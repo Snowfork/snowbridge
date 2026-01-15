@@ -16,6 +16,8 @@ export type ERC20Metadata = {
   deliveryGas?: bigint;
   // For ERC-20 tokens on L2 chains that have a corresponding mapped L1 token address.
   swapTokenAddress?: string;
+  // fee tier for uniswap call in basis points (e.g., 500 = 0.05%)
+  swapFee?: number;
 };
 
 export interface ERC20MetadataMap {
@@ -151,6 +153,7 @@ export type Environment = {
     acrossAPIUrl: string;
     l1AdapterAddress: string;
     l1FeeTokenAddress: string;
+    l1SwapQuoterAddress: string;
     l2Chains: { [l2ChainId: number]: L2ForwardMetadata };
   };
 };
@@ -245,6 +248,7 @@ export interface PNAMap {
 export type AssetSwapRoute = {
   inputToken: string;
   outputToken: string;
+  swapFee: number; // fee tier for uniswap call in basis points (e.g., 500 = 0.05%)
 };
 
 export type L2ForwardMetadata = {

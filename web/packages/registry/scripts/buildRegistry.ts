@@ -483,6 +483,7 @@ async function indexEthChain(
             assets[route.inputToken] = {
                 ...asset,
                 swapTokenAddress: route.outputToken,
+                swapFee: route.swapFee,
             }
         }
         assets["0x0000000000000000000000000000000000000000"] = {
@@ -491,6 +492,7 @@ async function indexEthChain(
             symbol: "Ether",
             decimals: 18,
             swapTokenAddress: "0x0000000000000000000000000000000000000000",
+            swapFee: 0,
         }
         return {
             chainId: networkChainId,

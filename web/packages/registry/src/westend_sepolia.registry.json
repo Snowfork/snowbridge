@@ -34,21 +34,24 @@
           "name": "Wrapped Ether",
           "symbol": "WETH",
           "decimals": 18,
-          "swapTokenAddress": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14"
+          "swapTokenAddress": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+          "swapFee": 0
         },
         "0x036cbd53842c5426634e7929541ec2318f3dcf7e": {
           "token": "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
           "name": "USDC",
           "symbol": "USDC",
           "decimals": 6,
-          "swapTokenAddress": "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238"
+          "swapTokenAddress": "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
+          "swapFee": 500
         },
         "0x0000000000000000000000000000000000000000": {
           "token": "0x0000000000000000000000000000000000000000",
           "name": "Ether",
           "symbol": "Ether",
           "decimals": 18,
-          "swapTokenAddress": "0x0000000000000000000000000000000000000000"
+          "swapTokenAddress": "0x0000000000000000000000000000000000000000",
+          "swapFee": 0
         }
       },
       "id": "base-sepolia"

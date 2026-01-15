@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-12-19T00:24:34.223Z",
+  "timestamp": "2026-01-15T09:38:08.873Z",
   "environment": "polkadot_mainnet",
   "ethChainId": 1,
   "gatewayAddress": "0x27ca963c279c93801941e1eb8799c23f407d68e7",
@@ -363,6 +363,36 @@
         "0xdac17f958d2ee523a2206206994597c13d831ec7": "0xffffffff7bc304425217b49e9598415c514ae81b"
       },
       "id": "evm_moonbeam"
+    },
+    "8453": {
+      "chainId": 8453,
+      "assets": {
+        "0x4200000000000000000000000000000000000006": {
+          "token": "0x4200000000000000000000000000000000000006",
+          "name": "Wrapped Ether",
+          "symbol": "WETH",
+          "decimals": 18,
+          "swapTokenAddress": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+          "swapFee": 0
+        },
+        "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913": {
+          "token": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+          "name": "USD Coin",
+          "symbol": "USDC",
+          "decimals": 6,
+          "swapTokenAddress": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          "swapFee": 500
+        },
+        "0x0000000000000000000000000000000000000000": {
+          "token": "0x0000000000000000000000000000000000000000",
+          "name": "Ether",
+          "symbol": "Ether",
+          "decimals": 18,
+          "swapTokenAddress": "0x0000000000000000000000000000000000000000",
+          "swapFee": 0
+        }
+      },
+      "id": "base"
     }
   },
   "parachains": {
@@ -1131,7 +1161,7 @@
         "evmChainId": 996,
         "name": "Bifrost Polkadot",
         "specName": "bifrost_polkadot",
-        "specVersion": 22002
+        "specVersion": 23000
       },
       "assets": {
         "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2": {
@@ -1151,7 +1181,7 @@
           "isSufficient": false
         }
       },
-      "estimatedExecutionFeeDOT": "bigint:125952027",
+      "estimatedExecutionFeeDOT": "bigint:90454898",
       "estimatedDeliveryFeeDOT": "bigint:307100000"
     },
     "2034": {
@@ -1176,7 +1206,7 @@
         "evmChainId": 222222,
         "name": "Hydration",
         "specName": "hydradx",
-        "specVersion": 359
+        "specVersion": 360
       },
       "assets": {
         "0x45804880de22913dafe09f4980848ece6ecbaf78": {
@@ -1332,7 +1362,7 @@
           "isSufficient": true
         }
       },
-      "estimatedExecutionFeeDOT": "bigint:1934280",
+      "estimatedExecutionFeeDOT": "bigint:1635024",
       "estimatedDeliveryFeeDOT": "bigint:307100000"
     },
     "2043": {
@@ -1431,7 +1461,7 @@
           "accountType": "AccountId32",
           "name": "Kusama Asset Hub",
           "specName": "statemine",
-          "specVersion": 2000003
+          "specVersion": 2000004
         },
         "assets": {
           "0x9d39a5de30e57443bff2a8307a4256c8797a3497": {

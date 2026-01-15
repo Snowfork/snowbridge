@@ -32,8 +32,8 @@ export type DeliveryFee = {
     extrinsicFeeDot: bigint // Fee for submitting to BridgeHub in DOT (part of relayerFee)
     extrinsicFeeEther: bigint // Fee for submitting to BridgeHub in Ether (part of relayerFee)
     totalFeeInWei: bigint
-    l2BridgeFeeInEther?: bigint // Fee for the call to fund the L1 handler is paid in native Ether.
-    l2BridgeFeeInL2Token?: bigint // Fee for the actual token swap on L2 is paid in the input token.
+    bridgeFeeInL2Token?: bigint // Fee for the actual token transfer in the input L2 token.
+    swapFeeInL1Token?: bigint // Fee for Gateway.v2_sendMessage in the output L1 token.
 }
 
 export type Transfer = {

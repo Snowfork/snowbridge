@@ -3,6 +3,8 @@ import { Context, toPolkadotSnowbridgeV2, toPolkadotV2 } from "@snowbridge/api"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { formatEther, Wallet } from "ethers"
 import { assetRegistryFor, environmentFor } from "@snowbridge/registry"
+import { IERC20__factory } from "@snowbridge/contract-types"
+import { ETHER_TOKEN_ADDRESS } from "@snowbridge/api/dist/assets_v2"
 
 export const transferToPolkadot = async (
     l2ChainId: number,
@@ -45,6 +47,32 @@ export const transferToPolkadot = async (
 
     console.log("TOKEN_CONTRACT", TOKEN_CONTRACT)
 
+    if (TOKEN_CONTRACT != ETHER_TOKEN_ADDRESS) {
+        console.log("# Approve")
+        const erc20 = IERC20__factory.connect(TOKEN_CONTRACT, ETHEREUM_ACCOUNT)
+        const l2AdapterAddress = await context.l2Adapter(l2ChainId).getAddress()
+        const [balance, allowance] = await Promise.all([
+            erc20.balanceOf(ETHEREUM_ACCOUNT_PUBLIC),
+            erc20.allowance(ETHEREUM_ACCOUNT_PUBLIC, l2AdapterAddress),
+        ])
+
+        if (allowance < amount) {
+            // Step 1: Reset allowance to 0 (required by this ERC20 implementation)
+            console.log("Resetting allowance to 0...")
+            const resetTx = await erc20.approve(l2AdapterAddress, 0n)
+            await resetTx.wait()
+
+            // Step 2: Set new allowance (higher than transfer amount for gateway fees)
+            const approveAmount = amount * 10n // 10x buffer
+            console.log("Setting new allowance to", approveAmount.toString())
+            const approveTx = await erc20.approve(l2AdapterAddress, approveAmount)
+            await approveTx.wait()
+
+            const newAllowance = await erc20.allowance(ETHEREUM_ACCOUNT_PUBLIC, l2AdapterAddress)
+            console.log("newAllowance", newAllowance.toString())
+        }
+    }
+
     console.log("Ethereum to Polkadot")
     {
         // Step 0. Create a transfer implementation
@@ -84,7 +112,7 @@ export const transferToPolkadot = async (
 
         // Step 4. Check validation logs for errors
         if (validation.logs.find((l) => l.kind == toPolkadotV2.ValidationKind.Error)) {
-            throw Error(`validation has one of more errors.`)
+            throw Error(`validation has one of more errors.` + JSON.stringify(validation.logs))
         }
 
         // Step 5. Estimate the cost of the execution cost of the transaction

@@ -69,7 +69,9 @@
     "transferUSDCFromL2ToAH": "npx ts-node src/transfer_from_l2_to_polkadot_wrapper.ts 84532 1000 USDC 110000",
     "transferUSDCFromAHToL2": "npx ts-node src/transfer_from_polkadot_to_l2_wrapper.ts 1000 84532 USDC 110000",
     "transferEtherFromL2ToAH": "npx ts-node src/transfer_from_l2_to_polkadot_wrapper.ts 84532 1000 Eth 1000000000000000",
-    "transferEtherFromAHToL2": "npx ts-node src/transfer_from_polkadot_to_l2_wrapper.ts 1000 84532 Eth 1000000000000000"
+    "transferEtherFromAHToL2": "npx ts-node src/transfer_from_polkadot_to_l2_wrapper.ts 1000 84532 Eth 1000000000000000",
+    "transferUSDCFromL2ToAH-mainnet": "npx ts-node src/transfer_from_l2_to_polkadot_wrapper.ts 8453 1000 USDC 1100000",
+    "transferEtherFromL2ToAH-mainnet": "npx ts-node src/transfer_from_l2_to_polkadot_wrapper.ts 8453 1000 Eth 1000000000000000"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^8.45.0",

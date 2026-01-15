@@ -16,24 +16,11 @@ export const estimateFees = async (
 
     const url = apiEndpoint + "/suggested-fees?" + new URLSearchParams(params)
 
-    let response: Response
+    let data
     try {
-        response = await fetch(url)
+        data = await (await fetch(url)).json()
     } catch (error) {
         throw new Error(`Failed to fetch suggested fees from ${url}: ${String(error)}`)
-    }
-
-    if (!response.ok) {
-        throw new Error(
-            `Failed to fetch suggested fees from ${url}: HTTP ${response.status} ${response.statusText}`,
-        )
-    }
-
-    let data: any
-    try {
-        data = await response.json()
-    } catch (error) {
-        throw new Error(`Failed to parse suggested fees response as JSON: ${String(error)}`)
     }
 
     if (
@@ -44,7 +31,10 @@ export const estimateFees = async (
         typeof data.totalRelayFee !== "object" ||
         !("total" in data.totalRelayFee)
     ) {
-        throw new Error("Invalid suggested fees response structure: missing totalRelayFee.total")
+        throw new Error(
+            "Invalid suggested fees response structure: missing totalRelayFee.total: " +
+                JSON.stringify(data),
+        )
     }
 
     const totalValue = (data as any).totalRelayFee.total

@@ -8,6 +8,8 @@ import {
     IGatewayV1__factory,
     IGatewayV2,
     IGatewayV2__factory,
+    ISwapQuoter,
+    ISwapQuoter__factory,
     SnowbridgeL1Adaptor,
     SnowbridgeL1Adaptor__factory,
     SnowbridgeL2Adaptor,
@@ -50,6 +52,7 @@ export class Context {
     #gatewayV2?: IGatewayV2
     #beefyClient?: BeefyClient
     #l1Adapter?: SnowbridgeL1Adaptor
+    #l1SwapQuoter?: ISwapQuoter
     #l2Adapters: { [l2ChainId: number]: SnowbridgeL2Adaptor } = {}
 
     // Substrate
@@ -297,6 +300,20 @@ export class Context {
             this.ethereum(),
         )
         return this.#l1Adapter
+    }
+
+    l1SwapQuoter(): ISwapQuoter {
+        if (!this.environment.l2Bridge) {
+            throw new Error("L2 bridge configuration is missing.")
+        }
+        if (this.#l1SwapQuoter) {
+            return this.#l1SwapQuoter
+        }
+        this.#l1SwapQuoter = ISwapQuoter__factory.connect(
+            this.environment.l2Bridge.l1SwapQuoterAddress as string,
+            this.ethereum(),
+        )
+        return this.#l1SwapQuoter
     }
 
     l1FeeTokenAddress(): string {

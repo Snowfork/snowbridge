@@ -26,9 +26,14 @@ import { FeeInfo, resolveInputs, ValidationLog, ValidationReason } from "../../t
 import { buildMessageId, Transfer, ValidationResult } from "../../toPolkadotSnowbridgeV2"
 import { getOperatingStatus } from "../../status"
 import { hexToU8a } from "@polkadot/util"
-import { SwapParamsStruct } from "@snowbridge/contract-types/dist/SnowbridgeL2Adaptor"
+import {
+    DepositParamsStruct,
+    SendParamsStruct,
+    SwapParamsStruct,
+} from "@snowbridge/contract-types/dist/SnowbridgeL2Adaptor"
 import { estimateFees } from "../../across/api"
 import { ContractTransaction } from "ethers/lib.commonjs/contract/types"
+import { ISwapQuoter } from "@snowbridge/contract-types"
 
 export class ERC20ToAH implements TransferInterface {
     async getDeliveryFee(
@@ -51,12 +56,22 @@ export class ERC20ToAH implements TransferInterface {
             assetHub: await context.assetHub(),
             bridgeHub: await context.bridgeHub(),
         }
+        if (registry.ethereumChains?.[l2ChainId] == undefined) {
+            throw new Error(`L2 Chain ID ${l2ChainId} is not supported in the provided registry`)
+        }
+        if (registry.ethereumChains?.[l2ChainId]?.assets[l2TokenAddress] == undefined) {
+            throw new Error(
+                `L2 Token Address ${l2TokenAddress} is not supported in the provided registry for L2 Chain ID ${l2ChainId}`,
+            )
+        }
         let tokenAddress: string | undefined
+        let swapFee: number | undefined
         if (l2TokenAddress == ETHER_TOKEN_ADDRESS) {
             tokenAddress = ETHER_TOKEN_ADDRESS
         } else {
             tokenAddress =
                 registry.ethereumChains?.[l2ChainId]?.assets[l2TokenAddress]?.swapTokenAddress
+            swapFee = registry.ethereumChains?.[l2ChainId]?.assets[l2TokenAddress]?.swapFee
         }
         if (!tokenAddress) {
             throw new Error("Token is not registered on Ethereum")
@@ -113,57 +128,68 @@ export class ERC20ToAH implements TransferInterface {
         )
 
         // Calculate fee with Across SDK
-        let l2BridgeFeeInL2Token = 0n
+        let bridgeFeeInL2Token = 0n,
+            swapFeeInL1Token = 0n
+        let totalFeeInWei = assetHubExecutionFeeEther + relayerFee
         if (l2TokenAddress != ETHER_TOKEN_ADDRESS) {
-            l2BridgeFeeInL2Token = await estimateFees(
-                context.acrossApiUrl(),
-                l2TokenAddress,
-                tokenAddress,
-                l2ChainId,
-                registry.ethChainId,
-                amount,
-            )
-            l2BridgeFeeInL2Token = padFeeByPercentage(
-                l2BridgeFeeInL2Token,
+            let swapQuoter = context.l1SwapQuoter()
+            let params: ISwapQuoter.QuoteExactOutputSingleParamsStruct = {
+                tokenIn: tokenAddress,
+                tokenOut: context.l1FeeTokenAddress(),
+                amount: assetHubExecutionFeeEther + relayerFee,
+                fee: swapFee ?? 500, // 0.05% pool fee
+                sqrtPriceLimitX96: 0, // no price limit
+            }
+            let result = await swapQuoter.quoteExactOutputSingle.staticCall(params)
+            swapFeeInL1Token = result[0] as bigint
+            swapFeeInL1Token = padFeeByPercentage(
+                swapFeeInL1Token,
                 options?.l2PadFeeByPercentage ?? 33n,
             )
-        }
-
-        let l2BridgeFeeInEther: bigint
-        const nativeFeeTokenAddress =
-            context.environment.l2Bridge?.l2Chains[l2ChainId]?.feeTokenAddress ||
-            ETHER_TOKEN_ADDRESS
-        const l1FeeTokenAddress =
-            registry.ethereumChains?.[l2ChainId]?.assets[nativeFeeTokenAddress]?.swapTokenAddress
-        if (!l1FeeTokenAddress) {
-            throw new Error("Token is not registered on Ethereum")
-        }
-
-        if (l2TokenAddress === ETHER_TOKEN_ADDRESS) {
-            l2BridgeFeeInEther = await estimateFees(
-                context.acrossApiUrl(),
-                nativeFeeTokenAddress,
-                l1FeeTokenAddress,
-                l2ChainId,
-                registry.ethChainId,
-                assetHubExecutionFeeEther + relayerFee + amount,
+            try {
+                bridgeFeeInL2Token = await estimateFees(
+                    context.acrossApiUrl(),
+                    l2TokenAddress,
+                    tokenAddress,
+                    l2ChainId,
+                    registry.ethChainId,
+                    amount + swapFeeInL1Token,
+                )
+            } catch (e) {
+                throw new Error("Failed to estimate Across bridge fees: " + (e as Error).message)
+            }
+            bridgeFeeInL2Token = padFeeByPercentage(
+                bridgeFeeInL2Token,
+                options?.l2PadFeeByPercentage ?? 33n,
             )
         } else {
-            l2BridgeFeeInEther = await estimateFees(
-                context.acrossApiUrl(),
-                nativeFeeTokenAddress,
-                l1FeeTokenAddress,
-                l2ChainId,
-                registry.ethChainId,
-                assetHubExecutionFeeEther + relayerFee,
+            const nativeFeeTokenAddress =
+                context.environment.l2Bridge?.l2Chains[l2ChainId]?.feeTokenAddress ||
+                ETHER_TOKEN_ADDRESS
+            const l1FeeTokenAddress =
+                registry.ethereumChains?.[l2ChainId]?.assets[nativeFeeTokenAddress]
+                    ?.swapTokenAddress
+            if (!l1FeeTokenAddress) {
+                throw new Error("Fee token is not registered on Ethereum")
+            }
+            try {
+                bridgeFeeInL2Token = await estimateFees(
+                    context.acrossApiUrl(),
+                    nativeFeeTokenAddress,
+                    l1FeeTokenAddress,
+                    l2ChainId,
+                    registry.ethChainId,
+                    assetHubExecutionFeeEther + relayerFee + amount,
+                )
+            } catch (e) {
+                throw new Error("Failed to estimate Across bridge fees: " + (e as Error).message)
+            }
+            bridgeFeeInL2Token = padFeeByPercentage(
+                bridgeFeeInL2Token,
+                options?.l2PadFeeByPercentage ?? 33n,
             )
+            totalFeeInWei += bridgeFeeInL2Token
         }
-        l2BridgeFeeInEther = padFeeByPercentage(
-            l2BridgeFeeInEther,
-            options?.l2PadFeeByPercentage ?? 33n,
-        )
-
-        const totalFeeInWei = assetHubExecutionFeeEther + relayerFee + l2BridgeFeeInEther
 
         return {
             assetHubDeliveryFeeEther: deliveryFeeInEther,
@@ -175,8 +201,8 @@ export class ERC20ToAH implements TransferInterface {
             extrinsicFeeEther: extrinsicFeeEther,
             totalFeeInWei: totalFeeInWei,
             feeAsset: feeAsset,
-            l2BridgeFeeInEther,
-            l2BridgeFeeInL2Token,
+            swapFeeInL1Token,
+            bridgeFeeInL2Token,
         }
     }
 
@@ -199,11 +225,13 @@ export class ERC20ToAH implements TransferInterface {
         const l2Chain = context.ethChain(l2ChainId)
 
         let tokenAddress: string | undefined
+        let swapFee: number | undefined
         if (l2TokenAddress == ETHER_TOKEN_ADDRESS) {
             tokenAddress = ETHER_TOKEN_ADDRESS
         } else {
             tokenAddress =
                 registry.ethereumChains?.[l2ChainId]?.assets[l2TokenAddress]?.swapTokenAddress
+            swapFee = registry.ethereumChains?.[l2ChainId]?.assets[l2TokenAddress]?.swapFee
         }
         if (!tokenAddress) {
             throw new Error("Token is not registered on Ethereum")
@@ -220,7 +248,7 @@ export class ERC20ToAH implements TransferInterface {
             beneficiaryMultiAddress(beneficiaryAccount)
 
         let assets: any = []
-        let value: bigint, outputAmount: bigint
+        let value: bigint, inputAmount: bigint
 
         const l2Adapter = context.l2Adapter(l2ChainId)
         const accountNonce = await l2Chain.getTransactionCount(sourceAccount, "pending")
@@ -244,50 +272,53 @@ export class ERC20ToAH implements TransferInterface {
         )
         let claimer = claimerFromBeneficiary(assetHub, beneficiaryAddressHex)
 
-        let swapParams: SwapParamsStruct, tx: ContractTransaction
+        let depositParams: DepositParamsStruct, tx: ContractTransaction
 
-        let sendParams = {
+        let sendParams: SendParamsStruct = {
             xcm: xcm,
             assets: assets,
             claimer: claimerLocationToBytes(claimer),
             executionFee: fee.assetHubExecutionFeeEther,
             relayerFee: fee.relayerFee,
-            l2Fee: fee.l2BridgeFeeInEther!,
         }
 
         if (l2TokenAddress === ETHER_TOKEN_ADDRESS) {
             value = fee.totalFeeInWei + amount
-            swapParams = {
+            depositParams = {
                 inputToken: l2TokenAddress,
                 outputToken: tokenAddress,
-                inputAmount: amount + fee.l2BridgeFeeInEther!,
+                inputAmount: value,
                 outputAmount: amount,
                 destinationChainId: BigInt(registry.ethChainId),
                 fillDeadlineBuffer: options?.fillDeadlineBuffer ?? 600n,
             }
             tx = await l2Adapter
                 .getFunction("sendNativeEtherAndCall")
-                .populateTransaction(swapParams, sendParams, sourceAccount, topic, {
+                .populateTransaction(depositParams, sendParams, sourceAccount, topic, {
                     value: value,
                     from: sourceAccount,
                 })
         } else {
             value = fee.totalFeeInWei
-            outputAmount = amount - fee.l2BridgeFeeInL2Token!
-            assets = [encodeNativeAsset(tokenAddress, outputAmount)]
+            inputAmount = amount + fee.bridgeFeeInL2Token! + fee.swapFeeInL1Token!
+            assets = [encodeNativeAsset(tokenAddress, amount)]
             sendParams.assets = assets
-            swapParams = {
+            depositParams = {
                 inputToken: l2TokenAddress,
                 outputToken: tokenAddress,
-                inputAmount: amount,
-                outputAmount: outputAmount,
+                inputAmount,
+                outputAmount: amount,
                 destinationChainId: BigInt(registry.ethChainId),
                 fillDeadlineBuffer: options?.fillDeadlineBuffer ?? 600n,
             }
+            let swapParams: SwapParamsStruct = {
+                inputAmountForFee: fee.swapFeeInL1Token!,
+                poolFee: swapFee ?? 500,
+                sqrtPriceLimitX96: 0n, // Setting to 0 is fine because we already protect the swap using amountInMaximum
+            }
             tx = await l2Adapter
                 .getFunction("sendTokenAndCall")
-                .populateTransaction(swapParams, sendParams, sourceAccount, topic, {
-                    value: value,
+                .populateTransaction(depositParams, swapParams, sendParams, sourceAccount, topic, {
                     from: sourceAccount,
                 })
         }
