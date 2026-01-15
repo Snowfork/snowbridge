@@ -24,12 +24,10 @@ import {
     buildContractCallHex,
     buildL2Call,
     estimateFeesFromAssetHub,
-    getSourceAgentAddress,
     MaxWeight,
     mockDeliveryFee,
     validateTransferFromAssetHub,
 } from "../../toEthereumSnowbridgeV2"
-import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
 
 export class ERC20FromAH implements TransferInterface {
     async getDeliveryFee(

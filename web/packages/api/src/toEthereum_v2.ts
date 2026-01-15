@@ -431,6 +431,7 @@ export enum ValidationReason {
     DryRunFailed,
     InsufficientEtherBalance,
     ContractCallInvalidTarget,
+    ContractCallAgentNotRegistered,
 }
 
 export type ValidationLog = {

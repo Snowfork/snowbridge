@@ -330,12 +330,15 @@ export const estimateFeesFromAssetHub = async (
         options.contractCall = options.contractCall || callInfo.l2Call
         l2BridgeFeeInL1Token = callInfo.fee
     }
-    let ethereumExecutionFee = await estimateEthereumExecutionFee(
-        context,
-        registry,
-        registry.assetHubParaId,
-        tokenAddress,
-        options,
+    let ethereumExecutionFee = padFeeByPercentage(
+        await estimateEthereumExecutionFee(
+            context,
+            registry,
+            registry.assetHubParaId,
+            tokenAddress,
+            options,
+        ),
+        feePadPercentage,
     )
 
     // calculate the cost of swapping in native asset
@@ -641,6 +644,20 @@ export const validateTransferFromAssetHub = async (
                 message:
                     "Contract call with invalid target address: " +
                     contractCall.target +
+                    " error: " +
+                    String(error),
+            })
+        }
+        try {
+            let agentAddress = await sourceAgentAddress(context, sourceParaId, sourceAccountHex)
+            console.log("Agent address for contract call validation:", agentAddress)
+        } catch (error) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.ContractCallAgentNotRegistered,
+                message:
+                    "Contract call cannot be performed because no agent is registered for source account: " +
+                    sourceAccountHex +
                     " error: " +
                     String(error),
             })
@@ -1036,7 +1053,7 @@ export async function buildL2Call(
         l2Call = {
             target: l1AdapterAddress,
             value: tokenAmount,
-            gas: options?.l2TransferGasLimit || 1_000_000n,
+            gas: options?.l2TransferGasLimit || 500_000n,
             calldata,
         }
     } else {
@@ -1066,14 +1083,14 @@ export async function buildL2Call(
         l2Call = {
             target: l1AdapterAddress,
             value: 0n,
-            gas: options?.l2TransferGasLimit || 1_000_000n,
+            gas: options?.l2TransferGasLimit || 500_000n,
             calldata,
         }
     }
     return { l2Call, fee: l2BridgeFeeInL1Token }
 }
 
-export async function getSourceAgentAddress(
+export async function sourceAgentAddress(
     context: Context,
     parachainId: number,
     sourceAccountHex: string,
