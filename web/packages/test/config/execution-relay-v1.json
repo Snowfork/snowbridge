@@ -9,7 +9,7 @@
     "channel-id": null,
     "beacon": {
       "endpoint": "http://127.0.0.1:9596",
-      "stateServiceEndpoint": "http://127.0.0.1:8080",
+      "stateEndpoint": "http://127.0.0.1:9596",
       "spec": {
         "syncCommitteeSize": 512,
         "slotsInEpoch": 32,
