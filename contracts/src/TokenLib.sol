@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2025 Snowfork <hello@snowfork.com>
 
-pragma solidity ^0.8.33;
+pragma solidity 0.8.33;
 
 import {IERC20} from "./interfaces/IERC20.sol";
 import {IERC20Permit} from "./interfaces/IERC20Permit.sol";

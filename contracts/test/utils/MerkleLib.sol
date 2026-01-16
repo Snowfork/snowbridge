@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.33;
+pragma solidity 0.8.33;
 
 library MerkleLib {
     // Build a power-of-two Merkle tree with `leafCount` leaves, place `targetLeaf` at
