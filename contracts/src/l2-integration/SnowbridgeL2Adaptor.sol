@@ -66,16 +66,16 @@ contract SnowbridgeL2Adaptor {
         emit DepositCallInvoked(topic, depositId);
     }
 
-    // Send native Ether to Polkadot, the fee should be calculated off-chain
-    function sendNativeEtherAndCall(
+    // Send native Ether or WETH to Polkadot, the fee should be calculated off-chain
+    function sendEtherAndCall(
         DepositParams calldata params,
         SendParams calldata sendParams,
         address recipient,
         bytes32 topic
     ) public payable {
         require(
-            params.inputToken == address(0),
-            "Input token must be zero address for native ETH deposits"
+            params.inputToken == address(0) || params.inputToken == address(L2_WETH9),
+            "Input token must be zero address or L2 WETH address for native ETH deposits"
         );
         checkInputs(params, sendParams, recipient);
         uint256 totalOutputAmount =
@@ -84,20 +84,27 @@ contract SnowbridgeL2Adaptor {
             params.inputAmount > totalOutputAmount,
             "Input amount must cover output amount and fee amount"
         );
-        require(
-            msg.value >= params.inputAmount,
-            "Sent value must be greater than or equal to total amount"
-        );
+        if (params.inputToken == address(0)) {
+            // Deposit native ETH
+            require(
+                msg.value >= params.inputAmount,
+                "Sent value must be greater than or equal to total amount"
+            );
+            L2_WETH9.deposit{value: params.inputAmount}();
+        } else {
+            // Deposit WETH
+            IERC20(address(L2_WETH9))
+                .safeTransferFrom(msg.sender, address(this), params.inputAmount);
+        }
 
-        L2_WETH9.deposit{value: params.inputAmount}();
         IERC20(address(L2_WETH9)).forceApprove(address(SPOKE_POOL), params.inputAmount);
 
         // deposit: WETH and cross-chain call
         uint256 depositId =
-            _depositNativeEtherAndSendMessage(params, sendParams, recipient, totalOutputAmount);
+            _depositEtherAndSendMessage(params, sendParams, recipient, totalOutputAmount);
 
         // Refund any excess ETH sent
-        if (msg.value > params.inputAmount) {
+        if (params.inputToken == address(0) && msg.value > params.inputAmount) {
             payable(msg.sender).transfer(msg.value - params.inputAmount);
         }
         emit DepositCallInvoked(topic, depositId);
@@ -191,7 +198,7 @@ contract SnowbridgeL2Adaptor {
         depositId = SPOKE_POOL.numberOfDeposits() - 1;
     }
 
-    function _depositNativeEtherAndSendMessage(
+    function _depositEtherAndSendMessage(
         DepositParams calldata params,
         SendParams calldata sendParams,
         address recipient,

@@ -23,7 +23,7 @@ import {
     TIME_BUFFER as MAINNET_TIME_BUFFER
 } from "../constants/Mainnet.sol";
 
-contract TestSnowbridgeL2AdaptorNativeEther is Script {
+contract TestSnowbridgeL2AdaptorWeth is Script {
     function run() public {
         vm.startBroadcast();
 
@@ -32,6 +32,8 @@ contract TestSnowbridgeL2AdaptorNativeEther is Script {
         address recipient = vm.envAddress("RECIPIENT_ADDRESS");
         uint256 CHAIN_ID;
         uint32 TIME_BUFFER;
+        address inputToken;
+        address outputToken;
         uint256 inputAmount;
         uint256 outputAmount;
         if (keccak256(bytes(vm.envString("L1_NETWORK"))) == keccak256(bytes("mainnet"))) {
@@ -39,17 +41,21 @@ contract TestSnowbridgeL2AdaptorNativeEther is Script {
             TIME_BUFFER = MAINNET_TIME_BUFFER;
             inputAmount = 1_200_000_000_000_000; // 0.0012 ETH
             outputAmount = 1_000_000_000_000_000; // 0.001 ETH
+            inputToken = MAINNET_BASE_WETH9;
+            outputToken = MAINNET_WETH9;
         } else if (keccak256(bytes(vm.envString("L1_NETWORK"))) == keccak256(bytes("sepolia"))) {
             CHAIN_ID = SEPOLIA_CHAIN_ID;
             TIME_BUFFER = SEPOLIA_TIME_BUFFER;
             inputAmount = 12_000_000_000_000_000; // 0.012 ETH
             outputAmount = 10_000_000_000_000_000; // 0.01 ETH
+            inputToken = SEPOLIA_BASE_WETH9;
+            outputToken = SEPOLIA_WETH9;
         } else {
             revert("Unsupported L1 network");
         }
         DepositParams memory params = DepositParams({
-            inputToken: address(0),
-            outputToken: address(0),
+            inputToken: inputToken,
+            outputToken: outputToken,
             inputAmount: inputAmount,
             outputAmount: outputAmount,
             destinationChainId: CHAIN_ID,
@@ -80,11 +86,12 @@ contract TestSnowbridgeL2AdaptorNativeEther is Script {
         } else {
             revert("Unsupported L1 network");
         }
+        WETH9(payable(params.inputToken)).deposit{value: params.inputAmount}();
+
+        IERC20(params.inputToken).approve(l2SnowbridgeAdaptor, params.inputAmount);
 
         SnowbridgeL2Adaptor(l2SnowbridgeAdaptor)
-        .sendEtherAndCall{
-            value: params.inputAmount
-        }(params, sendParams, recipient, keccak256("TestNativeEtherL2AdaptorTopicId"));
+            .sendEtherAndCall(params, sendParams, recipient, keccak256("TestWethL2AdaptorTopicId"));
 
         return;
     }

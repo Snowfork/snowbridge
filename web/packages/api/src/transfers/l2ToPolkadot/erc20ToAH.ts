@@ -293,7 +293,7 @@ export class ERC20ToAH implements TransferInterface {
                 fillDeadlineBuffer: options?.fillDeadlineBuffer ?? 600n,
             }
             tx = await l2Adapter
-                .getFunction("sendNativeEtherAndCall")
+                .getFunction("sendEtherAndCall")
                 .populateTransaction(depositParams, sendParams, sourceAccount, topic, {
                     value: value,
                     from: sourceAccount,
