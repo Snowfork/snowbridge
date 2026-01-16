@@ -47,7 +47,7 @@ contract TestSnowbridgeL1AdaptorNativeEther is Script {
         });
 
         SnowbridgeL1Adaptor(l1SnowbridgeAdaptor)
-        .depositNativeEther{
+        .depositToken{
             value: params.inputAmount
         }(params, recipient, keccak256("TestNativeEtherDeposit"));
 
