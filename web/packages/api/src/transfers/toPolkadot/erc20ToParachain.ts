@@ -19,12 +19,7 @@ import {
 } from "../../toPolkadotSnowbridgeV2"
 import { accountId32Location, DOT_LOCATION, erc20Location, isDOT } from "../../xcmBuilder"
 import { paraImplementation } from "../../parachains"
-import {
-    erc20Balance,
-    ETHER_TOKEN_ADDRESS,
-    swapAsset1ForAsset2,
-    validateAccount,
-} from "../../assets_v2"
+import { erc20Balance, ETHER_TOKEN_ADDRESS } from "../../assets_v2"
 import { beneficiaryMultiAddress, padFeeByPercentage, paraIdToSovereignAccount } from "../../utils"
 import { FeeInfo, resolveInputs, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
 import {
@@ -103,14 +98,13 @@ export class ERC20ToParachain implements TransferInterface {
         // AssetHub execution fee
         let assetHubExecutionFeeDOT = await assetHubImpl.calculateXcmFee(assetHubXcm, DOT_LOCATION)
         // Swap to ether
-        const deliveryFeeInEther = await swapAsset1ForAsset2(
-            assetHub,
+        const deliveryFeeInEther = await assetHubImpl.swapAsset1ForAsset2(
             DOT_LOCATION,
             ether,
             deliveryFeeInDOT,
         )
         let assetHubExecutionFeeEther = padFeeByPercentage(
-            await swapAsset1ForAsset2(assetHub, DOT_LOCATION, ether, assetHubExecutionFeeDOT),
+            await assetHubImpl.swapAsset1ForAsset2(DOT_LOCATION, ether, assetHubExecutionFeeDOT),
             paddFeeByPercentage ?? 33n,
         )
 
@@ -157,19 +151,18 @@ export class ERC20ToParachain implements TransferInterface {
         )
 
         // Swap to ether
-        const destinationDeliveryFeeEther = await swapAsset1ForAsset2(
-            assetHub,
+        const destinationDeliveryFeeEther = await assetHubImpl.swapAsset1ForAsset2(
             DOT_LOCATION,
             ether,
             destinationDeliveryFeeDOT,
         )
         let destinationExecutionFeeEther = padFeeByPercentage(
-            await swapAsset1ForAsset2(assetHub, DOT_LOCATION, ether, destinationExecutionFeeDOT),
+            await assetHubImpl.swapAsset1ForAsset2(DOT_LOCATION, ether, destinationExecutionFeeDOT),
             paddFeeByPercentage ?? 33n,
         )
 
         const { relayerFee, extrinsicFeeDot, extrinsicFeeEther } = await calculateRelayerFee(
-            assetHub,
+            assetHubImpl,
             registry.ethChainId,
             options?.overrideRelayerFee,
             deliveryFeeInEther,
@@ -247,10 +240,11 @@ export class ERC20ToParachain implements TransferInterface {
             accountNonce,
         )
 
+        const assetHubImpl = await paraImplementation(assetHub)
+
         let xcm
         if (isDOT(fee.feeAsset)) {
-            const dotFeeAmount = await swapAsset1ForAsset2(
-                assetHub,
+            const dotFeeAmount = await assetHubImpl.swapAsset1ForAsset2(
                 erc20Location(registry.ethChainId, ETHER_TOKEN_ADDRESS),
                 DOT_LOCATION,
                 fee.destinationExecutionFeeEther,
@@ -452,8 +446,7 @@ export class ERC20ToParachain implements TransferInterface {
 
             let xcm
             if (isDOT(transfer.input.fee.feeAsset)) {
-                const dotFeeAmount = await swapAsset1ForAsset2(
-                    assetHub,
+                const dotFeeAmount = await assetHubImpl.swapAsset1ForAsset2(
                     erc20Location(registry.ethChainId, ETHER_TOKEN_ADDRESS),
                     DOT_LOCATION,
                     transfer.input.fee.destinationExecutionFeeEther,
@@ -512,8 +505,7 @@ export class ERC20ToParachain implements TransferInterface {
         // Check if sovereign account balance for token is at 0 and that consumers is maxxed out.
         if (!ahAssetMetadata.isSufficient && !dryRunAhSuccess) {
             const sovereignAccountId = paraIdToSovereignAccount("sibl", destinationParaId)
-            const { accountMaxConsumers, accountExists } = await validateAccount(
-                assetHubImpl,
+            const { accountMaxConsumers, accountExists } = await assetHubImpl.validateAccount(
                 sovereignAccountId,
                 registry.ethChainId,
                 tokenAddress,
@@ -589,13 +581,13 @@ export class ERC20ToParachain implements TransferInterface {
             ) {
                 const destParachainImpl = await paraImplementation(destParachainApi)
                 // Check if the account is created
-                const { accountMaxConsumers, accountExists } = await validateAccount(
-                    destParachainImpl,
-                    beneficiaryAddressHex,
-                    registry.ethChainId,
-                    tokenAddress,
-                    destAssetMetadata,
-                )
+                const { accountMaxConsumers, accountExists } =
+                    await destParachainImpl.validateAccount(
+                        beneficiaryAddressHex,
+                        registry.ethChainId,
+                        tokenAddress,
+                        destAssetMetadata,
+                    )
                 if (accountMaxConsumers) {
                     logs.push({
                         kind: ValidationKind.Error,
