@@ -1052,7 +1052,7 @@ export async function buildL2Call(
         ])
         l2Call = {
             target: l1AdapterAddress,
-            value: tokenAmount,
+            value: 0n,
             gas: options?.l2TransferGasLimit || 500_000n,
             calldata,
         }
