@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.28;
+pragma solidity ^0.8.28;
 
 import {IERC20} from "openzeppelin/token/ERC20/IERC20.sol";
 import {SafeERC20} from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
@@ -33,22 +33,28 @@ contract SnowbridgeL1Adaptor {
     function depositToken(DepositParams calldata params, address recipient, bytes32 topic) public {
         require(params.inputToken != address(0), "Input token cannot be zero address");
         checkInputs(params, recipient);
-        IERC20(params.inputToken).forceApprove(address(SPOKE_POOL), params.inputAmount);
 
-        SPOKE_POOL.deposit(
-            bytes32(uint256(uint160(recipient))),
-            bytes32(uint256(uint160(recipient))),
-            bytes32(uint256(uint160(params.inputToken))),
-            bytes32(uint256(uint160(params.outputToken))),
-            params.inputAmount,
-            params.outputAmount,
-            params.destinationChainId,
-            bytes32(0), // exclusiveRelayer, zero means any relayer can fill
-            uint32(block.timestamp), // quoteTimestamp set to current block timestamp
-            uint32(block.timestamp + params.fillDeadlineBuffer), // fillDeadline set to fillDeadlineBuffer seconds in the future
-            0, // exclusivityDeadline, zero means no exclusivity
-            "" // empty message
-        );
+        (bool success,) = address(SPOKE_POOL)
+            .delegatecall(
+                abi.encodeCall(
+                    SPOKE_POOL.deposit,
+                    (
+                        bytes32(uint256(uint160(recipient))),
+                        bytes32(uint256(uint160(recipient))),
+                        bytes32(uint256(uint160(params.inputToken))),
+                        bytes32(uint256(uint160(params.outputToken))),
+                        params.inputAmount,
+                        params.outputAmount,
+                        params.destinationChainId,
+                        bytes32(0), // exclusiveRelayer, zero means any relayer can fill
+                        uint32(block.timestamp), // quoteTimestamp set to current block timestamp
+                        uint32(block.timestamp + params.fillDeadlineBuffer), // fillDeadline set to fillDeadlineBuffer seconds in the future
+                        0, // exclusivityDeadline, zero means no exclusivity
+                        "" // empty message
+                    )
+                )
+            );
+        require(success, "Deposit token failed");
         // Emit event with the depositId of the deposit
         uint256 depositId = SPOKE_POOL.numberOfDeposits() - 1;
         emit DepositCallInvoked(topic, depositId);

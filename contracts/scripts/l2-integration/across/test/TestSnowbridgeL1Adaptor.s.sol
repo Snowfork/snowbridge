@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.28;
+pragma solidity ^0.8.28;
 
 import {Script, console} from "forge-std/Script.sol";
 import {IERC20} from "openzeppelin/token/ERC20/IERC20.sol";
+import {SafeERC20} from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
 
 import {SnowbridgeL1Adaptor} from "../../../../src/l2-integration/SnowbridgeL1Adaptor.sol";
 import {ISpokePool} from "../../../../src/l2-integration/interfaces/ISpokePool.sol";
@@ -24,6 +25,8 @@ import {
 } from "../constants/Mainnet.sol";
 
 contract TestSnowbridgeL1Adaptor is Script {
+    using SafeERC20 for IERC20;
+
     function setUp() public {}
 
     function run() public {
@@ -62,7 +65,7 @@ contract TestSnowbridgeL1Adaptor is Script {
             fillDeadlineBuffer: TIME_BUFFER
         });
 
-        IERC20(params.inputToken).transfer(l1SnowbridgeAdaptor, params.inputAmount);
+        IERC20(params.inputToken).forceApprove(l1SnowbridgeAdaptor, params.inputAmount);
 
         SnowbridgeL1Adaptor(l1SnowbridgeAdaptor)
             .depositToken(params, recipient, keccak256("TestERC20Deposit"));
