@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2023 OpenZeppelin
 // SPDX-FileCopyrightText: 2024 Snowfork <hello@snowfork.com>
 
-pragma solidity 0.8.28;
+pragma solidity 0.8.33;
 
 import "./IERC20.sol";
 
