@@ -48,10 +48,10 @@ func (s *Service) Start(ctx context.Context, eg *errgroup.Group) error {
 	s.store = &st
 
 	// Initialize beacon API client
-	beaconAPI := api.NewBeaconClient(s.config.Beacon.Endpoint, s.config.Beacon.StateEndpoint)
+	beaconAPI := api.NewBeaconClient(s.config.Beacon.Endpoint)
 
 	// Initialize syncer
-	s.syncer = syncer.New(beaconAPI, &st, s.protocol)
+	s.syncer = syncer.New(beaconAPI, &st, s.protocol, nil)
 
 	// Initialize caches
 	stateTTL := time.Duration(s.config.Cache.StateTTLSeconds) * time.Second

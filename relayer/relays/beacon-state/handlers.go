@@ -29,6 +29,14 @@ type ProofResponse struct {
 	GeneralizedIndex int      `json:"generalizedIndex"`
 }
 
+type BlockRootProofResponse struct {
+	Slot             uint64     `json:"slot"`
+	Leaf             string     `json:"leaf"`
+	Proof            []string   `json:"proof"`
+	GeneralizedIndex int        `json:"generalizedIndex"`
+	BlockRoots       []string   `json:"blockRoots"`
+}
+
 type ErrorResponse struct {
 	Error string `json:"error"`
 }
@@ -180,11 +188,19 @@ func (s *Service) handleBlockRootProof(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response := ProofResponse{
+	// Get block roots from state for ancestry proofs
+	blockRoots := cachedState.State.GetBlockRoots()
+	blockRootsHex := make([]string, len(blockRoots))
+	for i, root := range blockRoots {
+		blockRootsHex[i] = "0x" + hex.EncodeToString(root[:])
+	}
+
+	response := BlockRootProofResponse{
 		Slot:             slot,
 		Leaf:             "0x" + hex.EncodeToString(proof.Leaf),
 		Proof:            hashesToHexStrings(proof.Hashes),
 		GeneralizedIndex: generalizedIndex,
+		BlockRoots:       blockRootsHex,
 	}
 
 	// Cache and return
