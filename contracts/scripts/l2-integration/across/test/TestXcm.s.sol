@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 import {Script} from "forge-std/Script.sol";
 import {XCM_PRECOMPILE} from "../constants/Sepolia.sol";
-import {IXcm} from "../../../../src/l2-integration/interfaces/IXcm.sol";
+import {IXcm} from "../interfaces/IXcm.sol";
 
 contract TestXcm is Script {
     function run() public {

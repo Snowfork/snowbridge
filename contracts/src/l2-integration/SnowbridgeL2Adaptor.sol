@@ -5,7 +5,6 @@ import {IERC20} from "openzeppelin/token/ERC20/IERC20.sol";
 import {SafeERC20} from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
 import {WETH9} from "canonical-weth/WETH9.sol";
 import {ISpokePool, IMessageHandler} from "./interfaces/ISpokePool.sol";
-import {ISwapRouter} from "./interfaces/ISwapRouter.sol";
 import {IGatewayV2} from "../v2/IGateway.sol";
 import {DepositParams, Instructions, Call, SendParams, SwapParams} from "./Types.sol";
 
@@ -17,7 +16,6 @@ contract SnowbridgeL2Adaptor {
     IGatewayV2 public immutable GATEWAY;
     WETH9 public immutable L1_WETH9;
     WETH9 public immutable L2_WETH9;
-    ISwapRouter public immutable SWAP_ROUTER;
 
     /**************************************
      *              EVENTS                *
@@ -30,15 +28,13 @@ contract SnowbridgeL2Adaptor {
         address _handler,
         address _gateway,
         address _l1weth9,
-        address _l2weth9,
-        address _swapRouter
+        address _l2weth9
     ) {
         SPOKE_POOL = ISpokePool(_spokePool);
         GATEWAY = IGatewayV2(_gateway);
         MULTI_CALL_HANDLER = IMessageHandler(_handler);
         L1_WETH9 = WETH9(payable(_l1weth9));
         L2_WETH9 = WETH9(payable(_l2weth9));
-        SWAP_ROUTER = ISwapRouter(_swapRouter);
     }
 
     // Send ERC20 token to Polkadot, the fee should be calculated off-chain
@@ -52,7 +48,7 @@ contract SnowbridgeL2Adaptor {
         require(params.inputToken != address(0), "Input token cannot be zero address");
         checkInputsWithSwapParams(params, swapParams, sendParams, recipient);
         require(
-            params.inputAmount > params.outputAmount + swapParams.inputAmountForFee,
+            params.inputAmount > params.outputAmount + swapParams.inputAmount,
             "Input amount must cover output amount and fee amount"
         );
 
@@ -120,33 +116,18 @@ contract SnowbridgeL2Adaptor {
         Call[] memory calls = new Call[](7);
         calls[0] = Call({
             target: address(params.outputToken),
-            callData: abi.encodeCall(IERC20.approve, (address(SWAP_ROUTER), 0)),
+            callData: abi.encodeCall(IERC20.approve, (address(swapParams.router), 0)),
             value: 0
         });
         calls[1] = Call({
             target: address(params.outputToken),
             callData: abi.encodeCall(
-                IERC20.approve, (address(SWAP_ROUTER), swapParams.inputAmountForFee)
+                IERC20.approve, (address(swapParams.router), swapParams.inputAmount)
             ),
             value: 0
         });
-        calls[2] = Call({
-            target: address(SWAP_ROUTER),
-            callData: abi.encodeCall(
-                ISwapRouter.exactOutputSingle,
-                (ISwapRouter.ExactOutputSingleParams({
-                        tokenIn: params.outputToken,
-                        tokenOut: address(L1_WETH9),
-                        fee: swapParams.poolFee,
-                        recipient: address(MULTI_CALL_HANDLER),
-                        deadline: fillDeadline,
-                        amountInMaximum: swapParams.inputAmountForFee,
-                        amountOut: sendParams.relayerFee + sendParams.executionFee,
-                        sqrtPriceLimitX96: swapParams.sqrtPriceLimitX96
-                    }))
-            ),
-            value: 0
-        });
+        calls[2] =
+            Call({target: address(swapParams.router), callData: swapParams.callData, value: 0});
         calls[3] = Call({
             target: address(L1_WETH9),
             callData: abi.encodeCall(
@@ -187,7 +168,7 @@ contract SnowbridgeL2Adaptor {
             bytes32(uint256(uint160(params.inputToken))),
             bytes32(uint256(uint160(params.outputToken))),
             params.inputAmount,
-            params.outputAmount + swapParams.inputAmountForFee,
+            params.outputAmount + swapParams.inputAmount,
             params.destinationChainId,
             bytes32(0),
             uint32(block.timestamp),
@@ -268,8 +249,9 @@ contract SnowbridgeL2Adaptor {
         address recipient
     ) internal pure {
         checkInputs(params, sendParams, recipient);
-        require(swapParams.inputAmountForFee > 0, "Input amount for fee must be greater than zero");
-        require(swapParams.poolFee > 0, "Pool fee must be greater than zero");
+        require(swapParams.inputAmount > 0, "Input amount for fee must be greater than zero");
+        require(swapParams.router != address(0), "Swap router cannot be zero address");
+        require(swapParams.callData.length > 0, "Swap callData cannot be empty");
     }
 
     receive() external payable {}
