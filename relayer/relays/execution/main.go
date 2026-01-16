@@ -19,7 +19,9 @@ import (
 	"github.com/snowfork/snowbridge/relayer/contracts"
 	"github.com/snowfork/snowbridge/relayer/crypto/sr25519"
 	"github.com/snowfork/snowbridge/relayer/ofac"
+	beaconstate "github.com/snowfork/snowbridge/relayer/relays/beacon-state"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/api"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/protocol"
@@ -103,7 +105,14 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	store := store.New(r.config.Source.Beacon.DataStore.Location, r.config.Source.Beacon.DataStore.MaxEntries, *p)
 	store.Connect()
 
-	beaconAPI := api.NewBeaconClient(r.config.Source.Beacon.Endpoint, r.config.Source.Beacon.StateEndpoint)
+	beaconAPI := api.NewBeaconClient(r.config.Source.Beacon.Endpoint)
+
+	var stateServiceClient syncer.StateServiceClient
+	if r.config.Source.Beacon.StateServiceEndpoint != "" {
+		stateServiceClient = beaconstate.NewClient(r.config.Source.Beacon.StateServiceEndpoint)
+		log.WithField("endpoint", r.config.Source.Beacon.StateServiceEndpoint).Info("Using beacon state service for proof generation")
+	}
+
 	beaconHeader := header.New(
 		r.writer,
 		beaconAPI,
@@ -111,6 +120,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		&store,
 		p,
 		0, // setting is not used in the execution relay
+		stateServiceClient,
 	)
 	r.beaconHeader = &beaconHeader
 

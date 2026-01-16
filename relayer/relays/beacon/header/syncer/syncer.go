@@ -29,17 +29,26 @@ var (
 	ErrSyncCommitteeNotSuperMajority              = errors.New("update received was not signed by supermajority")
 )
 
-type Syncer struct {
-	Client   api.BeaconAPI
-	store    store.BeaconStore
-	protocol *protocol.Protocol
+// StateServiceClient is an interface for the beacon state service HTTP client
+type StateServiceClient interface {
+	GetBlockRootProof(slot uint64) (*scale.BlockRootProof, error)
+	Health() error
 }
 
-func New(client api.BeaconAPI, store store.BeaconStore, protocol *protocol.Protocol) *Syncer {
+type Syncer struct {
+	Client       api.BeaconAPI
+	store        store.BeaconStore
+	protocol     *protocol.Protocol
+	stateService StateServiceClient
+}
+
+// New creates a Syncer with an optional beacon state service client (can be nil)
+func New(client api.BeaconAPI, store store.BeaconStore, protocol *protocol.Protocol, stateService StateServiceClient) *Syncer {
 	return &Syncer{
-		Client:   client,
-		store:    store,
-		protocol: protocol,
+		Client:       client,
+		store:        store,
+		protocol:     protocol,
+		stateService: stateService,
 	}
 }
 
@@ -304,6 +313,22 @@ func (s *Syncer) GetSyncCommitteePeriodUpdateFromEndpoint(from uint64) (scale.Up
 }
 
 func (s *Syncer) GetBlockRoots(slot uint64) (scale.BlockRootProof, error) {
+	// Try state service first if available
+	if s.stateService != nil {
+		proof, err := s.stateService.GetBlockRootProof(slot)
+		if err != nil {
+			log.WithError(err).WithField("slot", slot).Warn("state service failed, falling back to direct state download")
+		} else {
+			log.WithField("slot", slot).Debug("got block root proof from state service")
+			return *proof, nil
+		}
+	}
+
+	// Fall back to direct state download
+	return s.getBlockRootsDirect(slot)
+}
+
+func (s *Syncer) getBlockRootsDirect(slot uint64) (scale.BlockRootProof, error) {
 	var blockRootProof scale.BlockRootProof
 	var beaconState state.BeaconState
 	var blockRootsContainer state.BlockRootsContainer

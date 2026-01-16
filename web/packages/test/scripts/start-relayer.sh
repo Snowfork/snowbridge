@@ -6,6 +6,7 @@ source scripts/set-env.sh
 config_relayer() {
     local electra_forked_epoch=0
     local fulu_forked_epoch=50000000
+    local state_service_endpoint="http://127.0.0.1:8080"
     # Configure beefy relay
     jq \
         --arg k1 "$(address_for BeefyClient)" \
@@ -106,13 +107,29 @@ config_relayer() {
     ' \
         config/fisherman-relay.json >$output_dir/fisherman-relay.json
 
-    # Configure beacon relay
+    # Configure beacon state service
     jq \
         --arg beacon_endpoint_http $beacon_endpoint_http \
         --argjson electra_forked_epoch $electra_forked_epoch \
         --argjson fulu_forked_epoch $fulu_forked_epoch \
+        --arg datastore_location "$output_dir/beacon-state-service-data" \
+        '
+      .beacon.endpoint = $beacon_endpoint_http
+    | .beacon.spec.forkVersions.electra = $electra_forked_epoch
+    | .beacon.spec.forkVersions.fulu = $fulu_forked_epoch
+    | .beacon.datastore.location = $datastore_location
+    ' \
+        config/beacon-state-service.json >$output_dir/beacon-state-service.json
+
+    # Configure beacon relay
+    jq \
+        --arg beacon_endpoint_http $beacon_endpoint_http \
+        --arg state_service_endpoint $state_service_endpoint \
+        --argjson electra_forked_epoch $electra_forked_epoch \
+        --argjson fulu_forked_epoch $fulu_forked_epoch \
         '
       .source.beacon.endpoint = $beacon_endpoint_http
+    | .source.beacon.stateServiceEndpoint = $state_service_endpoint
     | .source.beacon.spec.forkVersions.electra = $electra_forked_epoch
     | .source.beacon.spec.forkVersions.fulu = $fulu_forked_epoch
     ' \
@@ -122,6 +139,7 @@ config_relayer() {
     jq \
         --arg eth_endpoint_ws $eth_endpoint_ws \
         --arg k1 "$(address_for GatewayProxy)" \
+        --arg state_service_endpoint $state_service_endpoint \
         --argjson electra_forked_epoch $electra_forked_epoch \
         --argjson fulu_forked_epoch $fulu_forked_epoch \
         --arg channelID $ASSET_HUB_CHANNEL_ID \
@@ -129,6 +147,7 @@ config_relayer() {
       .source.ethereum.endpoint = $eth_endpoint_ws
     | .source.contracts.Gateway = $k1
     | .schedule.id = 0
+    | .source.beacon.stateServiceEndpoint = $state_service_endpoint
     | .source.beacon.spec.forkVersions.electra = $electra_forked_epoch
     | .source.beacon.spec.forkVersions.fulu = $fulu_forked_epoch
     | .source."channel-id" = $channelID
@@ -140,12 +159,14 @@ config_relayer() {
       jq \
           --arg eth_endpoint_ws $eth_endpoint_ws \
           --arg k1 "$(address_for GatewayProxy)" \
+          --arg state_service_endpoint $state_service_endpoint \
           --argjson electra_forked_epoch $electra_forked_epoch \
           --argjson fulu_forked_epoch $fulu_forked_epoch \
           '
         .source.ethereum.endpoint = $eth_endpoint_ws
       | .source.contracts.Gateway = $k1
       | .schedule.id = 0
+      | .source.beacon.stateServiceEndpoint = $state_service_endpoint
       | .source.beacon.spec.forkVersions.electra = $electra_forked_epoch
       | .source.beacon.spec.forkVersions.fulu = $fulu_forked_epoch
 
@@ -156,11 +177,13 @@ config_relayer() {
       jq \
           --arg eth_endpoint_ws $eth_endpoint_ws \
           --arg k1 "$(address_for GatewayProxy)" \
+          --arg state_service_endpoint $state_service_endpoint \
           --argjson electra_forked_epoch $electra_forked_epoch \
           --argjson fulu_forked_epoch $fulu_forked_epoch \
           '
         .source.ethereum.endpoint = $eth_endpoint_ws
       | .source.contracts.Gateway = $k1
+      | .source.beacon.stateServiceEndpoint = $state_service_endpoint
       | .source.beacon.spec.forkVersions.electra = $electra_forked_epoch
       | .source.beacon.spec.forkVersions.fulu = $fulu_forked_epoch
 
@@ -223,6 +246,21 @@ start_relayer() {
             sleep 20
         done
     ) &
+
+    # Launch beacon state service (before beacon relay since other relayers may use it)
+    (
+        : >"$output_dir"/beacon-state-service.log
+        while :; do
+            echo "Starting beacon state service at $(date)"
+            "${relayer_v2}" run beacon-state-service \
+                --config "$output_dir/beacon-state-service.json" \
+                >>"$output_dir"/beacon-state-service.log 2>&1 || true
+            sleep 20
+        done
+    ) &
+
+    # Wait for beacon state service to be ready
+    sleep 5
 
     # Launch beacon relay
     (
