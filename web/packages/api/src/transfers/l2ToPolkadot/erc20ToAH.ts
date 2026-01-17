@@ -64,15 +64,8 @@ export class ERC20ToAH implements TransferInterface {
                 `L2 Token Address ${l2TokenAddress} is not supported in the provided registry for L2 Chain ID ${l2ChainId}`,
             )
         }
-        let tokenAddress: string | undefined
-        let swapFee: number | undefined
-        if (l2TokenAddress == ETHER_TOKEN_ADDRESS) {
-            tokenAddress = ETHER_TOKEN_ADDRESS
-        } else {
-            tokenAddress =
-                registry.ethereumChains?.[l2ChainId]?.assets[l2TokenAddress]?.swapTokenAddress
-            swapFee = registry.ethereumChains?.[l2ChainId]?.assets[l2TokenAddress]?.swapFee
-        }
+        let tokenAddress =
+            registry.ethereumChains?.[l2ChainId]?.assets[l2TokenAddress]?.swapTokenAddress
         if (!tokenAddress) {
             throw new Error("Token is not registered on Ethereum")
         }
@@ -131,7 +124,32 @@ export class ERC20ToAH implements TransferInterface {
         let bridgeFeeInL2Token = 0n,
             swapFeeInL1Token = 0n
         let totalFeeInWei = assetHubExecutionFeeEther + relayerFee
-        if (l2TokenAddress != ETHER_TOKEN_ADDRESS) {
+        let l2FeeTokenAddress = context.l2FeeTokenAddress(l2ChainId)
+        if (l2TokenAddress == ETHER_TOKEN_ADDRESS || l2TokenAddress == l2FeeTokenAddress) {
+            const l1FeeTokenAddress =
+                registry.ethereumChains?.[l2ChainId]?.assets[l2FeeTokenAddress]?.swapTokenAddress
+            if (!l1FeeTokenAddress) {
+                throw new Error("Fee token is not registered on Ethereum")
+            }
+            try {
+                bridgeFeeInL2Token = await estimateFees(
+                    context.acrossApiUrl(),
+                    l2FeeTokenAddress,
+                    l1FeeTokenAddress,
+                    l2ChainId,
+                    registry.ethChainId,
+                    assetHubExecutionFeeEther + relayerFee + amount,
+                )
+            } catch (e) {
+                throw new Error("Failed to estimate Across bridge fees: " + (e as Error).message)
+            }
+            bridgeFeeInL2Token = padFeeByPercentage(
+                bridgeFeeInL2Token,
+                options?.l2PadFeeByPercentage ?? 33n,
+            )
+            totalFeeInWei += bridgeFeeInL2Token
+        } else {
+            let swapFee = registry.ethereumChains?.[l2ChainId]?.assets[l2TokenAddress]?.swapFee
             let swapQuoter = context.l1SwapQuoter()
             let params: ISwapQuoter.QuoteExactOutputSingleParamsStruct = {
                 tokenIn: tokenAddress,
@@ -162,33 +180,6 @@ export class ERC20ToAH implements TransferInterface {
                 bridgeFeeInL2Token,
                 options?.l2PadFeeByPercentage ?? 33n,
             )
-        } else {
-            const nativeFeeTokenAddress =
-                context.environment.l2Bridge?.l2Chains[l2ChainId]?.feeTokenAddress ||
-                ETHER_TOKEN_ADDRESS
-            const l1FeeTokenAddress =
-                registry.ethereumChains?.[l2ChainId]?.assets[nativeFeeTokenAddress]
-                    ?.swapTokenAddress
-            if (!l1FeeTokenAddress) {
-                throw new Error("Fee token is not registered on Ethereum")
-            }
-            try {
-                bridgeFeeInL2Token = await estimateFees(
-                    context.acrossApiUrl(),
-                    nativeFeeTokenAddress,
-                    l1FeeTokenAddress,
-                    l2ChainId,
-                    registry.ethChainId,
-                    assetHubExecutionFeeEther + relayerFee + amount,
-                )
-            } catch (e) {
-                throw new Error("Failed to estimate Across bridge fees: " + (e as Error).message)
-            }
-            bridgeFeeInL2Token = padFeeByPercentage(
-                bridgeFeeInL2Token,
-                options?.l2PadFeeByPercentage ?? 33n,
-            )
-            totalFeeInWei += bridgeFeeInL2Token
         }
 
         return {
@@ -224,15 +215,9 @@ export class ERC20ToAH implements TransferInterface {
         const assetHub = await context.assetHub()
         const l2Chain = context.ethChain(l2ChainId)
 
-        let tokenAddress: string | undefined
-        let swapFee: number | undefined
-        if (l2TokenAddress == ETHER_TOKEN_ADDRESS) {
-            tokenAddress = ETHER_TOKEN_ADDRESS
-        } else {
-            tokenAddress =
-                registry.ethereumChains?.[l2ChainId]?.assets[l2TokenAddress]?.swapTokenAddress
-            swapFee = registry.ethereumChains?.[l2ChainId]?.assets[l2TokenAddress]?.swapFee
-        }
+        let tokenAddress =
+            registry.ethereumChains?.[l2ChainId]?.assets[l2TokenAddress]?.swapTokenAddress
+        let swapFee = registry.ethereumChains?.[l2ChainId]?.assets[l2TokenAddress]?.swapFee
         if (!tokenAddress) {
             throw new Error("Token is not registered on Ethereum")
         }
@@ -281,8 +266,8 @@ export class ERC20ToAH implements TransferInterface {
             executionFee: fee.assetHubExecutionFeeEther,
             relayerFee: fee.relayerFee,
         }
-
-        if (l2TokenAddress === ETHER_TOKEN_ADDRESS) {
+        let l2FeeTokenAddress = context.l2FeeTokenAddress(l2ChainId)
+        if (l2TokenAddress === ETHER_TOKEN_ADDRESS || l2TokenAddress === l2FeeTokenAddress) {
             value = fee.totalFeeInWei + amount
             depositParams = {
                 inputToken: l2TokenAddress,
@@ -292,12 +277,13 @@ export class ERC20ToAH implements TransferInterface {
                 destinationChainId: BigInt(registry.ethChainId),
                 fillDeadlineBuffer: options?.fillDeadlineBuffer ?? 600n,
             }
+            let txOptions: any = { from: sourceAccount }
+            if (l2TokenAddress === ETHER_TOKEN_ADDRESS) {
+                txOptions = { ...txOptions, value: value }
+            }
             tx = await l2Adapter
                 .getFunction("sendEtherAndCall")
-                .populateTransaction(depositParams, sendParams, sourceAccount, topic, {
-                    value: value,
-                    from: sourceAccount,
-                })
+                .populateTransaction(depositParams, sendParams, sourceAccount, topic, txOptions)
         } else {
             value = fee.totalFeeInWei
             inputAmount = amount + fee.bridgeFeeInL2Token! + fee.swapFeeInL1Token!

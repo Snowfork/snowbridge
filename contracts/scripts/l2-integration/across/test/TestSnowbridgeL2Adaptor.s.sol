@@ -46,7 +46,7 @@ contract TestSnowbridgeL2Adaptor is Script {
         DepositParams memory params;
         SendParams memory sendParams;
         SwapParams memory swapParams;
-        // Send the 1 USDC to Polkadot
+        // Send 0.1 USDC to Polkadot
         bytes[] memory assets = new bytes[](1);
         if (keccak256(bytes(vm.envString("L1_NETWORK"))) == keccak256(bytes("mainnet"))) {
             uint256 inputAmount = 1_000_000; // 1.0 USDC
@@ -89,7 +89,7 @@ contract TestSnowbridgeL2Adaptor is Script {
             });
         } else if (keccak256(bytes(vm.envString("L1_NETWORK"))) == keccak256(bytes("sepolia"))) {
             uint256 inputAmount = 10_000_000; // 10.0 USDC
-            uint256 outputAmount = 2_000_000; // 2 USDC
+            uint256 outputAmount = 4_000_000; // 4 USDC
             uint256 swapAmount = 5_000_000; // 5 USDC for fees
             params = DepositParams({
                 inputToken: SEPOLIA_BASE_USDC,

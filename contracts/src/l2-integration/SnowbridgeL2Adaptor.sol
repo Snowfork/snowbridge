@@ -170,10 +170,10 @@ contract SnowbridgeL2Adaptor {
             params.inputAmount,
             params.outputAmount + swapParams.inputAmount,
             params.destinationChainId,
-            bytes32(0),
-            uint32(block.timestamp),
-            fillDeadline,
-            0,
+            bytes32(0), // exclusiveRelayer, zero means any relayer can fill
+            uint32(block.timestamp), // quoteTimestamp set to current block timestamp
+            fillDeadline, // fillDeadline set to fillDeadlineBuffer seconds in the future
+            0, // exclusivityDeadline, zero means no exclusivity
             abi.encode(instructions)
         );
         depositId = SPOKE_POOL.numberOfDeposits() - 1;

@@ -108,20 +108,18 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
             l1SwapQuoterAddress: "0x61fFE014bA17989E743c5F6cB21bF9697530B21e",
             l2Chains: {
                 "8453": {
-                    adapterAddress: "0x7573a771677f30FD602722dB9F92c7a4429456A3",
+                    adapterAddress: "0xdA2112AF731721824fDa8b3A6aD822aFA4f08B59",
                     feeTokenAddress: "0x4200000000000000000000000000000000000006",
                     swapRoutes: [
                         // WETH
                         {
                             inputToken: "0x4200000000000000000000000000000000000006",
                             outputToken: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
-                            swapFee: 0,
                         },
                         // USDC
                         {
                             inputToken: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
                             outputToken: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-                            swapFee: 500,
                         },
                     ],
                 },
@@ -161,13 +159,11 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
                         {
                             inputToken: "0x4200000000000000000000000000000000000006",
                             outputToken: "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
-                            swapFee: 0,
                         },
                         // USDC
                         {
                             inputToken: "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
                             outputToken: "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
-                            swapFee: 500,
                         },
                     ],
                 },
