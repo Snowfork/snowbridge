@@ -23,6 +23,10 @@ test_snowbridge_l2_adaptor_weth() {
   forge script TestSnowbridgeL2AdaptorWeth --chain "${L2_NETWORK}" --rpc-url "${L2_RPC_URL}" --private-key "${PRIVATE_KEY}" --broadcast -vvvv
 }
 
+test_uniswap_quoter() {
+  forge script TestUniswapQuoter --chain "${L1_NETWORK}" --rpc-url "${L1_RPC_URL}" --private-key "${PRIVATE_KEY}" --broadcast -vvvv
+}
+
 usage() {
   cat <<'EOF'
 Usage: ./scripts/test-l2-adaptors.sh <target>
@@ -33,6 +37,7 @@ Targets:
   l2              Run TestSnowbridgeL2Adaptor
   l2-native       Run TestSnowbridgeL2AdaptorNativeEther
   l2-weth         Run TestSnowbridgeL2AdaptorWeth
+  l1-swap-quoter  Run TestUniswapQuoter
   all             Run all of the above in sequence
 EOF
 }
@@ -48,6 +53,7 @@ case "$1" in
   l2)          test_snowbridge_l2_adaptor ;;
   l2-native)   test_snowbridge_l2_adaptor_native_ether ;;
   l2-weth)     test_snowbridge_l2_adaptor_weth ;;
+  l1-swap-quoter) test_uniswap_quoter ;;
   all)
     test_snowbridge_l1_adaptor
     test_snowbridge_l1_adaptor_native_ether
