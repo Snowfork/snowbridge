@@ -1,5 +1,7 @@
 import { TransferInterface } from "./transfers/toPolkadot/transferInterface"
+import { TransferInterface as L2TransferInterface } from "./transfers/l2ToPolkadot/transferInterface"
 import { ERC20ToAH } from "./transfers/toPolkadot/erc20ToAH"
+import { ERC20ToAH as ERC20FromL2ToAH } from "./transfers/l2ToPolkadot/erc20ToAH"
 import { RegisterToken } from "./registration/toPolkadot/registerToken"
 import { TokenRegistration } from "./registration/toPolkadot/registrationInterface"
 import { Asset, AssetRegistry, ERC20Metadata, Parachain } from "@snowbridge/base-types"
@@ -30,6 +32,8 @@ export type DeliveryFee = {
     extrinsicFeeDot: bigint // Fee for submitting to BridgeHub in DOT (part of relayerFee)
     extrinsicFeeEther: bigint // Fee for submitting to BridgeHub in Ether (part of relayerFee)
     totalFeeInWei: bigint
+    bridgeFeeInL2Token?: bigint // Fee for the actual token transfer in the input L2 token.
+    swapFeeInL1Token?: bigint // Fee for Gateway.v2_sendMessage in the output L1 token.
 }
 
 export type Transfer = {
@@ -42,6 +46,8 @@ export type Transfer = {
         amount: bigint
         fee: DeliveryFee
         customXcm?: any[] // Optional custom XCM instructions
+        l2TokenAddress?: string
+        sourceChainId?: number
     }
     computed: {
         gatewayAddress: string
@@ -55,6 +61,7 @@ export type Transfer = {
         minimalBalance: bigint
         claimer: any
         topic: string
+        l2AdapterAddress?: string
     }
     tx: ContractTransaction
 }
@@ -72,6 +79,7 @@ export type ValidationResult = {
         bridgeStatus: OperationStatus
         assetHubDryRunError?: string
         destinationParachainDryRunError?: string
+        l2BridgeDryRunError?: string
     }
     transfer: Transfer
 }
@@ -114,6 +122,27 @@ export function createTransferImplementation(
             transferImpl = new ERC20ToParachain()
         }
     }
+    return transferImpl
+}
+
+export function createL2TransferImplementation(
+    l2ChainId: number,
+    destinationParaId: number,
+    registry: AssetRegistry,
+    l2TokenAddress: string,
+): L2TransferInterface {
+    const assets = registry.ethereumChains[l2ChainId].assets
+    const tokenMetadata = assets[l2TokenAddress]
+    if (!tokenMetadata) {
+        throw Error(`No token ${l2TokenAddress} registered on ethereum chain ${l2ChainId}.`)
+    }
+    const tokenAddress = tokenMetadata.swapTokenAddress
+    if (!tokenAddress) {
+        throw Error(`No swap token address for ${l2TokenAddress} on ethereum chain ${l2ChainId}.`)
+    }
+
+    // Todo: Resolve inputs based on the token address and support non-system destination parachain
+    let transferImpl: L2TransferInterface = new ERC20FromL2ToAH()
     return transferImpl
 }
 

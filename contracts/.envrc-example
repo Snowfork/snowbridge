@@ -7,17 +7,16 @@ export RANDAO_COMMIT_DELAY=3
 export RANDAO_COMMIT_EXP=8
 export MINIMUM_REQUIRED_SIGNATURES=17
 export PREV_RANDAO=377
-export ValidatorSetSize=300
+export ValidatorSetSize=600
 
-## ParachainClient
-export PARAID=1000
+## L2 Integration
+PRIVATE_KEY=0xprivate_key_here
+SEPOLIA_CHAIN=sepolia
+BASE_CHAIN=base-sepolia
+SEPOLIA_RPC_URL=https://eth-sepolia.g.alchemy.com/v2/your-api-key-here
+BASE_RPC_URL=https://base-sepolia.g.alchemy.com/v2/your-api-key-here
+ETHERSCAN_API_KEY=your-etherscan-api-key-here
+VERIFIER=etherscan
 
-## OutboundQueue
-export RELAYER_FEE=100
-
-## InboundChannel
-export RELAYER_REWARD=100
-
-## NativeTokens
-export STATEMINT_LOCATION=0x09b636bf387d256bd35ebf301c2da34fdee53b42f6a4648ad126156034d4a2db
-export CREATE_TOKEN_FEE="1000000000000000000"
+export L1_SNOWBRIDGE_ADAPTOR_ADDRESS=0xA44626f738e4369f1774b84Fb28Fd10f5a73a76f
+export L2_SNOWBRIDGE_ADAPTOR_ADDRESS=0x7573a771677f30FD602722dB9F92c7a4429456A3

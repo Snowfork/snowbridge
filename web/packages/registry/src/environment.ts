@@ -62,6 +62,7 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
         ethereumChains: {
             "1": "https://ethereum-rpc.publicnode.com",
             "1284": "https://rpc.api.moonbeam.network",
+            "8453": "https://base-rpc.publicnode.com",
         },
         relaychainUrl: "https://polkadot-rpc.n.dwellir.com",
         parachains: {
@@ -100,6 +101,32 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
                 name: "OriginTrail TRAC",
             },
         },
+        l2Bridge: {
+            acrossAPIUrl: "https://app.across.to/api",
+            l1AdapterAddress: "0xA44626f738e4369f1774b84Fb28Fd10f5a73a76f",
+            l1FeeTokenAddress: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+            l1SwapQuoterAddress: "0x61fFE014bA17989E743c5F6cB21bF9697530B21e",
+            l2Chains: {
+                "8453": {
+                    adapterAddress: "0xdA2112AF731721824fDa8b3A6aD822aFA4f08B59",
+                    feeTokenAddress: "0x4200000000000000000000000000000000000006",
+                    swapRoutes: [
+                        // WETH
+                        {
+                            inputToken: "0x4200000000000000000000000000000000000006",
+                            outputToken: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                            swapFee: 0,
+                        },
+                        // USDC
+                        {
+                            inputToken: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+                            outputToken: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+                            swapFee: 500,
+                        },
+                    ],
+                },
+            },
+        },
     },
     westend_sepolia: {
         name: "westend_sepolia",
@@ -107,6 +134,7 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
         beaconApiUrl: "https://lodestar-sepolia.chainsafe.io",
         ethereumChains: {
             "11155111": "https://ethereum-sepolia-rpc.publicnode.com",
+            "84532": "https://base-sepolia-rpc.publicnode.com",
         },
         relaychainUrl: "wss://westend-rpc.n.dwellir.com",
         parachains: {
@@ -119,5 +147,31 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
         bridgeHubParaId: 1002,
         indexerGraphQlUrl:
             "https://snowbridge.squids.live/snowbridge-subsquid-westend@v1/api/graphql",
+        l2Bridge: {
+            acrossAPIUrl: "https://testnet.across.to/api",
+            l1AdapterAddress: "0x33Fe409089c8AAd8Af119a8Dacd1ea6be3A3cbd5",
+            l1FeeTokenAddress: "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14",
+            l1SwapQuoterAddress: "0x61fFE014bA17989E743c5F6cB21bF9697530B21e",
+            l2Chains: {
+                "84532": {
+                    adapterAddress: "0x2F846925814a5E6FB5795Af6e49158391F379440",
+                    feeTokenAddress: "0x4200000000000000000000000000000000000006",
+                    swapRoutes: [
+                        // WETH
+                        {
+                            inputToken: "0x4200000000000000000000000000000000000006",
+                            outputToken: "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+                            swapFee: 0,
+                        },
+                        // USDC
+                        {
+                            inputToken: "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
+                            outputToken: "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
+                            swapFee: 500,
+                        },
+                    ],
+                },
+            },
+        },
     },
 }

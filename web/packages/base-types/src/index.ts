@@ -14,6 +14,10 @@ export type ERC20Metadata = {
   foreignId?: string;
   // The gas cost of a local transfer, which involves unlocking for ENA and minting for PNA.
   deliveryGas?: bigint;
+  // For ERC-20 tokens on L2 chains that have a corresponding mapped L1 token address.
+  swapTokenAddress?: string;
+  // fee tier for uniswap call in basis points (e.g., 500 = 0.05%)
+  swapFee?: number;
 };
 
 export interface ERC20MetadataMap {
@@ -133,6 +137,8 @@ export type Environment = {
   parachains: {
     [paraId: string]: string;
   };
+  // Indexer
+  indexerGraphQlUrl: string;
   kusama?: {
     assetHubParaId: number;
     bridgeHubParaId: number;
@@ -142,8 +148,14 @@ export type Environment = {
   assetOverrides?: AssetOverrideMap;
   precompiles?: PrecompileMap;
   metadataOverrides?: ERC20MetadataOverrideMap;
-  // Indexer
-  indexerGraphQlUrl: string;
+  // L2 Forwarding
+  l2Bridge?: {
+    acrossAPIUrl: string;
+    l1AdapterAddress: string;
+    l1FeeTokenAddress: string;
+    l1SwapQuoterAddress: string;
+    l2Chains: { [l2ChainId: number]: L2ForwardMetadata };
+  };
 };
 
 export type SourceType = "substrate" | "ethereum";
@@ -232,3 +244,15 @@ export interface PNAMap {
     ethereumlocation: any;
   };
 }
+
+export type AssetSwapRoute = {
+  inputToken: string;
+  outputToken: string;
+  swapFee: number; // fee tier for uniswap call in basis points (e.g., 500 = 0.05%)
+};
+
+export type L2ForwardMetadata = {
+  adapterAddress: string;
+  feeTokenAddress: string;
+  swapRoutes: AssetSwapRoute[];
+};

@@ -239,6 +239,9 @@ importers:
       '@typescript-eslint/parser':
         specifier: 8.45.0
         version: 8.45.0(eslint@9.37.0)(typescript@5.9.3)
+      dotenv:
+        specifier: ^17.2.3
+        version: 17.2.3
       eslint:
         specifier: 9.37.0
         version: 9.37.0

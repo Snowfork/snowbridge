@@ -2,7 +2,7 @@ import { AbstractProvider } from "ethers"
 import { ApiPromise } from "@polkadot/api"
 import { IERC20__factory } from "@snowbridge/contract-types"
 import { ParachainBase } from "./parachains/parachainBase"
-import { Asset } from "@snowbridge/base-types"
+import { Asset, AssetRegistry } from "@snowbridge/base-types"
 
 export const ETHER_TOKEN_ADDRESS = "0x0000000000000000000000000000000000000000"
 
@@ -91,4 +91,21 @@ export async function validateAccount(
         accountMaxConsumers:
             beneficiaryAccount.consumers >= (maxConsumers ?? 63n) && beneficiaryTokenBalance === 0n,
     }
+}
+
+export function findL2TokenAddress(
+    registry: AssetRegistry,
+    l2ChainId: number,
+    tokenAddress: string,
+): string | undefined {
+    const l2Chain = registry.ethereumChains[l2ChainId]
+    if (!l2Chain) {
+        return undefined
+    }
+    for (const [l2TokenAddress, asset] of Object.entries(l2Chain.assets)) {
+        if (asset.swapTokenAddress?.toLowerCase() === tokenAddress.toLowerCase()) {
+            return l2TokenAddress
+        }
+    }
+    return undefined
 }

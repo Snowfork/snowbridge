@@ -1,3 +1,4 @@
+import "dotenv/config"
 import {
     AssetOverrideMap,
     AssetRegistry,
@@ -8,6 +9,7 @@ import {
     ERC20MetadataOverrideMap,
     EthereumChain,
     KusamaConfig,
+    L2ForwardMetadata,
     Parachain,
     ParachainMap,
     PNAMap,
@@ -37,6 +39,7 @@ async function buildRegistry(environment: Environment): Promise<AssetRegistry> {
         metadataOverrides,
         kusama,
         name,
+        l2Bridge,
     } = environment
 
     let relayInfo: ChainProperties
@@ -161,6 +164,7 @@ async function buildRegistry(environment: Environment): Promise<AssetRegistry> {
                 paras,
                 precompiles ?? {},
                 metadataOverrides ?? {},
+                l2Bridge?.l2Chains ?? {},
             )
         }),
     )) {
@@ -409,6 +413,7 @@ async function indexEthChain(
     parachains: ParachainMap,
     precompiles: PrecompileMap,
     metadataOverrides: ERC20MetadataOverrideMap,
+    l2Chains: { [l2ChainId: number]: L2ForwardMetadata },
 ): Promise<EthereumChain> {
     const id = networkName !== "unknown" ? networkName : undefined
     if (networkChainId == ethChainId) {
@@ -470,6 +475,29 @@ async function indexEthChain(
             assets,
             id: id ?? `chain_${networkChainId}`,
             baseDeliveryGas: 120_000n,
+        }
+    } else if (networkChainId in l2Chains) {
+        const assets: ERC20MetadataMap = {}
+        for (const route of l2Chains[networkChainId].swapRoutes) {
+            let asset = await assetErc20Metadata(provider, route.inputToken)
+            assets[route.inputToken] = {
+                ...asset,
+                swapTokenAddress: route.outputToken,
+                swapFee: route.swapFee,
+            }
+        }
+        assets["0x0000000000000000000000000000000000000000"] = {
+            token: "0x0000000000000000000000000000000000000000",
+            name: "Ether",
+            symbol: "Ether",
+            decimals: 18,
+            swapTokenAddress: "0x0000000000000000000000000000000000000000",
+            swapFee: 0,
+        }
+        return {
+            chainId: networkChainId,
+            assets,
+            id: id ?? `l2_${networkChainId}`,
         }
     } else {
         let evmParachainChain: Parachain | undefined

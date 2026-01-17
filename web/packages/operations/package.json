@@ -65,7 +65,17 @@
     "transferWndToAHV2": "npx ts-node src/transfer_from_e2p_v2.ts 1000 WND 1000000000",
     "transferEtherToPenpalV2": "npx ts-node src/transfer_from_e2p_v2.ts 2000 Eth 100000000000000",
     "transferWndToPenpalV2": "npx ts-node src/transfer_from_e2p_v2.ts 2000 WND 1000000000",
-    "transactFromAHToEthereum": "npx ts-node src/transfer_from_p2e_v2_with_transact.ts 1000 Eth 100000000000000 0x31A6Dd971306bb72f2ffF771bF30b1B98dB8B2c5 0xf410fd0e0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000001e48656c6c6f2066726f6d20656e642075736572206f6e2057657374656e640000 0 1000000"
+    "transferUSDCToAHV2": "npx ts-node src/transfer_from_e2p_v2.ts 1000 USDC 100000",
+    "transferUSDCFromL2ToAH": "npx ts-node src/transfer_from_l2_to_polkadot_wrapper.ts 84532 1000 USDC 110000",
+    "transferUSDCFromAHToL2": "npx ts-node src/transfer_from_polkadot_to_l2_wrapper.ts 1000 84532 USDC 110000",
+    "transferEtherFromL2ToAH": "npx ts-node src/transfer_from_l2_to_polkadot_wrapper.ts 84532 1000 Eth 1000000000000000",
+    "transferEtherFromAHToL2": "npx ts-node src/transfer_from_polkadot_to_l2_wrapper.ts 1000 84532 Eth 1000000000000000",
+    "transferUSDCFromL2ToAH-mainnet": "npx ts-node src/transfer_from_l2_to_polkadot_wrapper.ts 8453 1000 USDC 1100000",
+    "transferEtherFromL2ToAH-mainnet": "npx ts-node src/transfer_from_l2_to_polkadot_wrapper.ts 8453 1000 Eth 1000000000000000",
+    "transferUSDCFromAHToL2-mainnet": "npx ts-node src/transfer_from_polkadot_to_l2_wrapper.ts 1000 8453 USDC 1100000",
+    "transferEtherFromAHToL2-mainnet": "npx ts-node src/transfer_from_polkadot_to_l2_wrapper.ts 1000 8453 Eth 1000000000000000",
+    "transferWethFromL2ToAH-mainnet": "npx ts-node src/transfer_from_l2_to_polkadot_wrapper.ts 8453 1000 WETH 1000000000000000",
+    "transferWethFromAHToL2-mainnet": "npx ts-node src/transfer_from_polkadot_to_l2_wrapper.ts 1000 8453 WETH 1000000000000000"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^8.45.0",

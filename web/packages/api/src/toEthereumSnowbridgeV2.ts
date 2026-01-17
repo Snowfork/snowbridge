@@ -16,7 +16,9 @@ import {
 } from "./toEthereum_v2"
 import { PNAFromAH } from "./transfers/toEthereum/pnaFromAH"
 import { TransferInterface } from "./transfers/toEthereum/transferInterface"
+import { TransferInterface as TransferInterfaceToL2 } from "./transfers/polkadotToL2/transferInterface"
 import { ERC20FromAH } from "./transfers/toEthereum/erc20FromAH"
+import { ERC20FromAH as ERC20FromAHToL2 } from "./transfers/polkadotToL2/erc20ToL2"
 import { PNAFromParachain } from "./transfers/toEthereum/pnaFromParachain"
 import { ERC20FromParachain } from "./transfers/toEthereum/erc20FromParachain"
 import {
@@ -31,10 +33,15 @@ import { BN, hexToU8a } from "@polkadot/util"
 import { padFeeByPercentage } from "./utils"
 import { paraImplementation } from "./parachains"
 import { Context } from "./index"
-import { ETHER_TOKEN_ADDRESS, getAssetHubConversionPalletSwap } from "./assets_v2"
+import {
+    ETHER_TOKEN_ADDRESS,
+    findL2TokenAddress,
+    getAssetHubConversionPalletSwap,
+} from "./assets_v2"
 import { getOperatingStatus } from "./status"
 import { AbstractProvider, ethers, Wallet, TransactionReceipt } from "ethers"
 import { CreateAgent } from "./registration/agent/createAgent"
+import { estimateFees } from "./across/api"
 
 export { ValidationKind, signAndSend } from "./toEthereum_v2"
 
@@ -59,6 +66,19 @@ export function createTransferImplementation(
             transferImpl = new ERC20FromParachain()
         }
     }
+    return transferImpl
+}
+
+export function createL2TransferImplementation(
+    sourceParaId: number,
+    registry: AssetRegistry,
+    tokenAddress: string,
+): TransferInterfaceToL2 {
+    // Todo: Support PNA transfers to L2
+    const { sourceAssetMetadata } = resolveInputs(registry, tokenAddress, sourceParaId)
+
+    let transferImpl = new ERC20FromAHToL2()
+
     return transferImpl
 }
 
@@ -189,7 +209,7 @@ export async function dryRunAssetHub(
     }
 }
 
-export const MaxWeight = { refTime: 15_000_000_000n, proofSize: 800_000 }
+export const MaxWeight = { refTime: 30_000_000_000n, proofSize: 1_000_000 }
 
 export const isFeeAllowed = (feeLocation: any, sourceParaId: number) => {
     return isRelaychainLocation(feeLocation) || isParachainNative(feeLocation, sourceParaId)
@@ -220,7 +240,10 @@ export const estimateEthereumExecutionFee = async (
     registry: AssetRegistry,
     sourceParaId: number,
     tokenAddress: string,
-    contractCall?: ContractCall,
+    options?: {
+        contractCall?: ContractCall
+        fillDeadlineBuffer?: bigint
+    },
 ): Promise<bigint> => {
     const ethereum = await context.ethereum()
     const { tokenErcMetadata } = resolveInputs(registry, tokenAddress, sourceParaId)
@@ -232,7 +255,7 @@ export const estimateEthereumExecutionFee = async (
         (feeData.gasPrice ?? 2_000_000_000n) *
         ((tokenErcMetadata.deliveryGas ?? 80_000n) +
             (ethereumChain.baseDeliveryGas ?? 120_000n) +
-            (contractCall?.gas ?? 0n))
+            (options?.contractCall?.gas ?? 0n))
     return ethereumExecutionFee
 }
 
@@ -247,7 +270,12 @@ export const estimateFeesFromAssetHub = async (
         defaultFee?: bigint
         feeTokenLocation?: any
         contractCall?: ContractCall
+        l2PadFeeByPercentage?: bigint
+        l2TransferGasLimit?: bigint
+        fillDeadlineBuffer?: bigint
     },
+    l2ChainId?: number,
+    tokenAmount?: bigint,
 ): Promise<DeliveryFee> => {
     const assetHub = await context.parachain(registry.assetHubParaId)
     const assetHubImpl = await paraImplementation(assetHub)
@@ -285,12 +313,32 @@ export const estimateFeesFromAssetHub = async (
         returnToSenderDeliveryFeeDOT +
         bridgeHubDeliveryFeeDOT
 
-    let ethereumExecutionFee = await estimateEthereumExecutionFee(
-        context,
-        registry,
-        registry.assetHubParaId,
-        tokenAddress,
-        options?.contractCall,
+    // Calculate L2 bridge fee
+    let l2BridgeFeeInL1Token: bigint = 0n
+    if (l2ChainId) {
+        let callInfo = await buildL2Call(
+            context,
+            registry,
+            tokenAddress,
+            l2ChainId,
+            tokenAmount!,
+            "0x0000000000000000000000000000000000000000",
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
+            options,
+        )
+        options = options || {}
+        options.contractCall = options.contractCall || callInfo.l2Call
+        l2BridgeFeeInL1Token = callInfo.fee
+    }
+    let ethereumExecutionFee = padFeeByPercentage(
+        await estimateEthereumExecutionFee(
+            context,
+            registry,
+            registry.assetHubParaId,
+            tokenAddress,
+            options,
+        ),
+        feePadPercentage,
     )
 
     // calculate the cost of swapping in native asset
@@ -331,6 +379,7 @@ export const estimateFeesFromAssetHub = async (
         ethereumExecutionFeeInNative,
         localExecutionFeeInNative,
         totalFeeInNative,
+        l2BridgeFeeInL1Token,
     }
 }
 
@@ -435,7 +484,7 @@ export const estimateFeesFromParachains = async (
         registry,
         sourceParaId,
         tokenAddress,
-        options?.contractCall,
+        options,
     )
 
     // calculate the cost of swapping in native asset
@@ -595,6 +644,20 @@ export const validateTransferFromAssetHub = async (
                 message:
                     "Contract call with invalid target address: " +
                     contractCall.target +
+                    " error: " +
+                    String(error),
+            })
+        }
+        try {
+            let agentAddress = await sourceAgentAddress(context, sourceParaId, sourceAccountHex)
+            console.log("Agent address for contract call validation:", agentAddress)
+        } catch (error) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.ContractCallAgentNotRegistered,
+                message:
+                    "Contract call cannot be performed because no agent is registered for source account: " +
+                    sourceAccountHex +
                     " error: " +
                     String(error),
             })
@@ -936,4 +999,112 @@ export async function sendAgentCreation(
         throw Error(`Transaction ${response.hash} not included.`)
     }
     return receipt
+}
+
+export async function buildL2Call(
+    context: Context,
+    registry: AssetRegistry,
+    tokenAddress: string,
+    l2ChainId: number,
+    tokenAmount: bigint,
+    destinationAddress: string,
+    topic: string,
+    options?: {
+        l2TransferGasLimit?: bigint
+        l2PadFeeByPercentage?: bigint
+        fillDeadlineBuffer?: bigint
+    },
+): Promise<{ fee: bigint; l2Call: ContractCall }> {
+    // Calculate fee with Across SDK
+    const l2TokenAddress = findL2TokenAddress(registry, l2ChainId, tokenAddress)
+    if (!l2TokenAddress) {
+        throw new Error("L2 token address not found")
+    }
+    const l1Adapter = context.l1Adapter()
+    let l1AdapterAddress = await l1Adapter.getAddress()
+    let l2BridgeFeeInL1Token: bigint
+    let l2Call: ContractCall
+    if (tokenAddress === ETHER_TOKEN_ADDRESS) {
+        let l1FeeTokenAddress = context.l1FeeTokenAddress()
+        let l2FeeTokenAddress = context.l2FeeTokenAddress(l2ChainId)
+        l2BridgeFeeInL1Token = padFeeByPercentage(
+            await estimateFees(
+                context.acrossApiUrl(),
+                l1FeeTokenAddress,
+                l2FeeTokenAddress,
+                registry.ethChainId,
+                l2ChainId,
+                tokenAmount,
+            ),
+            options?.l2PadFeeByPercentage ?? 33n,
+        )
+        let calldata = l1Adapter.interface.encodeFunctionData("depositNativeEther", [
+            {
+                inputToken: tokenAddress,
+                outputToken: l2TokenAddress,
+                inputAmount: tokenAmount,
+                outputAmount: tokenAmount - l2BridgeFeeInL1Token,
+                destinationChainId: l2ChainId,
+                fillDeadlineBuffer: options?.fillDeadlineBuffer ?? 600n,
+            },
+            destinationAddress,
+            topic,
+        ])
+        l2Call = {
+            target: l1AdapterAddress,
+            value: 0n,
+            gas: options?.l2TransferGasLimit || 500_000n,
+            calldata,
+        }
+    } else {
+        l2BridgeFeeInL1Token = padFeeByPercentage(
+            await estimateFees(
+                context.acrossApiUrl(),
+                tokenAddress,
+                l2TokenAddress,
+                registry.ethChainId,
+                l2ChainId,
+                tokenAmount,
+            ),
+            options?.l2PadFeeByPercentage ?? 33n,
+        )
+        let calldata = l1Adapter.interface.encodeFunctionData("depositToken", [
+            {
+                inputToken: tokenAddress,
+                outputToken: l2TokenAddress,
+                inputAmount: tokenAmount,
+                outputAmount: tokenAmount - l2BridgeFeeInL1Token,
+                destinationChainId: l2ChainId,
+                fillDeadlineBuffer: options?.fillDeadlineBuffer ?? 600n,
+            },
+            destinationAddress,
+            topic,
+        ])
+        l2Call = {
+            target: l1AdapterAddress,
+            value: 0n,
+            gas: options?.l2TransferGasLimit || 500_000n,
+            calldata,
+        }
+    }
+    return { l2Call, fee: l2BridgeFeeInL1Token }
+}
+
+export async function sourceAgentAddress(
+    context: Context,
+    parachainId: number,
+    sourceAccountHex: string,
+): Promise<string> {
+    const bridgeHub = await context.bridgeHub()
+    const gateway = context.gateway()
+    let sourceLocation = {
+        parents: 1,
+        interior: { x2: [{ parachain: parachainId }, { accountId32: { id: sourceAccountHex } }] },
+    }
+    let versionedLocation = bridgeHub.registry.createType("XcmVersionedLocation", {
+        v5: sourceLocation,
+    })
+    let agentID = (await bridgeHub.call.controlV2Api.agentId(versionedLocation)).toHex()
+    let agentAddress = await gateway.agentOf(agentID)
+    return agentAddress
 }

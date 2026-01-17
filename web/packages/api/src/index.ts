@@ -8,6 +8,12 @@ import {
     IGatewayV1__factory,
     IGatewayV2,
     IGatewayV2__factory,
+    ISwapQuoter,
+    ISwapQuoter__factory,
+    SnowbridgeL1Adaptor,
+    SnowbridgeL1Adaptor__factory,
+    SnowbridgeL2Adaptor,
+    SnowbridgeL2Adaptor__factory,
 } from "@snowbridge/contract-types"
 import { Environment } from "@snowbridge/base-types"
 
@@ -45,6 +51,9 @@ export class Context {
     #gateway?: IGatewayV1
     #gatewayV2?: IGatewayV2
     #beefyClient?: BeefyClient
+    #l1Adapter?: SnowbridgeL1Adaptor
+    #l1SwapQuoter?: ISwapQuoter
+    #l2Adapters: { [l2ChainId: number]: SnowbridgeL2Adaptor } = {}
 
     // Substrate
     #polkadotParachains: Parachains
@@ -218,21 +227,33 @@ export class Context {
         if (this.#gateway) {
             return this.#gateway
         }
-        return IGatewayV1__factory.connect(this.environment.gatewayContract, this.ethereum())
+        this.#gateway = IGatewayV1__factory.connect(
+            this.environment.gatewayContract,
+            this.ethereum(),
+        )
+        return this.#gateway
     }
 
     gatewayV2(): IGatewayV2 {
         if (this.#gatewayV2) {
             return this.#gatewayV2
         }
-        return IGatewayV2__factory.connect(this.environment.gatewayContract, this.ethereum())
+        this.#gatewayV2 = IGatewayV2__factory.connect(
+            this.environment.gatewayContract,
+            this.ethereum(),
+        )
+        return this.#gatewayV2
     }
 
     beefyClient(): BeefyClient {
         if (this.#beefyClient) {
             return this.#beefyClient
         }
-        return BeefyClient__factory.connect(this.environment.beefyContract, this.ethereum())
+        this.#beefyClient = BeefyClient__factory.connect(
+            this.environment.beefyContract,
+            this.ethereum(),
+        )
+        return this.#beefyClient
     }
 
     graphqlApiUrl(): string {
@@ -265,5 +286,72 @@ export class Context {
         for (const paraId of Object.keys(this.#kusamaParachains)) {
             await this.#kusamaParachains[Number(paraId)].disconnect()
         }
+    }
+
+    l1Adapter(): SnowbridgeL1Adaptor {
+        if (!this.environment.l2Bridge) {
+            throw new Error("L2 bridge configuration is missing.")
+        }
+        if (this.#l1Adapter) {
+            return this.#l1Adapter
+        }
+        this.#l1Adapter = SnowbridgeL1Adaptor__factory.connect(
+            this.environment.l2Bridge.l1AdapterAddress as string,
+            this.ethereum(),
+        )
+        return this.#l1Adapter
+    }
+
+    l1SwapQuoter(): ISwapQuoter {
+        if (!this.environment.l2Bridge) {
+            throw new Error("L2 bridge configuration is missing.")
+        }
+        if (this.#l1SwapQuoter) {
+            return this.#l1SwapQuoter
+        }
+        this.#l1SwapQuoter = ISwapQuoter__factory.connect(
+            this.environment.l2Bridge.l1SwapQuoterAddress as string,
+            this.ethereum(),
+        )
+        return this.#l1SwapQuoter
+    }
+
+    l1FeeTokenAddress(): string {
+        if (!this.environment.l2Bridge) {
+            throw new Error("L2 bridge configuration is missing.")
+        }
+        return this.environment.l2Bridge.l1FeeTokenAddress as string
+    }
+
+    l2Adapter(l2ChainId: number): SnowbridgeL2Adaptor {
+        if (!this.environment.l2Bridge) {
+            throw new Error("L2 bridge configuration is missing.")
+        }
+        if (this.#l2Adapters[l2ChainId]) {
+            return this.#l2Adapters[l2ChainId]
+        }
+        const adapter = SnowbridgeL2Adaptor__factory.connect(
+            this.environment.l2Bridge.l2Chains[l2ChainId].adapterAddress as string,
+            this.ethChain(l2ChainId),
+        )
+        this.#l2Adapters[l2ChainId] = adapter
+        return adapter
+    }
+
+    l2FeeTokenAddress(l2ChainId: number): string {
+        if (!this.environment.l2Bridge) {
+            throw new Error("L2 bridge configuration is missing.")
+        }
+        if (!this.environment.l2Bridge.l2Chains[l2ChainId]) {
+            throw new Error("L2 chain configuration is missing.")
+        }
+        return this.environment.l2Bridge.l2Chains[l2ChainId].feeTokenAddress as string
+    }
+
+    acrossApiUrl(): string {
+        if (!this.environment.l2Bridge) {
+            throw new Error("L2 bridge configuration is missing.")
+        }
+        return this.environment.l2Bridge.acrossAPIUrl as string
     }
 }
