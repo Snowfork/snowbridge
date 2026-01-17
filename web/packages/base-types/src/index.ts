@@ -152,7 +152,9 @@ export type Environment = {
   l2Bridge?: {
     acrossAPIUrl: string;
     l1AdapterAddress: string;
+    l1HandlerAddress: string;
     l1FeeTokenAddress: string;
+    l1SwapRouterAddress: string;
     l1SwapQuoterAddress: string;
     l2Chains: { [l2ChainId: number]: L2ForwardMetadata };
   };

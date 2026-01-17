@@ -2,6 +2,7 @@ import { AssetRegistry } from "@snowbridge/base-types"
 import { TransferInterface } from "./transferInterface"
 import { Context } from "../../index"
 import {
+    buildSwapCallData,
     calculateRelayerFee,
     claimerFromBeneficiary,
     claimerLocationToBytes,
@@ -217,7 +218,6 @@ export class ERC20ToAH implements TransferInterface {
 
         let tokenAddress =
             registry.ethereumChains?.[l2ChainId]?.assets[l2TokenAddress]?.swapTokenAddress
-        let swapFee = registry.ethereumChains?.[l2ChainId]?.assets[l2TokenAddress]?.swapFee
         if (!tokenAddress) {
             throw new Error("Token is not registered on Ethereum")
         }
@@ -297,10 +297,18 @@ export class ERC20ToAH implements TransferInterface {
                 destinationChainId: BigInt(registry.ethChainId),
                 fillDeadlineBuffer: options?.fillDeadlineBuffer ?? 600n,
             }
+            let swapCalldata = await buildSwapCallData(
+                context,
+                registry,
+                l2ChainId,
+                l2TokenAddress,
+                fee.assetHubExecutionFeeEther + fee.relayerFee,
+                fee.swapFeeInL1Token!,
+            )
             let swapParams: SwapParamsStruct = {
-                inputAmountForFee: fee.swapFeeInL1Token!,
-                poolFee: swapFee ?? 500,
-                sqrtPriceLimitX96: 0n, // Setting to 0 is fine because we already protect the swap using amountInMaximum
+                inputAmount: fee.swapFeeInL1Token!,
+                router: context.l1SwapRouterAddress(),
+                callData: swapCalldata,
             }
             tx = await l2Adapter
                 .getFunction("sendTokenAndCall")
