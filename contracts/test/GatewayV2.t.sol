@@ -1307,6 +1307,7 @@ contract GatewayV2Test is Test {
         MockGateway(address(gateway)).prank_registerNativeToken(token);
 
         uint128 tokenAmount = 1 ether;
+        uint128 halfAmount = tokenAmount / 2;
         vm.deal(assetHubAgent, tokenAmount);
         hoax(assetHubAgent);
         WETH9(payable(token)).deposit{value: tokenAmount}();
@@ -1315,21 +1316,21 @@ contract GatewayV2Test is Test {
         assertEq(IERC20(token).balanceOf(assetHubAgent), tokenAmount);
 
         // Create two commands:
-        // 1. UnlockNativeToken: Unlock asset to the AssetHub agent
+        // 1. UnlockNativeToken: Unlock asset to the relayer
         // 2. CallContracts: Three internal calls - approve, transfer tokens, then revert
 
-        // Command 1: UnlockNativeToken - unlock to assetHubAgent
+        // Command 1: UnlockNativeToken - unlock to relayer
         UnlockNativeTokenParams memory unlockParams =
-            UnlockNativeTokenParams({token: token, recipient: assetHubAgent, amount: tokenAmount});
+            UnlockNativeTokenParams({token: token, recipient: relayer, amount: halfAmount});
 
         // Command 2: CallContracts - three internal calls:
         // - First: approve HelloWorld to spend tokens from the agent
         // - Second: agent calls consumeToken to transfer tokens to HelloWorld
         // - Third: call revertUnauthorized which will fail
         bytes memory approveData =
-            abi.encodeWithSignature("approve(address,uint256)", address(helloWorld), tokenAmount);
+            abi.encodeWithSignature("approve(address,uint256)", address(helloWorld), halfAmount);
         bytes memory consumeData =
-            abi.encodeWithSignature("consumeToken(address,uint256)", token, tokenAmount);
+            abi.encodeWithSignature("consumeToken(address,uint256)", token, halfAmount);
         bytes memory revertData = abi.encodeWithSignature("revertUnauthorized()");
 
         CallContractParams[] memory callParams = new CallContractParams[](3);
@@ -1346,9 +1347,6 @@ contract GatewayV2Test is Test {
         commands[1] = CommandV2({
             kind: CommandKind.CallContracts, gas: 500_000, payload: abi.encode(callParams)
         });
-
-        // Fund agent with balance for gas
-        vm.deal(assetHubAgent, 1 ether);
 
         // Expect the CallContracts command to fail
         vm.expectEmit(true, false, false, true);
@@ -1372,11 +1370,18 @@ contract GatewayV2Test is Test {
                 relayerRewardAddress
             );
 
+        // Verify relayer received the unlocked tokens
+        assertEq(
+            IERC20(token).balanceOf(relayer),
+            halfAmount,
+            "Relayer should have received unlocked tokens"
+        );
+
         // Verify atomicity: since the third call failed, the first two calls should be reverted
         // The agent should still have all tokens (no transfer occurred)
         assertEq(
             IERC20(token).balanceOf(assetHubAgent),
-            tokenAmount,
+            halfAmount,
             "Agent should still have all tokens due to revert"
         );
         assertEq(
