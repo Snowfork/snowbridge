@@ -1298,5 +1298,92 @@ contract GatewayV2Test is Test {
             "HelloWorld should have received all tokens"
         );
     }
+
+    function testUnlockTokenThenCallContractsWithRevert() public {
+        bytes32 topic = keccak256("topic");
+
+        // Set up an ERC20 token (WETH) for the agent to work with
+        address token = address(new WETH9());
+        MockGateway(address(gateway)).prank_registerNativeToken(token);
+
+        uint128 tokenAmount = 1 ether;
+        vm.deal(assetHubAgent, tokenAmount);
+        hoax(assetHubAgent);
+        WETH9(payable(token)).deposit{value: tokenAmount}();
+
+        // Verify agent has the WETH
+        assertEq(IERC20(token).balanceOf(assetHubAgent), tokenAmount);
+
+        // Create two commands:
+        // 1. UnlockNativeToken: Unlock asset to the AssetHub agent
+        // 2. CallContracts: Three internal calls - approve, transfer tokens, then revert
+
+        // Command 1: UnlockNativeToken - unlock to assetHubAgent
+        UnlockNativeTokenParams memory unlockParams =
+            UnlockNativeTokenParams({token: token, recipient: assetHubAgent, amount: tokenAmount});
+
+        // Command 2: CallContracts - three internal calls:
+        // - First: approve HelloWorld to spend tokens from the agent
+        // - Second: agent calls consumeToken to transfer tokens to HelloWorld
+        // - Third: call revertUnauthorized which will fail
+        bytes memory approveData =
+            abi.encodeWithSignature("approve(address,uint256)", address(helloWorld), tokenAmount);
+        bytes memory consumeData =
+            abi.encodeWithSignature("consumeToken(address,uint256)", token, tokenAmount);
+        bytes memory revertData = abi.encodeWithSignature("revertUnauthorized()");
+
+        CallContractParams[] memory callParams = new CallContractParams[](3);
+        callParams[0] = CallContractParams({target: token, data: approveData, value: 0});
+        callParams[1] =
+            CallContractParams({target: address(helloWorld), data: consumeData, value: 0});
+        callParams[2] =
+            CallContractParams({target: address(helloWorld), data: revertData, value: 0});
+
+        CommandV2[] memory commands = new CommandV2[](2);
+        commands[0] = CommandV2({
+            kind: CommandKind.UnlockNativeToken, gas: 500_000, payload: abi.encode(unlockParams)
+        });
+        commands[1] = CommandV2({
+            kind: CommandKind.CallContracts, gas: 500_000, payload: abi.encode(callParams)
+        });
+
+        // Fund agent with balance for gas
+        vm.deal(assetHubAgent, 1 ether);
+
+        // Expect the CallContracts command to fail
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.CommandFailed(1, 1); // nonce 1, command index 1
+
+        // Expect InboundMessageDispatched to be emitted with success=false
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.InboundMessageDispatched(1, topic, false, relayerRewardAddress);
+
+        hoax(relayer, 1 ether);
+        IGatewayV2(address(gateway))
+            .v2_submit(
+                InboundMessageV2({
+                    origin: Constants.ASSET_HUB_AGENT_ID,
+                    nonce: 1,
+                    topic: topic,
+                    commands: commands
+                }),
+                proof,
+                makeMockProof(),
+                relayerRewardAddress
+            );
+
+        // Verify atomicity: since the third call failed, the first two calls should be reverted
+        // The agent should still have all tokens (no transfer occurred)
+        assertEq(
+            IERC20(token).balanceOf(assetHubAgent),
+            tokenAmount,
+            "Agent should still have all tokens due to revert"
+        );
+        assertEq(
+            IERC20(token).balanceOf(address(helloWorld)),
+            0,
+            "HelloWorld should have no tokens due to revert"
+        );
+    }
 }
 
