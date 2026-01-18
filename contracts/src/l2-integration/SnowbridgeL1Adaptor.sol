@@ -10,7 +10,6 @@ import {DepositParams, Instructions, Call} from "./Types.sol";
 contract SnowbridgeL1Adaptor {
     using SafeERC20 for IERC20;
     ISpokePool public immutable SPOKE_POOL;
-    IMessageHandler public immutable MULTI_CALL_HANDLER;
     WETH9 public immutable L1_WETH9;
     WETH9 public immutable L2_WETH9;
 
@@ -20,16 +19,16 @@ contract SnowbridgeL1Adaptor {
 
     event DepositCallInvoked(bytes32 topic, uint256 depositId);
 
-    constructor(address _spokePool, address _handler, address _l1weth9, address _l2weth9) {
+    constructor(address _spokePool, address _l1weth9, address _l2weth9) {
         SPOKE_POOL = ISpokePool(_spokePool);
-        MULTI_CALL_HANDLER = IMessageHandler(_handler);
         L1_WETH9 = WETH9(payable(_l1weth9));
         L2_WETH9 = WETH9(payable(_l2weth9));
     }
 
-    // Send ERC20 token on L1 to L2, the fee (params.inputAmount - params.outputAmount) should be calculated off-chain
+    // Send ERC20 token on L1 to L2 via the Across protocol.
+    // The fee (params.inputAmount - params.outputAmount) should be calculated off-chain
     // following https://docs.across.to/reference/api-reference#get-swap-approval
-    // The function assumes that tokens have been pre-funded and transferred to this contract via Snowbridge unlock prior to invocation.
+    // Tokens are pulled from the caller via safeTransferFrom.
     function depositToken(DepositParams calldata params, address recipient, bytes32 topic) public {
         require(params.inputToken != address(0), "Input token cannot be zero address");
         checkInputs(params, recipient);
@@ -63,26 +62,28 @@ contract SnowbridgeL1Adaptor {
         emit DepositCallInvoked(topic, depositId);
     }
 
-    // Send native Ether on L1 to L2, the function assumes that native ETH has been pre-funded
-    // and transferred to this contract via Snowbridge unlock prior to invocation.
-    function depositNativeEther(DepositParams calldata params, address recipient, bytes32 topic)
-        public
-        payable
-    {
+    // Send native Ether on L1 to L2 by first wrapping it to WETH, then depositing via SPOKE_POOL.
+    function depositNativeEther(
+        DepositParams calldata params,
+        address payable recipient,
+        bytes32 topic
+    ) public payable {
         require(
             params.inputToken == address(0),
             "Input token must be zero address for native ETH deposits"
         );
         checkInputs(params, recipient);
 
-        // Prepare the message (encoded instructions) to be executed on L2 upon deposit fulfillment
-        // (constructed via helper to avoid 'stack too deep' compiler errors)
-        bytes memory message = _encodeNativeEtherInstructions(recipient, params.outputAmount);
-        SPOKE_POOL.deposit{
-            value: params.inputAmount
-        }(
-            bytes32(uint256(uint160(recipient))),
-            bytes32(uint256(uint160(address(MULTI_CALL_HANDLER)))),
+        // Wrap native ETH to L1 WETH
+        L1_WETH9.deposit{value: params.inputAmount}();
+
+        // Approve SPOKE_POOL to spend the wrapped WETH
+        IERC20(address(L1_WETH9)).forceApprove(address(SPOKE_POOL), params.inputAmount);
+
+        // Deposit WETH via SPOKE_POOL
+        SPOKE_POOL.deposit(
+            bytes32(uint256(uint160(address(recipient)))),
+            bytes32(uint256(uint160(address(recipient)))),
             bytes32(uint256(uint160(address(L1_WETH9)))),
             bytes32(uint256(uint160(address(L2_WETH9)))),
             params.inputAmount,
@@ -92,13 +93,13 @@ contract SnowbridgeL1Adaptor {
             uint32(block.timestamp), // quoteTimestamp set to current block timestamp
             uint32(block.timestamp + params.fillDeadlineBuffer), // fillDeadline set to fillDeadlineBuffer seconds in the future
             0, // exclusivityDeadline, zero means no exclusivity
-            message
+            "" // empty message
         );
 
-        // Forward any remaining balance of native Ether back to the recipient to avoid trapping funds
+        // Forward any remaining balance back to the recipient to avoid trapping funds
         uint256 remaining = address(this).balance;
         if (remaining > 0) {
-            (bool success,) = payable(recipient).call{value: remaining}("");
+            (bool success,) = recipient.call{value: remaining}("");
             require(success, "Failed to transfer remaining ether to recipient");
         }
 
@@ -113,23 +114,6 @@ contract SnowbridgeL1Adaptor {
         require(params.fillDeadlineBuffer > 0, "Fill deadline buffer must be greater than zero");
         require(params.destinationChainId != 0, "Destination chain ID cannot be zero");
         require(recipient != address(0), "Recipient cannot be zero address");
-    }
-
-    function _encodeNativeEtherInstructions(address recipient, uint256 outputAmount)
-        internal
-        view
-        returns (bytes memory)
-    {
-        Call[] memory calls = new Call[](2);
-        calls[0] = Call({
-            target: address(L2_WETH9),
-            callData: abi.encodeCall(L2_WETH9.withdraw, (outputAmount)),
-            value: 0
-        });
-        calls[1] = Call({target: recipient, callData: "", value: outputAmount});
-        Instructions memory instructions =
-            Instructions({calls: calls, fallbackRecipient: recipient});
-        return abi.encode(instructions);
     }
 
     receive() external payable {}

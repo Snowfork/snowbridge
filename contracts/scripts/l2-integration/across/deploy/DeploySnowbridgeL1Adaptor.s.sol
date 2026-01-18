@@ -42,9 +42,8 @@ contract DeploySnowbridgeL1Adaptor is Script {
             revert("Unsupported L1 network");
         }
 
-        snowbridgeL1Adaptor = new SnowbridgeL1Adaptor(
-            SPOKE_POOL_ADDRESS, BASE_MULTI_CALL_HANDLER_ADDRESS, WETH9_ADDRESS, BASE_WETH9_ADDRESS
-        );
+        snowbridgeL1Adaptor =
+            new SnowbridgeL1Adaptor(SPOKE_POOL_ADDRESS, WETH9_ADDRESS, BASE_WETH9_ADDRESS);
         console.log("Snowbridge L1 Adaptor deployed at:", address(snowbridgeL1Adaptor));
         return;
     }
