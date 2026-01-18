@@ -19,6 +19,7 @@ contract SnowbridgeL1Adaptor {
      **************************************/
 
     event DepositCallInvoked(bytes32 topic, uint256 depositId);
+    event DepositCallFailed(bytes32 topic);
 
     constructor(address _spokePool, address _handler, address _l1weth9, address _l2weth9) {
         SPOKE_POOL = ISpokePool(_spokePool);
@@ -29,45 +30,35 @@ contract SnowbridgeL1Adaptor {
 
     // Send ERC20 token on L1 to L2, the fee (params.inputAmount - params.outputAmount) should be calculated off-chain
     // following https://docs.across.to/reference/api-reference#get-swap-approval
-    // The function assumes that tokens have been pre-funded and transferred to this contract via Snowbridge unlock prior to invocation.
+    // The call requires pre-funding of the contract with the input tokens.
     function depositToken(DepositParams calldata params, address recipient, bytes32 topic) public {
         require(params.inputToken != address(0), "Input token cannot be zero address");
         checkInputs(params, recipient);
 
-        // Pull tokens from the caller to avoid relying on pre-funding and then approve SpokePool
-        IERC20(params.inputToken).safeTransferFrom(msg.sender, address(this), params.inputAmount);
         IERC20(params.inputToken).forceApprove(address(SPOKE_POOL), params.inputAmount);
 
-        SPOKE_POOL.deposit(
-            bytes32(uint256(uint160(recipient))),
-            bytes32(uint256(uint160(recipient))),
-            bytes32(uint256(uint160(params.inputToken))),
-            bytes32(uint256(uint160(params.outputToken))),
-            params.inputAmount,
-            params.outputAmount,
-            params.destinationChainId,
-            bytes32(0), // exclusiveRelayer, zero means any relayer can fill
-            uint32(block.timestamp), // quoteTimestamp set to current block timestamp
-            uint32(block.timestamp + params.fillDeadlineBuffer), // fillDeadline set to fillDeadlineBuffer seconds in the future
-            0, // exclusivityDeadline, zero means no exclusivity
-            "" // empty message
-        );
+        // Build payload and perform low-level call
+        bytes memory payloadToken = _encodeDepositTokenPayload(params, recipient);
+        (bool depositSucceeded,) = address(SPOKE_POOL).call(payloadToken);
 
-        // Forward any remaining balance of the input token back to the recipient to avoid trapping funds
+        // Always forward any remaining balance of the input token back to the recipient to avoid trapping funds
         uint256 remaining = IERC20(params.inputToken).balanceOf(address(this));
         if (remaining > 0) {
             IERC20(params.inputToken).safeTransfer(recipient, remaining);
         }
 
-        uint256 depositId = SPOKE_POOL.numberOfDeposits() - 1;
-        emit DepositCallInvoked(topic, depositId);
+        if (depositSucceeded) {
+            uint256 depositId = SPOKE_POOL.numberOfDeposits() - 1;
+            emit DepositCallInvoked(topic, depositId);
+        } else {
+            emit DepositCallFailed(topic);
+        }
     }
 
-    // Send native Ether on L1 to L2, the function assumes that native ETH has been pre-funded
-    // and transferred to this contract via Snowbridge unlock prior to invocation.
+    // Send native Ether on L1 to L2. Native ETH is sent with the transaction via msg.value;
+    // The call requires pre-funding of the contract with native Ether.
     function depositNativeEther(DepositParams calldata params, address recipient, bytes32 topic)
         public
-        payable
     {
         require(
             params.inputToken == address(0),
@@ -78,32 +69,23 @@ contract SnowbridgeL1Adaptor {
         // Prepare the message (encoded instructions) to be executed on L2 upon deposit fulfillment
         // (constructed via helper to avoid 'stack too deep' compiler errors)
         bytes memory message = _encodeNativeEtherInstructions(recipient, params.outputAmount);
-        SPOKE_POOL.deposit{
-            value: params.inputAmount
-        }(
-            bytes32(uint256(uint160(recipient))),
-            bytes32(uint256(uint160(address(MULTI_CALL_HANDLER)))),
-            bytes32(uint256(uint160(address(L1_WETH9)))),
-            bytes32(uint256(uint160(address(L2_WETH9)))),
-            params.inputAmount,
-            params.outputAmount,
-            params.destinationChainId,
-            bytes32(0), // exclusiveRelayer, zero means any relayer can fill
-            uint32(block.timestamp), // quoteTimestamp set to current block timestamp
-            uint32(block.timestamp + params.fillDeadlineBuffer), // fillDeadline set to fillDeadlineBuffer seconds in the future
-            0, // exclusivityDeadline, zero means no exclusivity
-            message
-        );
+        bytes memory payloadNative = _encodeDepositNativePayload(params, recipient, message);
+        (bool depositSucceeded,) =
+            address(SPOKE_POOL).call{value: params.inputAmount}(payloadNative);
 
-        // Forward any remaining balance of native Ether back to the recipient to avoid trapping funds
+        // Always forward any remaining balance of native Ether back to the recipient to avoid trapping funds
         uint256 remaining = address(this).balance;
         if (remaining > 0) {
             (bool success,) = payable(recipient).call{value: remaining}("");
             require(success, "Failed to transfer remaining ether to recipient");
         }
 
-        uint256 depositId = SPOKE_POOL.numberOfDeposits() - 1;
-        emit DepositCallInvoked(topic, depositId);
+        if (depositSucceeded) {
+            uint256 depositId = SPOKE_POOL.numberOfDeposits() - 1;
+            emit DepositCallInvoked(topic, depositId);
+        } else {
+            emit DepositCallFailed(topic);
+        }
     }
 
     function checkInputs(DepositParams calldata params, address recipient) internal pure {
@@ -133,4 +115,50 @@ contract SnowbridgeL1Adaptor {
     }
 
     receive() external payable {}
+
+    // Build payload for token deposit call
+    function _encodeDepositTokenPayload(DepositParams calldata params, address recipient)
+        internal
+        view
+        returns (bytes memory)
+    {
+        return abi.encodeWithSelector(
+            ISpokePool.deposit.selector,
+            bytes32(uint256(uint160(recipient))),
+            bytes32(uint256(uint160(recipient))),
+            bytes32(uint256(uint160(params.inputToken))),
+            bytes32(uint256(uint160(params.outputToken))),
+            params.inputAmount,
+            params.outputAmount,
+            params.destinationChainId,
+            bytes32(0),
+            uint32(block.timestamp),
+            uint32(block.timestamp + params.fillDeadlineBuffer),
+            0,
+            bytes("")
+        );
+    }
+
+    // Build payload for native deposit call
+    function _encodeDepositNativePayload(
+        DepositParams calldata params,
+        address recipient,
+        bytes memory message
+    ) internal view returns (bytes memory) {
+        return abi.encodeWithSelector(
+            ISpokePool.deposit.selector,
+            bytes32(uint256(uint160(recipient))),
+            bytes32(uint256(uint160(address(MULTI_CALL_HANDLER)))),
+            bytes32(uint256(uint160(address(L1_WETH9)))),
+            bytes32(uint256(uint160(address(L2_WETH9)))),
+            params.inputAmount,
+            params.outputAmount,
+            params.destinationChainId,
+            bytes32(0),
+            uint32(block.timestamp),
+            uint32(block.timestamp + params.fillDeadlineBuffer),
+            0,
+            message
+        );
+    }
 }
