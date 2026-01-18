@@ -10,7 +10,6 @@ import {DepositParams, Instructions, Call} from "./Types.sol";
 contract SnowbridgeL1Adaptor {
     using SafeERC20 for IERC20;
     ISpokePool public immutable SPOKE_POOL;
-    IMessageHandler public immutable MULTI_CALL_HANDLER;
     WETH9 public immutable L1_WETH9;
     WETH9 public immutable L2_WETH9;
 
@@ -23,7 +22,6 @@ contract SnowbridgeL1Adaptor {
 
     constructor(address _spokePool, address _handler, address _l1weth9, address _l2weth9) {
         SPOKE_POOL = ISpokePool(_spokePool);
-        MULTI_CALL_HANDLER = IMessageHandler(_handler);
         L1_WETH9 = WETH9(payable(_l1weth9));
         L2_WETH9 = WETH9(payable(_l2weth9));
     }
@@ -65,10 +63,7 @@ contract SnowbridgeL1Adaptor {
         );
         checkInputs(params, recipient);
 
-        // Prepare the message (encoded instructions) to be executed on L2 upon deposit fulfillment
-        // (constructed via helper to avoid 'stack too deep' compiler errors)
-        bytes memory message = _encodeNativeEtherInstructions(recipient, params.outputAmount);
-        bytes memory payloadNative = _encodeDepositNativePayload(params, recipient, message);
+        bytes memory payloadNative = _encodeDepositNativePayload(params, recipient);
         (bool depositSucceeded,) =
             address(SPOKE_POOL).call{value: params.inputAmount}(payloadNative);
 
@@ -96,25 +91,6 @@ contract SnowbridgeL1Adaptor {
         require(recipient != address(0), "Recipient cannot be zero address");
     }
 
-    function _encodeNativeEtherInstructions(address recipient, uint256 outputAmount)
-        internal
-        view
-        returns (bytes memory)
-    {
-        Call[] memory calls = new Call[](2);
-        calls[0] = Call({
-            target: address(L2_WETH9),
-            callData: abi.encodeCall(L2_WETH9.withdraw, (outputAmount)),
-            value: 0
-        });
-        calls[1] = Call({target: recipient, callData: "", value: outputAmount});
-        Instructions memory instructions =
-            Instructions({calls: calls, fallbackRecipient: recipient});
-        return abi.encode(instructions);
-    }
-
-    receive() external payable {}
-
     // Build payload for token deposit call
     function _encodeDepositTokenPayload(DepositParams calldata params, address recipient)
         internal
@@ -139,15 +115,15 @@ contract SnowbridgeL1Adaptor {
     }
 
     // Build payload for native deposit call
-    function _encodeDepositNativePayload(
-        DepositParams calldata params,
-        address recipient,
-        bytes memory message
-    ) internal view returns (bytes memory) {
+    function _encodeDepositNativePayload(DepositParams calldata params, address recipient)
+        internal
+        view
+        returns (bytes memory)
+    {
         return abi.encodeWithSelector(
             ISpokePool.deposit.selector,
             bytes32(uint256(uint160(recipient))),
-            bytes32(uint256(uint160(address(MULTI_CALL_HANDLER)))),
+            bytes32(uint256(uint160(address(recipient)))),
             bytes32(uint256(uint160(address(L1_WETH9)))),
             bytes32(uint256(uint160(address(L2_WETH9)))),
             params.inputAmount,
@@ -157,7 +133,9 @@ contract SnowbridgeL1Adaptor {
             uint32(block.timestamp),
             uint32(block.timestamp + params.fillDeadlineBuffer),
             0,
-            message
+            bytes("")
         );
     }
+
+    receive() external payable {}
 }
