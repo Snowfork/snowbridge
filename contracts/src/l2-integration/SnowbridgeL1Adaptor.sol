@@ -33,6 +33,9 @@ contract SnowbridgeL1Adaptor {
     function depositToken(DepositParams calldata params, address recipient, bytes32 topic) public {
         require(params.inputToken != address(0), "Input token cannot be zero address");
         checkInputs(params, recipient);
+
+        // Pull tokens from the caller to avoid relying on pre-funding and then approve SpokePool
+        IERC20(params.inputToken).safeTransferFrom(msg.sender, address(this), params.inputAmount);
         IERC20(params.inputToken).forceApprove(address(SPOKE_POOL), params.inputAmount);
 
         SPOKE_POOL.deposit(
@@ -49,7 +52,13 @@ contract SnowbridgeL1Adaptor {
             0, // exclusivityDeadline, zero means no exclusivity
             "" // empty message
         );
-        // Emit event with the depositId of the deposit
+
+        // Forward any remaining balance of the input token back to the recipient to avoid trapping funds
+        uint256 remaining = IERC20(params.inputToken).balanceOf(address(this));
+        if (remaining > 0) {
+            IERC20(params.inputToken).safeTransfer(recipient, remaining);
+        }
+
         uint256 depositId = SPOKE_POOL.numberOfDeposits() - 1;
         emit DepositCallInvoked(topic, depositId);
     }
