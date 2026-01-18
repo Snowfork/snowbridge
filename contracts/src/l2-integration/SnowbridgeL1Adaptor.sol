@@ -94,6 +94,14 @@ contract SnowbridgeL1Adaptor {
             0, // exclusivityDeadline, zero means no exclusivity
             message
         );
+
+        // Forward any remaining balance of native Ether back to the recipient to avoid trapping funds
+        uint256 remaining = address(this).balance;
+        if (remaining > 0) {
+            (bool success,) = payable(recipient).call{value: remaining}("");
+            require(success, "Failed to transfer remaining ether to recipient");
+        }
+
         uint256 depositId = SPOKE_POOL.numberOfDeposits() - 1;
         emit DepositCallInvoked(topic, depositId);
     }

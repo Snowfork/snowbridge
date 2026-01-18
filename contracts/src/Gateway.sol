@@ -209,9 +209,9 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
                 success = false;
             }
         } else if (message.command == CommandV1.MintForeignToken) {
-            try Gateway(this).v1_handleMintForeignToken{gas: maxDispatchGas}(
-                message.channelID, message.params
-            ) {} catch {
+            try Gateway(this)
+            .v1_handleMintForeignToken{gas: maxDispatchGas}(message.channelID, message.params) {}
+            catch {
                 success = false;
             }
         } else {
@@ -510,15 +510,17 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         HandlersV2.callContract(origin, AGENT_EXECUTOR, data);
     }
 
+    // Call multiple arbitrary contract functions
+    function v2_handleCallContracts(bytes32 origin, bytes calldata data) external onlySelf {
+        HandlersV2.callContracts(origin, AGENT_EXECUTOR, data);
+    }
+
     /**
      * APIv2 Internal functions
      */
 
     // Internal helper to dispatch a single command
-    function _dispatchCommand(CommandV2 calldata command, bytes32 origin)
-        internal
-        returns (bool)
-    {
+    function _dispatchCommand(CommandV2 calldata command, bytes32 origin) internal returns (bool) {
         // check that there is enough gas available to forward to the command handler
         if (gasleft() * 63 / 64 < command.gas + DISPATCH_OVERHEAD_GAS_V2) {
             revert IGatewayV2.InsufficientGasLimit();
@@ -551,6 +553,11 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
             }
         } else if (command.kind == CommandKind.CallContract) {
             try Gateway(this).v2_handleCallContract{gas: command.gas}(origin, command.payload) {}
+            catch {
+                return false;
+            }
+        } else if (command.kind == CommandKind.CallContracts) {
+            try Gateway(this).v2_handleCallContracts{gas: command.gas}(origin, command.payload) {}
             catch {
                 return false;
             }

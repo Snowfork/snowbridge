@@ -319,6 +319,25 @@ contract GatewayV2Test is Test {
         return commands;
     }
 
+    function makeCallContractsCommand(uint256 value1, uint256 value2)
+        public
+        view
+        returns (CommandV2[] memory)
+    {
+        bytes memory data1 = abi.encodeWithSignature("sayHello(string)", "World");
+        bytes memory data2 = abi.encodeWithSignature("sayHello(string)", "Snowbridge");
+
+        CallContractParams[] memory params = new CallContractParams[](2);
+        params[0] = CallContractParams({target: address(helloWorld), data: data1, value: value1});
+        params[1] = CallContractParams({target: address(helloWorld), data: data2, value: value2});
+
+        bytes memory payload = abi.encode(params);
+
+        CommandV2[] memory commands = new CommandV2[](1);
+        commands[0] = CommandV2({kind: CommandKind.CallContracts, gas: 500_000, payload: payload});
+        return commands;
+    }
+
     /**
      * Message Verification
      */
@@ -465,8 +484,7 @@ contract GatewayV2Test is Test {
                 claimer: "",
                 value: 0.5 ether,
                 executionFee: 0.1 ether,
-                relayerFee: 0.4 ether
-            })
+                relayerFee: 0.4 ether})
         );
 
         hoax(user1);
@@ -496,9 +514,8 @@ contract GatewayV2Test is Test {
 
         vm.expectRevert();
         hoax(user1);
-        IGatewayV2(payable(address(gateway))).v2_sendMessage{value: 1 ether}(
-            "", assets, "", 0.1 ether, 0.4 ether
-        );
+        IGatewayV2(payable(address(gateway)))
+        .v2_sendMessage{value: 1 ether}("", assets, "", 0.1 ether, 0.4 ether);
 
         assertEq(feeToken.balanceOf(assetHubAgent), 0);
     }
@@ -611,6 +628,29 @@ contract GatewayV2Test is Test {
                     nonce: 1,
                     topic: topic,
                     commands: makeCallContractCommand(0.1 ether)
+                }),
+                proof,
+                makeMockProof(),
+                relayerRewardAddress
+            );
+    }
+
+    function testAgentCallContractsSuccess() public {
+        bytes32 topic = keccak256("topic");
+
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.InboundMessageDispatched(1, topic, true, relayerRewardAddress);
+
+        // fund the agent to forward value in both calls
+        vm.deal(assetHubAgent, 0.1 ether);
+        hoax(relayer, 1 ether);
+        IGatewayV2(address(gateway))
+            .v2_submit(
+                InboundMessageV2({
+                    origin: Constants.ASSET_HUB_AGENT_ID,
+                    nonce: 1,
+                    topic: topic,
+                    commands: makeCallContractsCommand(0.05 ether, 0.05 ether)
                 }),
                 proof,
                 makeMockProof(),
@@ -1184,4 +1224,79 @@ contract GatewayV2Test is Test {
         // message should be recorded as dispatched
         assertTrue(gw.v2_isDispatched(msgv.nonce));
     }
+
+    function testUnlockTokenThenCallContracts() public {
+        bytes32 topic = keccak256("topic");
+
+        // Set up an ERC20 token (WETH) for the agent to work with
+        address token = address(new WETH9());
+        MockGateway(address(gateway)).prank_registerNativeToken(token);
+
+        uint128 tokenAmount = 1 ether;
+        vm.deal(assetHubAgent, tokenAmount);
+        hoax(assetHubAgent);
+        WETH9(payable(token)).deposit{value: tokenAmount}();
+
+        // Verify agent has the WETH
+        assertEq(IERC20(token).balanceOf(assetHubAgent), tokenAmount);
+
+        // Create two commands:
+        // 1. UnlockNativeToken: Unlock asset to the AssetHub agent
+        // 2. CallContracts: Two internal calls - approve HelloWorld, then transfer tokens using consumeToken
+
+        // Command 1: UnlockNativeToken - unlock to assetHubAgent (no-op in this case since agent already has tokens)
+        UnlockNativeTokenParams memory unlockParams =
+            UnlockNativeTokenParams({token: token, recipient: assetHubAgent, amount: tokenAmount});
+
+        // Command 2: CallContracts - two internal calls:
+        // - First: approve HelloWorld to spend tokens from the agent
+        // - Second: agent calls consumeToken to transfer tokens to HelloWorld
+        bytes memory approveData =
+            abi.encodeWithSignature("approve(address,uint256)", address(helloWorld), tokenAmount);
+        bytes memory consumeData =
+            abi.encodeWithSignature("consumeToken(address,uint256)", token, tokenAmount);
+
+        CallContractParams[] memory callParams = new CallContractParams[](2);
+        callParams[0] = CallContractParams({target: token, data: approveData, value: 0});
+        callParams[1] =
+            CallContractParams({target: address(helloWorld), data: consumeData, value: 0});
+
+        CommandV2[] memory commands = new CommandV2[](2);
+        commands[0] = CommandV2({
+            kind: CommandKind.UnlockNativeToken, gas: 500_000, payload: abi.encode(unlockParams)
+        });
+        commands[1] = CommandV2({
+            kind: CommandKind.CallContracts, gas: 500_000, payload: abi.encode(callParams)
+        });
+
+        // Fund agent with balance for gas
+        vm.deal(assetHubAgent, 1 ether);
+
+        // Expect both commands to succeed
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.InboundMessageDispatched(1, topic, true, relayerRewardAddress);
+
+        hoax(relayer, 1 ether);
+        IGatewayV2(address(gateway))
+            .v2_submit(
+                InboundMessageV2({
+                    origin: Constants.ASSET_HUB_AGENT_ID,
+                    nonce: 1,
+                    topic: topic,
+                    commands: commands
+                }),
+                proof,
+                makeMockProof(),
+                relayerRewardAddress
+            );
+
+        // Verify the token flow: agent -> HelloWorld
+        assertEq(IERC20(token).balanceOf(assetHubAgent), 0, "Agent should have no tokens left");
+        assertEq(
+            IERC20(token).balanceOf(address(helloWorld)),
+            tokenAmount,
+            "HelloWorld should have received all tokens"
+        );
+    }
 }
+
