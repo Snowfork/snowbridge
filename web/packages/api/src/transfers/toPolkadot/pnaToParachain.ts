@@ -160,10 +160,12 @@ export class PNAToParachain implements TransferInterface {
             deliveryFeeInEther,
         )
 
-        const totalFeeInWei = assetHubExecutionFeeEther + relayerFee
+        // PayFees on AssetHub covers: execution + delivery to destination
+        const assetHubPayFeeEther = assetHubExecutionFeeEther + destinationDeliveryFeeEther
+        const totalFeeInWei = assetHubPayFeeEther + destinationExecutionFeeEther + relayerFee
         return {
             assetHubDeliveryFeeEther: deliveryFeeInEther,
-            assetHubExecutionFeeEther: assetHubExecutionFeeEther,
+            assetHubExecutionFeeEther: assetHubPayFeeEther,
             destinationDeliveryFeeEther: destinationDeliveryFeeEther,
             destinationExecutionFeeEther: destinationExecutionFeeEther,
             relayerFee: relayerFee,
@@ -406,9 +408,7 @@ export class PNAToParachain implements TransferInterface {
                     "Asset Hub does not support dry running of XCM. Transaction success cannot be confirmed.",
             })
         } else {
-            const assetHubFee =
-                transfer.input.fee.assetHubDeliveryFeeEther +
-                transfer.input.fee.assetHubExecutionFeeEther
+            const assetHubFee = transfer.input.fee.assetHubExecutionFeeEther
             const xcm = buildAssetHubPNAReceivedXcm(
                 assetHub.registry,
                 registry.ethChainId,

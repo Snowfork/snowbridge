@@ -39,8 +39,6 @@ export const transferToPolkadot = async (destParaId: number, symbol: string, amo
         throw Error(`No token found for ${symbol}`)
     }
 
-    const relayerFee = 100_000_000_000_000n // 0.000100000000000000 ETH (~ $.5)
-
     console.log("TOKEN_CONTRACT", TOKEN_CONTRACT)
     if (symbol.toLowerCase().startsWith("weth")) {
         console.log("# Deposit and Approve WETH")
@@ -81,7 +79,7 @@ export const transferToPolkadot = async (destParaId: number, symbol: string, amo
             registry,
             destParaId,
             ETHEREUM_ACCOUNT_PUBLIC,
-            POLKADOT_ACCOUNT_PUBLIC,
+            "0x460411e07f93dc4bc2b3a6cb67dad89ca26e8a54054d13916f74c982595c2e0e",
             TOKEN_CONTRACT,
             amount,
             fee,

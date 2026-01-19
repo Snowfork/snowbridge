@@ -175,10 +175,12 @@ export class ERC20ToParachain implements TransferInterface {
             deliveryFeeInEther,
         )
 
-        const totalFeeInWei = assetHubExecutionFeeEther + relayerFee
+        // PayFees on AssetHub covers: execution + delivery to destination
+        const assetHubPayFeeEther = assetHubExecutionFeeEther + destinationDeliveryFeeEther
+        const totalFeeInWei = assetHubPayFeeEther + destinationExecutionFeeEther + relayerFee
         return {
             assetHubDeliveryFeeEther: deliveryFeeInEther,
-            assetHubExecutionFeeEther: assetHubExecutionFeeEther,
+            assetHubExecutionFeeEther: assetHubPayFeeEther,
             destinationDeliveryFeeEther: destinationDeliveryFeeEther,
             destinationExecutionFeeEther: destinationExecutionFeeEther,
             relayerFee: relayerFee,
@@ -446,9 +448,7 @@ export class ERC20ToParachain implements TransferInterface {
             })
         } else {
             // build asset hub packet and dryRun
-            const assetHubFee =
-                transfer.input.fee.assetHubDeliveryFeeEther +
-                transfer.input.fee.assetHubExecutionFeeEther
+            const assetHubFee = transfer.input.fee.assetHubExecutionFeeEther
 
             let xcm
             if (isDOT(transfer.input.fee.feeAsset)) {
