@@ -20,7 +20,7 @@ contract SnowbridgeL1Adaptor {
     event DepositCallInvoked(bytes32 topic, uint256 depositId);
     event DepositCallFailed(bytes32 topic);
 
-    constructor(address _spokePool, address _handler, address _l1weth9, address _l2weth9) {
+    constructor(address _spokePool, address _l1weth9, address _l2weth9) {
         SPOKE_POOL = ISpokePool(_spokePool);
         L1_WETH9 = WETH9(payable(_l1weth9));
         L2_WETH9 = WETH9(payable(_l2weth9));

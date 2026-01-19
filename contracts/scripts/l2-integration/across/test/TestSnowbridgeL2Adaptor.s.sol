@@ -88,9 +88,9 @@ contract TestSnowbridgeL2Adaptor is Script {
                 )
             });
         } else if (keccak256(bytes(vm.envString("L1_NETWORK"))) == keccak256(bytes("sepolia"))) {
-            uint256 inputAmount = 10_000_000; // 10.0 USDC
+            uint256 inputAmount = 25_000_000; // 25.0 USDC
             uint256 outputAmount = 4_000_000; // 4 USDC
-            uint256 swapAmount = 5_000_000; // 5 USDC for fees
+            uint256 swapAmount = 18_000_000; // 18 USDC for fees
             params = DepositParams({
                 inputToken: SEPOLIA_BASE_USDC,
                 outputToken: SEPOLIA_USDC,

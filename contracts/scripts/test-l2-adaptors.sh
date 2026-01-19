@@ -4,11 +4,11 @@ set -eu
 
 # Use underscore names so the functions are valid in bash.
 test_snowbridge_l1_adaptor() {
-  forge script TestSnowbridgeL1Adaptor --chain "${L1_NETWORK}" --rpc-url "${L1_RPC_URL}" --private-key "${PRIVATE_KEY}" --broadcast -vvvv
+  forge script TestSnowbridgeL1Adaptor --chain "${L1_NETWORK}" --rpc-url "${L1_RPC_URL}" --private-key "${PRIVATE_KEY}" --slow --broadcast -vvvv
 }
 
 test_snowbridge_l1_adaptor_native_ether() {
-  forge script TestSnowbridgeL1AdaptorNativeEther --chain "${L1_NETWORK}" --rpc-url "${L1_RPC_URL}" --private-key "${PRIVATE_KEY}" --broadcast -vvvv
+  forge script TestSnowbridgeL1AdaptorNativeEther --chain "${L1_NETWORK}" --rpc-url "${L1_RPC_URL}" --private-key "${PRIVATE_KEY}" --slow --broadcast -vvvv
 }
 
 test_snowbridge_l2_adaptor() {
