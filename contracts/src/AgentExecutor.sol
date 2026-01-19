@@ -24,8 +24,8 @@ contract AgentExecutor {
     }
 
     // Call contract with Ether value
-    function callContract(CallContractParams calldata param) external {
-        bool success = Call.safeCall(param.target, param.data, param.value);
+    function callContract(CallContractParams calldata params) external {
+        bool success = Call.safeCall(params.target, params.data, params.value);
         if (!success) {
             revert();
         }
