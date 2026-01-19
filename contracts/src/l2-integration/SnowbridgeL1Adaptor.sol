@@ -4,8 +4,8 @@ pragma solidity 0.8.28;
 import {IERC20} from "openzeppelin/token/ERC20/IERC20.sol";
 import {SafeERC20} from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
 import {WETH9} from "canonical-weth/WETH9.sol";
-import {ISpokePool, IMessageHandler} from "./interfaces/ISpokePool.sol";
-import {DepositParams, Instructions, Call} from "./Types.sol";
+import {ISpokePool} from "./interfaces/ISpokePool.sol";
+import {DepositParams} from "./Types.sol";
 
 contract SnowbridgeL1Adaptor {
     using SafeERC20 for IERC20;
@@ -17,9 +17,13 @@ contract SnowbridgeL1Adaptor {
      *              EVENTS                *
      **************************************/
 
-    event DepositCallInvoked(bytes32 topic, uint256 depositId);
+    event DepositCallInvoked(bytes32 topic, uint256 depositId, address inputToken);
 
     constructor(address _spokePool, address _l1weth9, address _l2weth9) {
+        require(_spokePool != address(0), "SPOKE_POOL cannot be zero address");
+        require(_l1weth9 != address(0), "L1_WETH9 cannot be zero address");
+        require(_l2weth9 != address(0), "L2_WETH9 cannot be zero address");
+
         SPOKE_POOL = ISpokePool(_spokePool);
         L1_WETH9 = WETH9(payable(_l1weth9));
         L2_WETH9 = WETH9(payable(_l2weth9));
@@ -29,14 +33,16 @@ contract SnowbridgeL1Adaptor {
     // The fee (params.inputAmount - params.outputAmount) should be calculated off-chain
     // following https://docs.across.to/reference/api-reference#get-swap-approval
     // Tokens are pulled from the caller via safeTransferFrom.
+    // If SPOKE_POOL.deposit reverts, the entire transaction reverts atomically.
     function depositToken(DepositParams calldata params, address recipient, bytes32 topic) public {
         require(params.inputToken != address(0), "Input token cannot be zero address");
         checkInputs(params, recipient);
 
-        // Pull tokens from the caller to avoid relying on pre-funding and then approve SpokePool
+        // Pull tokens from the caller and approve SpokePool
         IERC20(params.inputToken).safeTransferFrom(msg.sender, address(this), params.inputAmount);
         IERC20(params.inputToken).forceApprove(address(SPOKE_POOL), params.inputAmount);
 
+        // Deposit via Across protocol
         SPOKE_POOL.deposit(
             bytes32(uint256(uint160(recipient))),
             bytes32(uint256(uint160(recipient))),
@@ -52,26 +58,24 @@ contract SnowbridgeL1Adaptor {
             "" // empty message
         );
 
-        // Forward any remaining balance of the input token back to the recipient to avoid trapping funds
-        uint256 remaining = IERC20(params.inputToken).balanceOf(address(this));
-        if (remaining > 0) {
-            IERC20(params.inputToken).safeTransfer(recipient, remaining);
-        }
-
         uint256 depositId = SPOKE_POOL.numberOfDeposits() - 1;
-        emit DepositCallInvoked(topic, depositId);
+        emit DepositCallInvoked(topic, depositId, params.inputToken);
     }
 
     // Send native Ether on L1 to L2 by first wrapping it to WETH, then depositing via SPOKE_POOL.
-    function depositNativeEther(
-        DepositParams calldata params,
-        address payable recipient,
-        bytes32 topic
-    ) public payable {
+    function depositNativeEther(DepositParams calldata params, address recipient, bytes32 topic)
+        public
+        payable
+    {
         require(
             params.inputToken == address(0),
             "Input token must be zero address for native ETH deposits"
         );
+        require(
+            params.outputToken == address(0) || params.outputToken == address(L2_WETH9),
+            "Output token must be zero address or L2 WETH for native ETH deposits"
+        );
+        require(msg.value == params.inputAmount, "Sent ETH amount must equal inputAmount");
         checkInputs(params, recipient);
 
         // Wrap native ETH to L1 WETH
@@ -82,8 +86,8 @@ contract SnowbridgeL1Adaptor {
 
         // Deposit WETH via SPOKE_POOL
         SPOKE_POOL.deposit(
-            bytes32(uint256(uint160(address(recipient)))),
-            bytes32(uint256(uint160(address(recipient)))),
+            bytes32(uint256(uint160(recipient))),
+            bytes32(uint256(uint160(recipient))),
             bytes32(uint256(uint160(address(L1_WETH9)))),
             bytes32(uint256(uint160(address(L2_WETH9)))),
             params.inputAmount,
@@ -96,15 +100,17 @@ contract SnowbridgeL1Adaptor {
             "" // empty message
         );
 
-        // Forward any remaining balance back to the recipient to avoid trapping funds
-        uint256 remaining = address(this).balance;
-        if (remaining > 0) {
-            (bool success,) = recipient.call{value: remaining}("");
-            require(success, "Failed to transfer remaining ether to recipient");
-        }
-
         uint256 depositId = SPOKE_POOL.numberOfDeposits() - 1;
-        emit DepositCallInvoked(topic, depositId);
+        emit DepositCallInvoked(topic, depositId, address(0));
+    }
+
+    /// @notice Explicit revert for any unexpected ETH transfers.
+    /// Direct ETH transfers to this contract are not allowed;
+    /// use depositNativeEther instead to properly handle ETH deposits.
+    receive() external payable {
+        revert(
+            "SnowbridgeL1Adaptor: Direct ETH transfers not allowed, use depositNativeEther instead"
+        );
     }
 
     function checkInputs(DepositParams calldata params, address recipient) internal pure {
@@ -115,6 +121,4 @@ contract SnowbridgeL1Adaptor {
         require(params.destinationChainId != 0, "Destination chain ID cannot be zero");
         require(recipient != address(0), "Recipient cannot be zero address");
     }
-
-    receive() external payable {}
 }
