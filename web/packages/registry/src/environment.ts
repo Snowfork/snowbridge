@@ -103,7 +103,7 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
         },
         l2Bridge: {
             acrossAPIUrl: "https://app.across.to/api",
-            l1AdapterAddress: "0xA44626f738e4369f1774b84Fb28Fd10f5a73a76f",
+            l1AdapterAddress: "0x313E8c9Fb47613f2B1A436bE978c2BB75727fcC5",
             l1HandlerAddress: "0x924a9f036260DdD5808007E1AA95f08eD08aA569",
             l1FeeTokenAddress: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
             l1SwapQuoterAddress: "0x61fFE014bA17989E743c5F6cB21bF9697530B21e",
