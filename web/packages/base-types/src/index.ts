@@ -141,6 +141,7 @@ export type Environment = {
   // Substrate
   assetHubParaId: number;
   bridgeHubParaId: number;
+  /** @deprecated Remove once V2 is fully rolled out to all parachains */
   v2_parachains?: number[];
   relaychainUrl: string;
   parachains: {
@@ -218,6 +219,7 @@ export type AssetRegistry = {
   ethChainId: number;
   assetHubParaId: number;
   bridgeHubParaId: number;
+  /** @deprecated Remove once V2 is fully rolled out to all parachains */
   v2_parachains?: number[];
   relaychain: ChainProperties;
   bridgeHub: ChainProperties;
