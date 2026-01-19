@@ -98,19 +98,27 @@ export interface ParachainMap {
   [paraId: string]: Parachain;
 }
 
-export function supportsEthereumToPolkadotV2(parachain: Parachain): boolean {
+export function supportsEthereumToPolkadotV2(
+  parachain: Parachain,
+  v2_parachains?: number[],
+): boolean {
   return (
     parachain.features.hasXcmPaymentApi &&
-    parachain.features.xcmVersion === "v5"
+    parachain.features.xcmVersion === "v5" &&
+    (v2_parachains?.includes(parachain.parachainId) ?? false)
   );
 }
 
-export function supportsPolkadotToEthereumV2(parachain: Parachain): boolean {
+export function supportsPolkadotToEthereumV2(
+  parachain: Parachain,
+  v2_parachains?: number[],
+): boolean {
   return (
     parachain.features.hasEthBalance &&
     parachain.features.hasXcmPaymentApi &&
     parachain.features.supportsAliasOrigin &&
-    parachain.features.xcmVersion === "v5"
+    parachain.features.xcmVersion === "v5" &&
+    (v2_parachains?.includes(parachain.parachainId) ?? false)
   );
 }
 
@@ -133,6 +141,7 @@ export type Environment = {
   // Substrate
   assetHubParaId: number;
   bridgeHubParaId: number;
+  v2_parachains?: number[];
   relaychainUrl: string;
   parachains: {
     [paraId: string]: string;
@@ -209,6 +218,7 @@ export type AssetRegistry = {
   ethChainId: number;
   assetHubParaId: number;
   bridgeHubParaId: number;
+  v2_parachains?: number[];
   relaychain: ChainProperties;
   bridgeHub: ChainProperties;
   ethereumChains: {

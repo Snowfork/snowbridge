@@ -25,6 +25,7 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
         beefyContract: "0x83428c7db9815f482a39a1715684dcf755021997",
         assetHubParaId: 1000,
         bridgeHubParaId: 1002,
+        v2_parachains: [1000],
         indexerGraphQlUrl: "http://127.0.0.1/does/not/exist",
     },
     paseo_sepolia: {
@@ -45,6 +46,7 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
         beefyContract: "0x2c780945beb1241fE9c645800110cb9C4bBbb639",
         assetHubParaId: 1000,
         bridgeHubParaId: 1002,
+        v2_parachains: [1000],
         indexerGraphQlUrl:
             "https://snowbridge.squids.live/snowbridge-subsquid-paseo@v1/api/graphql",
         metadataOverrides: {
@@ -81,6 +83,7 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
         beefyContract: "0x1817874feAb3ce053d0F40AbC23870DB35C2AFfc",
         assetHubParaId: 1000,
         bridgeHubParaId: 1002,
+        v2_parachains: [1000],
         indexerGraphQlUrl:
             "https://snowbridge.squids.live/snowbridge-subsquid-polkadot:production/api/graphql",
         kusama: {
@@ -145,6 +148,7 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
         beefyContract: "0xA04460B1D8bBef33F54edB2C3115e3E4D41237A6",
         assetHubParaId: 1000,
         bridgeHubParaId: 1002,
+        v2_parachains: [1000],
         indexerGraphQlUrl:
             "https://snowbridge.squids.live/snowbridge-subsquid-westend@v1/api/graphql",
         l2Bridge: {

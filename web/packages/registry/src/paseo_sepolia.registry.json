@@ -5,6 +5,9 @@
   "gatewayAddress": "0x1607C1368bc943130258318c91bBd8cFf3D063E6",
   "assetHubParaId": 1000,
   "bridgeHubParaId": 1002,
+  "v2_parachains": [
+    1000
+  ],
   "relaychain": {
     "tokenSymbols": "PAS",
     "tokenDecimals": 10,
