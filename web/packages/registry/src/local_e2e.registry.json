@@ -5,9 +5,6 @@
   "gatewayAddress": "0xb1185ede04202fe62d38f5db72f71e38ff3e8305",
   "assetHubParaId": 1000,
   "bridgeHubParaId": 1002,
-  "v2_parachains": [
-    1000
-  ],
   "relaychain": {
     "tokenSymbols": "WND",
     "tokenDecimals": 12,
@@ -82,7 +79,12 @@
         "hasDryRunApi": true,
         "hasTxPaymentApi": true,
         "hasDryRunRpc": true,
-        "hasDotBalance": true
+        "hasDotBalance": true,
+        "hasEthBalance": true,
+        "hasXcmPaymentApi": true,
+        "supportsAliasOrigin": true,
+        "xcmVersion": "v5",
+        "supportsV2": true
       },
       "info": {
         "tokenSymbols": "WND",
@@ -258,7 +260,12 @@
         "hasDryRunApi": true,
         "hasTxPaymentApi": true,
         "hasDryRunRpc": true,
-        "hasDotBalance": true
+        "hasDotBalance": true,
+        "hasEthBalance": false,
+        "hasXcmPaymentApi": true,
+        "supportsAliasOrigin": false,
+        "xcmVersion": "v5",
+        "supportsV2": false
       },
       "info": {
         "tokenSymbols": "undefined",

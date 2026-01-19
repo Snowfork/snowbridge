@@ -1,13 +1,10 @@
 {
-  "timestamp": "2026-01-19T11:44:57.994Z",
+  "timestamp": "2026-01-19T12:15:32.614Z",
   "environment": "polkadot_mainnet",
   "ethChainId": 1,
   "gatewayAddress": "0x27ca963c279c93801941e1eb8799c23f407d68e7",
   "assetHubParaId": 1000,
   "bridgeHubParaId": 1002,
-  "v2_parachains": [
-    1000
-  ],
   "relaychain": {
     "tokenSymbols": "DOT",
     "tokenDecimals": 10,
@@ -410,7 +407,8 @@
         "hasEthBalance": true,
         "hasXcmPaymentApi": true,
         "supportsAliasOrigin": true,
-        "xcmVersion": "v5"
+        "xcmVersion": "v5",
+        "supportsV2": true
       },
       "info": {
         "tokenSymbols": "DOT",
@@ -1024,7 +1022,8 @@
         "hasEthBalance": true,
         "hasXcmPaymentApi": true,
         "supportsAliasOrigin": true,
-        "xcmVersion": "v5"
+        "xcmVersion": "v5",
+        "supportsV2": false
       },
       "info": {
         "tokenSymbols": "ACA",
@@ -1060,7 +1059,8 @@
         "hasEthBalance": false,
         "hasXcmPaymentApi": true,
         "supportsAliasOrigin": false,
-        "xcmVersion": "v5"
+        "xcmVersion": "v5",
+        "supportsV2": false
       },
       "info": {
         "tokenSymbols": "GLMR",
@@ -1153,7 +1153,8 @@
         "hasEthBalance": true,
         "hasXcmPaymentApi": true,
         "supportsAliasOrigin": true,
-        "xcmVersion": "v5"
+        "xcmVersion": "v5",
+        "supportsV2": false
       },
       "info": {
         "tokenSymbols": "BNC",
@@ -1184,7 +1185,7 @@
           "isSufficient": false
         }
       },
-      "estimatedExecutionFeeDOT": "bigint:94687716",
+      "estimatedExecutionFeeDOT": "bigint:94936522",
       "estimatedDeliveryFeeDOT": "bigint:307100000"
     },
     "2034": {
@@ -1198,7 +1199,8 @@
         "hasEthBalance": false,
         "hasXcmPaymentApi": true,
         "supportsAliasOrigin": false,
-        "xcmVersion": "v4"
+        "xcmVersion": "v4",
+        "supportsV2": false
       },
       "info": {
         "tokenSymbols": "HDX",
@@ -1365,7 +1367,7 @@
           "isSufficient": true
         }
       },
-      "estimatedExecutionFeeDOT": "bigint:1766310",
+      "estimatedExecutionFeeDOT": "bigint:1774411",
       "estimatedDeliveryFeeDOT": "bigint:307100000"
     },
     "2043": {
@@ -1379,7 +1381,8 @@
         "hasEthBalance": false,
         "hasXcmPaymentApi": true,
         "supportsAliasOrigin": false,
-        "xcmVersion": "v4"
+        "xcmVersion": "v4",
+        "supportsV2": false
       },
       "info": {
         "tokenSymbols": "NEURO",
@@ -1415,7 +1418,8 @@
         "hasEthBalance": false,
         "hasXcmPaymentApi": false,
         "supportsAliasOrigin": false,
-        "xcmVersion": "v4"
+        "xcmVersion": "v4",
+        "supportsV2": false
       },
       "info": {
         "tokenSymbols": "MYTH",
@@ -1454,7 +1458,8 @@
           "hasEthBalance": false,
           "hasXcmPaymentApi": true,
           "supportsAliasOrigin": true,
-          "xcmVersion": "v5"
+          "xcmVersion": "v5",
+          "supportsV2": false
         },
         "info": {
           "tokenSymbols": "KSM",

@@ -87,6 +87,8 @@ export type Parachain = {
     hasXcmPaymentApi: boolean;
     supportsAliasOrigin: boolean;
     xcmVersion: XcmVersion;
+    /** @deprecated Remove once V2 is fully rolled out to all parachains */
+    supportsV2: boolean;
   };
   assets: AssetMap;
   estimatedExecutionFeeDOT: bigint;
@@ -98,27 +100,21 @@ export interface ParachainMap {
   [paraId: string]: Parachain;
 }
 
-export function supportsEthereumToPolkadotV2(
-  parachain: Parachain,
-  v2_parachains?: number[],
-): boolean {
+export function supportsEthereumToPolkadotV2(parachain: Parachain): boolean {
   return (
     parachain.features.hasXcmPaymentApi &&
     parachain.features.xcmVersion === "v5" &&
-    (v2_parachains?.includes(parachain.parachainId) ?? false)
+    parachain.features.supportsV2
   );
 }
 
-export function supportsPolkadotToEthereumV2(
-  parachain: Parachain,
-  v2_parachains?: number[],
-): boolean {
+export function supportsPolkadotToEthereumV2(parachain: Parachain): boolean {
   return (
     parachain.features.hasEthBalance &&
     parachain.features.hasXcmPaymentApi &&
     parachain.features.supportsAliasOrigin &&
     parachain.features.xcmVersion === "v5" &&
-    (v2_parachains?.includes(parachain.parachainId) ?? false)
+    parachain.features.supportsV2
   );
 }
 
@@ -219,8 +215,6 @@ export type AssetRegistry = {
   ethChainId: number;
   assetHubParaId: number;
   bridgeHubParaId: number;
-  /** @deprecated Remove once V2 is fully rolled out to all parachains */
-  v2_parachains?: number[];
   relaychain: ChainProperties;
   bridgeHub: ChainProperties;
   ethereumChains: {
