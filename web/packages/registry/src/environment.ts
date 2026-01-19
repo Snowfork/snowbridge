@@ -158,7 +158,7 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
             l1SwapQuoterAddress: "0xEd1f6473345F45b75F8179591dd5bA1888cf2FB3",
             l2Chains: {
                 "84532": {
-                    adapterAddress: "0xf06939613A3838Af11104c898758220dB9093679",
+                    adapterAddress: "0xA5B8589bD534701be49916c4d2e634aB1c765Cbf",
                     feeTokenAddress: "0x4200000000000000000000000000000000000006",
                     swapRoutes: [
                         // WETH
