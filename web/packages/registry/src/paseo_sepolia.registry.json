@@ -83,7 +83,12 @@
         "hasDryRunApi": true,
         "hasTxPaymentApi": true,
         "hasDryRunRpc": true,
-        "hasDotBalance": true
+        "hasDotBalance": true,
+        "hasEthBalance": true,
+        "hasXcmPaymentApi": true,
+        "supportsAliasOrigin": true,
+        "xcmVersion": "v5",
+        "supportsV2": true
       },
       "info": {
         "tokenSymbols": "PAS",
@@ -155,7 +160,12 @@
         "hasDryRunApi": false,
         "hasTxPaymentApi": true,
         "hasDryRunRpc": true,
-        "hasDotBalance": false
+        "hasDotBalance": false,
+        "hasEthBalance": false,
+        "hasXcmPaymentApi": false,
+        "supportsAliasOrigin": false,
+        "xcmVersion": "v4",
+        "supportsV2": false
       },
       "info": {
         "tokenSymbols": "NEURO",
@@ -187,7 +197,12 @@
         "hasDryRunApi": true,
         "hasTxPaymentApi": true,
         "hasDryRunRpc": true,
-        "hasDotBalance": false
+        "hasDotBalance": false,
+        "hasEthBalance": false,
+        "hasXcmPaymentApi": false,
+        "supportsAliasOrigin": false,
+        "xcmVersion": "v4",
+        "supportsV2": false
       },
       "info": {
         "tokenSymbols": "MUSE",
