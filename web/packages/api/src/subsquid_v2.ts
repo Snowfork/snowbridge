@@ -56,28 +56,9 @@ export const fetchToPolkadotTransfers = async (graphqlApiUrl: string, graphqlQue
             sourceNetwork
             destinationNetwork
             sourceParaId
-            toBridgeHubInboundQueue {
-                id
-                timestamp
-                txHash
-                channelId
-                nonce
-                messageId
-            }
-            toAssetHubMessageQueue {
-                id
-                success
-                timestamp
-            }
-            toDestination {
-                id
-                eventId
-                messageId
-                timestamp
-                blockNumber
-                paraId
-                success
-            }
+            toBridgeHubInboundQueueId
+            toAssetHubMessageQueueId
+            toDestinationId
         }
     }`
     let result = await queryByGraphQL(graphqlApiUrl, query)
@@ -138,30 +119,9 @@ export const fetchToEthereumTransfers = async (graphqlApiUrl: string, graphqlQue
             txHash
             amount
             fee
-            toAssetHubMessageQueue {
-                id
-                success
-                timestamp
-            }
-            toBridgeHubMessageQueue {
-                id
-                success
-                timestamp
-            }
-            toBridgeHubOutboundQueue {
-                id
-                timestamp
-            }
-            toDestination {
-                id
-                blockNumber
-                timestamp
-                txHash
-                success
-                messageId
-                nonce
-                channelId
-            }
+            toAssetHubMessageQueueId
+            toBridgeHubMessageQueueId
+            toDestinationId
         }
     }`
     let result = await queryByGraphQL(graphqlApiUrl, query)
@@ -222,28 +182,9 @@ export const fetchToPolkadotTransferById = async (graphqlApiUrl: string, id: str
             txHash
             amount
             fee
-            toBridgeHubInboundQueue {
-                id
-                timestamp
-                txHash
-                channelId
-                nonce
-                messageId
-            }
-            toAssetHubMessageQueue {
-                id
-                success
-                timestamp
-            }
-            toDestination {
-                id
-                eventId
-                messageId
-                timestamp
-                blockNumber
-                paraId
-                success
-            }
+            toBridgeHubInboundQueueId
+            toAssetHubMessageQueueId
+            toDestinationId
         }
     }`
     let result = await queryByGraphQL(graphqlApiUrl, query)
@@ -305,30 +246,9 @@ export const fetchToEthereumTransferById = async (graphqlApiUrl: string, id: str
             txHash
             amount
             fee
-            toAssetHubMessageQueue {
-                id
-                success
-                timestamp
-            }
-            toBridgeHubMessageQueue {
-                id
-                success
-                timestamp
-            }
-            toBridgeHubOutboundQueue {
-                id
-                timestamp
-            }
-            toDestination {
-                id
-                blockNumber
-                timestamp
-                txHash
-                success
-                messageId
-                nonce
-                channelId
-            }
+            toAssetHubMessageQueueId
+            toBridgeHubMessageQueueId
+            toDestinationId
         }
     }`
     let result = await queryByGraphQL(graphqlApiUrl, query)
@@ -402,28 +322,9 @@ export const fetchToPolkadotPendingTransfers = async (
             sourceNetwork
             destinationNetwork
             sourceParaId
-            toBridgeHubInboundQueue {
-                id
-                timestamp
-                txHash
-                channelId
-                nonce
-                messageId
-            }
-            toAssetHubMessageQueue {
-                id
-                success
-                timestamp
-            }
-            toDestination {
-                id
-                eventId
-                messageId
-                timestamp
-                blockNumber
-                paraId
-                success
-            }
+            toBridgeHubInboundQueueId
+            toAssetHubMessageQueueId
+            toDestinationId
         }
     }`
     let result = await queryByGraphQL(graphqlApiUrl, query)
@@ -450,30 +351,9 @@ export const fetchToEthereumPendingTransfers = async (
             txHash
             amount
             fee
-            toAssetHubMessageQueue {
-                id
-                success
-                timestamp
-            }
-            toBridgeHubMessageQueue {
-                id
-                success
-                timestamp
-            }
-            toBridgeHubOutboundQueue {
-                id
-                timestamp
-            }
-            toDestination {
-                id
-                blockNumber
-                timestamp
-                txHash
-                success
-                messageId
-                nonce
-                channelId
-            }
+            toAssetHubMessageQueueId
+            toBridgeHubMessageQueueId
+            toDestinationId
         }
     }`
     let result = await queryByGraphQL(graphqlApiUrl, query)
@@ -505,28 +385,9 @@ export const fetchToPolkadotTransfersBySenders = async (
             sourceNetwork
             destinationNetwork
             sourceParaId
-            toBridgeHubInboundQueue {
-                id
-                timestamp
-                txHash
-                channelId
-                nonce
-                messageId
-            }
-            toAssetHubMessageQueue {
-                id
-                success
-                timestamp
-            }
-            toDestination {
-                id
-                eventId
-                messageId
-                timestamp
-                blockNumber
-                paraId
-                success
-            }
+            toBridgeHubInboundQueueId
+            toAssetHubMessageQueueId
+            toDestinationId
         }
     }`
     let result = await queryByGraphQL(graphqlApiUrl, query)
@@ -555,32 +416,63 @@ export const fetchToEthereumTransfersBySenders = async (
             txHash
             amount
             fee
-            toAssetHubMessageQueue {
-                id
-                success
-                timestamp
-            }
-            toBridgeHubMessageQueue {
-                id
-                success
-                timestamp
-            }
-            toBridgeHubOutboundQueue {
-                id
-                timestamp
-            }
-            toDestination {
-                id
-                blockNumber
-                timestamp
-                txHash
-                success
-                messageId
-                nonce
-                channelId
-            }
+            toAssetHubMessageQueueId
+            toBridgeHubMessageQueueId
+            toDestinationId
         }
     }`
     let result = await queryByGraphQL(graphqlApiUrl, query)
     return result?.transferStatusToEthereumV2s
+}
+
+export const fetchBridgeHubInboundMessageReceivedById = async (
+    graphqlApiUrl: string,
+    id: string,
+) => {
+    let query = `query { inboundMessageReceivedOnBridgeHubById(id: "${id}") {
+            id
+            eventId
+            messageId
+            channelId
+            nonce
+            timestamp
+        }
+    }`
+    let result = await queryByGraphQL(graphqlApiUrl, query)
+    return result?.inboundMessageReceivedOnBridgeHubById
+}
+
+export const fetchPolkadotMessageProcessedById = async (graphqlApiUrl: string, id: string) => {
+    let query = `query { messageProcessedOnPolkadotById(id: "${id}") {
+            id
+            blockNumber
+            messageId
+            paraId
+            eventId
+            network
+            timestamp
+            success
+        }
+    }`
+    let result = await queryByGraphQL(graphqlApiUrl, query)
+    return result?.messageProcessedOnPolkadotById
+}
+
+export const fetchInboundMessageDispatchedOnEthereumById = async (
+    graphqlApiUrl: string,
+    id: string,
+) => {
+    let query = `query { inboundMessageDispatchedOnEthereumById(id: "${id}") {
+            id
+            blockNumber
+            channelId
+            messageId
+            txHash
+            nonce
+            timestamp
+            success
+        }
+    }`
+    let result = await queryByGraphQL(graphqlApiUrl, query)
+    return result?.inboundMessageDispatchedOnEthereumById
 }
