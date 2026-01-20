@@ -46,10 +46,12 @@ contract TestSnowbridgeL1AdaptorNativeEther is Script {
             fillDeadlineBuffer: TIME_BUFFER
         });
 
+        // Prefund the adaptor with native Ether for the outgoing deposit
+        (bool prefunded,) = l1SnowbridgeAdaptor.call{value: params.inputAmount}("");
+        require(prefunded, "Failed to prefund adaptor with ETH");
+
         SnowbridgeL1Adaptor(l1SnowbridgeAdaptor)
-        .depositNativeEther{
-            value: params.inputAmount
-        }(params, recipient, keccak256("TestNativeEtherDeposit"));
+            .depositNativeEther(params, recipient, keccak256("TestNativeEtherDeposit"));
 
         return;
     }

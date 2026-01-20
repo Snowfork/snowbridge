@@ -106,12 +106,14 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
         },
         l2Bridge: {
             acrossAPIUrl: "https://app.across.to/api",
-            l1AdapterAddress: "0xA44626f738e4369f1774b84Fb28Fd10f5a73a76f",
+            l1AdapterAddress: "0x313E8c9Fb47613f2B1A436bE978c2BB75727fcC5",
+            l1HandlerAddress: "0x924a9f036260DdD5808007E1AA95f08eD08aA569",
             l1FeeTokenAddress: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
             l1SwapQuoterAddress: "0x61fFE014bA17989E743c5F6cB21bF9697530B21e",
+            l1SwapRouterAddress: "0xE592427A0AEce92De3Edee1F18E0157C05861564",
             l2Chains: {
                 "8453": {
-                    adapterAddress: "0xdA2112AF731721824fDa8b3A6aD822aFA4f08B59",
+                    adapterAddress: "0xCd5d2c665E3AC84bF5c67FE7a0C48748dA40db2F",
                     feeTokenAddress: "0x4200000000000000000000000000000000000006",
                     swapRoutes: [
                         // WETH
@@ -153,12 +155,14 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
             "https://snowbridge.squids.live/snowbridge-subsquid-westend@v1/api/graphql",
         l2Bridge: {
             acrossAPIUrl: "https://testnet.across.to/api",
-            l1AdapterAddress: "0x33Fe409089c8AAd8Af119a8Dacd1ea6be3A3cbd5",
+            l1AdapterAddress: "0xA5B8589bD534701be49916c4d2e634aB1c765Cbf",
+            l1HandlerAddress: "0x924a9f036260DdD5808007E1AA95f08eD08aA569",
             l1FeeTokenAddress: "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14",
-            l1SwapQuoterAddress: "0x61fFE014bA17989E743c5F6cB21bF9697530B21e",
+            l1SwapRouterAddress: "0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E",
+            l1SwapQuoterAddress: "0xEd1f6473345F45b75F8179591dd5bA1888cf2FB3",
             l2Chains: {
                 "84532": {
-                    adapterAddress: "0x2F846925814a5E6FB5795Af6e49158391F379440",
+                    adapterAddress: "0xf06939613A3838Af11104c898758220dB9093679",
                     feeTokenAddress: "0x4200000000000000000000000000000000000006",
                     swapRoutes: [
                         // WETH

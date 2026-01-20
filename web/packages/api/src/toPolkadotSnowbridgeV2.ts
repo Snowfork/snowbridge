@@ -20,6 +20,7 @@ import { accountToLocation, DOT_LOCATION, erc20Location } from "./xcmBuilder"
 import { Codec } from "@polkadot/types/types"
 import { ETHER_TOKEN_ADDRESS, swapAsset1ForAsset2 } from "./assets_v2"
 import { padFeeByPercentage } from "./utils"
+import { Context } from "./index"
 export { ValidationKind } from "./toPolkadot_v2"
 
 export type DeliveryFee = {
@@ -306,4 +307,55 @@ export async function calculateRelayerFee(
         relayerFee = padFeeByPercentage(relayerFee, 30n)
     }
     return { relayerFee, extrinsicFeeDot, extrinsicFeeEther }
+}
+
+export async function buildSwapCallData(
+    context: Context,
+    registry: AssetRegistry,
+    l2ChainId: number,
+    l2TokenAddress: string,
+    amountOut: bigint,
+    amountInMaximum: bigint,
+): Promise<string> {
+    let tokenIn = registry.ethereumChains?.[l2ChainId]?.assets[l2TokenAddress]?.swapTokenAddress
+    if (!tokenIn) {
+        throw new Error("Token is not registered on Ethereum")
+    }
+    let swapFee = registry.ethereumChains?.[l2ChainId]?.assets[l2TokenAddress]?.swapFee
+    let swapCalldata: string
+    if (registry.environment === "polkadot_mainnet") {
+        const l1SwapRouter = context.l1SwapRouter()
+        swapCalldata = l1SwapRouter.interface.encodeFunctionData("exactOutputSingle", [
+            {
+                tokenIn: tokenIn,
+                tokenOut: context.l1FeeTokenAddress(),
+                fee: swapFee ?? 500, // Stable default to 0.05% pool fee
+                recipient: context.l1HandlerAddress(),
+                deadline: Math.floor(Date.now() / 1000) + 600, // 10 minutes from now
+                amountOut: amountOut,
+                amountInMaximum: amountInMaximum,
+                sqrtPriceLimitX96: 0n, // No price limit should be fine as we protect the swap using amountInMaximum
+            },
+        ])
+    } // On Sepolia, only the legacy swap router is available, and it supports exactOutputSingle parameters without a deadline.
+    else if (
+        registry.environment === "paseo_sepolia" ||
+        registry.environment === "westend_sepolia"
+    ) {
+        const l1SwapRouter = context.l1LegacySwapRouter()
+        swapCalldata = l1SwapRouter.interface.encodeFunctionData("exactOutputSingle", [
+            {
+                tokenIn: tokenIn,
+                tokenOut: context.l1FeeTokenAddress(),
+                fee: swapFee ?? 500, // Stable default to 0.05% pool fee
+                recipient: context.l1HandlerAddress(),
+                amountOut: amountOut,
+                amountInMaximum: amountInMaximum,
+                sqrtPriceLimitX96: 0n, // No price limit should be fine as we protect the swap using amountInMaximum
+            },
+        ])
+    } else {
+        throw new Error(`Unsupported environment ${registry.environment} for L1 swap router.`)
+    }
+    return swapCalldata
 }
