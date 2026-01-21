@@ -1,5 +1,5 @@
 import "dotenv/config"
-import { historyV2, history, subsquid, subsquidV2 } from "@snowbridge/api"
+import { historyV2, subsquidV2 } from "@snowbridge/api"
 
 const search = async () => {
     const graphqlApiUrl = process.env["GRAPHQL_API_URL"]

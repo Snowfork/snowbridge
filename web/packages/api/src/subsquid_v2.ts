@@ -1,5 +1,12 @@
 import { queryByGraphQL } from "./subsquid"
 
+export {
+    fetchLatestBlocksSynced,
+    fetchInterParachainMessageById,
+    fetchSyncStatusOfParachain,
+    queryByGraphQL,
+} from "./subsquid"
+
 /**
  * Query the recent transfers from Ethereum to Polkadot
 
