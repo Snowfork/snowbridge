@@ -37,11 +37,11 @@ type Header struct {
 	updateSlotInterval uint64
 }
 
-func New(writer parachain.ChainWriter, client api.BeaconAPI, setting config.SpecSettings, store store.BeaconStore, protocol *protocol.Protocol, updateSlotInterval uint64) Header {
+func New(writer parachain.ChainWriter, client api.BeaconAPI, setting config.SpecSettings, store store.BeaconStore, protocol *protocol.Protocol, updateSlotInterval uint64, stateService syncer.StateServiceClient) Header {
 	return Header{
 		cache:              cache.New(setting.SlotsInEpoch, setting.EpochsPerSyncCommitteePeriod),
 		writer:             writer,
-		syncer:             syncer.New(client, store, protocol),
+		syncer:             syncer.New(client, store, protocol, stateService),
 		protocol:           protocol,
 		updateSlotInterval: updateSlotInterval,
 	}

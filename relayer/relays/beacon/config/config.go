@@ -33,10 +33,11 @@ type DataStore struct {
 }
 
 type BeaconConfig struct {
-	Endpoint      string       `mapstructure:"endpoint"`
-	StateEndpoint string       `mapstructure:"stateEndpoint"`
-	Spec          SpecSettings `mapstructure:"spec"`
-	DataStore     DataStore    `mapstructure:"datastore"`
+	Endpoint             string       `mapstructure:"endpoint"`
+	StateEndpoint        string       `mapstructure:"stateEndpoint"`
+	StateServiceEndpoint string       `mapstructure:"stateServiceEndpoint"`
+	Spec                 SpecSettings `mapstructure:"spec"`
+	DataStore            DataStore    `mapstructure:"datastore"`
 }
 
 type SinkConfig struct {
@@ -79,12 +80,14 @@ func (b BeaconConfig) Validate() error {
 	if b.Spec.SyncCommitteeSize == 0 {
 		return errors.New("source beacon setting [syncCommitteeSize] is not set")
 	}
-	// data store
-	if b.DataStore.Location == "" {
-		return errors.New("source beacon datastore [location] is not set")
-	}
-	if b.DataStore.MaxEntries == 0 {
-		return errors.New("source beacon datastore [maxEntries] is not set")
+	// data store - only required if not using state service exclusively
+	if b.StateServiceEndpoint == "" {
+		if b.DataStore.Location == "" {
+			return errors.New("source beacon datastore [location] is not set")
+		}
+		if b.DataStore.MaxEntries == 0 {
+			return errors.New("source beacon datastore [maxEntries] is not set")
+		}
 	}
 	// api endpoints
 	if b.Endpoint == "" {
