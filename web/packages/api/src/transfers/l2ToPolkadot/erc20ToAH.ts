@@ -19,8 +19,6 @@ import { paraImplementation } from "../../parachains"
 import {
     erc20Balance,
     ETHER_TOKEN_ADDRESS,
-    swapAsset1ForAsset2,
-    validateAccount,
 } from "../../assets_v2"
 import { beneficiaryMultiAddress, padFeeByPercentage } from "../../utils"
 import { FeeInfo, resolveInputs, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
@@ -100,8 +98,7 @@ export class ERC20ToAH implements TransferInterface {
         )
 
         const assetHubImpl = await paraImplementation(assetHub)
-        const deliveryFeeInEther = await swapAsset1ForAsset2(
-            assetHub,
+        const deliveryFeeInEther = await assetHubImpl.swapAsset1ForAsset2(
             DOT_LOCATION,
             ether,
             deliveryFeeInDOT,
@@ -110,12 +107,12 @@ export class ERC20ToAH implements TransferInterface {
         let assetHubExecutionFeeDOT = await assetHubImpl.calculateXcmFee(assetHubXcm, DOT_LOCATION)
 
         let assetHubExecutionFeeEther = padFeeByPercentage(
-            await swapAsset1ForAsset2(assetHub, DOT_LOCATION, ether, assetHubExecutionFeeDOT),
+            await assetHubImpl.swapAsset1ForAsset2(DOT_LOCATION, ether, assetHubExecutionFeeDOT),
             paddFeeByPercentage ?? 33n,
         )
 
         const { relayerFee, extrinsicFeeDot, extrinsicFeeEther } = await calculateRelayerFee(
-            assetHub,
+            assetHubImpl,
             registry.ethChainId,
             options?.overrideRelayerFee,
             deliveryFeeInEther,
@@ -497,8 +494,7 @@ export class ERC20ToAH implements TransferInterface {
         }
 
         if (!ahAssetMetadata.isSufficient && !dryRunAhSuccess) {
-            const { accountMaxConsumers, accountExists } = await validateAccount(
-                assetHubImpl,
+            const { accountMaxConsumers, accountExists } = await assetHubImpl.validateAccount(
                 beneficiaryAddressHex,
                 registry.ethChainId,
                 tokenAddress,

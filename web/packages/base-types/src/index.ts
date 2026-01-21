@@ -100,24 +100,6 @@ export interface ParachainMap {
   [paraId: string]: Parachain;
 }
 
-export function supportsEthereumToPolkadotV2(parachain: Parachain): boolean {
-  return (
-    parachain.features.hasXcmPaymentApi &&
-    parachain.features.xcmVersion === "v5" &&
-    parachain.features.supportsV2
-  );
-}
-
-export function supportsPolkadotToEthereumV2(parachain: Parachain): boolean {
-  return (
-    parachain.features.hasEthBalance &&
-    parachain.features.hasXcmPaymentApi &&
-    parachain.features.supportsAliasOrigin &&
-    parachain.features.xcmVersion === "v5" &&
-    parachain.features.supportsV2
-  );
-}
-
 export type KusamaConfig = {
   assetHubParaId: number;
   bridgeHubParaId: number;
