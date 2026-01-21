@@ -255,8 +255,6 @@ export const monitor = async (): Promise<status.AllMetrics> => {
 
     let indexerStatus = await fetchIndexerStatus(context, snowbridgeEnv)
 
-    let v2Status = await status.v2Status(context)
-
     const allMetrics: status.AllMetrics = {
         name,
         bridgeStatus,
@@ -264,7 +262,6 @@ export const monitor = async (): Promise<status.AllMetrics> => {
         relayers,
         sovereigns,
         indexerStatus,
-        v2Status,
     }
     console.log(
         "All metrics:",

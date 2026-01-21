@@ -1,7 +1,5 @@
 import { Context, subsquid, subsquidV2 } from "./index"
 import { fetchBeaconSlot, fetchFinalityUpdate } from "./utils"
-import { fetchEstimatedDeliveryTime } from "./subsquid"
-import { fetchEstimatedDeliveryTime as fetchV2EstimatedDeliveryTime } from "./subsquid_v2"
 import { ApiPromise } from "@polkadot/api"
 import { IGatewayV1, IGatewayV2 } from "@snowbridge/contract-types"
 
@@ -42,6 +40,8 @@ export type ChannelStatusInfo = {
     toEthereum: {
         outbound: number
         inbound: number
+        v2Outbound?: number
+        v2Inbound?: number
         // The estimated average delivery time for the most recent 10 messages.
         estimatedDeliveryTime?: number
         // The timeout duration of the oldest undelivered message.
@@ -53,21 +53,8 @@ export type ChannelStatusInfo = {
         }
         outbound: number
         inbound: number
-        estimatedDeliveryTime?: number
-        undeliveredTimeout?: number
-    }
-}
-
-export type V2StatusInfo = {
-    toEthereum: {
-        outbound: number
-        // The estimated average delivery time for the most recent 10 messages.
-        estimatedDeliveryTime?: number
-        // The timeout duration of the oldest undelivered message.
-        undeliveredTimeout?: number
-    }
-    toPolkadot: {
-        outbound: number
+        v2Outbound?: number
+        v2Inbound?: number
         estimatedDeliveryTime?: number
         undeliveredTimeout?: number
     }
@@ -92,7 +79,6 @@ export type AllMetrics = {
     sovereigns: Sovereign[]
     relayers: Relayer[]
     indexerStatus: IndexerServiceStatusInfo[]
-    v2Status?: V2StatusInfo
 }
 
 export type OperationStatus = {
@@ -207,12 +193,13 @@ export const channelStatusInfo = async (
     context: Context,
     channelId: string,
 ): Promise<ChannelStatusInfo> => {
-    const [bridgeHub, ethereum, gateway] = await Promise.all([
+    const [bridgeHub, gateway, gatewayV2] = await Promise.all([
         context.bridgeHub(),
-        context.ethereum(),
         context.gateway(),
+        context.gatewayV2(),
     ])
 
+    // V1 nonces
     const [inbound_nonce_eth, outbound_nonce_eth] = await gateway.channelNoncesOf(channelId)
     const operatingMode = await gateway.channelOperatingModeOf(channelId)
     const inbound_nonce_sub = (
@@ -222,20 +209,35 @@ export const channelStatusInfo = async (
         await bridgeHub.query.ethereumOutboundQueue.nonce(channelId)
     ).toPrimitive() as number
 
+    // V2 nonces
+    const v2_outbound_nonce_eth = Number(await gatewayV2.v2_outboundNonce())
+    const v2_outbound_nonce_sub = (
+        await bridgeHub.query.ethereumOutboundQueueV2.nonce()
+    ).toPrimitive() as number
+
+    const v2_max_delivered_nonce_to_polkadot = await subsquidV2.fetchMaxDeliveredNonceToPolkadot(
+        context.graphqlApiUrl(),
+        v2_outbound_nonce_eth,
+    )
+    const v2_max_delivered_nonce_to_ethereum = await subsquidV2.fetchMaxDeliveredNonceToEthereum(
+        context.graphqlApiUrl(),
+        v2_outbound_nonce_sub,
+    )
+
     let estimatedDeliveryTime: any,
         toEthereumUndeliveredTimeout: number | undefined,
         toPolkadotUndeliveredTimeout: number | undefined = undefined
 
     if (channelId.toLowerCase() == ASSET_HUB_CHANNEL_ID.toLowerCase()) {
-        estimatedDeliveryTime = await fetchEstimatedDeliveryTime(context.graphqlApiUrl(), channelId)
+        estimatedDeliveryTime = await subsquidV2.fetchEstimatedDeliveryTime(context.graphqlApiUrl())
 
-        let latencies = await subsquid.fetchToEthereumUndelivedLatency(context.graphqlApiUrl())
-        if (latencies && latencies.length) {
-            toEthereumUndeliveredTimeout = latencies[0].elapse
+        let latency = await subsquidV2.fetchToEthereumUndeliveredLatency(context.graphqlApiUrl())
+        if (latency && latency.elapse) {
+            toEthereumUndeliveredTimeout = latency.elapse
         }
-        latencies = await subsquid.fetchToPolkadotUndelivedLatency(context.graphqlApiUrl())
-        if (latencies && latencies.length) {
-            toPolkadotUndeliveredTimeout = latencies[0].elapse
+        latency = await subsquidV2.fetchToPolkadotUndeliveredLatency(context.graphqlApiUrl())
+        if (latency && latency.elapse) {
+            toPolkadotUndeliveredTimeout = latency.elapse
         }
     }
 
@@ -243,9 +245,9 @@ export const channelStatusInfo = async (
         toEthereum: {
             outbound: outbound_nonce_sub,
             inbound: Number(inbound_nonce_eth),
-            estimatedDeliveryTime: Math.ceil(
-                Number(estimatedDeliveryTime?.toEthereumElapse?.elapse),
-            ),
+            v2Outbound: v2_outbound_nonce_sub,
+            v2Inbound: v2_max_delivered_nonce_to_ethereum,
+            estimatedDeliveryTime: estimatedDeliveryTime?.toEthereumV2Elapse?.elapse,
             undeliveredTimeout: toEthereumUndeliveredTimeout,
         },
         toPolkadot: {
@@ -254,48 +256,9 @@ export const channelStatusInfo = async (
             },
             outbound: Number(outbound_nonce_eth),
             inbound: inbound_nonce_sub,
-            estimatedDeliveryTime: Math.ceil(
-                Number(estimatedDeliveryTime?.toPolkadotElapse?.elapse),
-            ),
-            undeliveredTimeout: toPolkadotUndeliveredTimeout,
-        },
-    }
-}
-
-export const v2Status = async (context: Context): Promise<V2StatusInfo> => {
-    const [bridgeHub, gateway] = await Promise.all([context.bridgeHub(), context.gatewayV2()])
-
-    const outbound_nonce_eth = await gateway.v2_outboundNonce()
-    const outbound_nonce_sub = (
-        await bridgeHub.query.ethereumOutboundQueueV2.nonce()
-    ).toPrimitive() as number
-
-    let estimatedDeliveryTime = await fetchV2EstimatedDeliveryTime(context.graphqlApiUrl())
-
-    let toEthereumUndeliveredTimeout: number | undefined = undefined
-    let toPolkadotUndeliveredTimeout: number | undefined = undefined
-    let latencies = await subsquidV2.fetchToEthereumUndeliveredLatency(context.graphqlApiUrl())
-    if (latencies && latencies.length) {
-        toEthereumUndeliveredTimeout = latencies[0].elapse
-    }
-    latencies = await subsquidV2.fetchToPolkadotUndeliveredLatency(context.graphqlApiUrl())
-    if (latencies && latencies.length) {
-        toPolkadotUndeliveredTimeout = latencies[0].elapse
-    }
-
-    return {
-        toEthereum: {
-            outbound: outbound_nonce_sub,
-            estimatedDeliveryTime: Math.ceil(
-                Number(estimatedDeliveryTime?.toEthereumV2Elapse?.elapse),
-            ),
-            undeliveredTimeout: toEthereumUndeliveredTimeout,
-        },
-        toPolkadot: {
-            outbound: Number(outbound_nonce_eth),
-            estimatedDeliveryTime: Math.ceil(
-                Number(estimatedDeliveryTime?.toPolkadotV2Elapse?.elapse),
-            ),
+            v2Outbound: v2_outbound_nonce_eth,
+            v2Inbound: v2_max_delivered_nonce_to_polkadot,
+            estimatedDeliveryTime: estimatedDeliveryTime?.toPolkadotV2Elapse?.elapse,
             undeliveredTimeout: toPolkadotUndeliveredTimeout,
         },
     }
