@@ -71,6 +71,7 @@ func TestSyncInterimFinalizedUpdate_WithDataFromAPI(t *testing.T) {
 		&beaconStore,
 		p,
 		316,
+		nil,
 	)
 
 	// Find a checkpoint for a slot that is just out of the on-chain synced finalized header block roots range
@@ -135,6 +136,7 @@ func TestSyncInterimFinalizedUpdate_WithDataFromStore(t *testing.T) {
 		&beaconStore,
 		p,
 		316,
+		nil,
 	)
 
 	// Find a checkpoint for a slot that is just out of the on-chain synced finalized header block roots range
@@ -201,6 +203,7 @@ func TestSyncInterimFinalizedUpdate_WithDataFromStoreWithDifferentBlocks(t *test
 		&beaconStore,
 		p,
 		316,
+		nil,
 	)
 
 	// Find a checkpoint for a slot that is just out of the on-chain synced finalized header block roots range
@@ -247,6 +250,7 @@ func TestSyncInterimFinalizedUpdate_BeaconStateNotAvailableInAPIAndStore(t *test
 		&beaconStore,
 		p,
 		316,
+		nil,
 	)
 
 	// Find a checkpoint for a slot that is just out of the on-chain synced finalized header block roots range
@@ -286,6 +290,7 @@ func TestSyncInterimFinalizedUpdate_NoValidBlocksFound(t *testing.T) {
 		&beaconStore,
 		p,
 		316,
+		nil,
 	)
 
 	// Find a checkpoint for a slot that is just out of the on-chain synced finalized header block roots range
@@ -408,6 +413,7 @@ func TestFindLatestCheckPoint(t *testing.T) {
 		&beaconStore,
 		p,
 		316,
+		nil,
 	)
 
 	// Slot 20 would be usable to prove slot 19
