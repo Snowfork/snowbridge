@@ -354,3 +354,102 @@ func writeError(w http.ResponseWriter, status int, message string) {
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(ErrorResponse{Error: message})
 }
+
+// StateResponse is the response for raw beacon state requests
+type StateResponse struct {
+	Slot uint64 `json:"slot"`
+	Data string `json:"data"` // hex-encoded SSZ state data
+}
+
+// StateRangeResponse is the response for beacon state range requests
+type StateRangeResponse struct {
+	AttestedSlot  uint64 `json:"attestedSlot"`
+	FinalizedSlot uint64 `json:"finalizedSlot"`
+	AttestedData  string `json:"attestedData"`  // hex-encoded SSZ state data
+	FinalizedData string `json:"finalizedData"` // hex-encoded SSZ state data
+}
+
+// handleGetState returns raw beacon state data for a given slot
+// First checks persistent store, then fetches from beacon node
+func (s *Service) handleGetState(w http.ResponseWriter, r *http.Request) {
+	slot, err := parseSlotParam(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	log.WithField("slot", slot).Debug("Handling get state request")
+
+	// Try persistent store first
+	data, err := s.store.GetBeaconStateData(slot)
+	if err == nil {
+		log.WithField("slot", slot).Debug("Found state in persistent store")
+		response := StateResponse{
+			Slot: slot,
+			Data: "0x" + hex.EncodeToString(data),
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	// Fetch from beacon node
+	data, err = s.syncer.Client.GetBeaconState(strconv.FormatUint(slot, 10))
+	if err != nil {
+		log.WithError(err).WithField("slot", slot).Error("Failed to get beacon state")
+		writeError(w, http.StatusNotFound, "beacon state not found")
+		return
+	}
+
+	response := StateResponse{
+		Slot: slot,
+		Data: "0x" + hex.EncodeToString(data),
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+// handleGetStateInRange finds beacon states within a slot range from the persistent store
+// Query params: minSlot, maxSlot
+func (s *Service) handleGetStateInRange(w http.ResponseWriter, r *http.Request) {
+	minSlotStr := r.URL.Query().Get("minSlot")
+	maxSlotStr := r.URL.Query().Get("maxSlot")
+
+	if minSlotStr == "" || maxSlotStr == "" {
+		writeError(w, http.StatusBadRequest, "minSlot and maxSlot parameters are required")
+		return
+	}
+
+	minSlot, err := strconv.ParseUint(minSlotStr, 10, 64)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid minSlot")
+		return
+	}
+
+	maxSlot, err := strconv.ParseUint(maxSlotStr, 10, 64)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid maxSlot")
+		return
+	}
+
+	log.WithFields(log.Fields{"minSlot": minSlot, "maxSlot": maxSlot}).Debug("Handling get state in range request")
+
+	// Query persistent store
+	data, err := s.store.FindBeaconStateWithinRange(minSlot, maxSlot)
+	if err != nil {
+		log.WithError(err).WithFields(log.Fields{"minSlot": minSlot, "maxSlot": maxSlot}).Debug("No states found in range")
+		writeError(w, http.StatusNotFound, "no beacon states found in range")
+		return
+	}
+
+	response := StateRangeResponse{
+		AttestedSlot:  data.AttestedSlot,
+		FinalizedSlot: data.FinalizedSlot,
+		AttestedData:  "0x" + hex.EncodeToString(data.AttestedBeaconState),
+		FinalizedData: "0x" + hex.EncodeToString(data.FinalizedBeaconState),
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}

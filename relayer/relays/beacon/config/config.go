@@ -79,18 +79,13 @@ func (b BeaconConfig) Validate() error {
 	if b.Spec.SyncCommitteeSize == 0 {
 		return errors.New("source beacon setting [syncCommitteeSize] is not set")
 	}
-	// data store - only required if not using state service exclusively
-	if b.StateServiceEndpoint == "" {
-		if b.DataStore.Location == "" {
-			return errors.New("source beacon datastore [location] is not set")
-		}
-		if b.DataStore.MaxEntries == 0 {
-			return errors.New("source beacon datastore [maxEntries] is not set")
-		}
-	}
 	// api endpoints
 	if b.Endpoint == "" {
 		return errors.New("source beacon setting [endpoint] is not set")
+	}
+	// state service is required for beacon state recovery
+	if b.StateServiceEndpoint == "" {
+		return errors.New("source beacon setting [stateServiceEndpoint] is not set")
 	}
 	return nil
 }

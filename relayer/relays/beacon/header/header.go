@@ -14,7 +14,6 @@ import (
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/protocol"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/store"
 	"github.com/snowfork/snowbridge/relayer/relays/error_tracking"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -38,11 +37,11 @@ type Header struct {
 	updateSlotInterval uint64
 }
 
-func New(writer parachain.ChainWriter, client api.BeaconAPI, setting config.SpecSettings, store store.BeaconStore, protocol *protocol.Protocol, updateSlotInterval uint64, stateService syncer.StateServiceClient) Header {
+func New(writer parachain.ChainWriter, client api.BeaconAPI, setting config.SpecSettings, protocol *protocol.Protocol, updateSlotInterval uint64, stateService syncer.StateServiceClient) Header {
 	return Header{
 		cache:              cache.New(setting.SlotsInEpoch, setting.EpochsPerSyncCommitteePeriod),
 		writer:             writer,
-		syncer:             syncer.New(client, store, protocol, stateService),
+		syncer:             syncer.New(client, protocol, stateService),
 		protocol:           protocol,
 		updateSlotInterval: updateSlotInterval,
 	}

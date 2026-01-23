@@ -26,5 +26,10 @@
     "maxProofs": 1000,
     "stateTTLSeconds": 780,
     "proofTTLSeconds": 3600
+  },
+  "persist": {
+    "enabled": true,
+    "saveIntervalHours": 12,
+    "maxEntries": 10
   }
 }

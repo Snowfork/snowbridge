@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strings"
 
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
@@ -12,7 +12,6 @@ import (
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/api"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/protocol"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/store"
 
 	"github.com/ethereum/go-ethereum/common"
 	log "github.com/sirupsen/logrus"
@@ -110,12 +109,9 @@ func importExecutionHeaderFn(cmd *cobra.Command, _ []string) error {
 		log.WithField("hash", beaconHeader).Info("will be syncing execution header for beacon hash")
 
 		p := protocol.New(conf.Source.Beacon.Spec, conf.Sink.Parachain.HeaderRedundancy)
-		store := store.New(conf.Source.Beacon.DataStore.Location, conf.Source.Beacon.DataStore.MaxEntries, *p)
-		store.Connect()
-		defer store.Close()
 
 		client := api.NewBeaconClient(lodestarEndpoint)
-		syncer := syncer.New(client, &store, p, nil)
+		syncer := syncer.New(client, p, nil)
 
 		beaconHeaderHash := common.HexToHash(finalizedHeader)
 
@@ -156,7 +152,7 @@ func importExecutionHeaderFn(cmd *cobra.Command, _ []string) error {
 
 func getKeyPair(privateKeyFile string) (*sr25519.Keypair, error) {
 	var cleanedKeyURI string
-	content, err := ioutil.ReadFile(privateKeyFile)
+	content, err := os.ReadFile(privateKeyFile)
 	if err != nil {
 		return nil, fmt.Errorf("cannot read key file: %w", err)
 	}

@@ -101,6 +101,7 @@ build_web_packages() {
 
 build_v1() {
     if [ ! -d $v1_root_dir ]; then
+      # TODO revert to branch snowbridge-v1
         git clone -b beacon-state-relayer-v1 https://github.com/snowfork/snowbridge/ $v1_root_dir
     fi
     pushd $v1_contract_dir

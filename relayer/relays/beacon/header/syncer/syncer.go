@@ -14,7 +14,6 @@ import (
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/protocol"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/store"
 	"github.com/snowfork/snowbridge/relayer/relays/util"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -33,20 +32,25 @@ var (
 type StateServiceClient interface {
 	GetBlockRootProof(slot uint64) (*scale.BlockRootProof, error)
 	Health() error
+	// GetBeaconState fetches raw SSZ beacon state data for a slot
+	GetBeaconState(slot uint64) ([]byte, error)
+	// GetBeaconStateInRangeDecoded fetches beacon states within a slot range
+	GetBeaconStateInRangeDecoded(minSlot, maxSlot uint64) (attestedSlot, finalizedSlot uint64, attestedData, finalizedData []byte, err error)
 }
 
 type Syncer struct {
 	Client       api.BeaconAPI
-	store        store.BeaconStore
 	protocol     *protocol.Protocol
 	stateService StateServiceClient
 }
 
-// New creates a Syncer with an optional beacon state service client (can be nil)
-func New(client api.BeaconAPI, store store.BeaconStore, protocol *protocol.Protocol, stateService StateServiceClient) *Syncer {
+// New creates a Syncer with an optional beacon state service client.
+// When stateService is provided, it handles all beacon state fetching with internal fallback logic
+// (state service cache -> beacon API -> persistent store).
+// When stateService is nil, the syncer falls back directly to the beacon API.
+func New(client api.BeaconAPI, protocol *protocol.Protocol, stateService StateServiceClient) *Syncer {
 	return &Syncer{
 		Client:       client,
-		store:        store,
 		protocol:     protocol,
 		stateService: stateService,
 	}
@@ -981,18 +985,26 @@ func (s *Syncer) getBeaconDataFromClient(attestedSlot uint64) (finalizedUpdateCo
 func (s *Syncer) getBestMatchBeaconDataFromStore(minSlot, maxSlot uint64) (finalizedUpdateContainer, error) {
 	var response finalizedUpdateContainer
 	var err error
+	var attestedSlot, finalizedSlot uint64
+	var attestedData, finalizedData []byte
 
-	data, err := s.store.FindBeaconStateWithinRange(minSlot, maxSlot)
+	// The state service handles all internal fallback logic (cache -> beacon API -> persistent store)
+	if s.stateService == nil {
+		return finalizedUpdateContainer{}, fmt.Errorf("no beacon state service configured for range query")
+	}
+
+	attestedSlot, finalizedSlot, attestedData, finalizedData, err = s.stateService.GetBeaconStateInRangeDecoded(minSlot, maxSlot)
+	if err != nil {
+		return finalizedUpdateContainer{}, fmt.Errorf("state service range query failed: %w", err)
+	}
+	log.WithFields(log.Fields{"minSlot": minSlot, "maxSlot": maxSlot}).Debug("fetched beacon states from state service")
+
+	response.AttestedSlot = attestedSlot
+	response.AttestedState, err = s.UnmarshalBeaconState(attestedSlot, attestedData)
 	if err != nil {
 		return finalizedUpdateContainer{}, err
 	}
-
-	response.AttestedSlot = data.AttestedSlot
-	response.AttestedState, err = s.UnmarshalBeaconState(data.AttestedSlot, data.AttestedBeaconState)
-	if err != nil {
-		return finalizedUpdateContainer{}, err
-	}
-	response.FinalizedState, err = s.UnmarshalBeaconState(data.FinalizedSlot, data.FinalizedBeaconState)
+	response.FinalizedState, err = s.UnmarshalBeaconState(finalizedSlot, finalizedData)
 	if err != nil {
 		return finalizedUpdateContainer{}, err
 	}
@@ -1012,14 +1024,22 @@ func (s *Syncer) getBestMatchBeaconDataFromStore(minSlot, maxSlot uint64) (final
 }
 
 func (s *Syncer) getBeaconState(slot uint64) ([]byte, error) {
+	// Try beacon state service first if available
+	// The state service handles all internal fallback logic (cache -> beacon API -> persistent store)
+	if s.stateService != nil {
+		data, serviceErr := s.stateService.GetBeaconState(slot)
+		if serviceErr == nil {
+			log.WithField("slot", slot).Debug("fetched beacon state from state service")
+			return data, nil
+		}
+		log.WithError(serviceErr).WithField("slot", slot).Debug("state service unavailable, falling back to beacon API")
+	}
+
+	// Fall back to beacon API directly
 	data, apiErr := s.Client.GetBeaconState(strconv.FormatUint(slot, 10))
 	if apiErr != nil {
-		var storeErr error
-		data, storeErr = s.store.GetBeaconStateData(slot)
-		if storeErr != nil {
-			log.WithFields(log.Fields{"apiError": apiErr, "storeErr": storeErr}).Warn("fetch beacon state from api and store failed")
-			return nil, ErrBeaconStateUnavailable
-		}
+		log.WithError(apiErr).WithField("slot", slot).Warn("fetch beacon state from beacon API failed")
+		return nil, ErrBeaconStateUnavailable
 	}
 	return data, nil
 }

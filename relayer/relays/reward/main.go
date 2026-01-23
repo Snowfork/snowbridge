@@ -23,7 +23,6 @@ import (
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/api"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/protocol"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/store"
 	"github.com/snowfork/snowbridge/relayer/relays/util"
 	"golang.org/x/sync/errgroup"
 )
@@ -92,9 +91,6 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 
 	p := protocol.New(r.config.Source.Beacon.Spec, r.config.Sink.Parachain.HeaderRedundancy)
 
-	store := store.New(r.config.Source.Beacon.DataStore.Location, r.config.Source.Beacon.DataStore.MaxEntries, *p)
-	store.Connect()
-
 	beaconAPI := api.NewBeaconClient(r.config.Source.Beacon.Endpoint)
 
 	var stateServiceClient syncer.StateServiceClient
@@ -107,7 +103,6 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		r.writer,
 		beaconAPI,
 		r.config.Source.Beacon.Spec,
-		&store,
 		p,
 		0, // setting is not used in the reward relay
 		stateServiceClient,

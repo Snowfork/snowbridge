@@ -247,7 +247,7 @@ start_relayer() {
         done
     ) &
 
-    # Launch beacon state service (before beacon relay since other relayers may use it)
+    # Launch beacon state service (before other relayers since may use it)
     (
         : >"$output_dir"/beacon-state-service.log
         while :; do

@@ -12,7 +12,6 @@ import (
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/api"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/protocol"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/store"
 
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
@@ -56,12 +55,6 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		return err
 	}
 
-	s := store.New(r.config.Source.Beacon.DataStore.Location, r.config.Source.Beacon.DataStore.MaxEntries, *p)
-	err = s.Connect()
-	if err != nil {
-		return err
-	}
-
 	beaconAPI := api.NewBeaconClient(r.config.Source.Beacon.Endpoint)
 
 	var stateServiceClient syncer.StateServiceClient
@@ -74,7 +67,6 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		writer,
 		beaconAPI,
 		specSettings,
-		&s,
 		p,
 		r.config.Sink.UpdateSlotInterval,
 		stateServiceClient,

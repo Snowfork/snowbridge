@@ -192,3 +192,93 @@ func (c *Client) fetchProof(url string) (*ProofResponse, error) {
 
 	return &proofResp, nil
 }
+
+// GetBeaconState fetches raw SSZ beacon state data for a slot
+func (c *Client) GetBeaconState(slot uint64) ([]byte, error) {
+	url := fmt.Sprintf("%s/v1/state?slot=%d", c.endpoint, slot)
+	log.WithField("url", url).Debug("Fetching beacon state from beacon state service")
+
+	resp, err := c.httpClient.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("http request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response body: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		var errResp ErrorResponse
+		if json.Unmarshal(body, &errResp) == nil && errResp.Error != "" {
+			return nil, fmt.Errorf("beacon state service error: %s", errResp.Error)
+		}
+		return nil, fmt.Errorf("beacon state service returned status %d", resp.StatusCode)
+	}
+
+	var stateResp StateResponse
+	if err := json.Unmarshal(body, &stateResp); err != nil {
+		return nil, fmt.Errorf("unmarshal response: %w", err)
+	}
+
+	// Decode hex data
+	data, err := util.HexStringToByteArray(stateResp.Data)
+	if err != nil {
+		return nil, fmt.Errorf("decode state data: %w", err)
+	}
+
+	return data, nil
+}
+
+// GetBeaconStateInRange fetches beacon states within a slot range from the persistent store
+func (c *Client) GetBeaconStateInRange(minSlot, maxSlot uint64) (*StateRangeResponse, error) {
+	url := fmt.Sprintf("%s/v1/state/range?minSlot=%d&maxSlot=%d", c.endpoint, minSlot, maxSlot)
+	log.WithField("url", url).Debug("Fetching beacon state range from beacon state service")
+
+	resp, err := c.httpClient.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("http request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response body: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		var errResp ErrorResponse
+		if json.Unmarshal(body, &errResp) == nil && errResp.Error != "" {
+			return nil, fmt.Errorf("beacon state service error: %s", errResp.Error)
+		}
+		return nil, fmt.Errorf("beacon state service returned status %d", resp.StatusCode)
+	}
+
+	var rangeResp StateRangeResponse
+	if err := json.Unmarshal(body, &rangeResp); err != nil {
+		return nil, fmt.Errorf("unmarshal response: %w", err)
+	}
+
+	return &rangeResp, nil
+}
+
+// GetBeaconStateInRangeDecoded fetches beacon states within a slot range and decodes the hex data
+func (c *Client) GetBeaconStateInRangeDecoded(minSlot, maxSlot uint64) (attestedSlot, finalizedSlot uint64, attestedData, finalizedData []byte, err error) {
+	rangeResp, err := c.GetBeaconStateInRange(minSlot, maxSlot)
+	if err != nil {
+		return 0, 0, nil, nil, err
+	}
+
+	attestedData, err = util.HexStringToByteArray(rangeResp.AttestedData)
+	if err != nil {
+		return 0, 0, nil, nil, fmt.Errorf("decode attested data: %w", err)
+	}
+
+	finalizedData, err = util.HexStringToByteArray(rangeResp.FinalizedData)
+	if err != nil {
+		return 0, 0, nil, nil, fmt.Errorf("decode finalized data: %w", err)
+	}
+
+	return rangeResp.AttestedSlot, rangeResp.FinalizedSlot, attestedData, finalizedData, nil
+}
