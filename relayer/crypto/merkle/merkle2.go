@@ -71,7 +71,7 @@ func (n *Node2) CalculateNodeHash(sort bool) ([]byte, error) {
 	return h.Sum(nil), nil
 }
 
-// NewTree creates a new Merkle Tree using the content cs.
+// NewTree2 creates a new Merkle Tree using the content cs.
 func NewTree2(cs []Content) (*MerkleTree, error) {
 	return NewTreeWithHashStrategy(cs, sha3.NewLegacyKeccak256)
 }
