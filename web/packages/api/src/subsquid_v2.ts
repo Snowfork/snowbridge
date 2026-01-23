@@ -1,5 +1,12 @@
 import { queryByGraphQL } from "./subsquid"
 
+export {
+    fetchLatestBlocksSynced,
+    fetchInterParachainMessageById,
+    fetchSyncStatusOfParachain,
+    queryByGraphQL,
+} from "./subsquid"
+
 /**
  * Query the recent transfers from Ethereum to Polkadot
 
@@ -583,4 +590,22 @@ export const fetchToEthereumTransfersBySenders = async (
     }`
     let result = await queryByGraphQL(graphqlApiUrl, query)
     return result?.transferStatusToEthereumV2s
+}
+
+export const fetchMaxDeliveredNonceToEthereum = async (graphqlApiUrl: string, latest: number) => {
+    let query = `query { toEthereumV2LastDelivered(latest: ${latest}) {
+                max
+            }
+        }`
+    let result = await queryByGraphQL(graphqlApiUrl, query)
+    return result?.toEthereumV2LastDelivered?.max
+}
+
+export const fetchMaxDeliveredNonceToPolkadot = async (graphqlApiUrl: string, latest: number) => {
+    let query = `query { toPolkadotV2LastDelivered(latest: ${latest}) {
+                max
+            }
+        }`
+    let result = await queryByGraphQL(graphqlApiUrl, query)
+    return result?.toPolkadotV2LastDelivered?.max
 }
