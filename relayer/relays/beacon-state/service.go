@@ -123,9 +123,11 @@ func (s *Service) runPeriodicStateSaver(ctx context.Context) error {
 
 	log.WithField("interval", interval).Info("Starting periodic beacon state saver")
 
-	// Save immediately on startup
-	if err := s.saveCurrentFinalizedState(); err != nil {
-		log.WithError(err).Warn("Failed to save initial beacon state")
+	// Only save on startup if we don't have a recent state
+	if s.shouldSaveOnStartup(interval) {
+		if err := s.saveCurrentFinalizedState(); err != nil {
+			log.WithError(err).Warn("Failed to save initial beacon state")
+		}
 	}
 
 	for {
@@ -139,6 +141,40 @@ func (s *Service) runPeriodicStateSaver(ctx context.Context) error {
 			}
 		}
 	}
+}
+
+// shouldSaveOnStartup checks if we need to save a beacon state on startup.
+// Returns true if no recent state exists (within the save interval).
+func (s *Service) shouldSaveOnStartup(interval time.Duration) bool {
+	latestTimestamp, err := s.store.GetLatestTimestamp()
+	if err != nil {
+		log.WithError(err).Warn("Failed to get latest beacon state timestamp, will save on startup")
+		return true
+	}
+
+	// No entries exist
+	if latestTimestamp.IsZero() {
+		log.Info("No existing beacon states found, will save on startup")
+		return true
+	}
+
+	// Check if the latest entry is older than the save interval
+	age := time.Since(latestTimestamp)
+	if age >= interval {
+		log.WithFields(log.Fields{
+			"lastSaved": latestTimestamp,
+			"age":       age,
+			"interval":  interval,
+		}).Info("Latest beacon state is older than save interval, will save on startup")
+		return true
+	}
+
+	log.WithFields(log.Fields{
+		"lastSaved":    latestTimestamp,
+		"age":          age,
+		"nextSaveIn":   interval - age,
+	}).Info("Recent beacon state exists, skipping startup save")
+	return false
 }
 
 // saveCurrentFinalizedState fetches and saves the current finalized beacon state

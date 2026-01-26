@@ -209,6 +209,21 @@ func (s *Store) ListBeaconStates() ([]BeaconState, error) {
 	return response, nil
 }
 
+// GetLatestTimestamp returns the timestamp of the most recently saved beacon state entry.
+// Returns zero time if no entries exist.
+func (s *Store) GetLatestTimestamp() (time.Time, error) {
+	query := `SELECT timestamp FROM beacon_state ORDER BY timestamp DESC LIMIT 1`
+	var timestamp int64
+	err := s.db.QueryRow(query).Scan(&timestamp)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return time.Time{}, nil
+		}
+		return time.Time{}, fmt.Errorf("query latest timestamp: %w", err)
+	}
+	return time.Unix(timestamp, 0), nil
+}
+
 func (s *Store) DeleteStateFile(filename string) error {
 	err := os.Remove(s.stateFileLocation(filename))
 	if err != nil {
