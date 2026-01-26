@@ -428,15 +428,12 @@ contract GatewayV2Test is Test {
         // Limit the gas for this test to ensure we hit the NotEnoughGas error
         uint256 gasLimit = 100_000;
         vm.deal(relayer, 1 ether);
-
-        vm.expectEmit(true, false, false, true);
-        emit IGatewayV2.CommandFailed(2, 0);
-        vm.expectEmit(true, false, false, true);
-        emit IGatewayV2.InboundMessageDispatched(2, topic, false, relayerRewardAddress);
-
         vm.prank(relayer);
-        IGatewayV2(address(gateway))
-        .v2_submit{gas: gasLimit}(message, proof, makeMockProof(), relayerRewardAddress);
+
+        vm.expectRevert(IGatewayV2.InsufficientGasLimit.selector);
+        IGatewayV2(address(gateway)).v2_submit{gas: gasLimit}(
+            message, proof, makeMockProof(), relayerRewardAddress
+        );
     }
 
     function mockNativeTokenForSend(address user, uint128 amount)
@@ -507,8 +504,9 @@ contract GatewayV2Test is Test {
         );
 
         hoax(user1);
-        IGatewayV2(payable(address(gateway)))
-        .v2_sendMessage{value: 1 ether}("", assets, "", 0.1 ether, 0.4 ether);
+        IGatewayV2(payable(address(gateway))).v2_sendMessage{value: 1 ether}(
+            "", assets, "", 0.1 ether, 0.4 ether
+        );
 
         // Verify asset balances
         assertEq(assetHubAgent.balance, 1 ether);
@@ -533,8 +531,9 @@ contract GatewayV2Test is Test {
 
         vm.expectRevert();
         hoax(user1);
-        IGatewayV2(payable(address(gateway)))
-        .v2_sendMessage{value: 1 ether}("", assets, "", 0.1 ether, 0.4 ether);
+        IGatewayV2(payable(address(gateway))).v2_sendMessage{value: 1 ether}(
+            "", assets, "", 0.1 ether, 0.4 ether
+        );
 
         assertEq(feeToken.balanceOf(assetHubAgent), 0);
     }
@@ -542,16 +541,18 @@ contract GatewayV2Test is Test {
     function testSendMessageFailsWithInsufficentValue() public {
         vm.expectRevert(IGatewayV2.InsufficientValue.selector);
         hoax(user1, 1 ether);
-        IGatewayV2(payable(address(gateway)))
-        .v2_sendMessage{value: 0.4 ether}("", new bytes[](0), "", 0.1 ether, 0.4 ether);
+        IGatewayV2(payable(address(gateway))).v2_sendMessage{value: 0.4 ether}(
+            "", new bytes[](0), "", 0.1 ether, 0.4 ether
+        );
     }
 
     function testSendMessageFailsWithExceededMaximumValue() public {
         vm.expectRevert(IGatewayV2.ExceededMaximumValue.selector);
         uint256 value = uint256(type(uint128).max) + 1;
         hoax(user1, value);
-        IGatewayV2(payable(address(gateway)))
-        .v2_sendMessage{value: value}("", new bytes[](0), "", 0.1 ether, 0.4 ether);
+        IGatewayV2(payable(address(gateway))).v2_sendMessage{value: value}(
+            "", new bytes[](0), "", 0.1 ether, 0.4 ether
+        );
     }
 
     function testUnlockWethSuccess() public {
@@ -717,10 +718,9 @@ contract GatewayV2Test is Test {
         uint256 totalRequired = executionFee + relayerFee;
 
         hoax(user1, totalRequired);
-        IGatewayV2(payable(address(gateway)))
-        .v2_registerToken{
-            value: totalRequired
-        }(validTokenContract, uint8(0), executionFee, relayerFee);
+        IGatewayV2(payable(address(gateway))).v2_registerToken{value: totalRequired}(
+            validTokenContract, uint8(0), executionFee, relayerFee
+        );
 
         // Verify the token is registered
         assertTrue(IGatewayV2(address(gateway)).isTokenRegistered(validTokenContract));
@@ -737,10 +737,9 @@ contract GatewayV2Test is Test {
 
         vm.expectRevert(IGatewayV2.InsufficientValue.selector);
         hoax(user1, totalRequired);
-        IGatewayV2(payable(address(gateway)))
-        .v2_registerToken{
-            value: totalRequired - 1
-        }(validTokenContract, uint8(0), executionFee, relayerFee);
+        IGatewayV2(payable(address(gateway))).v2_registerToken{value: totalRequired - 1}(
+            validTokenContract, uint8(0), executionFee, relayerFee
+        );
 
         // Verify token still is not registered after the failed attempt
         assertFalse(IGatewayV2(address(gateway)).isTokenRegistered(validTokenContract));
@@ -757,8 +756,9 @@ contract GatewayV2Test is Test {
         vm.expectRevert(IGatewayV2.ExceededMaximumValue.selector);
         uint256 value = uint256(type(uint128).max) + 1;
         hoax(user1, value);
-        IGatewayV2(payable(address(gateway)))
-        .v2_registerToken{value: value}(validTokenContract, uint8(0), executionFee, relayerFee);
+        IGatewayV2(payable(address(gateway))).v2_registerToken{value: value}(
+            validTokenContract, uint8(0), executionFee, relayerFee
+        );
 
         // Verify token still is not registered after the failed attempt
         assertFalse(IGatewayV2(address(gateway)).isTokenRegistered(validTokenContract));
@@ -1135,16 +1135,15 @@ contract GatewayV2Test is Test {
             );
     }
 
-    function testAgentCallContractRevertedForInsufficientGas() public {
+    function testAgentCallContractWontRevertForInsufficientGas() public {
         bytes32 topic = keccak256("topic");
 
         vm.deal(assetHubAgent, 1 ether);
         hoax(relayer, 1 ether);
 
-        // InsufficientGasLimit during dispatch is caught and emits CommandFailed
-        // but with very low gas (1), the dispatch might fail differently
-        vm.expectEmit(true, false, false, true);
-        emit IGatewayV2.InboundMessageDispatched(1, topic, true, relayerRewardAddress);
+        // After Option A implementation, InsufficientGasLimit is now propagated
+        // and causes the entire v2_submit to revert
+        vm.expectRevert(IGatewayV2.InsufficientGasLimit.selector);
 
         IGatewayV2(address(gateway))
             .v2_submit(
