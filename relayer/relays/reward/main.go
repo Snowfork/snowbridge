@@ -20,7 +20,6 @@ import (
 	"github.com/snowfork/snowbridge/relayer/crypto/sr25519"
 	beaconstate "github.com/snowfork/snowbridge/relayer/relays/beacon-state"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/api"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/protocol"
 	"github.com/snowfork/snowbridge/relayer/relays/util"
@@ -93,11 +92,8 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 
 	beaconAPI := api.NewBeaconClient(r.config.Source.Beacon.Endpoint)
 
-	var stateServiceClient syncer.StateServiceClient
-	if r.config.Source.Beacon.StateServiceEndpoint != "" {
-		stateServiceClient = beaconstate.NewClient(r.config.Source.Beacon.StateServiceEndpoint)
-		log.WithField("endpoint", r.config.Source.Beacon.StateServiceEndpoint).Info("Using beacon state service for proof generation")
-	}
+	stateServiceClient := beaconstate.NewClient(r.config.Source.Beacon.StateServiceEndpoint)
+	log.WithField("endpoint", r.config.Source.Beacon.StateServiceEndpoint).Info("Using beacon state service for proof generation")
 
 	beaconHeader := header.New(
 		r.writer,
