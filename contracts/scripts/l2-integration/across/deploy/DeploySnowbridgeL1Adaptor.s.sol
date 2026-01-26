@@ -1,16 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.28;
+pragma solidity 0.8.33;
 
 import {Script, console} from "forge-std/Script.sol";
 import {
     SPOKE_POOL as SEPOLIA_SPOKE_POOL,
-    BASE_MULTI_CALL_HANDLER as SEPOLIA_BASE_MULTI_CALL_HANDLER,
     WETH9 as SEPOLIA_WETH9,
     BASE_WETH9 as SEPOLIA_BASE_WETH9
 } from "../constants/Sepolia.sol";
 import {
     SPOKE_POOL as MAINNET_SPOKE_POOL,
-    BASE_MULTI_CALL_HANDLER as MAINNET_BASE_MULTI_CALL_HANDLER,
     WETH9 as MAINNET_WETH9,
     BASE_WETH9 as MAINNET_BASE_WETH9
 } from "../constants/Mainnet.sol";
@@ -30,12 +28,11 @@ contract DeploySnowbridgeL1Adaptor is Script {
 
         if (keccak256(bytes(vm.envString("L1_NETWORK"))) == keccak256(bytes("mainnet"))) {
             SPOKE_POOL_ADDRESS = MAINNET_SPOKE_POOL;
-            BASE_MULTI_CALL_HANDLER_ADDRESS = MAINNET_BASE_MULTI_CALL_HANDLER;
             WETH9_ADDRESS = MAINNET_WETH9;
             BASE_WETH9_ADDRESS = MAINNET_BASE_WETH9;
         } else if (keccak256(bytes(vm.envString("L1_NETWORK"))) == keccak256(bytes("sepolia"))) {
             SPOKE_POOL_ADDRESS = SEPOLIA_SPOKE_POOL;
-            BASE_MULTI_CALL_HANDLER_ADDRESS = SEPOLIA_BASE_MULTI_CALL_HANDLER;
+            WETH9_ADDRESS = SEPOLIA_WETH9;
             WETH9_ADDRESS = SEPOLIA_WETH9;
             BASE_WETH9_ADDRESS = SEPOLIA_BASE_WETH9;
         } else {

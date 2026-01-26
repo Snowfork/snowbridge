@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-01-15T09:38:08.873Z",
+  "timestamp": "2026-01-19T12:15:32.614Z",
   "environment": "polkadot_mainnet",
   "ethChainId": 1,
   "gatewayAddress": "0x27ca963c279c93801941e1eb8799c23f407d68e7",
@@ -407,7 +407,8 @@
         "hasEthBalance": true,
         "hasXcmPaymentApi": true,
         "supportsAliasOrigin": true,
-        "xcmVersion": "v5"
+        "xcmVersion": "v5",
+        "supportsV2": true
       },
       "info": {
         "tokenSymbols": "DOT",
@@ -1021,7 +1022,8 @@
         "hasEthBalance": true,
         "hasXcmPaymentApi": true,
         "supportsAliasOrigin": true,
-        "xcmVersion": "v5"
+        "xcmVersion": "v5",
+        "supportsV2": false
       },
       "info": {
         "tokenSymbols": "ACA",
@@ -1057,7 +1059,8 @@
         "hasEthBalance": false,
         "hasXcmPaymentApi": true,
         "supportsAliasOrigin": false,
-        "xcmVersion": "v5"
+        "xcmVersion": "v5",
+        "supportsV2": false
       },
       "info": {
         "tokenSymbols": "GLMR",
@@ -1150,7 +1153,8 @@
         "hasEthBalance": true,
         "hasXcmPaymentApi": true,
         "supportsAliasOrigin": true,
-        "xcmVersion": "v5"
+        "xcmVersion": "v5",
+        "supportsV2": false
       },
       "info": {
         "tokenSymbols": "BNC",
@@ -1181,7 +1185,7 @@
           "isSufficient": false
         }
       },
-      "estimatedExecutionFeeDOT": "bigint:90454898",
+      "estimatedExecutionFeeDOT": "bigint:94936522",
       "estimatedDeliveryFeeDOT": "bigint:307100000"
     },
     "2034": {
@@ -1195,7 +1199,8 @@
         "hasEthBalance": false,
         "hasXcmPaymentApi": true,
         "supportsAliasOrigin": false,
-        "xcmVersion": "v4"
+        "xcmVersion": "v4",
+        "supportsV2": false
       },
       "info": {
         "tokenSymbols": "HDX",
@@ -1206,7 +1211,7 @@
         "evmChainId": 222222,
         "name": "Hydration",
         "specName": "hydradx",
-        "specVersion": 360
+        "specVersion": 378
       },
       "assets": {
         "0x45804880de22913dafe09f4980848ece6ecbaf78": {
@@ -1362,7 +1367,7 @@
           "isSufficient": true
         }
       },
-      "estimatedExecutionFeeDOT": "bigint:1635024",
+      "estimatedExecutionFeeDOT": "bigint:1774411",
       "estimatedDeliveryFeeDOT": "bigint:307100000"
     },
     "2043": {
@@ -1376,7 +1381,8 @@
         "hasEthBalance": false,
         "hasXcmPaymentApi": true,
         "supportsAliasOrigin": false,
-        "xcmVersion": "v4"
+        "xcmVersion": "v4",
+        "supportsV2": false
       },
       "info": {
         "tokenSymbols": "NEURO",
@@ -1412,7 +1418,8 @@
         "hasEthBalance": false,
         "hasXcmPaymentApi": false,
         "supportsAliasOrigin": false,
-        "xcmVersion": "v4"
+        "xcmVersion": "v4",
+        "supportsV2": false
       },
       "info": {
         "tokenSymbols": "MYTH",
@@ -1451,7 +1458,8 @@
           "hasEthBalance": false,
           "hasXcmPaymentApi": true,
           "supportsAliasOrigin": true,
-          "xcmVersion": "v5"
+          "xcmVersion": "v5",
+          "supportsV2": false
         },
         "info": {
           "tokenSymbols": "KSM",

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.28;
+pragma solidity 0.8.33;
 
 import {Script, console} from "forge-std/Script.sol";
 import {IERC20} from "openzeppelin/token/ERC20/IERC20.sol";
@@ -46,10 +46,12 @@ contract TestSnowbridgeL1AdaptorNativeEther is Script {
             fillDeadlineBuffer: TIME_BUFFER
         });
 
+        // Prefund the adaptor with native Ether for the outgoing deposit
+        (bool prefunded,) = l1SnowbridgeAdaptor.call{value: params.inputAmount}("");
+        require(prefunded, "Failed to prefund adaptor with ETH");
+
         SnowbridgeL1Adaptor(l1SnowbridgeAdaptor)
-        .depositNativeEther{
-            value: params.inputAmount
-        }(params, recipient, keccak256("TestNativeEtherDeposit"));
+            .depositNativeEther(params, recipient, keccak256("TestNativeEtherDeposit"));
 
         return;
     }

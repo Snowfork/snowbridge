@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.28;
+pragma solidity 0.8.33;
 
-// Sepolia addressess
+// Sepolia addresses
 address constant SPOKE_POOL = 0x5ef6C01E11889d86803e0B23e3cB3F9E9d97B662;
 address constant MULTI_CALL_HANDLER = 0x924a9f036260DdD5808007E1AA95f08eD08aA569;
 address constant USDC = 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238;
@@ -9,6 +9,7 @@ uint32 constant CHAIN_ID = 11_155_111;
 address constant WETH9 = 0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14;
 address constant GATEWAY = 0x9Ed8b47Bc3417e3BD0507ADC06E56e2Fa360A4E9;
 address constant UNISWAP_ROUTER = 0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E;
+address constant UNISWAP_QUOTER = 0xEd1f6473345F45b75F8179591dd5bA1888cf2FB3;
 
 // Base Sepolia addresses
 address constant BASE_SPOKE_POOL = 0x82B564983aE7274c86695917BBf8C99ECb6F0F8F;

@@ -32,6 +32,7 @@ async function buildRegistry(environment: Environment): Promise<AssetRegistry> {
         ethChainId,
         assetHubParaId,
         bridgeHubParaId,
+        v2_parachains,
         parachains,
         gatewayContract,
         assetOverrides,
@@ -143,6 +144,7 @@ async function buildRegistry(environment: Environment): Promise<AssetRegistry> {
                     assetHubParaId,
                     pnaAssets,
                     assetOverrides ?? {},
+                    v2_parachains,
                 )
                 return { parachainId, para }
             }),
@@ -307,6 +309,7 @@ async function indexParachain(
     assetHubParaId: number,
     pnaAssets: PNAMap,
     assetOverrides: AssetOverrideMap,
+    v2_parachains?: number[],
 ): Promise<Parachain> {
     const info = await parachain.chainProperties()
 
@@ -394,6 +397,7 @@ async function indexParachain(
             hasXcmPaymentApi,
             supportsAliasOrigin,
             xcmVersion,
+            supportsV2: v2_parachains?.includes(parachainId) ?? false,
         },
         info,
         xcDOT,

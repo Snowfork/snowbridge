@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.28;
+pragma solidity 0.8.33;
 
 import {Script, console} from "forge-std/Script.sol";
 
@@ -10,8 +10,7 @@ import {
     BASE_MULTI_CALL_HANDLER as SEPOLIA_BASE_MULTI_CALL_HANDLER,
     WETH9 as SEPOLIA_WETH9,
     BASE_WETH9 as SEPOLIA_BASE_WETH9,
-    GATEWAY as SEPOLIA_GATEWAY,
-    UNISWAP_ROUTER as SEPOLIA_UNISWAP_ROUTER
+    GATEWAY as SEPOLIA_GATEWAY
 } from "../constants/Sepolia.sol";
 import {
     SPOKE_POOL as MAINNET_SPOKE_POOL,
@@ -20,8 +19,7 @@ import {
     BASE_MULTI_CALL_HANDLER as MAINNET_BASE_MULTI_CALL_HANDLER,
     WETH9 as MAINNET_WETH9,
     BASE_WETH9 as MAINNET_BASE_WETH9,
-    GATEWAY as MAINNET_GATEWAY,
-    UNISWAP_ROUTER as MAINNET_UNISWAP_ROUTER
+    GATEWAY as MAINNET_GATEWAY
 } from "../constants/Mainnet.sol";
 import {SnowbridgeL2Adaptor} from "../../../../src/l2-integration/SnowbridgeL2Adaptor.sol";
 
@@ -46,14 +44,12 @@ contract DeploySnowbridgeL2Adaptor is Script {
             GATEWAY_V2_ADDRESS = MAINNET_GATEWAY;
             WETH9_ADDRESS = MAINNET_WETH9;
             BASE_WETH9_ADDRESS = MAINNET_BASE_WETH9;
-            UNISWAP_ROUTER_ADDRESS = MAINNET_UNISWAP_ROUTER;
         } else if (keccak256(bytes(vm.envString("L1_NETWORK"))) == keccak256(bytes("sepolia"))) {
             BASE_SPOKE_POOL_ADDRESS = SEPOLIA_BASE_SPOKE_POOL;
             MULTI_CALL_HANDLER_ADDRESS = SEPOLIA_MULTI_CALL_HANDLER;
             GATEWAY_V2_ADDRESS = SEPOLIA_GATEWAY;
             WETH9_ADDRESS = SEPOLIA_WETH9;
             BASE_WETH9_ADDRESS = SEPOLIA_BASE_WETH9;
-            UNISWAP_ROUTER_ADDRESS = SEPOLIA_UNISWAP_ROUTER;
         } else {
             revert("Unsupported L1 network");
         }
@@ -63,8 +59,7 @@ contract DeploySnowbridgeL2Adaptor is Script {
             MULTI_CALL_HANDLER_ADDRESS,
             GATEWAY_V2_ADDRESS,
             WETH9_ADDRESS,
-            BASE_WETH9_ADDRESS,
-            UNISWAP_ROUTER_ADDRESS
+            BASE_WETH9_ADDRESS
         );
         console.log("Snowbridge L2 Adaptor deployed at:", address(snowbridgeL2Adaptor));
         return;

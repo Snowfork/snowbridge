@@ -8,8 +8,12 @@ import {
     IGatewayV1__factory,
     IGatewayV2,
     IGatewayV2__factory,
+    ISwapLegacyRouter,
+    ISwapLegacyRouter__factory,
     ISwapQuoter,
     ISwapQuoter__factory,
+    ISwapRouter,
+    ISwapRouter__factory,
     SnowbridgeL1Adaptor,
     SnowbridgeL1Adaptor__factory,
     SnowbridgeL2Adaptor,
@@ -23,7 +27,6 @@ export * as utils from "./utils"
 export * as status from "./status"
 export * as assetsV2 from "./assets_v2"
 export * as history from "./history"
-export * as subsquid from "./subsquid"
 export * as historyV2 from "./history_v2"
 export * as subsquidV2 from "./subsquid_v2"
 export * as forKusama from "./forKusama"
@@ -53,6 +56,8 @@ export class Context {
     #beefyClient?: BeefyClient
     #l1Adapter?: SnowbridgeL1Adaptor
     #l1SwapQuoter?: ISwapQuoter
+    #l1SwapRouter?: ISwapRouter
+    #l1LegacySwapRouter?: ISwapLegacyRouter
     #l2Adapters: { [l2ChainId: number]: SnowbridgeL2Adaptor } = {}
 
     // Substrate
@@ -314,6 +319,48 @@ export class Context {
             this.ethereum(),
         )
         return this.#l1SwapQuoter
+    }
+
+    l1SwapRouterAddress(): string {
+        if (!this.environment.l2Bridge) {
+            throw new Error("L2 bridge configuration is missing.")
+        }
+        return this.environment.l2Bridge.l1SwapRouterAddress as string
+    }
+
+    l1SwapRouter(): ISwapRouter {
+        if (!this.environment.l2Bridge) {
+            throw new Error("L2 bridge configuration is missing.")
+        }
+        if (this.#l1SwapRouter) {
+            return this.#l1SwapRouter
+        }
+        this.#l1SwapRouter = ISwapRouter__factory.connect(
+            this.l1SwapRouterAddress(),
+            this.ethereum(),
+        )
+        return this.#l1SwapRouter
+    }
+
+    l1LegacySwapRouter(): ISwapLegacyRouter {
+        if (!this.environment.l2Bridge) {
+            throw new Error("L2 bridge configuration is missing.")
+        }
+        if (this.#l1LegacySwapRouter) {
+            return this.#l1LegacySwapRouter
+        }
+        this.#l1LegacySwapRouter = ISwapLegacyRouter__factory.connect(
+            this.environment.l2Bridge.l1SwapRouterAddress as string,
+            this.ethereum(),
+        )
+        return this.#l1LegacySwapRouter
+    }
+
+    l1HandlerAddress(): string {
+        if (!this.environment.l2Bridge) {
+            throw new Error("L2 bridge configuration is missing.")
+        }
+        return this.environment.l2Bridge.l1HandlerAddress as string
     }
 
     l1FeeTokenAddress(): string {

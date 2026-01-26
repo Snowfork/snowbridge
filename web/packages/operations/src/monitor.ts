@@ -1,6 +1,6 @@
 import { u8aToHex } from "@polkadot/util"
 import { blake2AsU8a } from "@polkadot/util-crypto"
-import { Context, status, utils, subsquid } from "@snowbridge/api"
+import { Context, status, utils, subsquidV2 } from "@snowbridge/api"
 import { sendMetrics } from "./alarm"
 import { environmentFor } from "@snowbridge/registry"
 import { Environment } from "../../base-types/dist"
@@ -255,8 +255,6 @@ export const monitor = async (): Promise<status.AllMetrics> => {
 
     let indexerStatus = await fetchIndexerStatus(context, snowbridgeEnv)
 
-    let v2Status = await status.v2Status(context)
-
     const allMetrics: status.AllMetrics = {
         name,
         bridgeStatus,
@@ -264,7 +262,6 @@ export const monitor = async (): Promise<status.AllMetrics> => {
         relayers,
         sovereigns,
         indexerStatus,
-        v2Status,
     }
     console.log(
         "All metrics:",
@@ -388,7 +385,7 @@ export const fetchIndexerStatus = async (context: Context, env: Environment) => 
     const latestBlockOfBH = (await bridgeHub.query.system.number()).toPrimitive() as number
     const latestBlockOfEth = await ethereum.getBlockNumber()
 
-    const chains = await subsquid.fetchLatestBlocksSynced(
+    const chains = await subsquidV2.fetchLatestBlocksSynced(
         context.graphqlApiUrl(),
         env.name == "polkadot_mainnet",
     )
@@ -411,7 +408,10 @@ export const fetchIndexerStatus = async (context: Context, env: Environment) => 
         for (const paraid of monitorChains) {
             let chain = await context.parachain(paraid)
             let latestBlock = (await chain.query.system.number()).toPrimitive() as number
-            let status = await subsquid.fetchSyncStatusOfParachain(context.graphqlApiUrl(), paraid)
+            let status = await subsquidV2.fetchSyncStatusOfParachain(
+                context.graphqlApiUrl(),
+                paraid,
+            )
             let info: status.IndexerServiceStatusInfo = {
                 chain: status.name,
                 paraid: status.paraid,

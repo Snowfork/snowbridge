@@ -56,7 +56,7 @@ export const transferToPolkadot = async (
             erc20.allowance(ETHEREUM_ACCOUNT_PUBLIC, l2AdapterAddress),
         ])
 
-        if (allowance < amount) {
+        if (allowance <= amount) {
             // Step 1: Reset allowance to 0 (required by this ERC20 implementation)
             console.log("Resetting allowance to 0...")
             const resetTx = await erc20.approve(l2AdapterAddress, 0n)
