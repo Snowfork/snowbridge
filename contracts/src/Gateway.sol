@@ -432,7 +432,7 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         }
 
         // Dispatch the message payload.
-        bool dispatchSuccess = true;
+        bool dispatchSuccess = false;
         try Gateway(this).v2_dispatch(message) returns (bool success) {
             dispatchSuccess = success;
         } catch (bytes memory reason) {
