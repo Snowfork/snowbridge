@@ -20,7 +20,7 @@ import {
 import { ApiPromise, HttpProvider, WsProvider } from "@polkadot/api"
 import { isFunction } from "@polkadot/util"
 import { writeFile } from "fs/promises"
-import { environmentFor } from "../src"
+import { environmentFor } from "../src/environment"
 import { AbstractProvider, Contract, ethers } from "ethers"
 import { IGatewayV1__factory as IGateway__factory } from "@snowbridge/contract-types"
 import { parachains as ParaImpl, xcmBuilder, assetsV2 } from "@snowbridge/api"
@@ -653,17 +653,53 @@ async function getRegisteredPnas(
         env = process.env.NODE_ENV
     }
     const registry = await buildRegistry(environmentFor(env))
-    const json = JSON.stringify(
-        registry,
-        (key, value) => {
-            if (typeof value === "bigint") {
-                return `bigint:${value.toString()}`
-            }
-            return value
-        },
-        2,
-    )
-
-    const filepath = `src/${env}.registry.json`
-    await writeFile(filepath, json)
+    const json = stringifyWithBigInt(registry, 4)
+    const fileContents = `const registry = ${json} as const\nexport default registry\n`
+    const filepath = `src/${env}_registry.g.ts`
+    await writeFile(filepath, fileContents)
 })()
+
+function stringifyWithBigInt(value: unknown, indentSize = 4): string {
+    const indentUnit = " ".repeat(indentSize)
+    const serialize = (val: unknown, depth: number): string | undefined => {
+        if (val === null) return "null"
+        if (val === undefined) return undefined
+        if (typeof val === "function" || typeof val === "symbol") return undefined
+        if (typeof val === "bigint") return `${val}n`
+        if (typeof val === "string") return JSON.stringify(val)
+        if (typeof val === "number" || typeof val === "boolean") return String(val)
+        if (Array.isArray(val)) {
+            if (val.length === 0) return "[]"
+            const indent = indentUnit.repeat(depth + 1)
+            const closingIndent = indentUnit.repeat(depth)
+            const items = val
+                .map((item) => {
+                    const serialized = serialize(item, depth + 1)
+                    return `${indent}${serialized ?? "null"}`
+                })
+                .join(",\n")
+            return `[\n${items}\n${closingIndent}]`
+        }
+        if (typeof val === "object") {
+            const obj = val as Record<string, unknown>
+            const keys = Object.keys(obj)
+            const indent = indentUnit.repeat(depth + 1)
+            const closingIndent = indentUnit.repeat(depth)
+            const items: string[] = []
+            for (const key of keys) {
+                const serialized = serialize(obj[key], depth + 1)
+                if (serialized === undefined) continue
+                items.push(`${indent}${JSON.stringify(key)}: ${serialized}`)
+            }
+            if (items.length === 0) return "{}"
+            return `{\n${items.join(",\n")}\n${closingIndent}}`
+        }
+        throw new Error(`Unsupported type in registry output: ${typeof val}`)
+    }
+
+    const serialized = serialize(value, 0)
+    if (serialized === undefined) {
+        throw new Error("Registry output is not serializable")
+    }
+    return serialized
+}
