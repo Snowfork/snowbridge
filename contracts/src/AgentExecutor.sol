@@ -25,7 +25,8 @@ contract AgentExecutor {
 
     // Call contract with Ether value
     function callContract(CallContractParams calldata params) external {
-        bool success = Call.safeCall(params.target, params.data, params.value);
+        bool success =
+            Call.safeCallWithGasLimit(params.target, params.data, params.value, params.gas);
         if (!success) {
             revert();
         }
@@ -35,7 +36,9 @@ contract AgentExecutor {
     function callContracts(CallContractParams[] calldata params) external {
         uint256 len = params.length;
         for (uint256 i; i < len; ++i) {
-            bool success = Call.safeCall(params[i].target, params[i].data, params[i].value);
+            bool success = Call.safeCallWithGasLimit(
+                params[i].target, params[i].data, params[i].value, params[i].gas
+            );
             if (!success) {
                 revert();
             }

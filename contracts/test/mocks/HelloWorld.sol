@@ -9,9 +9,16 @@ contract HelloWorld {
 
     error Unauthorized();
 
+    uint256 private counter; // storage variable for expensive operations
+
     function sayHello(string memory _text) public payable {
         string memory fullMessage = string(abi.encodePacked("Hello there, ", _text));
         emit SaidHello(fullMessage);
+    }
+
+    // Function that requires significant gas due to storage operations
+    function expensiveOperation() public {
+        counter += 1;
     }
 
     function revertUnauthorized() public pure {
@@ -20,7 +27,7 @@ contract HelloWorld {
 
     function retBomb() public pure returns (bytes memory) {
         assembly {
-            return(1, 3000000)
+            return(1, 0x2dc6c0)
         }
     }
 
@@ -34,3 +41,4 @@ contract HelloWorld {
         emit TokenConsumed(token, msg.sender, amount);
     }
 }
+

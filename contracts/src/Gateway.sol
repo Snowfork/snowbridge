@@ -569,7 +569,10 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
             try this.v2_dispatchCommand(command, message.origin) {}
             catch (bytes memory reason) {
                 // Check if the error is InsufficientGasLimit and rethrow it
-                if (reason.length >= 4 && bytes4(reason) == IGatewayV2.InsufficientGasLimit.selector) {
+                if (
+                    reason.length >= 4
+                        && bytes4(reason) == IGatewayV2.InsufficientGasLimit.selector
+                ) {
                     revert IGatewayV2.InsufficientGasLimit();
                 }
                 emit IGatewayV2.CommandFailed(message.nonce, i);

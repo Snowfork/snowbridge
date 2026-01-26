@@ -186,6 +186,8 @@ struct CallContractParams {
     bytes data;
     // Ether value
     uint256 value;
+    // Gas limit
+    uint64 gas;
 }
 
 enum Network {

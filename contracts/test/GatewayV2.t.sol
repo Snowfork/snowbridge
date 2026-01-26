@@ -286,8 +286,9 @@ contract GatewayV2Test is Test {
 
     function makeCallContractCommand(uint256 value) public view returns (CommandV2[] memory) {
         bytes memory data = abi.encodeWithSignature("sayHello(string)", "World");
-        CallContractParams memory params =
-            CallContractParams({target: address(helloWorld), data: data, value: value});
+        CallContractParams memory params = CallContractParams({
+            target: address(helloWorld), data: data, value: value, gas: 20_000
+        });
         bytes memory payload = abi.encode(params);
 
         CommandV2[] memory commands = new CommandV2[](1);
@@ -303,8 +304,9 @@ contract GatewayV2Test is Test {
         returns (CommandV2[] memory)
     {
         bytes memory data = abi.encodeWithSignature("sayHelloNotExists(string)", "World");
-        CallContractParams memory params =
-            CallContractParams({target: address(helloWorld), data: data, value: value});
+        CallContractParams memory params = CallContractParams({
+            target: address(helloWorld), data: data, value: value, gas: 20_000
+        });
         bytes memory payload = abi.encode(params);
 
         CommandV2[] memory commands = new CommandV2[](1);
@@ -319,14 +321,18 @@ contract GatewayV2Test is Test {
         view
         returns (CommandV2[] memory)
     {
-        bytes memory data = abi.encodeWithSignature("sayHello(string)", "World");
-        CallContractParams memory params =
-            CallContractParams({target: address(helloWorld), data: data, value: value});
+        // Call expensiveOperation which requires storage writes and thus significant gas
+        bytes memory data = abi.encodeWithSignature("expensiveOperation()");
+        uint64 callGas = 5000; // insufficient gas for storage write (typical cost: ~20000)
+        CallContractParams memory params = CallContractParams({
+            target: address(helloWorld), data: data, value: value, gas: callGas
+        });
         bytes memory payload = abi.encode(params);
 
         CommandV2[] memory commands = new CommandV2[](1);
-        commands[0] =
-            CommandV2({kind: CommandKind.CallContract, gas: 1, atomic: false, payload: payload});
+        commands[0] = CommandV2({
+            kind: CommandKind.CallContract, gas: callGas, atomic: false, payload: payload
+        });
         return commands;
     }
 
@@ -339,8 +345,12 @@ contract GatewayV2Test is Test {
         bytes memory data2 = abi.encodeWithSignature("sayHello(string)", "Snowbridge");
 
         CallContractParams[] memory params = new CallContractParams[](2);
-        params[0] = CallContractParams({target: address(helloWorld), data: data1, value: value1});
-        params[1] = CallContractParams({target: address(helloWorld), data: data2, value: value2});
+        params[0] = CallContractParams({
+            target: address(helloWorld), data: data1, value: value1, gas: 20_000
+        });
+        params[1] = CallContractParams({
+            target: address(helloWorld), data: data2, value: value2, gas: 20_000
+        });
 
         bytes memory payload = abi.encode(params);
 
@@ -431,9 +441,8 @@ contract GatewayV2Test is Test {
         vm.prank(relayer);
 
         vm.expectRevert(IGatewayV2.InsufficientGasLimit.selector);
-        IGatewayV2(address(gateway)).v2_submit{gas: gasLimit}(
-            message, proof, makeMockProof(), relayerRewardAddress
-        );
+        IGatewayV2(address(gateway))
+        .v2_submit{gas: gasLimit}(message, proof, makeMockProof(), relayerRewardAddress);
     }
 
     function mockNativeTokenForSend(address user, uint128 amount)
@@ -504,9 +513,8 @@ contract GatewayV2Test is Test {
         );
 
         hoax(user1);
-        IGatewayV2(payable(address(gateway))).v2_sendMessage{value: 1 ether}(
-            "", assets, "", 0.1 ether, 0.4 ether
-        );
+        IGatewayV2(payable(address(gateway)))
+        .v2_sendMessage{value: 1 ether}("", assets, "", 0.1 ether, 0.4 ether);
 
         // Verify asset balances
         assertEq(assetHubAgent.balance, 1 ether);
@@ -531,9 +539,8 @@ contract GatewayV2Test is Test {
 
         vm.expectRevert();
         hoax(user1);
-        IGatewayV2(payable(address(gateway))).v2_sendMessage{value: 1 ether}(
-            "", assets, "", 0.1 ether, 0.4 ether
-        );
+        IGatewayV2(payable(address(gateway)))
+        .v2_sendMessage{value: 1 ether}("", assets, "", 0.1 ether, 0.4 ether);
 
         assertEq(feeToken.balanceOf(assetHubAgent), 0);
     }
@@ -541,18 +548,16 @@ contract GatewayV2Test is Test {
     function testSendMessageFailsWithInsufficentValue() public {
         vm.expectRevert(IGatewayV2.InsufficientValue.selector);
         hoax(user1, 1 ether);
-        IGatewayV2(payable(address(gateway))).v2_sendMessage{value: 0.4 ether}(
-            "", new bytes[](0), "", 0.1 ether, 0.4 ether
-        );
+        IGatewayV2(payable(address(gateway)))
+        .v2_sendMessage{value: 0.4 ether}("", new bytes[](0), "", 0.1 ether, 0.4 ether);
     }
 
     function testSendMessageFailsWithExceededMaximumValue() public {
         vm.expectRevert(IGatewayV2.ExceededMaximumValue.selector);
         uint256 value = uint256(type(uint128).max) + 1;
         hoax(user1, value);
-        IGatewayV2(payable(address(gateway))).v2_sendMessage{value: value}(
-            "", new bytes[](0), "", 0.1 ether, 0.4 ether
-        );
+        IGatewayV2(payable(address(gateway)))
+        .v2_sendMessage{value: value}("", new bytes[](0), "", 0.1 ether, 0.4 ether);
     }
 
     function testUnlockWethSuccess() public {
@@ -718,9 +723,10 @@ contract GatewayV2Test is Test {
         uint256 totalRequired = executionFee + relayerFee;
 
         hoax(user1, totalRequired);
-        IGatewayV2(payable(address(gateway))).v2_registerToken{value: totalRequired}(
-            validTokenContract, uint8(0), executionFee, relayerFee
-        );
+        IGatewayV2(payable(address(gateway)))
+        .v2_registerToken{
+            value: totalRequired
+        }(validTokenContract, uint8(0), executionFee, relayerFee);
 
         // Verify the token is registered
         assertTrue(IGatewayV2(address(gateway)).isTokenRegistered(validTokenContract));
@@ -737,9 +743,10 @@ contract GatewayV2Test is Test {
 
         vm.expectRevert(IGatewayV2.InsufficientValue.selector);
         hoax(user1, totalRequired);
-        IGatewayV2(payable(address(gateway))).v2_registerToken{value: totalRequired - 1}(
-            validTokenContract, uint8(0), executionFee, relayerFee
-        );
+        IGatewayV2(payable(address(gateway)))
+        .v2_registerToken{
+            value: totalRequired - 1
+        }(validTokenContract, uint8(0), executionFee, relayerFee);
 
         // Verify token still is not registered after the failed attempt
         assertFalse(IGatewayV2(address(gateway)).isTokenRegistered(validTokenContract));
@@ -756,9 +763,8 @@ contract GatewayV2Test is Test {
         vm.expectRevert(IGatewayV2.ExceededMaximumValue.selector);
         uint256 value = uint256(type(uint128).max) + 1;
         hoax(user1, value);
-        IGatewayV2(payable(address(gateway))).v2_registerToken{value: value}(
-            validTokenContract, uint8(0), executionFee, relayerFee
-        );
+        IGatewayV2(payable(address(gateway)))
+        .v2_registerToken{value: value}(validTokenContract, uint8(0), executionFee, relayerFee);
 
         // Verify token still is not registered after the failed attempt
         assertFalse(IGatewayV2(address(gateway)).isTokenRegistered(validTokenContract));
@@ -782,8 +788,9 @@ contract GatewayV2Test is Test {
 
         // Second command should fail - Call a function that reverts
         bytes memory failingData = abi.encodeWithSignature("revertUnauthorized()");
-        CallContractParams memory params2 =
-            CallContractParams({target: address(helloWorld), data: failingData, value: 0});
+        CallContractParams memory params2 = CallContractParams({
+            target: address(helloWorld), data: failingData, value: 0, gas: 20_000
+        });
         commands[1] = CommandV2({
             kind: CommandKind.CallContract,
             gas: 500_000,
@@ -1021,8 +1028,9 @@ contract GatewayV2Test is Test {
     }
 
     function testCallContractAgentDoesNotExistReturnsFalse() public {
-        CallContractParams memory p =
-            CallContractParams({target: address(0xdead), data: "", value: uint256(0)});
+        CallContractParams memory p = CallContractParams({
+            target: address(0xdead), data: "", value: uint256(0), gas: 20_000
+        });
         bytes memory payload = abi.encode(p);
 
         // origin corresponds to agent id; use a non-existent id
@@ -1120,7 +1128,9 @@ contract GatewayV2Test is Test {
         vm.deal(assetHubAgent, 1 ether);
         hoax(relayer, 1 ether);
 
-        emit IGatewayV2.InboundMessageDispatched(1, topic, true, relayerRewardAddress);
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.CommandFailed(1, 0);
+
         IGatewayV2(address(gateway))
             .v2_submit(
                 InboundMessageV2({
@@ -1141,9 +1151,8 @@ contract GatewayV2Test is Test {
         vm.deal(assetHubAgent, 1 ether);
         hoax(relayer, 1 ether);
 
-        // After Option A implementation, InsufficientGasLimit is now propagated
-        // and causes the entire v2_submit to revert
-        vm.expectRevert(IGatewayV2.InsufficientGasLimit.selector);
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.CommandFailed(1, 0);
 
         IGatewayV2(address(gateway))
             .v2_submit(
@@ -1238,7 +1247,7 @@ contract GatewayV2Test is Test {
         });
 
         CallContractParams memory cc =
-            CallContractParams({target: address(0x1234), data: "", value: 0});
+            CallContractParams({target: address(0x1234), data: "", value: 0, gas: 20_000});
         cmds[1] = CommandV2({
             kind: CommandKind.CallContract, gas: 200_000, atomic: false, payload: abi.encode(cc)
         });
@@ -1248,45 +1257,18 @@ contract GatewayV2Test is Test {
         msgv.topic = bytes32(0);
         msgv.commands = cmds;
 
+        // Expect CommandFailed for the second command (index 1)
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.CommandFailed(msgv.nonce, 1);
+
         // call v2_submit (verification overridden to true)
-
-        // construct an empty Verification.Proof
-        Verification.DigestItem[] memory digestItems = new Verification.DigestItem[](0);
-        Verification.ParachainHeader memory header = Verification.ParachainHeader({
-            parentHash: bytes32(0),
-            number: 0,
-            stateRoot: bytes32(0),
-            extrinsicsRoot: bytes32(0),
-            digestItems: digestItems
-        });
-
-        bytes32[] memory emptyBytes32 = new bytes32[](0);
-        Verification.HeadProof memory hp =
-            Verification.HeadProof({pos: 0, width: 0, proof: emptyBytes32});
-        Verification.MMRLeafPartial memory lp = Verification.MMRLeafPartial({
-            version: 0,
-            parentNumber: 0,
-            parentHash: bytes32(0),
-            nextAuthoritySetID: 0,
-            nextAuthoritySetLen: 0,
-            nextAuthoritySetRoot: bytes32(0)
-        });
-
-        Verification.Proof memory headerProof = Verification.Proof({
-            header: header,
-            headProof: hp,
-            leafPartial: lp,
-            leafProof: emptyBytes32,
-            leafProofOrder: 0
-        });
-
-        gw.v2_submit(msgv, proof, headerProof, bytes32(0));
+        gw.v2_submit(msgv, proof, makeMockProof(), bytes32(0));
 
         // message should be recorded as dispatched
         assertTrue(gw.v2_isDispatched(msgv.nonce));
     }
 
-    function testUnlockTokenThenCallContracts() public {
+    function testUnlockTokenThenCallContractsWillSucceed() public {
         bytes32 topic = keccak256("topic");
 
         // Set up an ERC20 token (WETH) for the agent to work with
@@ -1318,20 +1300,22 @@ contract GatewayV2Test is Test {
             abi.encodeWithSignature("consumeToken(address,uint256)", token, tokenAmount);
 
         CallContractParams[] memory callParams = new CallContractParams[](2);
-        callParams[0] = CallContractParams({target: token, data: approveData, value: 0});
-        callParams[1] =
-            CallContractParams({target: address(helloWorld), data: consumeData, value: 0});
+        callParams[0] =
+            CallContractParams({target: token, data: approveData, value: 0, gas: 100_000});
+        callParams[1] = CallContractParams({
+            target: address(helloWorld), data: consumeData, value: 0, gas: 100_000
+        });
 
         CommandV2[] memory commands = new CommandV2[](2);
         commands[0] = CommandV2({
             kind: CommandKind.UnlockNativeToken,
-            gas: 500_000,
+            gas: 100_000,
             atomic: false,
             payload: abi.encode(unlockParams)
         });
         commands[1] = CommandV2({
             kind: CommandKind.CallContracts,
-            gas: 500_000,
+            gas: 200_000,
             atomic: false,
             payload: abi.encode(callParams)
         });
@@ -1401,22 +1385,24 @@ contract GatewayV2Test is Test {
         bytes memory revertData = abi.encodeWithSignature("revertUnauthorized()");
 
         CallContractParams[] memory callParams = new CallContractParams[](3);
-        callParams[0] = CallContractParams({target: token, data: approveData, value: 0});
-        callParams[1] =
-            CallContractParams({target: address(helloWorld), data: consumeData, value: 0});
-        callParams[2] =
-            CallContractParams({target: address(helloWorld), data: revertData, value: 0});
-
+        callParams[0] =
+            CallContractParams({target: token, data: approveData, value: 0, gas: 50_000});
+        callParams[1] = CallContractParams({
+            target: address(helloWorld), data: consumeData, value: 0, gas: 50_000
+        });
+        callParams[2] = CallContractParams({
+            target: address(helloWorld), data: revertData, value: 0, gas: 50_000
+        });
         CommandV2[] memory commands = new CommandV2[](2);
         commands[0] = CommandV2({
             kind: CommandKind.UnlockNativeToken,
-            gas: 500_000,
+            gas: 100_000,
             atomic: false,
             payload: abi.encode(unlockParams)
         });
         commands[1] = CommandV2({
             kind: CommandKind.CallContracts,
-            gas: 500_000,
+            gas: 200_000,
             atomic: false,
             payload: abi.encode(callParams)
         });
