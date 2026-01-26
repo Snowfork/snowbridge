@@ -35,9 +35,9 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
         ethereumChains: {
             "11155111": "https://ethereum-sepolia-rpc.publicnode.com",
         },
-        relaychainUrl: "wss://paseo-rpc.dwellir.com",
+        relaychainUrl: "wss://paseo-rpc.n.dwellir.com",
         parachains: {
-            "1000": "wss://asset-hub-paseo-rpc.dwellir.com",
+            "1000": "wss://asset-hub-paseo-rpc.n.dwellir.com",
             "1002": "wss://bridge-hub-paseo.dotters.network",
             "3369": "wss://paseo-muse-rpc.polkadot.io",
             "2043": `wss://parachain-testnet-rpc.origin-trail.network`,
