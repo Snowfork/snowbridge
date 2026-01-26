@@ -41,3 +41,4 @@ lodestar
 db.sqlite*
 .pnpm-store
 /deploy
+lib/
