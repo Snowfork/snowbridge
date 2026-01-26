@@ -30,6 +30,7 @@ type SourceContractsConfig struct {
 type SinkConfig struct {
 	Ethereum  config.EthereumConfig `mapstructure:"ethereum"`
 	Contracts SinkContractsConfig   `mapstructure:"contracts"`
+	Fees      FeeConfig             `mapstructure:"fees"`
 }
 
 type SinkContractsConfig struct {
@@ -43,6 +44,17 @@ type ScheduleConfig struct {
 	TotalRelayerCount uint64 `mapstructure:"totalRelayerCount"`
 	// Sleep interval(in seconds) to check if message(nonce) has already been relayed
 	SleepInterval uint64 `mapstructure:"sleepInterval"`
+}
+
+type FeeConfig struct {
+	// The gas cost of v2_submit excludes command execution, mainly covers the verification
+	BaseDeliveryGas uint64 `mapstructure:"base-delivery-gas"`
+	// The gas cost of unlock ERC20 token
+	BaseUnlockGas uint64 `mapstructure:"base-unlock-gas"`
+	// The gas cost of mint Polkadot native asset
+	BaseMintGas         uint64 `mapstructure:"base-mint-gas"`
+	FeeRatioNumerator   uint64 `mapstructure:"fee-ratio-numerator"`
+	FeeRatioDenominator uint64 `mapstructure:"fee-ratio-denominator"`
 }
 
 func (r ScheduleConfig) Validate() error {

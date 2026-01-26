@@ -101,7 +101,10 @@ func (wr *EthereumWriter) WriteChannels(
 ) error {
 	for _, proof := range *task.MessageProofs {
 		profitable, err := wr.isRelayMessageProfitable(ctx, &proof)
-		if profitable || wr.config.Ethereum.SkipFeeCheck {
+		if err != nil {
+			return fmt.Errorf("determine message profitability: %w", err)
+		}
+		if profitable {
 			err = wr.WriteChannel(ctx, options, &proof, task.ProofOutput)
 			if err != nil {
 				return fmt.Errorf("write eth gateway: %w", err)
@@ -121,10 +124,10 @@ func (wr *EthereumWriter) commandGas(command *CommandWrapper) uint64 {
 	// ERC20 transfer
 	case 2:
 		// BaseUnlockGas should cover most of the ERC20 token. Specific gas costs can be set per token if needed
-		gas = wr.config.Ethereum.BaseUnlockGas
+		gas = wr.config.Fees.BaseUnlockGas
 	// PNA transfer
 	case 4:
-		gas = wr.config.Ethereum.BaseMintGas
+		gas = wr.config.Fees.BaseMintGas
 	default:
 		gas = uint64(command.MaxDispatchGas)
 	}
@@ -140,11 +143,23 @@ func (wr *EthereumWriter) isRelayMessageProfitable(ctx context.Context, proof *M
 	var totalDispatchGas uint64
 	commands := proof.Message.OriginalMessage.Commands
 	for _, command := range commands {
-		totalDispatchGas = totalDispatchGas + wr.commandGas(&command)
+		totalDispatchGas += wr.commandGas(&command)
 	}
-	totalDispatchGas = totalDispatchGas + wr.config.Ethereum.BaseDeliveryGas
-	gasFee := new(big.Int)
-	gasFee.Mul(gasPrice, big.NewInt(int64(totalDispatchGas)))
+	totalDispatchGas += wr.config.Fees.BaseDeliveryGas
+
+	// gasFee = gasPrice * totalDispatchGas * (numerator / denominator)
+	gasFee := new(big.Int).Mul(gasPrice, new(big.Int).SetUint64(totalDispatchGas))
+
+	feeRatioDenominator := wr.config.Fees.FeeRatioDenominator
+	if feeRatioDenominator == 0 {
+		feeRatioDenominator = 1 // avoid panic on zero denominator; interpreted as 1:1
+	}
+	numerator := new(big.Int).SetUint64(wr.config.Fees.FeeRatioNumerator)
+	denominator := new(big.Int).SetUint64(feeRatioDenominator)
+
+	// Apply ratio safely: (gasPrice * gas * num) / denom
+	gasFee.Mul(gasFee, numerator)
+	gasFee.Div(gasFee, denominator)
 	if proof.Message.Fee.Cmp(gasFee) >= 0 {
 		return true, nil
 	}
