@@ -22,9 +22,7 @@ type HTTPConfig struct {
 }
 
 type CacheConfig struct {
-	MaxStates       int `mapstructure:"maxStates"`
 	MaxProofs       int `mapstructure:"maxProofs"`
-	StateTTLSeconds int `mapstructure:"stateTTLSeconds"`
 	ProofTTLSeconds int `mapstructure:"proofTTLSeconds"`
 }
 
@@ -80,14 +78,8 @@ func (h HTTPConfig) Validate() error {
 }
 
 func (c CacheConfig) Validate() error {
-	if c.MaxStates == 0 {
-		return errors.New("[maxStates] is not set")
-	}
 	if c.MaxProofs == 0 {
 		return errors.New("[maxProofs] is not set")
-	}
-	if c.StateTTLSeconds == 0 {
-		return errors.New("[stateTTLSeconds] is not set")
 	}
 	if c.ProofTTLSeconds == 0 {
 		return errors.New("[proofTTLSeconds] is not set")

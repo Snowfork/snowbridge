@@ -22,9 +22,7 @@
     "writeTimeout": "60s"
   },
   "cache": {
-    "maxStates": 5,
     "maxProofs": 1000,
-    "stateTTLSeconds": 780,
     "proofTTLSeconds": 3600
   },
   "persist": {

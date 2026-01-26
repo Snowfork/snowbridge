@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strconv"
 
+	"github.com/ferranbt/fastssz"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/protocol"
@@ -15,11 +16,9 @@ import (
 )
 
 type HealthResponse struct {
-	Status            string `json:"status"`
-	LatestCachedSlot  uint64 `json:"latestCachedSlot,omitempty"`
-	StateCacheSize    int    `json:"stateCacheSize"`
-	ProofCacheSize    int    `json:"proofCacheSize"`
-	BeaconEndpoint    string `json:"beaconEndpoint"`
+	Status         string `json:"status"`
+	ProofCacheSize int    `json:"proofCacheSize"`
+	BeaconEndpoint string `json:"beaconEndpoint"`
 }
 
 type ProofResponse struct {
@@ -44,7 +43,6 @@ type ErrorResponse struct {
 func (s *Service) handleHealth(w http.ResponseWriter, r *http.Request) {
 	response := HealthResponse{
 		Status:         "healthy",
-		StateCacheSize: s.stateCache.Size(),
 		ProofCacheSize: s.proofCache.Size(),
 		BeaconEndpoint: s.config.Beacon.Endpoint,
 	}
@@ -70,37 +68,22 @@ func (s *Service) handleFinalizedHeaderProof(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	// Get or download state
-	cachedState, err := s.getOrDownloadState(slot)
-	if err != nil {
-		log.WithError(err).WithField("slot", slot).Error("Failed to get beacon state")
+	// Download state and cache all proofs
+	if err := s.downloadStateAndCacheAllProofs(slot); err != nil {
+		log.WithError(err).WithField("slot", slot).Error("Failed to download beacon state")
 		writeError(w, http.StatusInternalServerError, "failed to get beacon state")
 		return
 	}
 
-	// Generate proof
-	_ = cachedState.Tree.Hash()
-	generalizedIndex := s.protocol.FinalizedCheckpointGeneralizedIndex(slot)
-	proof, err := cachedState.Tree.Prove(generalizedIndex)
-	if err != nil {
-		log.WithError(err).Error("Failed to generate finalized header proof")
+	// Return from cache
+	cached, ok := s.proofCache.Get(cacheKey)
+	if !ok {
 		writeError(w, http.StatusInternalServerError, "failed to generate proof")
 		return
 	}
 
-	response := ProofResponse{
-		Slot:             slot,
-		Leaf:             "0x" + hex.EncodeToString(proof.Leaf),
-		Proof:            hashesToHexStrings(proof.Hashes),
-		GeneralizedIndex: generalizedIndex,
-	}
-
-	// Cache and return
-	jsonResponse, _ := json.Marshal(response)
-	s.proofCache.Put(cacheKey, jsonResponse)
-
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(jsonResponse)
+	w.Write(cached)
 }
 
 func (s *Service) handleExecutionStateRootProof(w http.ResponseWriter, r *http.Request) {
@@ -120,37 +103,22 @@ func (s *Service) handleExecutionStateRootProof(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	// Get or download state
-	cachedState, err := s.getOrDownloadState(slot)
-	if err != nil {
-		log.WithError(err).WithField("slot", slot).Error("Failed to get beacon state")
+	// Download state and cache all proofs
+	if err := s.downloadStateAndCacheAllProofs(slot); err != nil {
+		log.WithError(err).WithField("slot", slot).Error("Failed to download beacon state")
 		writeError(w, http.StatusInternalServerError, "failed to get beacon state")
 		return
 	}
 
-	// Generate proof for execution payload
-	_ = cachedState.Tree.Hash()
-	generalizedIndex := s.protocol.ExecutionPayloadGeneralizedIndex(slot)
-	proof, err := cachedState.Tree.Prove(generalizedIndex)
-	if err != nil {
-		log.WithError(err).Error("Failed to generate execution state root proof")
+	// Return from cache
+	cached, ok := s.proofCache.Get(cacheKey)
+	if !ok {
 		writeError(w, http.StatusInternalServerError, "failed to generate proof")
 		return
 	}
 
-	response := ProofResponse{
-		Slot:             slot,
-		Leaf:             "0x" + hex.EncodeToString(proof.Leaf),
-		Proof:            hashesToHexStrings(proof.Hashes),
-		GeneralizedIndex: generalizedIndex,
-	}
-
-	// Cache and return
-	jsonResponse, _ := json.Marshal(response)
-	s.proofCache.Put(cacheKey, jsonResponse)
-
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(jsonResponse)
+	w.Write(cached)
 }
 
 func (s *Service) handleBlockRootProof(w http.ResponseWriter, r *http.Request) {
@@ -170,45 +138,22 @@ func (s *Service) handleBlockRootProof(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get or download state
-	cachedState, err := s.getOrDownloadState(slot)
-	if err != nil {
-		log.WithError(err).WithField("slot", slot).Error("Failed to get beacon state")
+	// Download state and cache all proofs
+	if err := s.downloadStateAndCacheAllProofs(slot); err != nil {
+		log.WithError(err).WithField("slot", slot).Error("Failed to download beacon state")
 		writeError(w, http.StatusInternalServerError, "failed to get beacon state")
 		return
 	}
 
-	// Generate proof for block roots
-	_ = cachedState.Tree.Hash()
-	generalizedIndex := s.protocol.BlockRootGeneralizedIndex(slot)
-	proof, err := cachedState.Tree.Prove(generalizedIndex)
-	if err != nil {
-		log.WithError(err).Error("Failed to generate block root proof")
+	// Return from cache
+	cached, ok := s.proofCache.Get(cacheKey)
+	if !ok {
 		writeError(w, http.StatusInternalServerError, "failed to generate proof")
 		return
 	}
 
-	// Get block roots from state for ancestry proofs
-	blockRoots := cachedState.State.GetBlockRoots()
-	blockRootsHex := make([]string, len(blockRoots))
-	for i, root := range blockRoots {
-		blockRootsHex[i] = "0x" + hex.EncodeToString(root[:])
-	}
-
-	response := BlockRootProofResponse{
-		Slot:             slot,
-		Leaf:             "0x" + hex.EncodeToString(proof.Leaf),
-		Proof:            hashesToHexStrings(proof.Hashes),
-		GeneralizedIndex: generalizedIndex,
-		BlockRoots:       blockRootsHex,
-	}
-
-	// Cache and return
-	jsonResponse, _ := json.Marshal(response)
-	s.proofCache.Put(cacheKey, jsonResponse)
-
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(jsonResponse)
+	w.Write(cached)
 }
 
 func (s *Service) handleSyncCommitteeProof(w http.ResponseWriter, r *http.Request) {
@@ -233,28 +178,89 @@ func (s *Service) handleSyncCommitteeProof(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Get or download state
-	cachedState, err := s.getOrDownloadState(slot)
-	if err != nil {
-		log.WithError(err).WithField("slot", slot).Error("Failed to get beacon state")
+	// Download state and cache all proofs
+	if err := s.downloadStateAndCacheAllProofs(slot); err != nil {
+		log.WithError(err).WithField("slot", slot).Error("Failed to download beacon state")
 		writeError(w, http.StatusInternalServerError, "failed to get beacon state")
 		return
 	}
 
-	// Generate proof for sync committee
-	_ = cachedState.Tree.Hash()
-	var generalizedIndex int
-	if period == "next" {
-		generalizedIndex = s.protocol.NextSyncCommitteeGeneralizedIndex(slot)
-	} else {
-		generalizedIndex = s.protocol.CurrentSyncCommitteeGeneralizedIndex(slot)
-	}
-
-	proof, err := cachedState.Tree.Prove(generalizedIndex)
-	if err != nil {
-		log.WithError(err).Error("Failed to generate sync committee proof")
+	// Return from cache
+	cached, ok := s.proofCache.Get(cacheKey)
+	if !ok {
 		writeError(w, http.StatusInternalServerError, "failed to generate proof")
 		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(cached)
+}
+
+func (s *Service) downloadStateAndCacheAllProofs(slot uint64) error {
+	log.WithField("slot", slot).Info("Downloading beacon state and generating all proofs")
+
+	// Download state
+	data, err := s.syncer.Client.GetBeaconState(strconv.FormatUint(slot, 10))
+	if err != nil {
+		return fmt.Errorf("download beacon state: %w", err)
+	}
+
+	// Unmarshal based on fork
+	beaconState, err := s.unmarshalBeaconState(slot, data)
+	if err != nil {
+		return fmt.Errorf("unmarshal beacon state: %w", err)
+	}
+
+	// Generate tree
+	tree, err := beaconState.GetTree()
+	if err != nil {
+		return fmt.Errorf("get state tree: %w", err)
+	}
+
+	// Compute tree hash once (required before generating proofs)
+	_ = tree.Hash()
+
+	// Generate and cache all proof types
+	s.cacheAllProofs(slot, beaconState, tree)
+
+	// Trigger GC to help reclaim memory after processing large state
+	runtime.GC()
+
+	return nil
+}
+
+// cacheAllProofs generates all proof types for a slot and caches them
+func (s *Service) cacheAllProofs(slot uint64, beaconState state.BeaconState, tree *ssz.Node) {
+	// 1. Finalized header proof
+	s.cacheProof(slot, "finalized-header", s.protocol.FinalizedCheckpointGeneralizedIndex(slot), tree)
+
+	// 2. Execution state root proof
+	s.cacheProof(slot, "execution-state-root", s.protocol.ExecutionPayloadGeneralizedIndex(slot), tree)
+
+	// 3. Block root proof (includes block roots array)
+	s.cacheBlockRootProof(slot, beaconState, tree)
+
+	// 4. Sync committee proofs (current and next)
+	s.cacheProof(slot, "sync-committee:current", s.protocol.CurrentSyncCommitteeGeneralizedIndex(slot), tree)
+	s.cacheProof(slot, "sync-committee:next", s.protocol.NextSyncCommitteeGeneralizedIndex(slot), tree)
+
+	log.WithField("slot", slot).Info("Cached all proofs for slot")
+}
+
+func (s *Service) cacheProof(slot uint64, proofType string, generalizedIndex int, tree *ssz.Node) {
+	proof, err := tree.Prove(generalizedIndex)
+	if err != nil {
+		log.WithError(err).WithFields(log.Fields{"slot": slot, "proofType": proofType}).Warn("Failed to generate proof")
+		return
+	}
+
+	var cacheKey string
+	if proofType == "sync-committee:current" {
+		cacheKey = fmt.Sprintf("sync-committee:%d:current", slot)
+	} else if proofType == "sync-committee:next" {
+		cacheKey = fmt.Sprintf("sync-committee:%d:next", slot)
+	} else {
+		cacheKey = fmt.Sprintf("%s:%d", proofType, slot)
 	}
 
 	response := ProofResponse{
@@ -264,49 +270,36 @@ func (s *Service) handleSyncCommitteeProof(w http.ResponseWriter, r *http.Reques
 		GeneralizedIndex: generalizedIndex,
 	}
 
-	// Cache and return
 	jsonResponse, _ := json.Marshal(response)
 	s.proofCache.Put(cacheKey, jsonResponse)
-
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(jsonResponse)
 }
 
-func (s *Service) getOrDownloadState(slot uint64) (*CachedState, error) {
-	// Check state cache
-	if cached, ok := s.stateCache.Get(slot); ok {
-		log.WithField("slot", slot).Debug("Using cached beacon state")
-		return cached, nil
-	}
-
-	log.WithField("slot", slot).Info("Downloading beacon state")
-
-	// Download state
-	data, err := s.syncer.Client.GetBeaconState(strconv.FormatUint(slot, 10))
+func (s *Service) cacheBlockRootProof(slot uint64, beaconState state.BeaconState, tree *ssz.Node) {
+	generalizedIndex := s.protocol.BlockRootGeneralizedIndex(slot)
+	proof, err := tree.Prove(generalizedIndex)
 	if err != nil {
-		return nil, fmt.Errorf("download beacon state: %w", err)
+		log.WithError(err).WithField("slot", slot).Warn("Failed to generate block root proof")
+		return
 	}
 
-	// Unmarshal based on fork
-	beaconState, err := s.unmarshalBeaconState(slot, data)
-	if err != nil {
-		return nil, fmt.Errorf("unmarshal beacon state: %w", err)
+	// Get block roots from state
+	blockRoots := beaconState.GetBlockRoots()
+	blockRootsHex := make([]string, len(blockRoots))
+	for i, root := range blockRoots {
+		blockRootsHex[i] = "0x" + hex.EncodeToString(root[:])
 	}
 
-	// Generate tree
-	tree, err := beaconState.GetTree()
-	if err != nil {
-		return nil, fmt.Errorf("get state tree: %w", err)
+	response := BlockRootProofResponse{
+		Slot:             slot,
+		Leaf:             "0x" + hex.EncodeToString(proof.Leaf),
+		Proof:            hashesToHexStrings(proof.Hashes),
+		GeneralizedIndex: generalizedIndex,
+		BlockRoots:       blockRootsHex,
 	}
 
-	// Cache
-	s.stateCache.Put(slot, beaconState, tree)
-
-	// Trigger GC to help reclaim memory
-	runtime.GC()
-
-	cached, _ := s.stateCache.Get(slot)
-	return cached, nil
+	cacheKey := fmt.Sprintf("block-root:%d", slot)
+	jsonResponse, _ := json.Marshal(response)
+	s.proofCache.Put(cacheKey, jsonResponse)
 }
 
 func (s *Service) unmarshalBeaconState(slot uint64, data []byte) (state.BeaconState, error) {

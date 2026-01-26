@@ -20,7 +20,6 @@ type Service struct {
 	syncer     *syncer.Syncer
 	protocol   *protocol.Protocol
 	store      *store.Store
-	stateCache *StateCache
 	proofCache *ProofCache
 	httpServer *http.Server
 }
@@ -59,10 +58,8 @@ func (s *Service) Start(ctx context.Context, eg *errgroup.Group) error {
 	// The syncer will fall back to beacon API directly
 	s.syncer = syncer.New(beaconAPI, s.protocol, nil)
 
-	// Initialize caches
-	stateTTL := time.Duration(s.config.Cache.StateTTLSeconds) * time.Second
+	// Initialize proof cache
 	proofTTL := time.Duration(s.config.Cache.ProofTTLSeconds) * time.Second
-	s.stateCache = NewStateCache(s.config.Cache.MaxStates, stateTTL)
 	s.proofCache = NewProofCache(s.config.Cache.MaxProofs, proofTTL)
 
 	// Parse timeouts
@@ -235,10 +232,6 @@ func (s *Service) GetSyncer() *syncer.Syncer {
 
 func (s *Service) GetProtocol() *protocol.Protocol {
 	return s.protocol
-}
-
-func (s *Service) GetStateCache() *StateCache {
-	return s.stateCache
 }
 
 func (s *Service) GetProofCache() *ProofCache {
