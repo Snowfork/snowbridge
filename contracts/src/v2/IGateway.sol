@@ -11,6 +11,8 @@ interface IGatewayV2 {
     error InvalidNetwork();
     error InvalidAsset();
     error InsufficientGasLimit();
+    error AtomicCommandFailed();
+    error InvalidCommand();
     error InsufficientValue();
     error ExceededMaximumValue();
     error TooManyAssets();

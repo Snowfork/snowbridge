@@ -92,8 +92,8 @@ contract MockGateway is Gateway {
         return super.v1_transactionBaseGas();
     }
 
-    function callDispatch(CommandV2 calldata command, bytes32 origin) external returns (bool) {
-        return super._dispatchCommand(command, origin);
+    function callDispatch(CommandV2 calldata command, bytes32 origin) external {
+        this.v2_dispatchCommand(command, origin);
     }
 
     function deployAgent() external returns (address) {
@@ -114,12 +114,9 @@ contract MockGateway is Gateway {
         return v1_transactionBaseGas();
     }
 
-    // Wrapper to call an internal dispatch and return the boolean result
-    function exposed_dispatchCommand(CommandV2 calldata cmd, bytes32 origin)
-        external
-        returns (bool)
-    {
-        return _dispatchCommand(cmd, origin);
+    // Wrapper to call an internal dispatch command
+    function exposed_dispatchCommand(CommandV2 calldata cmd, bytes32 origin) external {
+        _dispatchCommand(cmd, origin);
     }
 
     // Helper to call vulnerable-onlySelf handler from within the contract (so msg.sender == this)
