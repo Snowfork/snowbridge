@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.33;
 
-// Mainnet addressess
+// Mainnet addresses
 address constant SPOKE_POOL = 0x5c7BCd6E7De5423a257D81B442095A1a6ced35C5;
 address constant MULTI_CALL_HANDLER = 0x924a9f036260DdD5808007E1AA95f08eD08aA569;
 address constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
