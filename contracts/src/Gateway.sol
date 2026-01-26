@@ -567,7 +567,13 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         for (uint256 i = 0; i < message.commands.length; i++) {
             CommandV2 calldata command = message.commands[i];
             try this.v2_dispatchCommand(command, message.origin) {}
-            catch {
+            catch (bytes memory reason) {
+                // Check if the error is InsufficientGasLimit and rethrow it
+                if (reason.length >= 4 && bytes4(reason) == IGatewayV2.InsufficientGasLimit.selector) {
+                    assembly {
+                        revert(add(reason, 32), mload(reason))
+                    }
+                }
                 emit IGatewayV2.CommandFailed(message.nonce, i);
                 if (command.atomic) {
                     revert IGatewayV2.AtomicCommandFailed();

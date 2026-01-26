@@ -1141,10 +1141,9 @@ contract GatewayV2Test is Test {
         vm.deal(assetHubAgent, 1 ether);
         hoax(relayer, 1 ether);
 
-        // InsufficientGasLimit during dispatch is caught and emits CommandFailed
-        // but with very low gas (1), the dispatch might fail differently
-        vm.expectEmit(true, false, false, true);
-        emit IGatewayV2.InboundMessageDispatched(1, topic, true, relayerRewardAddress);
+        // After Option A implementation, InsufficientGasLimit is now propagated
+        // and causes the entire v2_submit to revert
+        vm.expectRevert(IGatewayV2.InsufficientGasLimit.selector);
 
         IGatewayV2(address(gateway))
             .v2_submit(
