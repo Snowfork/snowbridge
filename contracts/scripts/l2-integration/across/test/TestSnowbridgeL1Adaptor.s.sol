@@ -62,7 +62,7 @@ contract TestSnowbridgeL1Adaptor is Script {
             fillDeadlineBuffer: TIME_BUFFER
         });
 
-        IERC20(params.inputToken).approve(l1SnowbridgeAdaptor, params.inputAmount);
+        IERC20(params.inputToken).transfer(l1SnowbridgeAdaptor, params.inputAmount);
 
         SnowbridgeL1Adaptor(l1SnowbridgeAdaptor)
             .depositToken(params, recipient, keccak256("TestERC20Deposit"));

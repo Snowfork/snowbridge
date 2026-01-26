@@ -23,7 +23,7 @@ contract TestSnowbridgeL1AdaptorNativeEther is Script {
         address payable l1SnowbridgeAdaptor =
             payable(vm.envAddress("L1_SNOWBRIDGE_ADAPTOR_ADDRESS"));
 
-        address payable recipient = payable(vm.envAddress("RECIPIENT_ADDRESS"));
+        address recipient = vm.envAddress("RECIPIENT_ADDRESS");
 
         uint256 BASE_CHAIN_ID;
         uint32 TIME_BUFFER;
