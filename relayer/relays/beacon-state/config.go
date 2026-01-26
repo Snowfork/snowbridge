@@ -39,7 +39,7 @@ type PersistConfig struct {
 }
 
 func (c Config) Validate() error {
-	err := c.Beacon.Validate()
+	err := c.Beacon.ValidateForStateService()
 	if err != nil {
 		return fmt.Errorf("beacon config: %w", err)
 	}
