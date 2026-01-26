@@ -1206,9 +1206,16 @@ contract GatewayV2Test is Test {
     }
 
     function test_onlySelf_enforced_on_external_calls() public {
-        MockGateway gw = MockGateway(address(gateway));
-        // Since v2_handleSetOperatingMode is now internal, we can't call it externally
-        // This test is no longer applicable
+        // v2_dispatchCommand should revert when called externally (not via self-call)
+        CommandV2 memory command = CommandV2({
+            kind: CommandKind.SetOperatingMode,
+            gas: 100000,
+            atomic: false,
+            payload: abi.encode(SetOperatingModeParams({mode: OperatingMode.RejectingOutboundMessages}))
+        });
+        
+        vm.expectRevert(IGatewayBase.Unauthorized.selector);
+        gateway.v2_dispatchCommand(command, bytes32(0));
     }
 
     function test_call_handleSetOperatingMode_via_self_changes_mode() public {
@@ -1451,12 +1458,13 @@ contract GatewayV2Test is Test {
             "Relayer should have received unlocked tokens"
         );
 
-        // Verify atomicity: since the third call failed, the first two calls should be reverted
-        // The agent should still have all tokens (no transfer occurred)
+        // Verify atomicity: since the third call failed, any state changes from the second call
+        // are reverted, but the initial UnlockNativeToken that paid the relayer remains.
+        // The agent should still hold the remaining half of the tokens.
         assertEq(
             IERC20(token).balanceOf(assetHubAgent),
             halfAmount,
-            "Agent should still have all tokens due to revert"
+            "Agent should still hold the remaining tokens after revert"
         );
         assertEq(
             IERC20(token).balanceOf(address(helloWorld)),

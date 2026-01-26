@@ -432,19 +432,22 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         }
 
         // Dispatch the message payload.
-        bool dispatchSuccess = true;
+        bool dispatchSuccess = false;
         try Gateway(this).v2_dispatch(message) returns (bool success) {
             dispatchSuccess = success;
         } catch (bytes memory reason) {
             // If an atomic command failed or insufficient gas limit, rethrow the error to stop processing
             // Otherwise, silently ignore command failures
-            if (
-                reason.length >= 4
-                    && (bytes4(reason) == IGatewayV2.AtomicCommandFailed.selector
-                        || bytes4(reason) == IGatewayV2.InsufficientGasLimit.selector)
-            ) {
-                assembly {
-                    revert(add(reason, 32), mload(reason))
+            if (reason.length >= 4) {
+                bytes4 selector = bytes4(reason);
+                if (selector == IGatewayV2.InsufficientGasLimit.selector) {
+                    assembly {
+                        revert(add(reason, 32), mload(reason))
+                    }
+                } else if (selector == IGatewayV2.AtomicCommandFailed.selector) {
+                    assembly {
+                        revert(add(reason, 32), mload(reason))
+                    }
                 }
             }
         }
@@ -566,12 +569,21 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         bool success = true;
         for (uint256 i = 0; i < message.commands.length; i++) {
             CommandV2 calldata command = message.commands[i];
-            try this.v2_dispatchCommand(command, message.origin) {}
-            catch {
-                emit IGatewayV2.CommandFailed(message.nonce, i);
-                if (command.atomic) {
-                    revert IGatewayV2.AtomicCommandFailed();
+            // Enforce per-command gas metering by providing an explicit gas stipend
+            try this.v2_dispatchCommand{gas: command.gas}(command, message.origin) {}
+            catch (bytes memory reason) {
+                // Rethrow InsufficientGasLimit to stop processing
+                if (reason.length >= 4 && bytes4(reason) == IGatewayV2.InsufficientGasLimit.selector) {
+                    assembly {
+                        revert(add(reason, 32), mload(reason))
+                    }
                 }
+                // For atomic commands, revert with index information (event would be rolled back anyway)
+                if (command.atomic) {
+                    revert IGatewayV2.AtomicCommandFailed(message.nonce, i);
+                }
+                // For non-atomic commands, emit event and continue
+                emit IGatewayV2.CommandFailed(message.nonce, i);
                 success = false;
             }
         }
