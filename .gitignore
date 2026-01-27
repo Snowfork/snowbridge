@@ -1,3 +1,4 @@
+
 # Local Netlify folder
 .netlify
 
@@ -41,4 +42,3 @@ lodestar
 db.sqlite*
 .pnpm-store
 /deploy
-lib/
