@@ -1,0 +1,57 @@
+{
+  "source": {
+    "ethereum": {
+      "endpoint": "${ETHEREUM_ENDPOINT}",
+      "heartbeat-secs": 600
+    },
+    "polkadot": {
+      "endpoint": "${POLKADOT_ENDPOINT}",
+      "heartbeat-secs": 45
+    },
+    "parachain": {
+      "endpoint": "${BRIDGEHUB_ENDPOINT}",
+      "heartbeat-secs": 45
+    },
+    "contracts": {
+      "BeefyClient": "${BEEFY_CLIENT_CONTRACT}",
+      "Gateway": "${GATEWAY_CONTRACT}"
+    },
+    "beacon": {
+      "endpoint": "${BEACON_ENDPOINT}",
+      "stateServiceEndpoint": "http://beacon-state-service:8080",
+      "spec": {
+        "syncCommitteeSize": 512,
+        "slotsInEpoch": 32,
+        "epochsPerSyncCommitteePeriod": 256,
+        "forkVersions": {
+          "deneb": ${FORK_DENEB},
+          "electra": ${FORK_ELECTRA},
+          "fulu": ${FORK_FULU}
+        }
+      },
+      "datastore": {
+        "location": "/data/beacon",
+        "maxEntries": 100
+      }
+    }
+  },
+  "sink": {
+    "ethereum": {
+      "endpoint": "${FLASHBOTS_ENDPOINT}",
+      "pending-tx-timeout-secs": 240
+    },
+    "contracts": {
+      "Gateway": "${GATEWAY_CONTRACT}"
+    }
+  },
+  "schedule": {
+    "id": ${SCHEDULE_ID:-0},
+    "totalRelayerCount": ${TOTAL_RELAYER_COUNT:-1},
+    "sleepInterval": ${SLEEP_INTERVAL:-45}
+  },
+  "reward-address": "${REWARD_ADDRESS}",
+  "ofac": {
+    "enabled": ${OFAC_ENABLED:-false},
+    "apiKey": "${CHAINALYSIS_API_KEY}"
+  }
+}

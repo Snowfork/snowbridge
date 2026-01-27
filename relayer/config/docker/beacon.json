@@ -1,0 +1,31 @@
+{
+  "source": {
+    "beacon": {
+      "endpoint": "${BEACON_ENDPOINT}",
+      "stateServiceEndpoint": "http://beacon-state-service:8080",
+      "spec": {
+        "syncCommitteeSize": 512,
+        "slotsInEpoch": 32,
+        "epochsPerSyncCommitteePeriod": 256,
+        "forkVersions": {
+          "deneb": ${FORK_DENEB},
+          "electra": ${FORK_ELECTRA},
+          "fulu": ${FORK_FULU}
+        }
+      },
+      "datastore": {
+        "location": "/data/beacon",
+        "maxEntries": 100
+      }
+    }
+  },
+  "sink": {
+    "parachain": {
+      "endpoint": "${BRIDGEHUB_ENDPOINT}",
+      "maxWatchedExtrinsics": ${MAX_WATCHED_EXTRINSICS:-200},
+      "headerRedundancy": 20,
+      "heartbeat-secs": 45
+    },
+    "updateSlotInterval": 32
+  }
+}

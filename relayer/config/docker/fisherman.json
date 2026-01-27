@@ -1,0 +1,18 @@
+{
+  "source": {
+    "ethereum": {
+      "endpoint": "${ETHEREUM_ENDPOINT}"
+    },
+    "polkadot": {
+      "endpoint": "${POLKADOT_ENDPOINT}"
+    },
+    "contracts": {
+      "BeefyClient": "${BEEFY_CLIENT_CONTRACT}"
+    }
+  },
+  "sink": {
+    "polkadot": {
+      "endpoint": "${POLKADOT_ENDPOINT}"
+    }
+  }
+}

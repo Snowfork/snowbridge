@@ -1,0 +1,29 @@
+{
+  "source": {
+    "polkadot": {
+      "endpoint": "${POLKADOT_ENDPOINT}",
+      "heartbeat-secs": 45
+    },
+    "bridge-hub": {
+      "endpoint": "${BRIDGEHUB_ENDPOINT}",
+      "heartbeat-secs": 45
+    }
+  },
+  "sink": {
+    "ethereum": {
+      "endpoint": "${ETHEREUM_ENDPOINT}",
+      "heartbeat-secs": 600
+    },
+    "descendants-until-final": 3,
+    "contracts": {
+      "BeefyClient": "${BEEFY_CLIENT_CONTRACT}",
+      "Gateway": "${GATEWAY_CONTRACT}"
+    }
+  },
+  "on-demand-sync": {
+    "asset-hub-channel-id": "0xc173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539",
+    "max-tasks": 3,
+    "merge-period": 900,
+    "expired-period": 3600
+  }
+}
