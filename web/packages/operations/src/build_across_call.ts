@@ -3,7 +3,7 @@ import { Context } from "@snowbridge/api"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { SnowbridgeL1Adaptor, SnowbridgeL1Adaptor__factory } from "@snowbridge/contract-types"
 import { Wallet } from "ethers"
-import { environmentFor } from "@snowbridge/registry"
+import { bridgeInfoFor } from "@snowbridge/registry"
 
 const run = async (
     inputToken: string,
@@ -19,7 +19,8 @@ const run = async (
     }
     console.log(`Using environment '${env}'`)
 
-    const context = new Context(environmentFor(env))
+    const { environment } = bridgeInfoFor(env)
+    const context = new Context(environment)
 
     const ETHEREUM_ACCOUNT = new Wallet(
         process.env.ETHEREUM_KEY ?? "Your Key Goes Here",

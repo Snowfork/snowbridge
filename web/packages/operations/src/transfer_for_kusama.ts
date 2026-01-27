@@ -1,8 +1,8 @@
 import "dotenv/config"
 import { Keyring } from "@polkadot/keyring"
 import { Context, forKusama } from "@snowbridge/api"
-import { assetRegistryFor, environmentFor } from "@snowbridge/registry"
 import { Direction } from "@snowbridge/api/dist/forKusama"
+import { bridgeInfoFor } from "@snowbridge/registry"
 
 export const transferForKusama = async (
     transferName: string,
@@ -14,7 +14,7 @@ export const transferForKusama = async (
     if (process.env.NODE_ENV !== undefined) {
         env = process.env.NODE_ENV
     }
-    const snowbridgeEnv = environmentFor(env)
+    const { registry, environment: snowbridgeEnv } = bridgeInfoFor(env)
     if (snowbridgeEnv === undefined) {
         throw Error(`Unknown environment '${env}'`)
     }
@@ -38,8 +38,6 @@ export const transferForKusama = async (
     const DEST_ACCOUNT = process.env["DEST_SUBSTRATE_KEY"]
         ? polkadot_keyring.addFromUri(process.env["DEST_SUBSTRATE_KEY"])
         : polkadot_keyring.addFromUri("//Ferdie")
-
-    const registry = assetRegistryFor(env)
 
     const SOURCE_ACCOUNT_PUBLIC = SOURCE_ACCOUNT.address
     const DEST_ACCOUNT_PUBLIC = DEST_ACCOUNT.address
