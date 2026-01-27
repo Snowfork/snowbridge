@@ -1,0 +1,2201 @@
+const registry = {
+    "environment": {
+        "name": "polkadot_mainnet",
+        "ethChainId": 1,
+        "beaconApiUrl": "https://lodestar-mainnet.chainsafe.io",
+        "ethereumChains": {
+            "1": "https://ethereum-rpc.publicnode.com",
+            "1284": "https://rpc.api.moonbeam.network",
+            "8453": "https://base-rpc.publicnode.com"
+        },
+        "relaychainUrl": "https://polkadot-rpc.n.dwellir.com",
+        "parachains": {
+            "1000": "wss://asset-hub-polkadot-rpc.n.dwellir.com",
+            "1002": "https://bridge-hub-polkadot-rpc.n.dwellir.com",
+            "2000": "wss://acala-rpc-0.aca-api.network",
+            "2004": "wss://moonbeam.ibp.network",
+            "2030": "wss://bifrost-polkadot.ibp.network",
+            "2034": "wss://hydration-rpc.n.dwellir.com",
+            "2043": "wss://parachain-rpc.origin-trail.network",
+            "3369": "wss://polkadot-mythos-rpc.polkadot.io"
+        },
+        "gatewayContract": "0x27ca963c279c93801941e1eb8799c23f407d68e7",
+        "beefyContract": "0x1817874feAb3ce053d0F40AbC23870DB35C2AFfc",
+        "assetHubParaId": 1000,
+        "bridgeHubParaId": 1002,
+        "v2_parachains": [
+            1000
+        ],
+        "indexerGraphQlUrl": "https://snowbridge.squids.live/snowbridge-subsquid-polkadot@v2/api/graphql",
+        "kusama": {
+            "assetHubParaId": 1000,
+            "bridgeHubParaId": 1002,
+            "parachains": {
+                "1000": "wss://asset-hub-kusama-rpc.n.dwellir.com",
+                "1002": "https://bridge-hub-kusama-rpc.n.dwellir.com"
+            }
+        },
+        "precompiles": {
+            "2004": "0x000000000000000000000000000000000000081a"
+        },
+        "metadataOverrides": {
+            "0xaa7a9ca87d3694b5755f213b5d04094b8d0f0a6f": {
+                "name": "OriginTrail TRAC"
+            }
+        },
+        "l2Bridge": {
+            "acrossAPIUrl": "https://app.across.to/api",
+            "l1AdapterAddress": "0x313E8c9Fb47613f2B1A436bE978c2BB75727fcC5",
+            "l1HandlerAddress": "0x924a9f036260DdD5808007E1AA95f08eD08aA569",
+            "l1FeeTokenAddress": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+            "l1SwapQuoterAddress": "0x61fFE014bA17989E743c5F6cB21bF9697530B21e",
+            "l1SwapRouterAddress": "0xE592427A0AEce92De3Edee1F18E0157C05861564",
+            "l2Chains": {
+                "8453": {
+                    "adapterAddress": "0xCd5d2c665E3AC84bF5c67FE7a0C48748dA40db2F",
+                    "feeTokenAddress": "0x4200000000000000000000000000000000000006",
+                    "swapRoutes": [
+                        {
+                            "inputToken": "0x4200000000000000000000000000000000000006",
+                            "outputToken": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                            "swapFee": 0
+                        },
+                        {
+                            "inputToken": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+                            "outputToken": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+                            "swapFee": 500
+                        }
+                    ]
+                }
+            }
+        }
+    },
+    "routes": [
+        {
+            "type": "ethereum",
+            "id": "ethereum",
+            "key": "1",
+            "destinations": {
+                "1000": {
+                    "type": "substrate",
+                    "assets": [
+                        "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+                        "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                        "0x6982508145454ce325ddbe47a25d4ec3d2311933",
+                        "0x5a98fcbea516cf06857215779fd812ca3bef1b32",
+                        "0x45804880de22913dafe09f4980848ece6ecbaf78",
+                        "0xcccccccccc33d538dbc2ee4feab0a7a1ff4e8a94",
+                        "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+                        "0x163f8c2467924be0ae7b5347228cabf260318753",
+                        "0x57e114b691db790c35207b2e685d4a43181e6061",
+                        "0x8236a87084f8b84306f72007f36f2618a5634494",
+                        "0x1abaea1f7c830bd89acc67ec4af516284b1bc33c",
+                        "0x56072c95faa701256059aa122697b133aded9279",
+                        "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                        "0x0e186357c323c806c1efdad36d217f7a54b63d18",
+                        "0x18084fba666a33d37592fa2633fd49a74dd93a88",
+                        "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+                        "0xe9f6d9898f9269b519e1435e6ebaff766c7f46bf",
+                        "0x582d872a1b094fc48f5de31d3b73f2d9be47def1",
+                        "0x6b175474e89094c44da98b954eedeac495271d0f",
+                        "0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce",
+                        "0x7de91b204c1c737bcee6f000aaa6569cf7061cb7",
+                        "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+                        "0x8daebade922df735c38c80c7ebd708af50815faa",
+                        "0x0000000000000000000000000000000000000000",
+                        "0x5d3d01fd6d2ad1169b17918eb4f153c6616288eb",
+                        "0xdac17f958d2ee523a2206206994597c13d831ec7",
+                        "0x514910771af9ca656af840dff83e8264ecf986ca",
+                        "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
+                        "0x196c20da81fbc324ecdf55501e95ce9f0bd84d14",
+                        "0x21fab0ea070f162180447881d5873cf3d57200d6",
+                        "0x12bbfdc9e813614eef8dc8a2560b0efbeaf7c2ab",
+                        "0x5fdcd48f09fb67de3d202cd854b372aec1100ed5",
+                        "0xa37b046782518a80e2e69056009fbd0431d36e50",
+                        "0x769916a66fdac0e3d57363129caac59386ea622b",
+                        "0x92262680a8d6636bba9bffdf484c274ca2de6400"
+                    ]
+                },
+                "2000": {
+                    "type": "substrate",
+                    "assets": [
+                        "0x0000000000000000000000000000000000000000"
+                    ]
+                },
+                "2004": {
+                    "type": "substrate",
+                    "assets": [
+                        "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                        "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                        "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+                        "0x6b175474e89094c44da98b954eedeac495271d0f",
+                        "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+                        "0x0000000000000000000000000000000000000000",
+                        "0xdac17f958d2ee523a2206206994597c13d831ec7"
+                    ]
+                },
+                "2030": {
+                    "type": "substrate",
+                    "assets": [
+                        "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                        "0x0000000000000000000000000000000000000000"
+                    ]
+                },
+                "2034": {
+                    "type": "substrate",
+                    "assets": [
+                        "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                        "0x5a98fcbea516cf06857215779fd812ca3bef1b32",
+                        "0x45804880de22913dafe09f4980848ece6ecbaf78",
+                        "0xcccccccccc33d538dbc2ee4feab0a7a1ff4e8a94",
+                        "0x57e114b691db790c35207b2e685d4a43181e6061",
+                        "0x8236a87084f8b84306f72007f36f2618a5634494",
+                        "0x56072c95faa701256059aa122697b133aded9279",
+                        "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                        "0xaa7a9ca87d3694b5755f213b5d04094b8d0f0a6f",
+                        "0x18084fba666a33d37592fa2633fd49a74dd93a88",
+                        "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+                        "0xe9f6d9898f9269b519e1435e6ebaff766c7f46bf",
+                        "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+                        "0x0000000000000000000000000000000000000000",
+                        "0xdac17f958d2ee523a2206206994597c13d831ec7",
+                        "0x514910771af9ca656af840dff83e8264ecf986ca",
+                        "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9"
+                    ]
+                },
+                "2043": {
+                    "type": "substrate",
+                    "assets": [
+                        "0xaa7a9ca87d3694b5755f213b5d04094b8d0f0a6f"
+                    ]
+                },
+                "3369": {
+                    "type": "substrate",
+                    "assets": [
+                        "0xba41ddf06b7ffd89d1267b5a93bfef2424eb2003"
+                    ]
+                }
+            }
+        },
+        {
+            "type": "substrate",
+            "id": "statemint",
+            "key": "1000",
+            "destinations": {
+                "1": {
+                    "type": "ethereum",
+                    "assets": [
+                        "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+                        "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                        "0x6982508145454ce325ddbe47a25d4ec3d2311933",
+                        "0x5a98fcbea516cf06857215779fd812ca3bef1b32",
+                        "0x45804880de22913dafe09f4980848ece6ecbaf78",
+                        "0xcccccccccc33d538dbc2ee4feab0a7a1ff4e8a94",
+                        "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+                        "0x163f8c2467924be0ae7b5347228cabf260318753",
+                        "0x57e114b691db790c35207b2e685d4a43181e6061",
+                        "0x8236a87084f8b84306f72007f36f2618a5634494",
+                        "0x1abaea1f7c830bd89acc67ec4af516284b1bc33c",
+                        "0x56072c95faa701256059aa122697b133aded9279",
+                        "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                        "0x0e186357c323c806c1efdad36d217f7a54b63d18",
+                        "0x18084fba666a33d37592fa2633fd49a74dd93a88",
+                        "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+                        "0xe9f6d9898f9269b519e1435e6ebaff766c7f46bf",
+                        "0x582d872a1b094fc48f5de31d3b73f2d9be47def1",
+                        "0x6b175474e89094c44da98b954eedeac495271d0f",
+                        "0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce",
+                        "0x7de91b204c1c737bcee6f000aaa6569cf7061cb7",
+                        "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+                        "0x8daebade922df735c38c80c7ebd708af50815faa",
+                        "0x0000000000000000000000000000000000000000",
+                        "0x5d3d01fd6d2ad1169b17918eb4f153c6616288eb",
+                        "0xdac17f958d2ee523a2206206994597c13d831ec7",
+                        "0x514910771af9ca656af840dff83e8264ecf986ca",
+                        "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
+                        "0x196c20da81fbc324ecdf55501e95ce9f0bd84d14",
+                        "0x21fab0ea070f162180447881d5873cf3d57200d6",
+                        "0x12bbfdc9e813614eef8dc8a2560b0efbeaf7c2ab",
+                        "0x5fdcd48f09fb67de3d202cd854b372aec1100ed5",
+                        "0xa37b046782518a80e2e69056009fbd0431d36e50",
+                        "0x769916a66fdac0e3d57363129caac59386ea622b",
+                        "0x92262680a8d6636bba9bffdf484c274ca2de6400"
+                    ]
+                },
+                "2034": {
+                    "type": "substrate",
+                    "assets": [
+                        "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                        "0x5a98fcbea516cf06857215779fd812ca3bef1b32",
+                        "0x45804880de22913dafe09f4980848ece6ecbaf78",
+                        "0xcccccccccc33d538dbc2ee4feab0a7a1ff4e8a94",
+                        "0x57e114b691db790c35207b2e685d4a43181e6061",
+                        "0x8236a87084f8b84306f72007f36f2618a5634494",
+                        "0x56072c95faa701256059aa122697b133aded9279",
+                        "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                        "0x18084fba666a33d37592fa2633fd49a74dd93a88",
+                        "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+                        "0xe9f6d9898f9269b519e1435e6ebaff766c7f46bf",
+                        "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+                        "0x0000000000000000000000000000000000000000",
+                        "0xdac17f958d2ee523a2206206994597c13d831ec7",
+                        "0x514910771af9ca656af840dff83e8264ecf986ca",
+                        "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9"
+                    ]
+                }
+            }
+        },
+        {
+            "type": "substrate",
+            "id": "acala",
+            "key": "2000",
+            "destinations": {
+                "1": {
+                    "type": "ethereum",
+                    "assets": [
+                        "0x0000000000000000000000000000000000000000"
+                    ]
+                }
+            }
+        },
+        {
+            "type": "substrate",
+            "id": "moonbeam",
+            "key": "2004",
+            "destinations": {
+                "1": {
+                    "type": "ethereum",
+                    "assets": [
+                        "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                        "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                        "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+                        "0x6b175474e89094c44da98b954eedeac495271d0f",
+                        "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+                        "0x0000000000000000000000000000000000000000",
+                        "0xdac17f958d2ee523a2206206994597c13d831ec7"
+                    ]
+                }
+            }
+        },
+        {
+            "type": "ethereum",
+            "id": "moonbeam_evm",
+            "key": "1284",
+            "destinations": {
+                "1": {
+                    "type": "ethereum",
+                    "assets": [
+                        "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                        "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                        "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+                        "0x6b175474e89094c44da98b954eedeac495271d0f",
+                        "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+                        "0x0000000000000000000000000000000000000000",
+                        "0xdac17f958d2ee523a2206206994597c13d831ec7"
+                    ]
+                }
+            }
+        },
+        {
+            "type": "substrate",
+            "id": "bifrost_polkadot",
+            "key": "2030",
+            "destinations": {
+                "1": {
+                    "type": "ethereum",
+                    "assets": [
+                        "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                        "0x0000000000000000000000000000000000000000"
+                    ]
+                }
+            }
+        },
+        {
+            "type": "substrate",
+            "id": "hydradx",
+            "key": "2034",
+            "destinations": {
+                "1": {
+                    "type": "ethereum",
+                    "assets": [
+                        "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+                        "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                        "0x5a98fcbea516cf06857215779fd812ca3bef1b32",
+                        "0x45804880de22913dafe09f4980848ece6ecbaf78",
+                        "0xcccccccccc33d538dbc2ee4feab0a7a1ff4e8a94",
+                        "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+                        "0x57e114b691db790c35207b2e685d4a43181e6061",
+                        "0x8236a87084f8b84306f72007f36f2618a5634494",
+                        "0x56072c95faa701256059aa122697b133aded9279",
+                        "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                        "0xaa7a9ca87d3694b5755f213b5d04094b8d0f0a6f",
+                        "0x18084fba666a33d37592fa2633fd49a74dd93a88",
+                        "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+                        "0xe9f6d9898f9269b519e1435e6ebaff766c7f46bf",
+                        "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+                        "0x0000000000000000000000000000000000000000",
+                        "0xdac17f958d2ee523a2206206994597c13d831ec7",
+                        "0x514910771af9ca656af840dff83e8264ecf986ca",
+                        "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9"
+                    ]
+                },
+                "1000": {
+                    "type": "substrate",
+                    "assets": [
+                        "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+                        "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                        "0x5a98fcbea516cf06857215779fd812ca3bef1b32",
+                        "0x45804880de22913dafe09f4980848ece6ecbaf78",
+                        "0xcccccccccc33d538dbc2ee4feab0a7a1ff4e8a94",
+                        "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+                        "0x57e114b691db790c35207b2e685d4a43181e6061",
+                        "0x8236a87084f8b84306f72007f36f2618a5634494",
+                        "0x56072c95faa701256059aa122697b133aded9279",
+                        "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                        "0xaa7a9ca87d3694b5755f213b5d04094b8d0f0a6f",
+                        "0x18084fba666a33d37592fa2633fd49a74dd93a88",
+                        "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+                        "0xe9f6d9898f9269b519e1435e6ebaff766c7f46bf",
+                        "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+                        "0x0000000000000000000000000000000000000000",
+                        "0xdac17f958d2ee523a2206206994597c13d831ec7",
+                        "0x514910771af9ca656af840dff83e8264ecf986ca",
+                        "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9"
+                    ]
+                }
+            }
+        },
+        {
+            "type": "substrate",
+            "id": "origintrail-parachain",
+            "key": "2043",
+            "destinations": {
+                "1": {
+                    "type": "ethereum",
+                    "assets": [
+                        "0xaa7a9ca87d3694b5755f213b5d04094b8d0f0a6f"
+                    ]
+                }
+            }
+        },
+        {
+            "type": "substrate",
+            "id": "mythos",
+            "key": "3369",
+            "destinations": {
+                "1": {
+                    "type": "ethereum",
+                    "assets": [
+                        "0xba41ddf06b7ffd89d1267b5a93bfef2424eb2003"
+                    ]
+                }
+            }
+        }
+    ],
+    "registry": {
+        "timestamp": "2026-01-26T23:07:37.346Z",
+        "environment": "polkadot_mainnet",
+        "ethChainId": 1,
+        "gatewayAddress": "0x27ca963c279c93801941e1eb8799c23f407d68e7",
+        "assetHubParaId": 1000,
+        "bridgeHubParaId": 1002,
+        "relaychain": {
+            "tokenSymbols": "DOT",
+            "tokenDecimals": 10,
+            "ss58Format": 0,
+            "isEthereum": false,
+            "accountType": "AccountId32",
+            "name": "Polkadot",
+            "specName": "polkadot",
+            "specVersion": 2000001
+        },
+        "bridgeHub": {
+            "tokenSymbols": "DOT",
+            "tokenDecimals": 10,
+            "ss58Format": 0,
+            "isEthereum": false,
+            "accountType": "AccountId32",
+            "name": "Polkadot BridgeHub",
+            "specName": "bridge-hub-polkadot",
+            "specVersion": 2000003
+        },
+        "ethereumChains": {
+            "1": {
+                "chainId": 1,
+                "assets": {
+                    "0x9d39a5de30e57443bff2a8307a4256c8797a3497": {
+                        "token": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+                        "name": "Staked USDe",
+                        "symbol": "sUSDe",
+                        "decimals": 18,
+                        "deliveryGas": 80000n
+                    },
+                    "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2": {
+                        "token": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                        "name": "Wrapped Ether",
+                        "symbol": "WETH",
+                        "decimals": 18,
+                        "deliveryGas": 80000n
+                    },
+                    "0x6982508145454ce325ddbe47a25d4ec3d2311933": {
+                        "token": "0x6982508145454ce325ddbe47a25d4ec3d2311933",
+                        "name": "Pepe",
+                        "symbol": "PEPE",
+                        "decimals": 18,
+                        "deliveryGas": 80000n
+                    },
+                    "0x5a98fcbea516cf06857215779fd812ca3bef1b32": {
+                        "token": "0x5a98fcbea516cf06857215779fd812ca3bef1b32",
+                        "name": "Lido DAO Token",
+                        "symbol": "LDO",
+                        "decimals": 18,
+                        "deliveryGas": 150000n
+                    },
+                    "0x45804880de22913dafe09f4980848ece6ecbaf78": {
+                        "token": "0x45804880de22913dafe09f4980848ece6ecbaf78",
+                        "name": "Paxos Gold",
+                        "symbol": "PAXG",
+                        "decimals": 18,
+                        "deliveryGas": 80000n
+                    },
+                    "0xcccccccccc33d538dbc2ee4feab0a7a1ff4e8a94": {
+                        "token": "0xcccccccccc33d538dbc2ee4feab0a7a1ff4e8a94",
+                        "name": "Centrifuge",
+                        "symbol": "CFG",
+                        "decimals": 18,
+                        "deliveryGas": 80000n
+                    },
+                    "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd": {
+                        "token": "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+                        "name": "Savings USDS",
+                        "symbol": "sUSDS",
+                        "decimals": 18,
+                        "deliveryGas": 80000n
+                    },
+                    "0x163f8c2467924be0ae7b5347228cabf260318753": {
+                        "token": "0x163f8c2467924be0ae7b5347228cabf260318753",
+                        "name": "Worldcoin",
+                        "symbol": "WLD",
+                        "decimals": 18,
+                        "deliveryGas": 80000n
+                    },
+                    "0x57e114b691db790c35207b2e685d4a43181e6061": {
+                        "token": "0x57e114b691db790c35207b2e685d4a43181e6061",
+                        "name": "ENA",
+                        "symbol": "ENA",
+                        "decimals": 18,
+                        "deliveryGas": 80000n
+                    },
+                    "0x8236a87084f8b84306f72007f36f2618a5634494": {
+                        "token": "0x8236a87084f8b84306f72007f36f2618a5634494",
+                        "name": "Lombard Staked Bitcoin",
+                        "symbol": "LBTC",
+                        "decimals": 8,
+                        "deliveryGas": 80000n
+                    },
+                    "0x1abaea1f7c830bd89acc67ec4af516284b1bc33c": {
+                        "token": "0x1abaea1f7c830bd89acc67ec4af516284b1bc33c",
+                        "name": "Euro Coin",
+                        "symbol": "EURC",
+                        "decimals": 6,
+                        "deliveryGas": 80000n
+                    },
+                    "0x56072c95faa701256059aa122697b133aded9279": {
+                        "token": "0x56072c95faa701256059aa122697b133aded9279",
+                        "name": "SKY Governance Token",
+                        "symbol": "SKY",
+                        "decimals": 18,
+                        "deliveryGas": 80000n
+                    },
+                    "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48": {
+                        "token": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                        "name": "USD Coin",
+                        "symbol": "USDC",
+                        "decimals": 6,
+                        "deliveryGas": 80000n
+                    },
+                    "0xba41ddf06b7ffd89d1267b5a93bfef2424eb2003": {
+                        "token": "0xba41ddf06b7ffd89d1267b5a93bfef2424eb2003",
+                        "name": "Mythos",
+                        "symbol": "MYTH",
+                        "decimals": 18,
+                        "deliveryGas": 80000n
+                    },
+                    "0x0e186357c323c806c1efdad36d217f7a54b63d18": {
+                        "token": "0x0e186357c323c806c1efdad36d217f7a54b63d18",
+                        "name": "Curio Gas Token",
+                        "symbol": "CGT2.0",
+                        "decimals": 18,
+                        "deliveryGas": 80000n
+                    },
+                    "0xaa7a9ca87d3694b5755f213b5d04094b8d0f0a6f": {
+                        "token": "0xaa7a9ca87d3694b5755f213b5d04094b8d0f0a6f",
+                        "name": "OriginTrail TRAC",
+                        "symbol": "TRAC",
+                        "decimals": 18,
+                        "deliveryGas": 80000n
+                    },
+                    "0x18084fba666a33d37592fa2633fd49a74dd93a88": {
+                        "token": "0x18084fba666a33d37592fa2633fd49a74dd93a88",
+                        "name": "tBTC v2",
+                        "symbol": "tBTC",
+                        "decimals": 18,
+                        "deliveryGas": 80000n
+                    },
+                    "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0": {
+                        "token": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+                        "name": "Wrapped liquid staked Ether 2.0",
+                        "symbol": "wstETH",
+                        "decimals": 18,
+                        "deliveryGas": 80000n
+                    },
+                    "0xe9f6d9898f9269b519e1435e6ebaff766c7f46bf": {
+                        "token": "0xe9f6d9898f9269b519e1435e6ebaff766c7f46bf",
+                        "name": "vTAO",
+                        "symbol": "vTAO",
+                        "decimals": 18,
+                        "deliveryGas": 80000n
+                    },
+                    "0x582d872a1b094fc48f5de31d3b73f2d9be47def1": {
+                        "token": "0x582d872a1b094fc48f5de31d3b73f2d9be47def1",
+                        "name": "Wrapped TON Coin",
+                        "symbol": "TONCOIN",
+                        "decimals": 9,
+                        "deliveryGas": 80000n
+                    },
+                    "0x6b175474e89094c44da98b954eedeac495271d0f": {
+                        "token": "0x6b175474e89094c44da98b954eedeac495271d0f",
+                        "name": "Dai Stablecoin",
+                        "symbol": "DAI",
+                        "decimals": 18,
+                        "deliveryGas": 80000n
+                    },
+                    "0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce": {
+                        "token": "0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce",
+                        "name": "SHIBA INU",
+                        "symbol": "SHIB",
+                        "decimals": 18,
+                        "deliveryGas": 80000n
+                    },
+                    "0x7de91b204c1c737bcee6f000aaa6569cf7061cb7": {
+                        "token": "0x7de91b204c1c737bcee6f000aaa6569cf7061cb7",
+                        "name": "Robonomics",
+                        "symbol": "XRT",
+                        "decimals": 9,
+                        "deliveryGas": 80000n
+                    },
+                    "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599": {
+                        "token": "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+                        "name": "Wrapped BTC",
+                        "symbol": "WBTC",
+                        "decimals": 8,
+                        "deliveryGas": 80000n
+                    },
+                    "0x8daebade922df735c38c80c7ebd708af50815faa": {
+                        "token": "0x8daebade922df735c38c80c7ebd708af50815faa",
+                        "name": "tBTC",
+                        "symbol": "TBTC",
+                        "decimals": 18,
+                        "deliveryGas": 80000n
+                    },
+                    "0x0000000000000000000000000000000000000000": {
+                        "token": "0x0000000000000000000000000000000000000000",
+                        "name": "Ether",
+                        "symbol": "ETH",
+                        "decimals": 18
+                    },
+                    "0x5d3d01fd6d2ad1169b17918eb4f153c6616288eb": {
+                        "token": "0x5d3d01fd6d2ad1169b17918eb4f153c6616288eb",
+                        "name": "KILT",
+                        "symbol": "KILT",
+                        "decimals": 15,
+                        "deliveryGas": 80000n
+                    },
+                    "0xdac17f958d2ee523a2206206994597c13d831ec7": {
+                        "token": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+                        "name": "Tether USD",
+                        "symbol": "USDT",
+                        "decimals": 6,
+                        "deliveryGas": 80000n
+                    },
+                    "0x514910771af9ca656af840dff83e8264ecf986ca": {
+                        "token": "0x514910771af9ca656af840dff83e8264ecf986ca",
+                        "name": "ChainLink Token",
+                        "symbol": "LINK",
+                        "decimals": 18,
+                        "deliveryGas": 80000n
+                    },
+                    "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9": {
+                        "token": "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
+                        "name": "Aave Token",
+                        "symbol": "AAVE",
+                        "decimals": 18,
+                        "deliveryGas": 80000n
+                    },
+                    "0x196c20da81fbc324ecdf55501e95ce9f0bd84d14": {
+                        "token": "0x196c20da81fbc324ecdf55501e95ce9f0bd84d14",
+                        "name": "Polkadot",
+                        "symbol": "DOT",
+                        "decimals": 10,
+                        "foreignId": "0x4e241583d94b5d48a27a22064cd49b2ed6f5231d2d950e432f9b7c2e0ade52b2",
+                        "deliveryGas": 80000n
+                    },
+                    "0x21fab0ea070f162180447881d5873cf3d57200d6": {
+                        "token": "0x21fab0ea070f162180447881d5873cf3d57200d6",
+                        "name": "Kolkadot",
+                        "symbol": "KOL",
+                        "decimals": 12,
+                        "foreignId": "0xad050334b66c8d3abaac7ef6667e97e3e6f4a25d9b7b4765133290f0dc19aa6e",
+                        "deliveryGas": 80000n
+                    },
+                    "0x12bbfdc9e813614eef8dc8a2560b0efbeaf7c2ab": {
+                        "token": "0x12bbfdc9e813614eef8dc8a2560b0efbeaf7c2ab",
+                        "name": "Kusama",
+                        "symbol": "KSM",
+                        "decimals": 12,
+                        "foreignId": "0x03b6054d0c576dd8391e34e1609cf398f68050c23009d19ce93c000922bcd852",
+                        "deliveryGas": 80000n
+                    },
+                    "0x5fdcd48f09fb67de3d202cd854b372aec1100ed5": {
+                        "token": "0x5fdcd48f09fb67de3d202cd854b372aec1100ed5",
+                        "name": "GAVUN WUD",
+                        "symbol": "WUD",
+                        "decimals": 10,
+                        "foreignId": "0x7ca757304cac2ff0881de18dc6a1dfa7f10e51b0cba0297e0e762f8072049c98",
+                        "deliveryGas": 80000n
+                    },
+                    "0xa37b046782518a80e2e69056009fbd0431d36e50": {
+                        "token": "0xa37b046782518a80e2e69056009fbd0431d36e50",
+                        "name": "PINK",
+                        "symbol": "PINK",
+                        "decimals": 10,
+                        "foreignId": "0xbc8785969587ef3d22739d3385cb519a9e0133dd5da8d320c376772468c19be6",
+                        "deliveryGas": 80000n
+                    },
+                    "0x769916a66fdac0e3d57363129caac59386ea622b": {
+                        "token": "0x769916a66fdac0e3d57363129caac59386ea622b",
+                        "name": "Integritee TEER",
+                        "symbol": "TEER",
+                        "decimals": 12,
+                        "foreignId": "0x3b7f577715347bdcde4739a1bf1a7f1dec71e8ff4dbe23a6a49348ebf920c658",
+                        "deliveryGas": 80000n
+                    },
+                    "0x92262680a8d6636bba9bffdf484c274ca2de6400": {
+                        "token": "0x92262680a8d6636bba9bffdf484c274ca2de6400",
+                        "name": "DED",
+                        "symbol": "DED",
+                        "decimals": 10,
+                        "foreignId": "0x536917d1276896038c09bb6499bd0d7197e609983ec22e9ca4e75b394b23752b",
+                        "deliveryGas": 80000n
+                    }
+                },
+                "id": "mainnet",
+                "baseDeliveryGas": 120000n
+            },
+            "1284": {
+                "chainId": 1284,
+                "evmParachainId": 2004,
+                "assets": {
+                    "0xffffffff86829afe1521ad2296719df3ace8ded7": {
+                        "token": "0xffffffff86829afe1521ad2296719df3ace8ded7",
+                        "name": "Snowbridge WETH",
+                        "symbol": "WETH.e",
+                        "decimals": 18
+                    },
+                    "0xffffffff5d5deb44bf7278dee5381beb24cb6573": {
+                        "token": "0xffffffff5d5deb44bf7278dee5381beb24cb6573",
+                        "name": "Snowbridge wstETH",
+                        "symbol": "wstETH.e",
+                        "decimals": 18
+                    },
+                    "0xffffffff1b4bb1ac5749f73d866ffc91a3432c47": {
+                        "token": "0xffffffff1b4bb1ac5749f73d866ffc91a3432c47",
+                        "name": "Snowbridge WBTC",
+                        "symbol": "WBTC.e",
+                        "decimals": 8
+                    },
+                    "0xffffffff9de12e6658c49b4834f9278f6a39f5d7": {
+                        "token": "0xffffffff9de12e6658c49b4834f9278f6a39f5d7",
+                        "name": "Snowbridge DAI",
+                        "symbol": "DAI.e",
+                        "decimals": 18
+                    },
+                    "0xffffffff166f84967f054ae95ab5764c38cf3aed": {
+                        "token": "0xffffffff166f84967f054ae95ab5764c38cf3aed",
+                        "name": "Snowbridge USDC",
+                        "symbol": "USDC.e",
+                        "decimals": 6
+                    },
+                    "0xffffffffaff6df83d0a1935dda2e5f1f402c0c45": {
+                        "token": "0xffffffffaff6df83d0a1935dda2e5f1f402c0c45",
+                        "name": "Snowbridge ETH",
+                        "symbol": "ETH.e",
+                        "decimals": 18
+                    },
+                    "0xffffffff7bc304425217b49e9598415c514ae81b": {
+                        "token": "0xffffffff7bc304425217b49e9598415c514ae81b",
+                        "name": "Snowbridge USDT",
+                        "symbol": "USDT.e",
+                        "decimals": 6
+                    },
+                    "0xffffffff1fcacbd218edc0eba20fc2308c778080": {
+                        "token": "0xffffffff1fcacbd218edc0eba20fc2308c778080",
+                        "name": "xcDOT",
+                        "symbol": "xcDOT",
+                        "decimals": 10
+                    }
+                },
+                "precompile": "0x000000000000000000000000000000000000081a",
+                "xcDOT": "0xffffffff1fcacbd218edc0eba20fc2308c778080",
+                "xcTokenMap": {
+                    "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2": "0xffffffff86829afe1521ad2296719df3ace8ded7",
+                    "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0": "0xffffffff5d5deb44bf7278dee5381beb24cb6573",
+                    "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599": "0xffffffff1b4bb1ac5749f73d866ffc91a3432c47",
+                    "0x6b175474e89094c44da98b954eedeac495271d0f": "0xffffffff9de12e6658c49b4834f9278f6a39f5d7",
+                    "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48": "0xffffffff166f84967f054ae95ab5764c38cf3aed",
+                    "0x0000000000000000000000000000000000000000": "0xffffffffaff6df83d0a1935dda2e5f1f402c0c45",
+                    "0xdac17f958d2ee523a2206206994597c13d831ec7": "0xffffffff7bc304425217b49e9598415c514ae81b"
+                },
+                "id": "evm_moonbeam"
+            },
+            "8453": {
+                "chainId": 8453,
+                "assets": {
+                    "0x4200000000000000000000000000000000000006": {
+                        "token": "0x4200000000000000000000000000000000000006",
+                        "name": "Wrapped Ether",
+                        "symbol": "WETH",
+                        "decimals": 18,
+                        "swapTokenAddress": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                        "swapFee": 0
+                    },
+                    "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913": {
+                        "token": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+                        "name": "USD Coin",
+                        "symbol": "USDC",
+                        "decimals": 6,
+                        "swapTokenAddress": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+                        "swapFee": 500
+                    },
+                    "0x0000000000000000000000000000000000000000": {
+                        "token": "0x0000000000000000000000000000000000000000",
+                        "name": "Ether",
+                        "symbol": "Ether",
+                        "decimals": 18,
+                        "swapTokenAddress": "0x0000000000000000000000000000000000000000",
+                        "swapFee": 0
+                    }
+                },
+                "id": "base"
+            }
+        },
+        "parachains": {
+            "1000": {
+                "parachainId": 1000,
+                "features": {
+                    "hasPalletXcm": true,
+                    "hasDryRunApi": true,
+                    "hasTxPaymentApi": true,
+                    "hasDryRunRpc": true,
+                    "hasDotBalance": true,
+                    "hasEthBalance": true,
+                    "hasXcmPaymentApi": true,
+                    "supportsAliasOrigin": true,
+                    "xcmVersion": "v5",
+                    "supportsV2": true
+                },
+                "info": {
+                    "tokenSymbols": "DOT",
+                    "tokenDecimals": 10,
+                    "ss58Format": 0,
+                    "isEthereum": false,
+                    "accountType": "AccountId32",
+                    "name": "Polkadot Asset Hub",
+                    "specName": "statemint",
+                    "specVersion": 2000003
+                },
+                "assets": {
+                    "0x9d39a5de30e57443bff2a8307a4256c8797a3497": {
+                        "token": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+                        "name": "Staked USDe",
+                        "minimumBalance": 1n,
+                        "symbol": "sUSDe",
+                        "decimals": 18,
+                        "isSufficient": false
+                    },
+                    "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2": {
+                        "token": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                        "name": "Wrapped Ether",
+                        "minimumBalance": 15000000000000n,
+                        "symbol": "WETH",
+                        "decimals": 18,
+                        "isSufficient": true
+                    },
+                    "0x6982508145454ce325ddbe47a25d4ec3d2311933": {
+                        "token": "0x6982508145454ce325ddbe47a25d4ec3d2311933",
+                        "name": "Pepe",
+                        "minimumBalance": 1n,
+                        "symbol": "PEPE",
+                        "decimals": 18,
+                        "isSufficient": false
+                    },
+                    "0x5a98fcbea516cf06857215779fd812ca3bef1b32": {
+                        "token": "0x5a98fcbea516cf06857215779fd812ca3bef1b32",
+                        "name": "Lido DAO Token",
+                        "minimumBalance": 1n,
+                        "symbol": "LDO",
+                        "decimals": 18,
+                        "isSufficient": false
+                    },
+                    "0x45804880de22913dafe09f4980848ece6ecbaf78": {
+                        "token": "0x45804880de22913dafe09f4980848ece6ecbaf78",
+                        "name": "",
+                        "minimumBalance": 1n,
+                        "symbol": "",
+                        "decimals": 0,
+                        "isSufficient": false
+                    },
+                    "0xcccccccccc33d538dbc2ee4feab0a7a1ff4e8a94": {
+                        "token": "0xcccccccccc33d538dbc2ee4feab0a7a1ff4e8a94",
+                        "name": "",
+                        "minimumBalance": 1n,
+                        "symbol": "",
+                        "decimals": 0,
+                        "isSufficient": false
+                    },
+                    "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd": {
+                        "token": "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+                        "name": "Savings USDS",
+                        "minimumBalance": 1n,
+                        "symbol": "sUSDS",
+                        "decimals": 18,
+                        "isSufficient": false
+                    },
+                    "0x163f8c2467924be0ae7b5347228cabf260318753": {
+                        "token": "0x163f8c2467924be0ae7b5347228cabf260318753",
+                        "name": "",
+                        "minimumBalance": 1n,
+                        "symbol": "",
+                        "decimals": 0,
+                        "isSufficient": false
+                    },
+                    "0x57e114b691db790c35207b2e685d4a43181e6061": {
+                        "token": "0x57e114b691db790c35207b2e685d4a43181e6061",
+                        "name": "",
+                        "minimumBalance": 1n,
+                        "symbol": "",
+                        "decimals": 0,
+                        "isSufficient": false
+                    },
+                    "0x8236a87084f8b84306f72007f36f2618a5634494": {
+                        "token": "0x8236a87084f8b84306f72007f36f2618a5634494",
+                        "name": "Lombard Staked Bitcoin",
+                        "minimumBalance": 1n,
+                        "symbol": "LBTC",
+                        "decimals": 8,
+                        "isSufficient": false
+                    },
+                    "0x1abaea1f7c830bd89acc67ec4af516284b1bc33c": {
+                        "token": "0x1abaea1f7c830bd89acc67ec4af516284b1bc33c",
+                        "name": "Euro Coin",
+                        "minimumBalance": 1n,
+                        "symbol": "EURC",
+                        "decimals": 6,
+                        "isSufficient": false
+                    },
+                    "0x56072c95faa701256059aa122697b133aded9279": {
+                        "token": "0x56072c95faa701256059aa122697b133aded9279",
+                        "name": "SKY Governance Token",
+                        "minimumBalance": 1n,
+                        "symbol": "SKY",
+                        "decimals": 18,
+                        "isSufficient": false
+                    },
+                    "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48": {
+                        "token": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                        "name": "USDC (Snowbridge)",
+                        "minimumBalance": 10000n,
+                        "symbol": "USDC",
+                        "decimals": 6,
+                        "isSufficient": true
+                    },
+                    "0xba41ddf06b7ffd89d1267b5a93bfef2424eb2003": {
+                        "token": "0xba41ddf06b7ffd89d1267b5a93bfef2424eb2003",
+                        "name": "Mythos",
+                        "minimumBalance": 1n,
+                        "symbol": "MYTH",
+                        "decimals": 18,
+                        "isSufficient": false
+                    },
+                    "0x0e186357c323c806c1efdad36d217f7a54b63d18": {
+                        "token": "0x0e186357c323c806c1efdad36d217f7a54b63d18",
+                        "name": "Curio Gas Token",
+                        "minimumBalance": 1n,
+                        "symbol": "CGT2.0",
+                        "decimals": 18,
+                        "isSufficient": false
+                    },
+                    "0xaa7a9ca87d3694b5755f213b5d04094b8d0f0a6f": {
+                        "token": "0xaa7a9ca87d3694b5755f213b5d04094b8d0f0a6f",
+                        "name": "OriginTrail TRAC",
+                        "minimumBalance": 1n,
+                        "symbol": "TRAC",
+                        "decimals": 18,
+                        "isSufficient": false
+                    },
+                    "0x18084fba666a33d37592fa2633fd49a74dd93a88": {
+                        "token": "0x18084fba666a33d37592fa2633fd49a74dd93a88",
+                        "name": "tBTC v2",
+                        "minimumBalance": 1n,
+                        "symbol": "tBTC",
+                        "decimals": 18,
+                        "isSufficient": false
+                    },
+                    "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0": {
+                        "token": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+                        "name": "Wrapped liquid staked Ether 2.0",
+                        "minimumBalance": 1n,
+                        "symbol": "wstETH",
+                        "decimals": 18,
+                        "isSufficient": false
+                    },
+                    "0xe9f6d9898f9269b519e1435e6ebaff766c7f46bf": {
+                        "token": "0xe9f6d9898f9269b519e1435e6ebaff766c7f46bf",
+                        "name": "",
+                        "minimumBalance": 1n,
+                        "symbol": "",
+                        "decimals": 0,
+                        "isSufficient": false
+                    },
+                    "0x582d872a1b094fc48f5de31d3b73f2d9be47def1": {
+                        "token": "0x582d872a1b094fc48f5de31d3b73f2d9be47def1",
+                        "name": "Wrapped TON Coin",
+                        "minimumBalance": 1n,
+                        "symbol": "TONCOIN",
+                        "decimals": 9,
+                        "isSufficient": false
+                    },
+                    "0x6b175474e89094c44da98b954eedeac495271d0f": {
+                        "token": "0x6b175474e89094c44da98b954eedeac495271d0f",
+                        "name": "Dai Stablecoin",
+                        "minimumBalance": 1n,
+                        "symbol": "DAI",
+                        "decimals": 18,
+                        "isSufficient": false
+                    },
+                    "0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce": {
+                        "token": "0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce",
+                        "name": "SHIBA INU",
+                        "minimumBalance": 1n,
+                        "symbol": "SHIB",
+                        "decimals": 18,
+                        "isSufficient": false
+                    },
+                    "0x7de91b204c1c737bcee6f000aaa6569cf7061cb7": {
+                        "token": "0x7de91b204c1c737bcee6f000aaa6569cf7061cb7",
+                        "name": "Robonomics",
+                        "minimumBalance": 1n,
+                        "symbol": "XRT",
+                        "decimals": 9,
+                        "isSufficient": false
+                    },
+                    "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599": {
+                        "token": "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+                        "name": "Wrapped BTC",
+                        "minimumBalance": 1n,
+                        "symbol": "WBTC",
+                        "decimals": 8,
+                        "isSufficient": false
+                    },
+                    "0x8daebade922df735c38c80c7ebd708af50815faa": {
+                        "token": "0x8daebade922df735c38c80c7ebd708af50815faa",
+                        "name": "tBTC",
+                        "minimumBalance": 1n,
+                        "symbol": "TBTC",
+                        "decimals": 18,
+                        "isSufficient": false
+                    },
+                    "0x0000000000000000000000000000000000000000": {
+                        "token": "0x0000000000000000000000000000000000000000",
+                        "name": "Ether",
+                        "minimumBalance": 15000000000000n,
+                        "symbol": "ETH",
+                        "decimals": 18,
+                        "isSufficient": true
+                    },
+                    "0x5d3d01fd6d2ad1169b17918eb4f153c6616288eb": {
+                        "token": "0x5d3d01fd6d2ad1169b17918eb4f153c6616288eb",
+                        "name": "KILT",
+                        "minimumBalance": 1n,
+                        "symbol": "KILT",
+                        "decimals": 15,
+                        "isSufficient": false
+                    },
+                    "0xdac17f958d2ee523a2206206994597c13d831ec7": {
+                        "token": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+                        "name": "Tether USD (Snowbridge)",
+                        "minimumBalance": 10000n,
+                        "symbol": "USDT",
+                        "decimals": 6,
+                        "isSufficient": true
+                    },
+                    "0x514910771af9ca656af840dff83e8264ecf986ca": {
+                        "token": "0x514910771af9ca656af840dff83e8264ecf986ca",
+                        "name": "ChainLink Token",
+                        "minimumBalance": 1n,
+                        "symbol": "LINK",
+                        "decimals": 18,
+                        "isSufficient": false
+                    },
+                    "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9": {
+                        "token": "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
+                        "name": "Aave Token",
+                        "minimumBalance": 1n,
+                        "symbol": "AAVE",
+                        "decimals": 18,
+                        "isSufficient": false
+                    },
+                    "0x196c20da81fbc324ecdf55501e95ce9f0bd84d14": {
+                        "token": "0x196c20da81fbc324ecdf55501e95ce9f0bd84d14",
+                        "name": "",
+                        "symbol": "DOT",
+                        "decimals": 10,
+                        "locationOnEthereum": {
+                            "parents": 1,
+                            "interior": {
+                                "x1": [
+                                    {
+                                        "globalConsensus": {
+                                            "polkadot": null
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        "location": {
+                            "parents": 1,
+                            "interior": "Here"
+                        },
+                        "locationOnAH": {
+                            "parents": 1,
+                            "interior": "Here"
+                        },
+                        "foreignId": "0x4e241583d94b5d48a27a22064cd49b2ed6f5231d2d950e432f9b7c2e0ade52b2",
+                        "minimumBalance": 100000000n,
+                        "isSufficient": true
+                    },
+                    "0x21fab0ea070f162180447881d5873cf3d57200d6": {
+                        "token": "0x21fab0ea070f162180447881d5873cf3d57200d6",
+                        "name": "Kolkadot",
+                        "symbol": "KOL",
+                        "decimals": 12,
+                        "locationOnEthereum": {
+                            "parents": 1,
+                            "interior": {
+                                "x4": [
+                                    {
+                                        "globalConsensus": {
+                                            "polkadot": null
+                                        }
+                                    },
+                                    {
+                                        "parachain": 1000
+                                    },
+                                    {
+                                        "palletInstance": 50
+                                    },
+                                    {
+                                        "generalIndex": 86
+                                    }
+                                ]
+                            }
+                        },
+                        "location": {
+                            "parents": 0,
+                            "interior": {
+                                "x2": [
+                                    {
+                                        "palletInstance": 50
+                                    },
+                                    {
+                                        "generalIndex": 86
+                                    }
+                                ]
+                            }
+                        },
+                        "locationOnAH": {
+                            "parents": 0,
+                            "interior": {
+                                "x2": [
+                                    {
+                                        "palletInstance": 50
+                                    },
+                                    {
+                                        "generalIndex": 86
+                                    }
+                                ]
+                            }
+                        },
+                        "foreignId": "0xad050334b66c8d3abaac7ef6667e97e3e6f4a25d9b7b4765133290f0dc19aa6e",
+                        "minimumBalance": 1000000000000n,
+                        "isSufficient": false,
+                        "assetId": "86"
+                    },
+                    "0x12bbfdc9e813614eef8dc8a2560b0efbeaf7c2ab": {
+                        "token": "0x12bbfdc9e813614eef8dc8a2560b0efbeaf7c2ab",
+                        "name": "Kusama",
+                        "symbol": "KSM",
+                        "decimals": 12,
+                        "locationOnEthereum": {
+                            "parents": 1,
+                            "interior": {
+                                "x1": [
+                                    {
+                                        "globalConsensus": {
+                                            "kusama": null
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        "location": {
+                            "parents": 2,
+                            "interior": {
+                                "x1": [
+                                    {
+                                        "globalConsensus": {
+                                            "kusama": null
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        "locationOnAH": {
+                            "parents": 2,
+                            "interior": {
+                                "x1": [
+                                    {
+                                        "globalConsensus": {
+                                            "kusama": null
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        "foreignId": "0x03b6054d0c576dd8391e34e1609cf398f68050c23009d19ce93c000922bcd852",
+                        "minimumBalance": 1000000000n,
+                        "isSufficient": true
+                    },
+                    "0x5fdcd48f09fb67de3d202cd854b372aec1100ed5": {
+                        "token": "0x5fdcd48f09fb67de3d202cd854b372aec1100ed5",
+                        "name": "GAVUN WUD",
+                        "symbol": "WUD",
+                        "decimals": 10,
+                        "locationOnEthereum": {
+                            "parents": 1,
+                            "interior": {
+                                "x4": [
+                                    {
+                                        "globalConsensus": {
+                                            "polkadot": null
+                                        }
+                                    },
+                                    {
+                                        "parachain": 1000
+                                    },
+                                    {
+                                        "palletInstance": 50
+                                    },
+                                    {
+                                        "generalIndex": 31337
+                                    }
+                                ]
+                            }
+                        },
+                        "location": {
+                            "parents": 0,
+                            "interior": {
+                                "x2": [
+                                    {
+                                        "palletInstance": 50
+                                    },
+                                    {
+                                        "generalIndex": 31337
+                                    }
+                                ]
+                            }
+                        },
+                        "locationOnAH": {
+                            "parents": 0,
+                            "interior": {
+                                "x2": [
+                                    {
+                                        "palletInstance": 50
+                                    },
+                                    {
+                                        "generalIndex": 31337
+                                    }
+                                ]
+                            }
+                        },
+                        "foreignId": "0x7ca757304cac2ff0881de18dc6a1dfa7f10e51b0cba0297e0e762f8072049c98",
+                        "minimumBalance": 10000000n,
+                        "isSufficient": false,
+                        "assetId": "31337"
+                    },
+                    "0xa37b046782518a80e2e69056009fbd0431d36e50": {
+                        "token": "0xa37b046782518a80e2e69056009fbd0431d36e50",
+                        "name": "PINK",
+                        "symbol": "PINK",
+                        "decimals": 10,
+                        "locationOnEthereum": {
+                            "parents": 1,
+                            "interior": {
+                                "x4": [
+                                    {
+                                        "globalConsensus": {
+                                            "polkadot": null
+                                        }
+                                    },
+                                    {
+                                        "parachain": 1000
+                                    },
+                                    {
+                                        "palletInstance": 50
+                                    },
+                                    {
+                                        "generalIndex": 23
+                                    }
+                                ]
+                            }
+                        },
+                        "location": {
+                            "parents": 0,
+                            "interior": {
+                                "x2": [
+                                    {
+                                        "palletInstance": 50
+                                    },
+                                    {
+                                        "generalIndex": 23
+                                    }
+                                ]
+                            }
+                        },
+                        "locationOnAH": {
+                            "parents": 0,
+                            "interior": {
+                                "x2": [
+                                    {
+                                        "palletInstance": 50
+                                    },
+                                    {
+                                        "generalIndex": 23
+                                    }
+                                ]
+                            }
+                        },
+                        "foreignId": "0xbc8785969587ef3d22739d3385cb519a9e0133dd5da8d320c376772468c19be6",
+                        "minimumBalance": 1n,
+                        "isSufficient": false,
+                        "assetId": "23"
+                    },
+                    "0x769916a66fdac0e3d57363129caac59386ea622b": {
+                        "token": "0x769916a66fdac0e3d57363129caac59386ea622b",
+                        "name": "Integritee TEER",
+                        "symbol": "TEER",
+                        "decimals": 12,
+                        "locationOnEthereum": {
+                            "parents": 1,
+                            "interior": {
+                                "x2": [
+                                    {
+                                        "globalConsensus": {
+                                            "polkadot": null
+                                        }
+                                    },
+                                    {
+                                        "parachain": 2039
+                                    }
+                                ]
+                            }
+                        },
+                        "location": {
+                            "parents": 1,
+                            "interior": {
+                                "x1": [
+                                    {
+                                        "parachain": 2039
+                                    }
+                                ]
+                            }
+                        },
+                        "locationOnAH": {
+                            "parents": 1,
+                            "interior": {
+                                "x1": [
+                                    {
+                                        "parachain": 2039
+                                    }
+                                ]
+                            }
+                        },
+                        "foreignId": "0x3b7f577715347bdcde4739a1bf1a7f1dec71e8ff4dbe23a6a49348ebf920c658",
+                        "minimumBalance": 1000000000n,
+                        "isSufficient": false
+                    },
+                    "0x92262680a8d6636bba9bffdf484c274ca2de6400": {
+                        "token": "0x92262680a8d6636bba9bffdf484c274ca2de6400",
+                        "name": "DED",
+                        "symbol": "DED",
+                        "decimals": 10,
+                        "locationOnEthereum": {
+                            "parents": 1,
+                            "interior": {
+                                "x4": [
+                                    {
+                                        "globalConsensus": {
+                                            "polkadot": null
+                                        }
+                                    },
+                                    {
+                                        "parachain": 1000
+                                    },
+                                    {
+                                        "palletInstance": 50
+                                    },
+                                    {
+                                        "generalIndex": 30
+                                    }
+                                ]
+                            }
+                        },
+                        "location": {
+                            "parents": 0,
+                            "interior": {
+                                "x2": [
+                                    {
+                                        "palletInstance": 50
+                                    },
+                                    {
+                                        "generalIndex": 30
+                                    }
+                                ]
+                            }
+                        },
+                        "locationOnAH": {
+                            "parents": 0,
+                            "interior": {
+                                "x2": [
+                                    {
+                                        "palletInstance": 50
+                                    },
+                                    {
+                                        "generalIndex": 30
+                                    }
+                                ]
+                            }
+                        },
+                        "foreignId": "0x536917d1276896038c09bb6499bd0d7197e609983ec22e9ca4e75b394b23752b",
+                        "minimumBalance": 1n,
+                        "isSufficient": false,
+                        "assetId": "30"
+                    }
+                },
+                "estimatedExecutionFeeDOT": 0n,
+                "estimatedDeliveryFeeDOT": 0n
+            },
+            "2000": {
+                "parachainId": 2000,
+                "features": {
+                    "hasPalletXcm": true,
+                    "hasDryRunApi": true,
+                    "hasTxPaymentApi": true,
+                    "hasDryRunRpc": true,
+                    "hasDotBalance": true,
+                    "hasEthBalance": true,
+                    "hasXcmPaymentApi": true,
+                    "supportsAliasOrigin": true,
+                    "xcmVersion": "v5",
+                    "supportsV2": false
+                },
+                "info": {
+                    "tokenSymbols": "ACA",
+                    "tokenDecimals": 12,
+                    "ss58Format": 10,
+                    "isEthereum": false,
+                    "accountType": "AccountId32",
+                    "name": "Acala",
+                    "specName": "acala",
+                    "specVersion": 2330
+                },
+                "assets": {
+                    "0x0000000000000000000000000000000000000000": {
+                        "token": "0x0000000000000000000000000000000000000000",
+                        "name": "Ether",
+                        "minimumBalance": 10000000000000n,
+                        "symbol": "ETH",
+                        "decimals": 18,
+                        "isSufficient": false
+                    }
+                },
+                "estimatedExecutionFeeDOT": 300000000n,
+                "estimatedDeliveryFeeDOT": 307100000n
+            },
+            "2004": {
+                "parachainId": 2004,
+                "features": {
+                    "hasPalletXcm": true,
+                    "hasDryRunApi": true,
+                    "hasTxPaymentApi": true,
+                    "hasDryRunRpc": true,
+                    "hasDotBalance": true,
+                    "hasEthBalance": false,
+                    "hasXcmPaymentApi": true,
+                    "supportsAliasOrigin": false,
+                    "xcmVersion": "v5",
+                    "supportsV2": false
+                },
+                "info": {
+                    "tokenSymbols": "GLMR",
+                    "tokenDecimals": 18,
+                    "ss58Format": 1284,
+                    "isEthereum": false,
+                    "accountType": "AccountId20",
+                    "evmChainId": 1284,
+                    "name": "Moonbeam",
+                    "specName": "moonbeam",
+                    "specVersion": 4001
+                },
+                "xcDOT": "0xffffffff1fcacbd218edc0eba20fc2308c778080",
+                "assets": {
+                    "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2": {
+                        "token": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                        "name": "Snowbridge WETH",
+                        "minimumBalance": 1n,
+                        "symbol": "WETH.e",
+                        "decimals": 18,
+                        "isSufficient": true,
+                        "xc20": "0xffffffff86829afe1521ad2296719df3ace8ded7"
+                    },
+                    "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0": {
+                        "token": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+                        "name": "Snowbridge wstETH",
+                        "minimumBalance": 1n,
+                        "symbol": "wstETH.e",
+                        "decimals": 18,
+                        "isSufficient": true,
+                        "xc20": "0xffffffff5d5deb44bf7278dee5381beb24cb6573"
+                    },
+                    "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599": {
+                        "token": "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+                        "name": "Snowbridge WBTC",
+                        "minimumBalance": 1n,
+                        "symbol": "WBTC.e",
+                        "decimals": 8,
+                        "isSufficient": true,
+                        "xc20": "0xffffffff1b4bb1ac5749f73d866ffc91a3432c47"
+                    },
+                    "0x6b175474e89094c44da98b954eedeac495271d0f": {
+                        "token": "0x6b175474e89094c44da98b954eedeac495271d0f",
+                        "name": "Snowbridge DAI",
+                        "minimumBalance": 1n,
+                        "symbol": "DAI.e",
+                        "decimals": 18,
+                        "isSufficient": true,
+                        "xc20": "0xffffffff9de12e6658c49b4834f9278f6a39f5d7"
+                    },
+                    "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48": {
+                        "token": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                        "name": "Snowbridge USDC",
+                        "minimumBalance": 1n,
+                        "symbol": "USDC.e",
+                        "decimals": 6,
+                        "isSufficient": true,
+                        "xc20": "0xffffffff166f84967f054ae95ab5764c38cf3aed"
+                    },
+                    "0x0000000000000000000000000000000000000000": {
+                        "token": "0x0000000000000000000000000000000000000000",
+                        "name": "Snowbridge ETH",
+                        "minimumBalance": 1n,
+                        "symbol": "ETH.e",
+                        "decimals": 18,
+                        "isSufficient": true,
+                        "xc20": "0xffffffffaff6df83d0a1935dda2e5f1f402c0c45"
+                    },
+                    "0xdac17f958d2ee523a2206206994597c13d831ec7": {
+                        "token": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+                        "name": "Snowbridge USDT",
+                        "minimumBalance": 1n,
+                        "symbol": "USDT.e",
+                        "decimals": 6,
+                        "isSufficient": true,
+                        "xc20": "0xffffffff7bc304425217b49e9598415c514ae81b"
+                    }
+                },
+                "estimatedExecutionFeeDOT": 105696134n,
+                "estimatedDeliveryFeeDOT": 306500000n
+            },
+            "2030": {
+                "parachainId": 2030,
+                "features": {
+                    "hasPalletXcm": true,
+                    "hasDryRunApi": true,
+                    "hasTxPaymentApi": true,
+                    "hasDryRunRpc": true,
+                    "hasDotBalance": true,
+                    "hasEthBalance": true,
+                    "hasXcmPaymentApi": true,
+                    "supportsAliasOrigin": true,
+                    "xcmVersion": "v5",
+                    "supportsV2": false
+                },
+                "info": {
+                    "tokenSymbols": "BNC",
+                    "tokenDecimals": 12,
+                    "ss58Format": 0,
+                    "isEthereum": false,
+                    "accountType": "AccountId32",
+                    "evmChainId": 996,
+                    "name": "Bifrost Polkadot",
+                    "specName": "bifrost_polkadot",
+                    "specVersion": 23000
+                },
+                "assets": {
+                    "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2": {
+                        "token": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                        "name": "Wrapped ETH",
+                        "minimumBalance": 15000000000000n,
+                        "symbol": "WETH",
+                        "decimals": 18,
+                        "isSufficient": false
+                    },
+                    "0x0000000000000000000000000000000000000000": {
+                        "token": "0x0000000000000000000000000000000000000000",
+                        "name": "Native ETH",
+                        "minimumBalance": 15000000000000n,
+                        "symbol": "ETH",
+                        "decimals": 18,
+                        "isSufficient": false
+                    }
+                },
+                "estimatedExecutionFeeDOT": 94821574n,
+                "estimatedDeliveryFeeDOT": 307100000n
+            },
+            "2034": {
+                "parachainId": 2034,
+                "features": {
+                    "hasPalletXcm": true,
+                    "hasDryRunApi": true,
+                    "hasTxPaymentApi": true,
+                    "hasDryRunRpc": true,
+                    "hasDotBalance": true,
+                    "hasEthBalance": false,
+                    "hasXcmPaymentApi": true,
+                    "supportsAliasOrigin": false,
+                    "xcmVersion": "v4",
+                    "supportsV2": false
+                },
+                "info": {
+                    "tokenSymbols": "HDX",
+                    "tokenDecimals": 12,
+                    "ss58Format": 0,
+                    "isEthereum": false,
+                    "accountType": "AccountId32",
+                    "evmChainId": 222222,
+                    "name": "Hydration",
+                    "specName": "hydradx",
+                    "specVersion": 378
+                },
+                "assets": {
+                    "0x45804880de22913dafe09f4980848ece6ecbaf78": {
+                        "token": "0x45804880de22913dafe09f4980848ece6ecbaf78",
+                        "name": "PAX Gold",
+                        "minimumBalance": 2374169040836n,
+                        "symbol": "PAXG",
+                        "decimals": 18,
+                        "isSufficient": true
+                    },
+                    "0x57e114b691db790c35207b2e685d4a43181e6061": {
+                        "token": "0x57e114b691db790c35207b2e685d4a43181e6061",
+                        "name": "Ethena",
+                        "minimumBalance": 17337031900138700n,
+                        "symbol": "ENA",
+                        "decimals": 18,
+                        "isSufficient": true
+                    },
+                    "0x0000000000000000000000000000000000000000": {
+                        "token": "0x0000000000000000000000000000000000000000",
+                        "name": "Ethereum",
+                        "minimumBalance": 5373455131650n,
+                        "symbol": "ETH",
+                        "decimals": 18,
+                        "isSufficient": true
+                    },
+                    "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48": {
+                        "token": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                        "name": "USDC (Ethereum native)",
+                        "minimumBalance": 10000n,
+                        "symbol": "USDC",
+                        "decimals": 6,
+                        "isSufficient": true
+                    },
+                    "0x5a98fcbea516cf06857215779fd812ca3bef1b32": {
+                        "token": "0x5a98fcbea516cf06857215779fd812ca3bef1b32",
+                        "name": "Lido",
+                        "minimumBalance": 5102040816326530n,
+                        "symbol": "LDO",
+                        "decimals": 18,
+                        "isSufficient": true
+                    },
+                    "0x56072c95faa701256059aa122697b133aded9279": {
+                        "token": "0x56072c95faa701256059aa122697b133aded9279",
+                        "name": "SKY",
+                        "minimumBalance": 211685012701101000n,
+                        "symbol": "SKY",
+                        "decimals": 18,
+                        "isSufficient": true
+                    },
+                    "0xaa7a9ca87d3694b5755f213b5d04094b8d0f0a6f": {
+                        "token": "0xaa7a9ca87d3694b5755f213b5d04094b8d0f0a6f",
+                        "name": "OriginTrail",
+                        "minimumBalance": 27777777777777800n,
+                        "symbol": "TRAC",
+                        "decimals": 18,
+                        "isSufficient": true
+                    },
+                    "0xe9f6d9898f9269b519e1435e6ebaff766c7f46bf": {
+                        "token": "0xe9f6d9898f9269b519e1435e6ebaff766c7f46bf",
+                        "name": "",
+                        "minimumBalance": 1n,
+                        "symbol": "",
+                        "decimals": 0,
+                        "isSufficient": false
+                    },
+                    "0xcccccccccc33d538dbc2ee4feab0a7a1ff4e8a94": {
+                        "token": "0xcccccccccc33d538dbc2ee4feab0a7a1ff4e8a94",
+                        "name": "Centrifuge",
+                        "minimumBalance": 36297640653357500n,
+                        "symbol": "CFG",
+                        "decimals": 18,
+                        "isSufficient": true
+                    },
+                    "0x514910771af9ca656af840dff83e8264ecf986ca": {
+                        "token": "0x514910771af9ca656af840dff83e8264ecf986ca",
+                        "name": "Chainlink",
+                        "minimumBalance": 436681222707424n,
+                        "symbol": "LINK",
+                        "decimals": 18,
+                        "isSufficient": true
+                    },
+                    "0x9d39a5de30e57443bff2a8307a4256c8797a3497": {
+                        "token": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+                        "name": "Ethena Staked USDe",
+                        "minimumBalance": 8928571428571430n,
+                        "symbol": "sUSDe",
+                        "decimals": 18,
+                        "isSufficient": true
+                    },
+                    "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9": {
+                        "token": "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
+                        "name": "AAVE",
+                        "minimumBalance": 59084194977843n,
+                        "symbol": "AAVE",
+                        "decimals": 18,
+                        "isSufficient": true
+                    },
+                    "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599": {
+                        "token": "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+                        "name": "Wrapped Bitcoin",
+                        "minimumBalance": 23n,
+                        "symbol": "WBTC",
+                        "decimals": 8,
+                        "isSufficient": true
+                    },
+                    "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd": {
+                        "token": "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+                        "name": "Savings USDS",
+                        "minimumBalance": 9910802775024780n,
+                        "symbol": "sUSDS",
+                        "decimals": 18,
+                        "isSufficient": true
+                    },
+                    "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0": {
+                        "token": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+                        "name": "Wrapped staked ETH",
+                        "minimumBalance": 3244646333550n,
+                        "symbol": "wstETH",
+                        "decimals": 18,
+                        "isSufficient": true
+                    },
+                    "0xdac17f958d2ee523a2206206994597c13d831ec7": {
+                        "token": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+                        "name": "Tether (Ethereum native)",
+                        "minimumBalance": 10000n,
+                        "symbol": "USDT",
+                        "decimals": 6,
+                        "isSufficient": true
+                    },
+                    "0x18084fba666a33d37592fa2633fd49a74dd93a88": {
+                        "token": "0x18084fba666a33d37592fa2633fd49a74dd93a88",
+                        "name": "Threshold BTC",
+                        "minimumBalance": 106803374987n,
+                        "symbol": "tBTC",
+                        "decimals": 18,
+                        "isSufficient": true
+                    },
+                    "0x8236a87084f8b84306f72007f36f2618a5634494": {
+                        "token": "0x8236a87084f8b84306f72007f36f2618a5634494",
+                        "name": "Lombard Staked BTC",
+                        "minimumBalance": 11n,
+                        "symbol": "LBTC",
+                        "decimals": 8,
+                        "isSufficient": true
+                    },
+                    "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2": {
+                        "token": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                        "name": "Wrapped Ethereum",
+                        "minimumBalance": 6009615384615n,
+                        "symbol": "WETH",
+                        "decimals": 18,
+                        "isSufficient": true
+                    }
+                },
+                "estimatedExecutionFeeDOT": 1651255n,
+                "estimatedDeliveryFeeDOT": 307100000n
+            },
+            "2043": {
+                "parachainId": 2043,
+                "features": {
+                    "hasPalletXcm": true,
+                    "hasDryRunApi": true,
+                    "hasTxPaymentApi": true,
+                    "hasDryRunRpc": true,
+                    "hasDotBalance": false,
+                    "hasEthBalance": false,
+                    "hasXcmPaymentApi": true,
+                    "supportsAliasOrigin": false,
+                    "xcmVersion": "v4",
+                    "supportsV2": false
+                },
+                "info": {
+                    "tokenSymbols": "NEURO",
+                    "tokenDecimals": 12,
+                    "ss58Format": 101,
+                    "isEthereum": false,
+                    "accountType": "AccountId32",
+                    "name": "NeuroWeb",
+                    "specName": "origintrail-parachain",
+                    "specVersion": 151
+                },
+                "assets": {
+                    "0xaa7a9ca87d3694b5755f213b5d04094b8d0f0a6f": {
+                        "token": "0xaa7a9ca87d3694b5755f213b5d04094b8d0f0a6f",
+                        "name": "Trac",
+                        "minimumBalance": 1000000000000000n,
+                        "symbol": "TRAC",
+                        "decimals": 18,
+                        "isSufficient": true
+                    }
+                },
+                "estimatedExecutionFeeDOT": 306833n,
+                "estimatedDeliveryFeeDOT": 307100000n
+            },
+            "3369": {
+                "parachainId": 3369,
+                "features": {
+                    "hasPalletXcm": true,
+                    "hasDryRunApi": true,
+                    "hasTxPaymentApi": true,
+                    "hasDryRunRpc": true,
+                    "hasDotBalance": false,
+                    "hasEthBalance": false,
+                    "hasXcmPaymentApi": false,
+                    "supportsAliasOrigin": false,
+                    "xcmVersion": "v4",
+                    "supportsV2": false
+                },
+                "info": {
+                    "tokenSymbols": "MYTH",
+                    "tokenDecimals": 18,
+                    "ss58Format": 29972,
+                    "isEthereum": true,
+                    "accountType": "AccountId20",
+                    "name": "Mythos",
+                    "specName": "mythos",
+                    "specVersion": 1016
+                },
+                "assets": {
+                    "0xba41ddf06b7ffd89d1267b5a93bfef2424eb2003": {
+                        "token": "0xba41ddf06b7ffd89d1267b5a93bfef2424eb2003",
+                        "name": "Mythos",
+                        "minimumBalance": 10000000000000000n,
+                        "symbol": "MYTH",
+                        "decimals": 18,
+                        "isSufficient": true
+                    }
+                },
+                "estimatedExecutionFeeDOT": 1000000000n,
+                "estimatedDeliveryFeeDOT": 306500000n
+            }
+        },
+        "kusama": {
+            "parachains": {
+                "1000": {
+                    "parachainId": 1000,
+                    "features": {
+                        "hasPalletXcm": true,
+                        "hasDryRunApi": true,
+                        "hasTxPaymentApi": true,
+                        "hasDryRunRpc": true,
+                        "hasDotBalance": true,
+                        "hasEthBalance": false,
+                        "hasXcmPaymentApi": true,
+                        "supportsAliasOrigin": true,
+                        "xcmVersion": "v5",
+                        "supportsV2": false
+                    },
+                    "info": {
+                        "tokenSymbols": "KSM",
+                        "tokenDecimals": 12,
+                        "ss58Format": 2,
+                        "isEthereum": false,
+                        "accountType": "AccountId32",
+                        "name": "Kusama Asset Hub",
+                        "specName": "statemine",
+                        "specVersion": 2000004
+                    },
+                    "assets": {
+                        "0x9d39a5de30e57443bff2a8307a4256c8797a3497": {
+                            "token": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+                            "name": "Staked USDe",
+                            "minimumBalance": 1n,
+                            "symbol": "sUSDe",
+                            "decimals": 18,
+                            "isSufficient": false
+                        },
+                        "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2": {
+                            "token": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                            "name": "Wrapped Ether",
+                            "minimumBalance": 15000000000000n,
+                            "symbol": "WETH",
+                            "decimals": 18,
+                            "isSufficient": true
+                        },
+                        "0x6982508145454ce325ddbe47a25d4ec3d2311933": {
+                            "token": "0x6982508145454ce325ddbe47a25d4ec3d2311933",
+                            "name": "Pepe",
+                            "minimumBalance": 1n,
+                            "symbol": "PEPE",
+                            "decimals": 18,
+                            "isSufficient": false
+                        },
+                        "0x5a98fcbea516cf06857215779fd812ca3bef1b32": {
+                            "token": "0x5a98fcbea516cf06857215779fd812ca3bef1b32",
+                            "name": "Lido DAO Token",
+                            "minimumBalance": 1n,
+                            "symbol": "LDO",
+                            "decimals": 18,
+                            "isSufficient": false
+                        },
+                        "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd": {
+                            "token": "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+                            "name": "Savings USDS",
+                            "minimumBalance": 1n,
+                            "symbol": "sUSDS",
+                            "decimals": 18,
+                            "isSufficient": false
+                        },
+                        "0x8236a87084f8b84306f72007f36f2618a5634494": {
+                            "token": "0x8236a87084f8b84306f72007f36f2618a5634494",
+                            "name": "Lombard Staked Bitcoin",
+                            "minimumBalance": 1n,
+                            "symbol": "LBTC",
+                            "decimals": 8,
+                            "isSufficient": false
+                        },
+                        "0x1abaea1f7c830bd89acc67ec4af516284b1bc33c": {
+                            "token": "0x1abaea1f7c830bd89acc67ec4af516284b1bc33c",
+                            "name": "Euro Coin",
+                            "minimumBalance": 1n,
+                            "symbol": "EURC",
+                            "decimals": 6,
+                            "isSufficient": false
+                        },
+                        "0x56072c95faa701256059aa122697b133aded9279": {
+                            "token": "0x56072c95faa701256059aa122697b133aded9279",
+                            "name": "SKY Governance Token",
+                            "minimumBalance": 1n,
+                            "symbol": "SKY",
+                            "decimals": 18,
+                            "isSufficient": false
+                        },
+                        "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48": {
+                            "token": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                            "name": "USDC (Snowbridge)",
+                            "minimumBalance": 10000n,
+                            "symbol": "USDC",
+                            "decimals": 6,
+                            "isSufficient": true
+                        },
+                        "0x0e186357c323c806c1efdad36d217f7a54b63d18": {
+                            "token": "0x0e186357c323c806c1efdad36d217f7a54b63d18",
+                            "name": "Curio Gas Token",
+                            "minimumBalance": 1n,
+                            "symbol": "CGT2.0",
+                            "decimals": 18,
+                            "isSufficient": false
+                        },
+                        "0x18084fba666a33d37592fa2633fd49a74dd93a88": {
+                            "token": "0x18084fba666a33d37592fa2633fd49a74dd93a88",
+                            "name": "tBTC v2",
+                            "minimumBalance": 1n,
+                            "symbol": "tBTC",
+                            "decimals": 18,
+                            "isSufficient": false
+                        },
+                        "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0": {
+                            "token": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+                            "name": "Wrapped liquid staked Ether 2.0",
+                            "minimumBalance": 1n,
+                            "symbol": "wstETH",
+                            "decimals": 18,
+                            "isSufficient": false
+                        },
+                        "0x582d872a1b094fc48f5de31d3b73f2d9be47def1": {
+                            "token": "0x582d872a1b094fc48f5de31d3b73f2d9be47def1",
+                            "name": "Wrapped TON Coin",
+                            "minimumBalance": 1n,
+                            "symbol": "TONCOIN",
+                            "decimals": 9,
+                            "isSufficient": false
+                        },
+                        "0x6b175474e89094c44da98b954eedeac495271d0f": {
+                            "token": "0x6b175474e89094c44da98b954eedeac495271d0f",
+                            "name": "Dai Stablecoin",
+                            "minimumBalance": 1n,
+                            "symbol": "DAI",
+                            "decimals": 18,
+                            "isSufficient": false
+                        },
+                        "0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce": {
+                            "token": "0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce",
+                            "name": "SHIBA INU",
+                            "minimumBalance": 1n,
+                            "symbol": "SHIB",
+                            "decimals": 18,
+                            "isSufficient": false
+                        },
+                        "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599": {
+                            "token": "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+                            "name": "Wrapped BTC",
+                            "minimumBalance": 1n,
+                            "symbol": "WBTC",
+                            "decimals": 8,
+                            "isSufficient": false
+                        },
+                        "0x8daebade922df735c38c80c7ebd708af50815faa": {
+                            "token": "0x8daebade922df735c38c80c7ebd708af50815faa",
+                            "name": "tBTC",
+                            "minimumBalance": 1n,
+                            "symbol": "TBTC",
+                            "decimals": 18,
+                            "isSufficient": false
+                        },
+                        "0x0000000000000000000000000000000000000000": {
+                            "token": "0x0000000000000000000000000000000000000000",
+                            "name": "Ether",
+                            "minimumBalance": 15000000000000n,
+                            "symbol": "ETH",
+                            "decimals": 18,
+                            "isSufficient": true
+                        },
+                        "0x5d3d01fd6d2ad1169b17918eb4f153c6616288eb": {
+                            "token": "0x5d3d01fd6d2ad1169b17918eb4f153c6616288eb",
+                            "name": "KILT",
+                            "minimumBalance": 1n,
+                            "symbol": "KILT",
+                            "decimals": 15,
+                            "isSufficient": false
+                        },
+                        "0xdac17f958d2ee523a2206206994597c13d831ec7": {
+                            "token": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+                            "name": "USDT (Snowbridge)",
+                            "minimumBalance": 10000n,
+                            "symbol": "USDT",
+                            "decimals": 6,
+                            "isSufficient": true
+                        },
+                        "0x514910771af9ca656af840dff83e8264ecf986ca": {
+                            "token": "0x514910771af9ca656af840dff83e8264ecf986ca",
+                            "name": "ChainLink Token",
+                            "minimumBalance": 1n,
+                            "symbol": "LINK",
+                            "decimals": 18,
+                            "isSufficient": false
+                        },
+                        "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9": {
+                            "token": "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
+                            "name": "Aave Token",
+                            "minimumBalance": 1n,
+                            "symbol": "AAVE",
+                            "decimals": 18,
+                            "isSufficient": false
+                        },
+                        "0x196c20da81fbc324ecdf55501e95ce9f0bd84d14": {
+                            "token": "0x196c20da81fbc324ecdf55501e95ce9f0bd84d14",
+                            "name": "Polkadot",
+                            "symbol": "DOT",
+                            "decimals": 10,
+                            "locationOnEthereum": {
+                                "parents": 1,
+                                "interior": {
+                                    "x1": [
+                                        {
+                                            "globalConsensus": {
+                                                "polkadot": null
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            "location": {
+                                "parents": 2,
+                                "interior": {
+                                    "x1": [
+                                        {
+                                            "globalConsensus": {
+                                                "Polkadot": null
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            "locationOnAH": {
+                                "parents": 2,
+                                "interior": {
+                                    "x1": [
+                                        {
+                                            "globalConsensus": {
+                                                "Polkadot": null
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            "foreignId": "0x4e241583d94b5d48a27a22064cd49b2ed6f5231d2d950e432f9b7c2e0ade52b2",
+                            "minimumBalance": 10000000n,
+                            "isSufficient": true
+                        },
+                        "0x12bbfdc9e813614eef8dc8a2560b0efbeaf7c2ab": {
+                            "token": "0x12bbfdc9e813614eef8dc8a2560b0efbeaf7c2ab",
+                            "name": "",
+                            "symbol": "KSM",
+                            "decimals": 12,
+                            "locationOnEthereum": {
+                                "parents": 1,
+                                "interior": {
+                                    "x1": [
+                                        {
+                                            "globalConsensus": {
+                                                "kusama": null
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            "location": {
+                                "parents": 1,
+                                "interior": "Here"
+                            },
+                            "locationOnAH": {
+                                "parents": 1,
+                                "interior": "Here"
+                            },
+                            "foreignId": "0x03b6054d0c576dd8391e34e1609cf398f68050c23009d19ce93c000922bcd852",
+                            "minimumBalance": 3333333n,
+                            "isSufficient": true
+                        },
+                        "0x5fdcd48f09fb67de3d202cd854b372aec1100ed5": {
+                            "token": "0x5fdcd48f09fb67de3d202cd854b372aec1100ed5",
+                            "name": "GAVUN WUD",
+                            "symbol": "WUD",
+                            "decimals": 10,
+                            "locationOnEthereum": {
+                                "parents": 1,
+                                "interior": {
+                                    "x4": [
+                                        {
+                                            "globalConsensus": {
+                                                "polkadot": null
+                                            }
+                                        },
+                                        {
+                                            "parachain": 1000
+                                        },
+                                        {
+                                            "palletInstance": 50
+                                        },
+                                        {
+                                            "generalIndex": 31337
+                                        }
+                                    ]
+                                }
+                            },
+                            "location": {
+                                "parents": 2,
+                                "interior": {
+                                    "x4": [
+                                        {
+                                            "globalConsensus": {
+                                                "Polkadot": null
+                                            }
+                                        },
+                                        {
+                                            "parachain": 1000
+                                        },
+                                        {
+                                            "palletInstance": 50
+                                        },
+                                        {
+                                            "generalIndex": 31337
+                                        }
+                                    ]
+                                }
+                            },
+                            "locationOnAH": {
+                                "parents": 2,
+                                "interior": {
+                                    "x4": [
+                                        {
+                                            "globalConsensus": {
+                                                "Polkadot": null
+                                            }
+                                        },
+                                        {
+                                            "parachain": 1000
+                                        },
+                                        {
+                                            "palletInstance": 50
+                                        },
+                                        {
+                                            "generalIndex": 31337
+                                        }
+                                    ]
+                                }
+                            },
+                            "foreignId": "0x7ca757304cac2ff0881de18dc6a1dfa7f10e51b0cba0297e0e762f8072049c98",
+                            "minimumBalance": 10000000n,
+                            "isSufficient": false
+                        }
+                    },
+                    "estimatedExecutionFeeDOT": 0n,
+                    "estimatedDeliveryFeeDOT": 0n
+                }
+            },
+            "assetHubParaId": 1000,
+            "bridgeHubParaId": 1002
+        }
+    }
+} as const
+export default registry
