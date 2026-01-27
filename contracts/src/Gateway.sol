@@ -436,13 +436,9 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         try Gateway(this).v2_dispatch(message) returns (bool success) {
             dispatchSuccess = success;
         } catch (bytes memory reason) {
-            // If an atomic command failed or insufficient gas limit, rethrow the error to stop processing
+            // If insufficient gas limit, rethrow the error to stop processing
             // Otherwise, silently ignore command failures
-            if (
-                reason.length >= 4
-                    && (bytes4(reason) == IGatewayV2.AtomicCommandFailed.selector
-                        || bytes4(reason) == IGatewayV2.InsufficientGasLimit.selector)
-            ) {
+            if (reason.length >= 4 && bytes4(reason) == IGatewayV2.InsufficientGasLimit.selector) {
                 assembly {
                     revert(add(reason, 32), mload(reason))
                 }
@@ -560,9 +556,8 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
     }
 
     // Dispatch all the commands within the batch of commands in the message payload. Each command is processed
-    // independently, such that non-atomic failures emit a `CommandFailed` event without stopping execution of
-    // subsequent commands, while atomic failures revert the entire transaction. Returns true if all commands
-    // executed successfully, false if any non-atomic command failed.
+    // independently, such that failures emit a `CommandFailed` event without stopping execution of
+    // subsequent commands. Returns true if all commands executed successfully, false if any command failed.
     function v2_dispatch(InboundMessageV2 calldata message) external onlySelf returns (bool) {
         bool success = true;
         for (uint256 i = 0; i < message.commands.length; i++) {
@@ -575,9 +570,6 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
                         && bytes4(reason) == IGatewayV2.InsufficientGasLimit.selector
                 ) {
                     revert IGatewayV2.InsufficientGasLimit();
-                }
-                if (command.atomic) {
-                    revert IGatewayV2.AtomicCommandFailed(message.nonce, i);
                 }
                 emit IGatewayV2.CommandFailed(message.nonce, i);
                 success = false;

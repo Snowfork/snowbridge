@@ -19,7 +19,6 @@ struct InboundMessage {
 struct Command {
     uint8 kind;
     uint64 gas;
-    bool atomic;
     bytes payload;
 }
 

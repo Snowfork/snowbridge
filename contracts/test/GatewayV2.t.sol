@@ -226,7 +226,6 @@ contract GatewayV2Test is Test {
         commands[0] = CommandV2({
             kind: CommandKind.SetOperatingMode,
             gas: 500_000,
-            atomic: false,
             payload: abi.encode(params)
         });
         return commands;
@@ -246,9 +245,8 @@ contract GatewayV2Test is Test {
         bytes memory payload = abi.encode(params);
 
         CommandV2[] memory commands = new CommandV2[](1);
-        commands[0] = CommandV2({
-            kind: CommandKind.UnlockNativeToken, gas: 500_000, atomic: false, payload: payload
-        });
+        commands[0] =
+            CommandV2({kind: CommandKind.UnlockNativeToken, gas: 500_000, payload: payload});
         return commands;
     }
 
@@ -263,9 +261,8 @@ contract GatewayV2Test is Test {
         bytes memory payload = abi.encode(params);
 
         CommandV2[] memory commands = new CommandV2[](1);
-        commands[0] = CommandV2({
-            kind: CommandKind.RegisterForeignToken, gas: 1_200_000, atomic: false, payload: payload
-        });
+        commands[0] =
+            CommandV2({kind: CommandKind.RegisterForeignToken, gas: 1_200_000, payload: payload});
         return commands;
     }
 
@@ -278,9 +275,8 @@ contract GatewayV2Test is Test {
         bytes memory payload = abi.encode(params);
 
         CommandV2[] memory commands = new CommandV2[](1);
-        commands[0] = CommandV2({
-            kind: CommandKind.MintForeignToken, gas: 100_000, atomic: false, payload: payload
-        });
+        commands[0] =
+            CommandV2({kind: CommandKind.MintForeignToken, gas: 100_000, payload: payload});
         return commands;
     }
 
@@ -292,9 +288,7 @@ contract GatewayV2Test is Test {
         bytes memory payload = abi.encode(params);
 
         CommandV2[] memory commands = new CommandV2[](1);
-        commands[0] = CommandV2({
-            kind: CommandKind.CallContract, gas: 500_000, atomic: false, payload: payload
-        });
+        commands[0] = CommandV2({kind: CommandKind.CallContract, gas: 500_000, payload: payload});
         return commands;
     }
 
@@ -310,9 +304,7 @@ contract GatewayV2Test is Test {
         bytes memory payload = abi.encode(params);
 
         CommandV2[] memory commands = new CommandV2[](1);
-        commands[0] = CommandV2({
-            kind: CommandKind.CallContract, gas: 500_000, atomic: false, payload: payload
-        });
+        commands[0] = CommandV2({kind: CommandKind.CallContract, gas: 500_000, payload: payload});
         return commands;
     }
 
@@ -330,9 +322,7 @@ contract GatewayV2Test is Test {
         bytes memory payload = abi.encode(params);
 
         CommandV2[] memory commands = new CommandV2[](1);
-        commands[0] = CommandV2({
-            kind: CommandKind.CallContract, gas: callGas, atomic: false, payload: payload
-        });
+        commands[0] = CommandV2({kind: CommandKind.CallContract, gas: callGas, payload: payload});
         return commands;
     }
 
@@ -355,9 +345,7 @@ contract GatewayV2Test is Test {
         bytes memory payload = abi.encode(params);
 
         CommandV2[] memory commands = new CommandV2[](1);
-        commands[0] = CommandV2({
-            kind: CommandKind.CallContracts, gas: 500_000, atomic: false, payload: payload
-        });
+        commands[0] = CommandV2({kind: CommandKind.CallContracts, gas: 500_000, payload: payload});
         return commands;
     }
 
@@ -425,7 +413,6 @@ contract GatewayV2Test is Test {
         commands[0] = CommandV2({
             kind: CommandKind.SetOperatingMode,
             gas: 80_000,
-            atomic: false,
             payload: abi.encode(params)
         });
 
@@ -436,7 +423,6 @@ contract GatewayV2Test is Test {
         commands[1] = CommandV2({
             kind: CommandKind.CallContracts,
             gas: 80_000,
-            atomic: false,
             payload: abi.encode(callParams)
         });
 
@@ -794,7 +780,6 @@ contract GatewayV2Test is Test {
         commands[0] = CommandV2({
             kind: CommandKind.SetOperatingMode,
             gas: 500_000,
-            atomic: false,
             payload: abi.encode(params1)
         });
 
@@ -806,7 +791,6 @@ contract GatewayV2Test is Test {
         commands[1] = CommandV2({
             kind: CommandKind.CallContract,
             gas: 500_000,
-            atomic: false,
             payload: abi.encode(params2)
         });
 
@@ -816,7 +800,6 @@ contract GatewayV2Test is Test {
         commands[2] = CommandV2({
             kind: CommandKind.SetOperatingMode,
             gas: 500_000,
-            atomic: false,
             payload: abi.encode(params3)
         });
 
@@ -852,7 +835,6 @@ contract GatewayV2Test is Test {
         commands[0] = CommandV2({
             kind: CommandKind.SetOperatingMode,
             gas: 500_000,
-            atomic: false,
             payload: abi.encode(params1)
         });
 
@@ -860,7 +842,6 @@ contract GatewayV2Test is Test {
         commands[1] = CommandV2({
             kind: 255, // Invalid command kind
             gas: 500_000,
-            atomic: false,
             payload: abi.encode(bytes32(0))
         });
 
@@ -896,7 +877,6 @@ contract GatewayV2Test is Test {
         commands[0] = CommandV2({
             kind: CommandKind.SetOperatingMode,
             gas: 500_000,
-            atomic: false,
             payload: abi.encode(params1)
         });
 
@@ -906,7 +886,6 @@ contract GatewayV2Test is Test {
         commands[1] = CommandV2({
             kind: CommandKind.SetOperatingMode,
             gas: 500_000,
-            atomic: false,
             payload: abi.encode(params2)
         });
 
@@ -916,7 +895,6 @@ contract GatewayV2Test is Test {
         commands[2] = CommandV2({
             kind: CommandKind.SetOperatingMode,
             gas: 500_000,
-            atomic: false,
             payload: abi.encode(params3)
         });
 
@@ -939,7 +917,7 @@ contract GatewayV2Test is Test {
     function testUnknownCommandReturnsFalse() public {
         bytes memory payload = "";
         CommandV2 memory cmd =
-            CommandV2({kind: uint8(200), gas: uint64(100_000), payload: payload, atomic: false});
+            CommandV2({kind: uint8(200), gas: uint64(100_000), payload: payload});
 
         // unknown command should revert with InvalidCommand
         vm.expectRevert(IGatewayV2.InvalidCommand.selector);
@@ -951,7 +929,6 @@ contract GatewayV2Test is Test {
         CommandV2 memory cmd = CommandV2({
             kind: CommandKind.SetOperatingMode,
             gas: uint64(200_000),
-            atomic: false,
             payload: payload
         });
 
@@ -975,8 +952,7 @@ contract GatewayV2Test is Test {
         CommandV2 memory cmd = CommandV2({
             kind: CommandKind.UnlockNativeToken,
             gas: uint64(200_000),
-            payload: payload,
-            atomic: false
+            payload: payload
         });
 
         // handler revert should be caught and command should fail (revert)
@@ -990,9 +966,8 @@ contract GatewayV2Test is Test {
             UpgradeParams({impl: address(0), implCodeHash: bytes32(0), initParams: ""});
         bytes memory payload = abi.encode(up);
 
-        CommandV2 memory cmd = CommandV2({
-            kind: CommandKind.Upgrade, gas: uint64(200_000), payload: payload, atomic: false
-        });
+        CommandV2 memory cmd =
+            CommandV2({kind: CommandKind.Upgrade, gas: uint64(200_000), payload: payload});
 
         // upgrade with invalid impl should revert
         vm.expectRevert();
@@ -1008,8 +983,7 @@ contract GatewayV2Test is Test {
         CommandV2 memory cmd = CommandV2({
             kind: CommandKind.MintForeignToken,
             gas: uint64(200_000),
-            payload: payload,
-            atomic: false
+            payload: payload
         });
 
         // mintForeignToken for unregistered token should revert
@@ -1027,8 +1001,7 @@ contract GatewayV2Test is Test {
         CommandV2 memory cmd = CommandV2({
             kind: CommandKind.RegisterForeignToken,
             gas: uint64(3_000_000),
-            payload: payload,
-            atomic: false
+            payload: payload
         });
 
         // first register should succeed
@@ -1046,9 +1019,8 @@ contract GatewayV2Test is Test {
         bytes memory payload = abi.encode(p);
 
         // origin corresponds to agent id; use a non-existent id
-        CommandV2 memory cmd = CommandV2({
-            kind: CommandKind.CallContract, gas: uint64(200_000), atomic: false, payload: payload
-        });
+        CommandV2 memory cmd =
+            CommandV2({kind: CommandKind.CallContract, gas: uint64(200_000), payload: payload});
 
         // callContract with missing agent should revert
         vm.expectRevert();
@@ -1061,7 +1033,6 @@ contract GatewayV2Test is Test {
         CommandV2 memory cmd = CommandV2({
             kind: CommandKind.SetOperatingMode,
             gas: type(uint64).max,
-            atomic: false,
             payload: payload
         });
 
@@ -1239,9 +1210,8 @@ contract GatewayV2Test is Test {
         gw.v1_handleSetOperatingMode(payload);
 
         // Try another onlySelf protected function - v2_dispatchCommand
-        CommandV2 memory cmd = CommandV2({
-            kind: CommandKind.SetOperatingMode, gas: 100_000, atomic: false, payload: payload
-        });
+        CommandV2 memory cmd =
+            CommandV2({kind: CommandKind.SetOperatingMode, gas: 100_000, payload: payload});
 
         vm.expectRevert(IGatewayBase.Unauthorized.selector);
         gw.v2_dispatchCommand(cmd, bytes32(0));
@@ -1264,7 +1234,7 @@ contract GatewayV2Test is Test {
 
     function test_dispatch_unknown_command_returns_false() public {
         MockGateway gw = MockGateway(address(gateway));
-        CommandV2 memory cmd = CommandV2({kind: 0xFF, gas: 100_000, atomic: false, payload: ""});
+        CommandV2 memory cmd = CommandV2({kind: 0xFF, gas: 100_000, payload: ""});
         vm.expectRevert(IGatewayV2.InvalidCommand.selector);
         gw.exposed_dispatchCommand(cmd, bytes32(0));
     }
@@ -1274,15 +1244,13 @@ contract GatewayV2Test is Test {
         // Build two commands: SetOperatingMode (should succeed) and CallContract (will fail due to missing agent)
         CommandV2[] memory cmds = new CommandV2[](2);
         SetOperatingModeParams memory p = SetOperatingModeParams({mode: OperatingMode.Normal});
-        cmds[0] = CommandV2({
-            kind: CommandKind.SetOperatingMode, gas: 200_000, atomic: false, payload: abi.encode(p)
-        });
+        cmds[0] =
+            CommandV2({kind: CommandKind.SetOperatingMode, gas: 200_000, payload: abi.encode(p)});
 
         CallContractParams memory cc =
             CallContractParams({target: address(0x1234), data: "", value: 0, gas: 20_000});
-        cmds[1] = CommandV2({
-            kind: CommandKind.CallContract, gas: 200_000, atomic: false, payload: abi.encode(cc)
-        });
+        cmds[1] =
+            CommandV2({kind: CommandKind.CallContract, gas: 200_000, payload: abi.encode(cc)});
         InboundMessageV2 memory msgv;
         msgv.origin = bytes32("orig");
         msgv.nonce = 1;
@@ -1298,46 +1266,6 @@ contract GatewayV2Test is Test {
 
         // message should be recorded as dispatched
         assertTrue(gw.v2_isDispatched(msgv.nonce));
-    }
-
-    function test_v2_dispatch_will_revert_when_atomic_command_fails() public {
-        MockGateway gw = MockGateway(address(gateway));
-        OperatingMode mode = gw.operatingMode();
-        assertEq(uint256(mode), uint256(OperatingMode.Normal));
-        // Build two commands: SetOperatingMode (should succeed) and CallContract (will fail due to missing agent)
-        CommandV2[] memory cmds = new CommandV2[](2);
-        SetOperatingModeParams memory p =
-            SetOperatingModeParams({mode: OperatingMode.RejectingOutboundMessages});
-        cmds[0] = CommandV2({
-            kind: CommandKind.SetOperatingMode, gas: 200_000, atomic: false, payload: abi.encode(p)
-        });
-
-        CallContractParams memory cc =
-            CallContractParams({target: address(0x1234), data: "", value: 0, gas: 200_000});
-        cmds[1] = CommandV2({
-            kind: CommandKind.CallContract, gas: 200_000, atomic: true, payload: abi.encode(cc)
-        });
-        InboundMessageV2 memory msgv;
-        msgv.origin = bytes32("orig");
-        msgv.nonce = 1;
-        msgv.topic = bytes32(0);
-        msgv.commands = cmds;
-
-        // Expect AtomicCommandFailed for the second command (index 1) with nonce and index
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IGatewayV2.AtomicCommandFailed.selector, uint64(msgv.nonce), uint256(1)
-            )
-        );
-        // call v2_submit (verification overridden to true)
-        gw.v2_submit(msgv, proof, makeMockProof(), bytes32(0));
-
-        // message should not be recorded as dispatched
-        assertFalse(gw.v2_isDispatched(msgv.nonce));
-
-        // operating mode should remain unchanged
-        mode = gw.operatingMode();
-        assertEq(uint256(mode), uint256(OperatingMode.Normal));
     }
 
     function testUnlockTokenThenCallContractsWillSucceed() public {
@@ -1382,13 +1310,11 @@ contract GatewayV2Test is Test {
         commands[0] = CommandV2({
             kind: CommandKind.UnlockNativeToken,
             gas: 100_000,
-            atomic: false,
             payload: abi.encode(unlockParams)
         });
         commands[1] = CommandV2({
             kind: CommandKind.CallContracts,
             gas: 200_000,
-            atomic: false,
             payload: abi.encode(callParams)
         });
 
@@ -1469,13 +1395,11 @@ contract GatewayV2Test is Test {
         commands[0] = CommandV2({
             kind: CommandKind.UnlockNativeToken,
             gas: 100_000,
-            atomic: false,
             payload: abi.encode(unlockParams)
         });
         commands[1] = CommandV2({
             kind: CommandKind.CallContracts,
             gas: 200_000,
-            atomic: false,
             payload: abi.encode(callParams)
         });
 
