@@ -431,10 +431,10 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
             revert IGatewayBase.InvalidProof();
         }
 
-        // Dispatch the message payload.
-        bool dispatchSuccess = false;
-        try Gateway(this).v2_dispatch(message) returns (bool success) {
-            dispatchSuccess = success;
+        // Dispatch the message payload. The boolean returned indicates whether all commands succeeded.
+        bool success = false;
+        try Gateway(this).v2_dispatch(message) returns (bool _success) {
+            success = _success;
         } catch (bytes memory reason) {
             // If insufficient gas limit, rethrow the error to stop processing
             // Otherwise, silently ignore command failures
@@ -445,9 +445,10 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
             }
         }
 
-        // Emit the event indicating message dispatch was attempted.
+        // Emit the event with a success value "true" if all commands successfully executed, otherwise "false"
+        // if all or some of the commands failed.
         emit IGatewayV2.InboundMessageDispatched(
-            message.nonce, message.topic, dispatchSuccess, rewardAddress
+            message.nonce, message.topic, success, rewardAddress
         );
     }
 
