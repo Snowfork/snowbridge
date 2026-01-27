@@ -17,10 +17,9 @@ const registry = {
         beefyContract: "0x2c780945beb1241fE9c645800110cb9C4bBbb639",
         assetHubParaId: 1000,
         bridgeHubParaId: 1002,
-        v2_parachains: [
-            1000
-        ],
-        indexerGraphQlUrl: "https://snowbridge.squids.live/snowbridge-subsquid-paseo@v1/api/graphql",
+        v2_parachains: [1000],
+        indexerGraphQlUrl:
+            "https://snowbridge.squids.live/snowbridge-subsquid-paseo@v1/api/graphql",
         metadataOverrides: {
             "0xef32abea56beff54f61da319a7311098d6fbcea9": {
                 name: "OriginTrail TRAC",
@@ -43,7 +42,7 @@ const registry = {
                 "0x22e12ed4e6bcde652a73552dde340fcb972eef89",
                 "0xef32abea56beff54f61da319a7311098d6fbcea9",
                 "0x99e743964c036bc28931fb564817db428aa7f752",
-                "0xfff9976782d46cc05630d1f6ebab18b2324d6b14"
+                "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
             ],
         },
         {
@@ -60,7 +59,7 @@ const registry = {
                 "0x22e12ed4e6bcde652a73552dde340fcb972eef89",
                 "0xef32abea56beff54f61da319a7311098d6fbcea9",
                 "0x99e743964c036bc28931fb564817db428aa7f752",
-                "0xfff9976782d46cc05630d1f6ebab18b2324d6b14"
+                "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
             ],
         },
         {
@@ -72,9 +71,7 @@ const registry = {
                 kind: "polkadot",
                 id: 2043,
             },
-            assets: [
-                "0xef32abea56beff54f61da319a7311098d6fbcea9"
-            ],
+            assets: ["0xef32abea56beff54f61da319a7311098d6fbcea9"],
         },
         {
             from: {
@@ -85,9 +82,7 @@ const registry = {
                 kind: "ethereum",
                 id: 11155111,
             },
-            assets: [
-                "0xef32abea56beff54f61da319a7311098d6fbcea9"
-            ],
+            assets: ["0xef32abea56beff54f61da319a7311098d6fbcea9"],
         },
         {
             from: {
@@ -98,9 +93,7 @@ const registry = {
                 kind: "polkadot",
                 id: 3369,
             },
-            assets: [
-                "0xb34a6924a02100ba6ef12af1c798285e8f7a16ee"
-            ],
+            assets: ["0xb34a6924a02100ba6ef12af1c798285e8f7a16ee"],
         },
         {
             from: {
@@ -111,10 +104,8 @@ const registry = {
                 kind: "ethereum",
                 id: 11155111,
             },
-            assets: [
-                "0xb34a6924a02100ba6ef12af1c798285e8f7a16ee"
-            ],
-        }
+            assets: ["0xb34a6924a02100ba6ef12af1c798285e8f7a16ee"],
+        },
     ],
     registry: {
         timestamp: "2026-01-27T01:35:29.758Z",

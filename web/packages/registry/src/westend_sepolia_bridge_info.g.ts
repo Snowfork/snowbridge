@@ -16,10 +16,9 @@ const registry = {
         beefyContract: "0xA04460B1D8bBef33F54edB2C3115e3E4D41237A6",
         assetHubParaId: 1000,
         bridgeHubParaId: 1002,
-        v2_parachains: [
-            1000
-        ],
-        indexerGraphQlUrl: "https://snowbridge.squids.live/snowbridge-subsquid-westend@v1/api/graphql",
+        v2_parachains: [1000],
+        indexerGraphQlUrl:
+            "https://snowbridge.squids.live/snowbridge-subsquid-westend@v1/api/graphql",
         l2Bridge: {
             acrossAPIUrl: "https://testnet.across.to/api",
             l1AdapterAddress: "0xA5B8589bD534701be49916c4d2e634aB1c765Cbf",
@@ -41,7 +40,7 @@ const registry = {
                             inputToken: "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
                             outputToken: "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
                             swapFee: 500,
-                        }
+                        },
                     ],
                 },
             },
@@ -63,7 +62,7 @@ const registry = {
                 "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
                 "0x23838b1bb57cecf4422a57dd8e7f8a087b30d54f",
                 "0xb8a0f2703ac6bdd352096c90c2945a097e8f4055",
-                "0xf50fb50d65c8c1f6c72e4d8397c984933afc8f7e"
+                "0xf50fb50d65c8c1f6c72e4d8397c984933afc8f7e",
             ],
         },
         {
@@ -81,9 +80,9 @@ const registry = {
                 "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
                 "0x23838b1bb57cecf4422a57dd8e7f8a087b30d54f",
                 "0xb8a0f2703ac6bdd352096c90c2945a097e8f4055",
-                "0xf50fb50d65c8c1f6c72e4d8397c984933afc8f7e"
+                "0xf50fb50d65c8c1f6c72e4d8397c984933afc8f7e",
             ],
-        }
+        },
     ],
     registry: {
         timestamp: "2026-01-27T01:37:29.572Z",
@@ -178,7 +177,8 @@ const registry = {
                         name: "Frequency",
                         symbol: "XRQCY",
                         decimals: 8,
-                        foreignId: "0xaf13384cf9612ef1ff4b87470ab247d6f8d8110d4f5af2fe290ce6767818712c",
+                        foreignId:
+                            "0xaf13384cf9612ef1ff4b87470ab247d6f8d8110d4f5af2fe290ce6767818712c",
                         deliveryGas: 80000n,
                     },
                     "0xb8a0f2703ac6bdd352096c90c2945a097e8f4055": {
@@ -186,7 +186,8 @@ const registry = {
                         name: "WND",
                         symbol: "WND",
                         decimals: 12,
-                        foreignId: "0x2121cfe35065c0c33465fbada265f08e9613428a4b9eb4bb717cd7db2abf622e",
+                        foreignId:
+                            "0x2121cfe35065c0c33465fbada265f08e9613428a4b9eb4bb717cd7db2abf622e",
                         deliveryGas: 80000n,
                     },
                     "0xf50fb50d65c8c1f6c72e4d8397c984933afc8f7e": {
@@ -194,7 +195,8 @@ const registry = {
                         name: "WND",
                         symbol: "WND",
                         decimals: 12,
-                        foreignId: "0x9441dceeeffa7e032eedaccf9b7632e60e86711551a82ffbbb0dda8afd9e4ef7",
+                        foreignId:
+                            "0x9441dceeeffa7e032eedaccf9b7632e60e86711551a82ffbbb0dda8afd9e4ef7",
                         deliveryGas: 80000n,
                     },
                 },
@@ -271,12 +273,13 @@ const registry = {
                                 x2: [
                                     {
                                         globalConsensus: {
-                                            byGenesis: "0xe143f23803ac50e8f6f8e62695d1ce9e4e1d68aa36c1cd2cfd15340213f3423e",
+                                            byGenesis:
+                                                "0xe143f23803ac50e8f6f8e62695d1ce9e4e1d68aa36c1cd2cfd15340213f3423e",
                                         },
                                     },
                                     {
                                         parachain: 2313,
-                                    }
+                                    },
                                 ],
                             },
                         },
@@ -286,7 +289,7 @@ const registry = {
                                 x1: [
                                     {
                                         parachain: 2313,
-                                    }
+                                    },
                                 ],
                             },
                         },
@@ -296,11 +299,12 @@ const registry = {
                                 x1: [
                                     {
                                         parachain: 2313,
-                                    }
+                                    },
                                 ],
                             },
                         },
-                        foreignId: "0xaf13384cf9612ef1ff4b87470ab247d6f8d8110d4f5af2fe290ce6767818712c",
+                        foreignId:
+                            "0xaf13384cf9612ef1ff4b87470ab247d6f8d8110d4f5af2fe290ce6767818712c",
                         minimumBalance: 1n,
                         isSufficient: false,
                     },
@@ -315,9 +319,10 @@ const registry = {
                                 x1: [
                                     {
                                         globalConsensus: {
-                                            byGenesis: "0xe143f23803ac50e8f6f8e62695d1ce9e4e1d68aa36c1cd2cfd15340213f3423e",
+                                            byGenesis:
+                                                "0xe143f23803ac50e8f6f8e62695d1ce9e4e1d68aa36c1cd2cfd15340213f3423e",
                                         },
-                                    }
+                                    },
                                 ],
                             },
                         },
@@ -329,7 +334,8 @@ const registry = {
                             parents: 1,
                             interior: "Here",
                         },
-                        foreignId: "0x2121cfe35065c0c33465fbada265f08e9613428a4b9eb4bb717cd7db2abf622e",
+                        foreignId:
+                            "0x2121cfe35065c0c33465fbada265f08e9613428a4b9eb4bb717cd7db2abf622e",
                         minimumBalance: 1000000000n,
                         isSufficient: true,
                     },
@@ -344,9 +350,10 @@ const registry = {
                                 x1: [
                                     {
                                         globalConsensus: {
-                                            byGenesis: "0xe143f23803ac50e8f6f8e62695d1ce9e4e1d68aa36c1cd2cfd15340213f3423e",
+                                            byGenesis:
+                                                "0xe143f23803ac50e8f6f8e62695d1ce9e4e1d68aa36c1cd2cfd15340213f3423e",
                                         },
-                                    }
+                                    },
                                 ],
                             },
                         },
@@ -358,7 +365,8 @@ const registry = {
                             parents: 1,
                             interior: "Here",
                         },
-                        foreignId: "0x9441dceeeffa7e032eedaccf9b7632e60e86711551a82ffbbb0dda8afd9e4ef7",
+                        foreignId:
+                            "0x9441dceeeffa7e032eedaccf9b7632e60e86711551a82ffbbb0dda8afd9e4ef7",
                         minimumBalance: 1000000000n,
                         isSufficient: true,
                     },
