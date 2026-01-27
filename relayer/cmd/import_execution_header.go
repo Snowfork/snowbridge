@@ -115,7 +115,7 @@ func importExecutionHeaderFn(cmd *cobra.Command, _ []string) error {
 		defer store.Close()
 
 		client := api.NewBeaconClient(lodestarEndpoint, lodestarEndpoint)
-		syncer := syncer.New(client, &store, p, nil)
+		syncer := syncer.New(client, &store, p)
 
 		beaconHeaderHash := common.HexToHash(finalizedHeader)
 

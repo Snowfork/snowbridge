@@ -20,9 +20,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/contracts"
 	"github.com/snowfork/snowbridge/relayer/crypto/sr25519"
-	beaconstate "github.com/snowfork/snowbridge/relayer/relays/beacon-state"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/api"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/protocol"
@@ -102,13 +100,6 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	store.Connect()
 
 	beaconAPI := api.NewBeaconClient(r.config.Source.Beacon.Endpoint, r.config.Source.Beacon.StateEndpoint)
-
-	var stateServiceClient syncer.StateServiceClient
-	if r.config.Source.Beacon.StateServiceEndpoint != "" {
-		stateServiceClient = beaconstate.NewClient(r.config.Source.Beacon.StateServiceEndpoint)
-		log.WithField("endpoint", r.config.Source.Beacon.StateServiceEndpoint).Info("Using beacon state service for proof generation")
-	}
-
 	beaconHeader := header.New(
 		r.writer,
 		beaconAPI,
@@ -116,7 +107,6 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		&store,
 		p,
 		0, // setting is not used in the execution relay
-		stateServiceClient,
 	)
 	r.beaconHeader = &beaconHeader
 

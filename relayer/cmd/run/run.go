@@ -2,7 +2,6 @@ package run
 
 import (
 	"github.com/snowfork/snowbridge/relayer/cmd/run/beacon"
-	beaconstate "github.com/snowfork/snowbridge/relayer/cmd/run/beacon-state"
 	"github.com/snowfork/snowbridge/relayer/cmd/run/beefy"
 	"github.com/snowfork/snowbridge/relayer/cmd/run/execution"
 	"github.com/snowfork/snowbridge/relayer/cmd/run/parachain"
@@ -19,7 +18,6 @@ func Command() *cobra.Command {
 	cmd.AddCommand(beefy.Command())
 	cmd.AddCommand(parachain.Command())
 	cmd.AddCommand(beacon.Command())
-	cmd.AddCommand(beaconstate.Command())
 	cmd.AddCommand(execution.Command())
 
 	return cmd
