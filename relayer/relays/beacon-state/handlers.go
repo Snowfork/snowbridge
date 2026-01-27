@@ -209,10 +209,17 @@ func (s *Service) downloadStateAndCacheAllProofs(slot uint64) error {
 
 	log.WithField("slot", slot).Info("Downloading beacon state and generating all proofs")
 
-	// Download state
+	// Try beacon node first
 	data, err := s.syncer.Client.GetBeaconState(strconv.FormatUint(slot, 10))
 	if err != nil {
-		return fmt.Errorf("download beacon state: %w", err)
+		log.WithError(err).WithField("slot", slot).Warn("Failed to download from beacon node, trying persistent store")
+
+		// Fall back to persistent store
+		data, err = s.store.GetBeaconStateData(slot)
+		if err != nil {
+			return fmt.Errorf("beacon state unavailable from both beacon node and store: %w", err)
+		}
+		log.WithField("slot", slot).Info("Using beacon state from persistent store")
 	}
 
 	// Unmarshal based on fork
