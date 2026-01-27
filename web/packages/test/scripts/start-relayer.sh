@@ -188,7 +188,7 @@ start_relayer() {
         : >"$output_dir"/parachain-relay-v1.log
         while :; do
             echo "Starting parachain relay v1 at $(date)"
-            "${relayer_v1}" run parachain \
+            "${relayer_v2}" run parachain-v1 \
                 --config "$output_dir/parachain-relay-v1.json" \
                 --ethereum.private-key $parachain_relay_primary_gov_eth_key \
                 >>"$output_dir"/parachain-relay-v1.log 2>&1 || true
@@ -242,7 +242,7 @@ start_relayer() {
         : >$output_dir/execution-relay-v1.log
         while :; do
             echo "Starting execution relay v1 at $(date)"
-            "${relayer_v1}" run execution \
+            "${relayer_v2}" run execution-v1 \
                 --config $output_dir/execution-relay-v1.json \
                 --substrate.private-key "//ExecutionRelayAssetHub" \
                 >>"$output_dir"/execution-relay-v1.log 2>&1 || true
@@ -281,7 +281,7 @@ start_relayer() {
         : >"$output_dir"/parachain-relay-bridge-hub-01.log
         while :; do
             echo "Starting parachain-relay (primary governance) at $(date)"
-            "${relayer_v1}" run parachain \
+            "${relayer_v2}" run parachain-v1 \
                 --config "$output_dir/parachain-relay-bridge-hub-01.json" \
                 --ethereum.private-key $parachain_relay_primary_gov_eth_key \
                 >>"$output_dir"/parachain-relay-bridge-hub-01.log 2>&1 || true
@@ -294,7 +294,7 @@ start_relayer() {
         : >"$output_dir"/parachain-relay-bridge-hub-02.log
         while :; do
             echo "Starting parachain-relay (secondary governance) at $(date)"
-            "${relayer_v1}" run parachain \
+            "${relayer_v2}" run parachain-v1 \
                 --config "$output_dir/parachain-relay-bridge-hub-02.json" \
                 --ethereum.private-key $parachain_relay_secondary_gov_eth_key \
                 >>"$output_dir"/parachain-relay-bridge-hub-02.log 2>&1 || true
