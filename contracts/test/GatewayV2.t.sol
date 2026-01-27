@@ -1227,8 +1227,28 @@ contract GatewayV2Test is Test {
 
     function test_onlySelf_enforced_on_external_calls() public {
         MockGateway gw = MockGateway(address(gateway));
-        // Since v2_handleSetOperatingMode is now internal, we can't call it externally
-        // This test is no longer applicable
+        // Try to call a protected handler function directly (not via internal dispatch)
+        // This should fail because msg.sender != address(this)
+        SetOperatingModeParams memory p =
+            SetOperatingModeParams({mode: OperatingMode.RejectingOutboundMessages});
+        bytes memory payload = abi.encode(p);
+
+        // Attempt to call v1_handleSetOperatingMode directly from external context
+        // Should revert with Unauthorized since onlySelf modifier requires msg.sender == address(this)
+        vm.expectRevert(IGatewayBase.Unauthorized.selector);
+        gw.v1_handleSetOperatingMode(payload);
+
+        // Try another onlySelf protected function - v2_dispatchCommand
+        CommandV2 memory cmd = CommandV2({
+            kind: CommandKind.SetOperatingMode, gas: 100_000, atomic: false, payload: payload
+        });
+
+        vm.expectRevert(IGatewayBase.Unauthorized.selector);
+        gw.v2_dispatchCommand(cmd, bytes32(0));
+
+        // Verify mode was not changed (stayed Normal)
+        OperatingMode mode = gw.operatingMode();
+        assertEq(uint256(mode), uint256(OperatingMode.Normal));
     }
 
     function test_call_handleSetOperatingMode_via_self_changes_mode() public {
