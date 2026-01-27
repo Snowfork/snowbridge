@@ -39,7 +39,7 @@ This guide explains how to deploy Snowbridge relayers using Docker Compose.
 
 ## Architecture
 
-The Docker Compose setup runs 7 relayer services:
+The Docker Compose setup runs 6 relayer services:
 
 | Service | Description | Keys Required |
 |---------|-------------|---------------|
@@ -49,7 +49,6 @@ The Docker Compose setup runs 7 relayer services:
 | `beefy` | Relays BEEFY commitments to Ethereum | Ethereum |
 | `parachain` | Relays Polkadot messages to Ethereum | Ethereum + Substrate |
 | `reward` | Processes relayer rewards | Substrate |
-| `fisherman` | Monitors for equivocations | Ethereum + Substrate |
 
 ### Service Dependencies
 
@@ -61,7 +60,6 @@ beacon-state-service (starts first, health checked)
     └── reward
 
 beefy (independent)
-fisherman (independent)
 ```
 
 ## Configuration

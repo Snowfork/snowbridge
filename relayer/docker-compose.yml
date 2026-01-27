@@ -161,25 +161,6 @@ services:
       beacon-state-service:
         condition: service_healthy
 
-  fisherman:
-    image: ghcr.io/snowfork/snowbridge-relay
-    platform: linux/amd64
-    command: >
-      run fisherman
-      --config /config/fisherman.json
-      --ethereum.private-key-id ${FISHERMAN_ETHEREUM_KEY_ID}
-      --substrate.private-key-id ${FISHERMAN_SUBSTRATE_KEY_ID}
-    volumes:
-      - ./config/docker:/config
-    environment:
-      - AWS_REGION=${AWS_REGION}
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - ETHEREUM_ENDPOINT=${ETHEREUM_ENDPOINT}
-      - POLKADOT_ENDPOINT=${POLKADOT_ENDPOINT}
-      - BEEFY_CLIENT_CONTRACT=${BEEFY_CLIENT_CONTRACT}
-    restart: on-failure
-
 volumes:
   beacon-state-data:
   beacon-data:
