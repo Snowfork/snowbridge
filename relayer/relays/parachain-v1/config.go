@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/snowfork/snowbridge/relayer/config-v1"
+	"github.com/snowfork/snowbridge/relayer/config"
 )
 
 type Config struct {

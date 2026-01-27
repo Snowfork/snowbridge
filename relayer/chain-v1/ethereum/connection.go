@@ -20,7 +20,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/snowfork/snowbridge/relayer/config-v1"
+	"github.com/snowfork/snowbridge/relayer/config"
 	"github.com/snowfork/snowbridge/relayer/crypto/secp256k1"
 
 	log "github.com/sirupsen/logrus"
