@@ -8,7 +8,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/snowfork/snowbridge/relayer/chain-v1/ethereum"
-	"github.com/snowfork/snowbridge/relayer/chain-v1/parachain"
+	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/chain-v1/relaychain"
 	"github.com/snowfork/snowbridge/relayer/crypto/secp256k1"
 	"github.com/snowfork/snowbridge/relayer/ofac"

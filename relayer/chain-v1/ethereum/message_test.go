@@ -5,12 +5,15 @@ import (
 	"fmt"
 	"testing"
 
+	gethRawDB "github.com/ethereum/go-ethereum/core/rawdb"
+	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 	gethTrie "github.com/ethereum/go-ethereum/trie"
+	gethTrieDB "github.com/ethereum/go-ethereum/triedb"
 	"github.com/snowfork/snowbridge/relayer/chain-v1/ethereum"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/snowfork/snowbridge/relayer/chain-v1/parachain"
+	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 )
 
 type TestProof parachain.ProofData
@@ -45,10 +48,8 @@ func TestMessage_Proof(t *testing.T) {
 	}
 
 	// Construct Merkle Patricia Trie for receipts
-	receiptTrie, err := ethereum.MakeTrie(receipts)
-	if err != nil {
-		panic(err)
-	}
+	receiptTrie := gethTrie.NewEmpty(gethTrieDB.NewDatabase(gethRawDB.NewMemoryDatabase(), nil))
+	gethTypes.DeriveSha(gethTypes.Receipts(receipts), receiptTrie)
 
 	fmt.Println("Hash", receiptTrie.Hash())
 

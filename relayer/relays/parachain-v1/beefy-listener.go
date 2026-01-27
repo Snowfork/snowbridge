@@ -13,7 +13,7 @@ import (
 
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain-v1/ethereum"
-	"github.com/snowfork/snowbridge/relayer/chain-v1/parachain"
+	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/chain-v1/relaychain"
 	contracts "github.com/snowfork/snowbridge/relayer/contracts/v1"
 	"github.com/snowfork/snowbridge/relayer/crypto/merkle"

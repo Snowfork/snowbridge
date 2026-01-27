@@ -13,7 +13,7 @@ import (
 
 	"github.com/mitchellh/mapstructure"
 	"github.com/sirupsen/logrus"
-	"github.com/snowfork/snowbridge/relayer/chain-v1/parachain"
+	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	execution "github.com/snowfork/snowbridge/relayer/relays/execution-v1"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"

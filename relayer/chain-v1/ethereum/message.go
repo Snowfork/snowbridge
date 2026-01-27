@@ -10,7 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 	etrie "github.com/ethereum/go-ethereum/trie"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
-	"github.com/snowfork/snowbridge/relayer/chain-v1/parachain"
+	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 )
 
 func MakeMessageFromEvent(event *etypes.Log, receiptsTrie *etrie.Trie) (*parachain.Message, error) {
