@@ -1323,8 +1323,12 @@ contract GatewayV2Test is Test {
         msgv.topic = bytes32(0);
         msgv.commands = cmds;
 
-        // Expect AtomicCommandFailed for the second command (index 1)
-        vm.expectRevert(IGatewayV2.AtomicCommandFailed.selector);
+        // Expect AtomicCommandFailed for the second command (index 1) with nonce and index
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IGatewayV2.AtomicCommandFailed.selector, uint64(msgv.nonce), uint256(1)
+            )
+        );
         // call v2_submit (verification overridden to true)
         gw.v2_submit(msgv, proof, makeMockProof(), bytes32(0));
 

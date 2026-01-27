@@ -577,7 +577,7 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
                     revert IGatewayV2.InsufficientGasLimit();
                 }
                 if (command.atomic) {
-                    revert IGatewayV2.AtomicCommandFailed();
+                    revert IGatewayV2.AtomicCommandFailed(message.nonce, i);
                 }
                 emit IGatewayV2.CommandFailed(message.nonce, i);
                 success = false;
