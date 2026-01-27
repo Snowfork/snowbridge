@@ -14,7 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/snowfork/snowbridge/relayer/chain-v1/ethereum"
+	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	contracts "github.com/snowfork/snowbridge/relayer/contracts/v1"
 	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
 

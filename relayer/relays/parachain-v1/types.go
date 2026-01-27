@@ -5,7 +5,7 @@ import (
 
 	"github.com/snowfork/go-substrate-rpc-client/v4/scale"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
-	"github.com/snowfork/snowbridge/relayer/chain-v1/relaychain"
+	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
 	contracts "github.com/snowfork/snowbridge/relayer/contracts/v1"
 	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
 )

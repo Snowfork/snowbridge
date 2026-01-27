@@ -7,9 +7,9 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/snowfork/snowbridge/relayer/chain-v1/ethereum"
+	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
-	"github.com/snowfork/snowbridge/relayer/chain-v1/relaychain"
+	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
 	"github.com/snowfork/snowbridge/relayer/crypto/secp256k1"
 	"github.com/snowfork/snowbridge/relayer/ofac"
 
@@ -30,7 +30,7 @@ func NewRelay(config *Config, keypair *secp256k1.Keypair) (*Relay, error) {
 	log.Info("Creating worker")
 
 	parachainConn := parachain.NewConnection(config.Source.Parachain.Endpoint, nil)
-	relaychainConn := relaychain.NewConnection(config.Source.Polkadot.Endpoint)
+	relaychainConn := relaychain.NewConnection(config.Source.Polkadot.Endpoint, nil)
 
 	ethereumConnWriter := ethereum.NewConnection(&config.Sink.Ethereum, keypair)
 	ethereumConnBeefy := ethereum.NewConnection(&config.Source.Ethereum, keypair)
