@@ -1,3 +1,9 @@
+export type BridgeInfo = {
+  environment: Environment;
+  routes: readonly TransferRoute[];
+  registry: AssetRegistry;
+};
+
 export type AccountType = "AccountId20" | "AccountId32";
 
 export type XcmVersion = "v4" | "v5";
@@ -120,7 +126,7 @@ export type Environment = {
   assetHubParaId: number;
   bridgeHubParaId: number;
   /** @deprecated Remove once V2 is fully rolled out to all parachains */
-  v2_parachains?: number[];
+  v2_parachains?: readonly number[];
   relaychainUrl: string;
   parachains: {
     [paraId: string]: string;
@@ -150,13 +156,18 @@ export type Environment = {
 
 export type SourceType = "substrate" | "ethereum";
 
-export type Path = {
-  type: SourceType;
-  id: string;
-  source: number;
-  destinationType: SourceType;
-  destination: number;
-  asset: string;
+export type ChainKind = "ethereum" | "polkadot" | "ethereum_l2" | "kusama";
+export type ChainId = {
+  kind: ChainKind;
+  /** Ethereum chain id or polkadot parachain id.
+   */
+  id: number;
+};
+
+export type TransferRoute = {
+  from: ChainId;
+  to: ChainId;
+  assets: readonly string[];
 };
 
 export type Source = {
@@ -164,7 +175,7 @@ export type Source = {
   id: string;
   key: string;
   destinations: {
-    [destination: string]: { type: SourceType; assets: string[] };
+    [destination: string]: { type: SourceType; assets: readonly string[] };
   };
 };
 
@@ -244,5 +255,5 @@ export type AssetSwapRoute = {
 export type L2ForwardMetadata = {
   adapterAddress: string;
   feeTokenAddress: string;
-  swapRoutes: AssetSwapRoute[];
+  swapRoutes: readonly AssetSwapRoute[];
 };
