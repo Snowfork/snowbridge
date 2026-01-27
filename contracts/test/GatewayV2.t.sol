@@ -419,30 +419,42 @@ contract GatewayV2Test is Test {
         bytes32 topic = keccak256("topic");
 
         // Create a command with very high gas requirement
-        CommandV2[] memory commands = new CommandV2[](1);
-        SetOperatingModeParams memory params = SetOperatingModeParams({mode: OperatingMode.Normal});
+        CommandV2[] memory commands = new CommandV2[](2);
+        SetOperatingModeParams memory params =
+            SetOperatingModeParams({mode: OperatingMode.RejectingOutboundMessages});
         commands[0] = CommandV2({
             kind: CommandKind.SetOperatingMode,
-            gas: 30_000_000, // Extremely high gas value
+            gas: 80_000,
             atomic: false,
             payload: abi.encode(params)
         });
 
-        InboundMessageV2 memory message = InboundMessageV2({
-            origin: keccak256("666"),
-            nonce: 2, // Use a different nonce from other tests
-            topic: topic,
-            commands: commands
+        bytes memory data = abi.encodeWithSignature("sayHello(string)", "World");
+        CallContractParams[] memory callParams = new CallContractParams[](1);
+        callParams[0] =
+            CallContractParams({target: address(helloWorld), data: data, value: 0, gas: 20_000});
+        commands[1] = CommandV2({
+            kind: CommandKind.CallContracts,
+            gas: 80_000,
+            atomic: false,
+            payload: abi.encode(callParams)
         });
 
-        // Limit the gas for this test to ensure we hit the NotEnoughGas error
-        uint256 gasLimit = 100_000;
+        InboundMessageV2 memory message = InboundMessageV2({
+            origin: Constants.ASSET_HUB_AGENT_ID, nonce: 1, topic: topic, commands: commands
+        });
+
+        // Limit the gas for this test to ensure we hit the InsufficientGasLimit error
+        uint256 gasLimit = 180_000;
         vm.deal(relayer, 1 ether);
         vm.prank(relayer);
 
         vm.expectRevert(IGatewayV2.InsufficientGasLimit.selector);
         IGatewayV2(address(gateway))
         .v2_submit{gas: gasLimit}(message, proof, makeMockProof(), relayerRewardAddress);
+
+        OperatingMode mode = IGatewayV2(address(gateway)).operatingMode();
+        assertEq(uint256(mode), uint256(OperatingMode.Normal));
     }
 
     function mockNativeTokenForSend(address user, uint128 amount)
@@ -1053,7 +1065,7 @@ contract GatewayV2Test is Test {
             payload: payload
         });
 
-        vm.expectRevert();
+        vm.expectRevert(IGatewayV2.InsufficientGasLimit.selector);
         gatewayLogic.callDispatch(cmd, bytes32(0));
     }
 
@@ -1266,6 +1278,42 @@ contract GatewayV2Test is Test {
 
         // message should be recorded as dispatched
         assertTrue(gw.v2_isDispatched(msgv.nonce));
+    }
+
+    function test_v2_dispatch_will_revert_when_atomic_command_fails() public {
+        MockGateway gw = MockGateway(address(gateway));
+        OperatingMode mode = gw.operatingMode();
+        assertEq(uint256(mode), uint256(OperatingMode.Normal));
+        // Build two commands: SetOperatingMode (should succeed) and CallContract (will fail due to missing agent)
+        CommandV2[] memory cmds = new CommandV2[](2);
+        SetOperatingModeParams memory p =
+            SetOperatingModeParams({mode: OperatingMode.RejectingOutboundMessages});
+        cmds[0] = CommandV2({
+            kind: CommandKind.SetOperatingMode, gas: 200_000, atomic: false, payload: abi.encode(p)
+        });
+
+        CallContractParams memory cc =
+            CallContractParams({target: address(0x1234), data: "", value: 0, gas: 200_000});
+        cmds[1] = CommandV2({
+            kind: CommandKind.CallContract, gas: 200_000, atomic: true, payload: abi.encode(cc)
+        });
+        InboundMessageV2 memory msgv;
+        msgv.origin = bytes32("orig");
+        msgv.nonce = 1;
+        msgv.topic = bytes32(0);
+        msgv.commands = cmds;
+
+        // Expect AtomicCommandFailed for the second command (index 1)
+        vm.expectRevert(IGatewayV2.AtomicCommandFailed.selector);
+        // call v2_submit (verification overridden to true)
+        gw.v2_submit(msgv, proof, makeMockProof(), bytes32(0));
+
+        // message should not be recorded as dispatched
+        assertFalse(gw.v2_isDispatched(msgv.nonce));
+
+        // operating mode should remain unchanged
+        mode = gw.operatingMode();
+        assertEq(uint256(mode), uint256(OperatingMode.Normal));
     }
 
     function testUnlockTokenThenCallContractsWillSucceed() public {
