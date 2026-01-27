@@ -1,7 +1,7 @@
 import { Keyring } from "@polkadot/keyring"
 import { Context } from "@snowbridge/api"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
-import { assetRegistryFor, environmentFor } from "@snowbridge/registry"
+import { bridgeInfoFor } from "@snowbridge/registry"
 import { NeurowebParachain } from "@snowbridge/api/dist/parachains/neuroweb"
 
 const wrapSnowTRAC = async () => {
@@ -13,7 +13,8 @@ const wrapSnowTRAC = async () => {
     }
     console.log(`Using environment '${env}'`)
 
-    const context = new Context(environmentFor(env))
+    const { registry, environment } = bridgeInfoFor(env)
+    const context = new Context(environment)
 
     const polkadot_keyring = new Keyring({ type: "sr25519" })
 
@@ -22,7 +23,6 @@ const wrapSnowTRAC = async () => {
 
     console.log("sub", POLKADOT_ACCOUNT_PUBLIC)
 
-    const registry = assetRegistryFor(env)
     const neuroWebParaId = 2043
 
     if (!registry.parachains[neuroWebParaId]) {

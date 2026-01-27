@@ -2,7 +2,7 @@ import { Keyring } from "@polkadot/keyring"
 import { Context, toPolkadotSnowbridgeV2, toPolkadotV2 } from "@snowbridge/api"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { formatEther, Wallet } from "ethers"
-import { assetRegistryFor, environmentFor } from "@snowbridge/registry"
+import { bridgeInfoFor } from "@snowbridge/registry"
 import { WETH9__factory } from "@snowbridge/contract-types"
 
 export const transferToPolkadot = async (destParaId: number, symbol: string, amount: bigint) => {
@@ -14,7 +14,8 @@ export const transferToPolkadot = async (destParaId: number, symbol: string, amo
     }
     console.log(`Using environment '${env}'`)
 
-    const context = new Context(environmentFor(env))
+    const { registry, environment } = bridgeInfoFor(env)
+    const context = new Context(environment)
 
     const polkadot_keyring = new Keyring({ type: "sr25519" })
 
@@ -27,8 +28,6 @@ export const transferToPolkadot = async (destParaId: number, symbol: string, amo
     const POLKADOT_ACCOUNT_PUBLIC = POLKADOT_ACCOUNT.address
 
     console.log("eth", ETHEREUM_ACCOUNT_PUBLIC, "sub", POLKADOT_ACCOUNT_PUBLIC)
-
-    const registry = assetRegistryFor(env)
 
     const assets = registry.ethereumChains[registry.ethChainId].assets
     const TOKEN_CONTRACT = Object.keys(assets)
