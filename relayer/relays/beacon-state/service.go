@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -22,6 +23,7 @@ type Service struct {
 	store      *store.Store
 	proofCache *ProofCache
 	httpServer *http.Server
+	downloadMu sync.Mutex // Ensures only one state download at a time
 }
 
 func New(config *Config) *Service {

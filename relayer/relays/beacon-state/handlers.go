@@ -197,6 +197,16 @@ func (s *Service) handleSyncCommitteeProof(w http.ResponseWriter, r *http.Reques
 }
 
 func (s *Service) downloadStateAndCacheAllProofs(slot uint64) error {
+	// Serialize state downloads to ensure only one large state in memory at a time
+	s.downloadMu.Lock()
+	defer s.downloadMu.Unlock()
+
+	// Double-check cache after acquiring lock (another request may have populated it)
+	if s.hasAllProofsCached(slot) {
+		log.WithField("slot", slot).Debug("Proofs already cached by another request")
+		return nil
+	}
+
 	log.WithField("slot", slot).Info("Downloading beacon state and generating all proofs")
 
 	// Download state
@@ -207,6 +217,9 @@ func (s *Service) downloadStateAndCacheAllProofs(slot uint64) error {
 
 	// Unmarshal based on fork
 	beaconState, err := s.unmarshalBeaconState(slot, data)
+	// Release raw bytes immediately after unmarshaling
+	data = nil
+
 	if err != nil {
 		return fmt.Errorf("unmarshal beacon state: %w", err)
 	}
@@ -223,7 +236,9 @@ func (s *Service) downloadStateAndCacheAllProofs(slot uint64) error {
 	// Generate and cache all proof types
 	s.cacheAllProofs(slot, beaconState, tree)
 
-	// Trigger GC to help reclaim memory after processing large state
+	// Release large objects and trigger GC
+	beaconState = nil
+	tree = nil
 	runtime.GC()
 
 	return nil
@@ -300,6 +315,15 @@ func (s *Service) cacheBlockRootProof(slot uint64, beaconState state.BeaconState
 	cacheKey := fmt.Sprintf("block-root:%d", slot)
 	jsonResponse, _ := json.Marshal(response)
 	s.proofCache.Put(cacheKey, jsonResponse)
+}
+
+// hasAllProofsCached checks if at least one proof is cached for the slot.
+// Used for double-check after acquiring the download lock.
+func (s *Service) hasAllProofsCached(slot uint64) bool {
+	// Just check one proof type - if one is cached, all should be cached
+	cacheKey := fmt.Sprintf("finalized-header:%d", slot)
+	_, ok := s.proofCache.Get(cacheKey)
+	return ok
 }
 
 func (s *Service) unmarshalBeaconState(slot uint64, data []byte) (state.BeaconState, error) {

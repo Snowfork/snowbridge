@@ -94,7 +94,6 @@ func (p *Protocol) ForkVersion(slot uint64) ForkVersion {
 	} else {
 		fv = Deneb
 	}
-	log.WithField("ForkVersion", fv).Info("Found fork version")
 	return fv
 }
 
