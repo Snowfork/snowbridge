@@ -15,7 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/snowfork/snowbridge/relayer/chain-v1/ethereum"
-	"github.com/snowfork/snowbridge/relayer/contracts-v1"
+	contracts "github.com/snowfork/snowbridge/relayer/contracts/v1"
 	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
 
 	gsrpcTypes "github.com/snowfork/go-substrate-rpc-client/v4/types"

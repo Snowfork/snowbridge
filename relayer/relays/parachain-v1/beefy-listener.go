@@ -15,7 +15,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain-v1/ethereum"
 	"github.com/snowfork/snowbridge/relayer/chain-v1/parachain"
 	"github.com/snowfork/snowbridge/relayer/chain-v1/relaychain"
-	"github.com/snowfork/snowbridge/relayer/contracts-v1"
+	contracts "github.com/snowfork/snowbridge/relayer/contracts/v1"
 	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
 	"github.com/snowfork/snowbridge/relayer/ofac"
 
