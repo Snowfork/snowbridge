@@ -150,12 +150,8 @@ func (wr *EthereumWriter) isRelayMessageProfitable(ctx context.Context, proof *M
 	// gasFee = gasPrice * totalDispatchGas * (numerator / denominator)
 	gasFee := new(big.Int).Mul(gasPrice, new(big.Int).SetUint64(totalDispatchGas))
 
-	feeRatioDenominator := wr.config.Fees.FeeRatioDenominator
-	if feeRatioDenominator == 0 {
-		feeRatioDenominator = 1 // avoid panic on zero denominator; interpreted as 1:1
-	}
 	numerator := new(big.Int).SetUint64(wr.config.Fees.FeeRatioNumerator)
-	denominator := new(big.Int).SetUint64(feeRatioDenominator)
+	denominator := new(big.Int).SetUint64(wr.config.Fees.FeeRatioDenominator)
 
 	// Apply ratio safely: (gasPrice * gas * num) / denom
 	gasFee.Mul(gasFee, numerator)

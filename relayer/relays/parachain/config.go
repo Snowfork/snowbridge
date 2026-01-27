@@ -57,6 +57,16 @@ type FeeConfig struct {
 	FeeRatioDenominator uint64 `mapstructure:"fee-ratio-denominator"`
 }
 
+func (f FeeConfig) Validate() error {
+	if f.FeeRatioDenominator == 0 {
+		return errors.New("fee-ratio-denominator must be non-zero")
+	}
+	if f.FeeRatioNumerator == 0 {
+		return errors.New("fee-ratio-numerator must be non-zero")
+	}
+	return nil
+}
+
 func (r ScheduleConfig) Validate() error {
 	if r.TotalRelayerCount < 1 {
 		return errors.New("Number of relayer is not set")
@@ -95,6 +105,10 @@ func (c Config) Validate() error {
 	}
 	if c.Sink.Contracts.Gateway == "" {
 		return fmt.Errorf("sink contracts setting [Gateway] is not set")
+	}
+	err = c.Sink.Fees.Validate()
+	if err != nil {
+		return fmt.Errorf("sink fees config: %w", err)
 	}
 
 	// Relay
