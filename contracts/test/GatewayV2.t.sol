@@ -224,9 +224,7 @@ contract GatewayV2Test is Test {
         CommandV2[] memory commands = new CommandV2[](1);
         SetOperatingModeParams memory params = SetOperatingModeParams({mode: OperatingMode.Normal});
         commands[0] = CommandV2({
-            kind: CommandKind.SetOperatingMode,
-            gas: 500_000,
-            payload: abi.encode(params)
+            kind: CommandKind.SetOperatingMode, gas: 500_000, payload: abi.encode(params)
         });
         return commands;
     }
@@ -282,9 +280,8 @@ contract GatewayV2Test is Test {
 
     function makeCallContractCommand(uint256 value) public view returns (CommandV2[] memory) {
         bytes memory data = abi.encodeWithSignature("sayHello(string)", "World");
-        CallContractParams memory params = CallContractParams({
-            target: address(helloWorld), data: data, value: value, gas: 20_000
-        });
+        CallContractParams memory params =
+            CallContractParams({target: address(helloWorld), data: data, value: value});
         bytes memory payload = abi.encode(params);
 
         CommandV2[] memory commands = new CommandV2[](1);
@@ -298,9 +295,8 @@ contract GatewayV2Test is Test {
         returns (CommandV2[] memory)
     {
         bytes memory data = abi.encodeWithSignature("sayHelloNotExists(string)", "World");
-        CallContractParams memory params = CallContractParams({
-            target: address(helloWorld), data: data, value: value, gas: 20_000
-        });
+        CallContractParams memory params =
+            CallContractParams({target: address(helloWorld), data: data, value: value});
         bytes memory payload = abi.encode(params);
 
         CommandV2[] memory commands = new CommandV2[](1);
@@ -315,37 +311,12 @@ contract GatewayV2Test is Test {
     {
         // Call expensiveOperation which requires storage writes and thus significant gas
         bytes memory data = abi.encodeWithSignature("expensiveOperation()");
-        uint64 callGas = 5000; // insufficient gas for storage write (typical cost: ~20000)
-        CallContractParams memory params = CallContractParams({
-            target: address(helloWorld), data: data, value: value, gas: callGas
-        });
+        CallContractParams memory params =
+            CallContractParams({target: address(helloWorld), data: data, value: value});
         bytes memory payload = abi.encode(params);
 
         CommandV2[] memory commands = new CommandV2[](1);
-        commands[0] = CommandV2({kind: CommandKind.CallContract, gas: callGas, payload: payload});
-        return commands;
-    }
-
-    function makeCallContractsCommand(uint256 value1, uint256 value2)
-        public
-        view
-        returns (CommandV2[] memory)
-    {
-        bytes memory data1 = abi.encodeWithSignature("sayHello(string)", "World");
-        bytes memory data2 = abi.encodeWithSignature("sayHello(string)", "Snowbridge");
-
-        CallContractParams[] memory params = new CallContractParams[](2);
-        params[0] = CallContractParams({
-            target: address(helloWorld), data: data1, value: value1, gas: 20_000
-        });
-        params[1] = CallContractParams({
-            target: address(helloWorld), data: data2, value: value2, gas: 20_000
-        });
-
-        bytes memory payload = abi.encode(params);
-
-        CommandV2[] memory commands = new CommandV2[](1);
-        commands[0] = CommandV2({kind: CommandKind.CallContracts, gas: 500_000, payload: payload});
+        commands[0] = CommandV2({kind: CommandKind.CallContract, gas: 500_000, payload: payload});
         return commands;
     }
 
@@ -411,19 +382,14 @@ contract GatewayV2Test is Test {
         SetOperatingModeParams memory params =
             SetOperatingModeParams({mode: OperatingMode.RejectingOutboundMessages});
         commands[0] = CommandV2({
-            kind: CommandKind.SetOperatingMode,
-            gas: 80_000,
-            payload: abi.encode(params)
+            kind: CommandKind.SetOperatingMode, gas: 100_000, payload: abi.encode(params)
         });
 
         bytes memory data = abi.encodeWithSignature("sayHello(string)", "World");
         CallContractParams[] memory callParams = new CallContractParams[](1);
-        callParams[0] =
-            CallContractParams({target: address(helloWorld), data: data, value: 0, gas: 20_000});
+        callParams[0] = CallContractParams({target: address(helloWorld), data: data, value: 0});
         commands[1] = CommandV2({
-            kind: CommandKind.CallContracts,
-            gas: 80_000,
-            payload: abi.encode(callParams)
+            kind: CommandKind.CallContract, gas: 100_000, payload: abi.encode(callParams)
         });
 
         InboundMessageV2 memory message = InboundMessageV2({
@@ -658,29 +624,6 @@ contract GatewayV2Test is Test {
             );
     }
 
-    function testAgentCallContractsSuccess() public {
-        bytes32 topic = keccak256("topic");
-
-        vm.expectEmit(true, false, false, true);
-        emit IGatewayV2.InboundMessageDispatched(1, topic, true, relayerRewardAddress);
-
-        // fund the agent to forward value in both calls
-        vm.deal(assetHubAgent, 0.1 ether);
-        hoax(relayer, 1 ether);
-        IGatewayV2(address(gateway))
-            .v2_submit(
-                InboundMessageV2({
-                    origin: Constants.ASSET_HUB_AGENT_ID,
-                    nonce: 1,
-                    topic: topic,
-                    commands: makeCallContractsCommand(0.05 ether, 0.05 ether)
-                }),
-                proof,
-                makeMockProof(),
-                relayerRewardAddress
-            );
-    }
-
     function testCreateAgent() public {
         bytes32 origin = bytes32(uint256(1));
         vm.expectEmit(true, false, false, false);
@@ -778,29 +721,22 @@ contract GatewayV2Test is Test {
         SetOperatingModeParams memory params1 =
             SetOperatingModeParams({mode: OperatingMode.Normal});
         commands[0] = CommandV2({
-            kind: CommandKind.SetOperatingMode,
-            gas: 500_000,
-            payload: abi.encode(params1)
+            kind: CommandKind.SetOperatingMode, gas: 500_000, payload: abi.encode(params1)
         });
 
         // Second command should fail - Call a function that reverts
         bytes memory failingData = abi.encodeWithSignature("revertUnauthorized()");
-        CallContractParams memory params2 = CallContractParams({
-            target: address(helloWorld), data: failingData, value: 0, gas: 20_000
-        });
+        CallContractParams memory params2 =
+            CallContractParams({target: address(helloWorld), data: failingData, value: 0});
         commands[1] = CommandV2({
-            kind: CommandKind.CallContract,
-            gas: 500_000,
-            payload: abi.encode(params2)
+            kind: CommandKind.CallContract, gas: 500_000, payload: abi.encode(params2)
         });
 
         // Third command should succeed - SetOperatingMode again
         SetOperatingModeParams memory params3 =
             SetOperatingModeParams({mode: OperatingMode.Normal});
         commands[2] = CommandV2({
-            kind: CommandKind.SetOperatingMode,
-            gas: 500_000,
-            payload: abi.encode(params3)
+            kind: CommandKind.SetOperatingMode, gas: 500_000, payload: abi.encode(params3)
         });
 
         // Expect the failed command to emit CommandFailed event
@@ -833,9 +769,7 @@ contract GatewayV2Test is Test {
         SetOperatingModeParams memory params1 =
             SetOperatingModeParams({mode: OperatingMode.Normal});
         commands[0] = CommandV2({
-            kind: CommandKind.SetOperatingMode,
-            gas: 500_000,
-            payload: abi.encode(params1)
+            kind: CommandKind.SetOperatingMode, gas: 500_000, payload: abi.encode(params1)
         });
 
         // Second command is invalid
@@ -875,27 +809,21 @@ contract GatewayV2Test is Test {
         SetOperatingModeParams memory params1 =
             SetOperatingModeParams({mode: OperatingMode.Normal});
         commands[0] = CommandV2({
-            kind: CommandKind.SetOperatingMode,
-            gas: 500_000,
-            payload: abi.encode(params1)
+            kind: CommandKind.SetOperatingMode, gas: 500_000, payload: abi.encode(params1)
         });
 
         // Second command - Set mode to RejectingOutboundMessages (will succeed)
         SetOperatingModeParams memory params2 =
             SetOperatingModeParams({mode: OperatingMode.RejectingOutboundMessages});
         commands[1] = CommandV2({
-            kind: CommandKind.SetOperatingMode,
-            gas: 500_000,
-            payload: abi.encode(params2)
+            kind: CommandKind.SetOperatingMode, gas: 500_000, payload: abi.encode(params2)
         });
 
         // Third command - Also set mode to Normal again (will succeed)
         SetOperatingModeParams memory params3 =
             SetOperatingModeParams({mode: OperatingMode.Normal});
         commands[2] = CommandV2({
-            kind: CommandKind.SetOperatingMode,
-            gas: 500_000,
-            payload: abi.encode(params3)
+            kind: CommandKind.SetOperatingMode, gas: 500_000, payload: abi.encode(params3)
         });
 
         // Expect InboundMessageDispatched to be emitted with success=true since all commands should succeed
@@ -927,9 +855,7 @@ contract GatewayV2Test is Test {
     function testSetOperatingModeSucceeds() public {
         bytes memory payload = abi.encode((SetOperatingModeParams({mode: OperatingMode.Normal})));
         CommandV2 memory cmd = CommandV2({
-            kind: CommandKind.SetOperatingMode,
-            gas: uint64(200_000),
-            payload: payload
+            kind: CommandKind.SetOperatingMode, gas: uint64(200_000), payload: payload
         });
 
         // Expect the OperatingModeChanged event to be emitted
@@ -950,9 +876,7 @@ contract GatewayV2Test is Test {
         bytes memory payload = abi.encode(params);
 
         CommandV2 memory cmd = CommandV2({
-            kind: CommandKind.UnlockNativeToken,
-            gas: uint64(200_000),
-            payload: payload
+            kind: CommandKind.UnlockNativeToken, gas: uint64(200_000), payload: payload
         });
 
         // handler revert should be caught and command should fail (revert)
@@ -981,9 +905,7 @@ contract GatewayV2Test is Test {
         bytes memory payload = abi.encode(p);
 
         CommandV2 memory cmd = CommandV2({
-            kind: CommandKind.MintForeignToken,
-            gas: uint64(200_000),
-            payload: payload
+            kind: CommandKind.MintForeignToken, gas: uint64(200_000), payload: payload
         });
 
         // mintForeignToken for unregistered token should revert
@@ -999,9 +921,7 @@ contract GatewayV2Test is Test {
         bytes memory payload = abi.encode(p);
 
         CommandV2 memory cmd = CommandV2({
-            kind: CommandKind.RegisterForeignToken,
-            gas: uint64(3_000_000),
-            payload: payload
+            kind: CommandKind.RegisterForeignToken, gas: uint64(3_000_000), payload: payload
         });
 
         // first register should succeed
@@ -1013,9 +933,8 @@ contract GatewayV2Test is Test {
     }
 
     function testCallContractAgentDoesNotExistReturnsFalse() public {
-        CallContractParams memory p = CallContractParams({
-            target: address(0xdead), data: "", value: uint256(0), gas: 20_000
-        });
+        CallContractParams memory p =
+            CallContractParams({target: address(0xdead), data: "", value: uint256(0)});
         bytes memory payload = abi.encode(p);
 
         // origin corresponds to agent id; use a non-existent id
@@ -1025,19 +944,6 @@ contract GatewayV2Test is Test {
         // callContract with missing agent should revert
         vm.expectRevert();
         gatewayLogic.callDispatch(cmd, bytes32(uint256(0x9999)));
-    }
-
-    function testInsufficientGasReverts() public {
-        bytes memory payload = "";
-        // Use an extremely large gas value to trigger InsufficientGasLimit revert in _dispatchCommand
-        CommandV2 memory cmd = CommandV2({
-            kind: CommandKind.SetOperatingMode,
-            gas: type(uint64).max,
-            payload: payload
-        });
-
-        vm.expectRevert(IGatewayV2.InsufficientGasLimit.selector);
-        gatewayLogic.callDispatch(cmd, bytes32(0));
     }
 
     function testUpgradeCallsInitialize() public {
@@ -1248,7 +1154,7 @@ contract GatewayV2Test is Test {
             CommandV2({kind: CommandKind.SetOperatingMode, gas: 200_000, payload: abi.encode(p)});
 
         CallContractParams memory cc =
-            CallContractParams({target: address(0x1234), data: "", value: 0, gas: 20_000});
+            CallContractParams({target: address(0x1234), data: "", value: 0});
         cmds[1] =
             CommandV2({kind: CommandKind.CallContract, gas: 200_000, payload: abi.encode(cc)});
         InboundMessageV2 memory msgv;
@@ -1268,181 +1174,24 @@ contract GatewayV2Test is Test {
         assertTrue(gw.v2_isDispatched(msgv.nonce));
     }
 
-    function testUnlockTokenThenCallContractsWillSucceed() public {
-        bytes32 topic = keccak256("topic");
+    function testInsufficientGasReverts() public {
+        MockGateway gw = MockGateway(address(gateway));
 
-        // Set up an ERC20 token (WETH) for the agent to work with
-        address token = address(new WETH9());
-        MockGateway(address(gateway)).prank_registerNativeToken(token);
-
-        uint128 tokenAmount = 1 ether;
-        vm.deal(assetHubAgent, tokenAmount);
-        hoax(assetHubAgent);
-        WETH9(payable(token)).deposit{value: tokenAmount}();
-
-        // Verify agent has the WETH
-        assertEq(IERC20(token).balanceOf(assetHubAgent), tokenAmount);
-
-        // Create two commands:
-        // 1. UnlockNativeToken: Unlock asset to the AssetHub agent
-        // 2. CallContracts: Two internal calls - approve HelloWorld, then transfer tokens using consumeToken
-
-        // Command 1: UnlockNativeToken - unlock to assetHubAgent (no-op in this case since agent already has tokens)
-        UnlockNativeTokenParams memory unlockParams =
-            UnlockNativeTokenParams({token: token, recipient: assetHubAgent, amount: tokenAmount});
-
-        // Command 2: CallContracts - two internal calls:
-        // - First: approve HelloWorld to spend tokens from the agent
-        // - Second: agent calls consumeToken to transfer tokens to HelloWorld
-        bytes memory approveData =
-            abi.encodeWithSignature("approve(address,uint256)", address(helloWorld), tokenAmount);
-        bytes memory consumeData =
-            abi.encodeWithSignature("consumeToken(address,uint256)", token, tokenAmount);
-
-        CallContractParams[] memory callParams = new CallContractParams[](2);
-        callParams[0] =
-            CallContractParams({target: token, data: approveData, value: 0, gas: 100_000});
-        callParams[1] = CallContractParams({
-            target: address(helloWorld), data: consumeData, value: 0, gas: 100_000
+        // Use an extremely large gas value to trigger InsufficientGasLimit revert in _dispatchCommand
+        CommandV2[] memory cmds = new CommandV2[](1);
+        SetOperatingModeParams memory p = SetOperatingModeParams({mode: OperatingMode.Normal});
+        cmds[0] = CommandV2({
+            kind: CommandKind.SetOperatingMode, gas: type(uint64).max, payload: abi.encode(p)
         });
 
-        CommandV2[] memory commands = new CommandV2[](2);
-        commands[0] = CommandV2({
-            kind: CommandKind.UnlockNativeToken,
-            gas: 100_000,
-            payload: abi.encode(unlockParams)
-        });
-        commands[1] = CommandV2({
-            kind: CommandKind.CallContracts,
-            gas: 200_000,
-            payload: abi.encode(callParams)
-        });
+        InboundMessageV2 memory msgv;
+        msgv.origin = bytes32("orig");
+        msgv.nonce = 1;
+        msgv.topic = bytes32(0);
+        msgv.commands = cmds;
 
-        // Fund agent with balance for gas
-        vm.deal(assetHubAgent, 1 ether);
-
-        // Expect both commands to succeed
-        vm.expectEmit(true, false, false, true);
-        emit IGatewayV2.InboundMessageDispatched(1, topic, true, relayerRewardAddress);
-
-        hoax(relayer, 1 ether);
-        IGatewayV2(address(gateway))
-            .v2_submit(
-                InboundMessageV2({
-                    origin: Constants.ASSET_HUB_AGENT_ID,
-                    nonce: 1,
-                    topic: topic,
-                    commands: commands
-                }),
-                proof,
-                makeMockProof(),
-                relayerRewardAddress
-            );
-
-        // Verify the token flow: agent -> HelloWorld
-        assertEq(IERC20(token).balanceOf(assetHubAgent), 0, "Agent should have no tokens left");
-        assertEq(
-            IERC20(token).balanceOf(address(helloWorld)),
-            tokenAmount,
-            "HelloWorld should have received all tokens"
-        );
-    }
-
-    function testUnlockTokenThenCallContractsWithRevert() public {
-        bytes32 topic = keccak256("topic");
-
-        // Set up an ERC20 token (WETH) for the agent to work with
-        address token = address(new WETH9());
-        MockGateway(address(gateway)).prank_registerNativeToken(token);
-
-        uint128 tokenAmount = 1 ether;
-        uint128 halfAmount = tokenAmount / 2;
-        vm.deal(assetHubAgent, tokenAmount);
-        hoax(assetHubAgent);
-        WETH9(payable(token)).deposit{value: tokenAmount}();
-
-        // Verify agent has the WETH
-        assertEq(IERC20(token).balanceOf(assetHubAgent), tokenAmount);
-
-        // Create two commands:
-        // 1. UnlockNativeToken: Unlock asset to the relayer
-        // 2. CallContracts: Three internal calls - approve, transfer tokens, then revert
-
-        // Command 1: UnlockNativeToken - unlock to relayer
-        UnlockNativeTokenParams memory unlockParams =
-            UnlockNativeTokenParams({token: token, recipient: relayer, amount: halfAmount});
-
-        // Command 2: CallContracts - three internal calls:
-        // - First: approve HelloWorld to spend tokens from the agent
-        // - Second: agent calls consumeToken to transfer tokens to HelloWorld
-        // - Third: call revertUnauthorized which will fail
-        bytes memory approveData =
-            abi.encodeWithSignature("approve(address,uint256)", address(helloWorld), halfAmount);
-        bytes memory consumeData =
-            abi.encodeWithSignature("consumeToken(address,uint256)", token, halfAmount);
-        bytes memory revertData = abi.encodeWithSignature("revertUnauthorized()");
-
-        CallContractParams[] memory callParams = new CallContractParams[](3);
-        callParams[0] =
-            CallContractParams({target: token, data: approveData, value: 0, gas: 50_000});
-        callParams[1] = CallContractParams({
-            target: address(helloWorld), data: consumeData, value: 0, gas: 50_000
-        });
-        callParams[2] = CallContractParams({
-            target: address(helloWorld), data: revertData, value: 0, gas: 50_000
-        });
-        CommandV2[] memory commands = new CommandV2[](2);
-        commands[0] = CommandV2({
-            kind: CommandKind.UnlockNativeToken,
-            gas: 100_000,
-            payload: abi.encode(unlockParams)
-        });
-        commands[1] = CommandV2({
-            kind: CommandKind.CallContracts,
-            gas: 200_000,
-            payload: abi.encode(callParams)
-        });
-
-        // Expect the CallContracts command to fail
-        vm.expectEmit(true, false, false, true);
-        emit IGatewayV2.CommandFailed(1, 1); // nonce 1, command index 1
-
-        // Expect InboundMessageDispatched to be emitted with success=false (command failed)
-        vm.expectEmit(true, false, false, true);
-        emit IGatewayV2.InboundMessageDispatched(1, topic, false, relayerRewardAddress);
-
-        hoax(relayer, 1 ether);
-        IGatewayV2(address(gateway))
-            .v2_submit(
-                InboundMessageV2({
-                    origin: Constants.ASSET_HUB_AGENT_ID,
-                    nonce: 1,
-                    topic: topic,
-                    commands: commands
-                }),
-                proof,
-                makeMockProof(),
-                relayerRewardAddress
-            );
-
-        // Verify relayer received the unlocked tokens
-        assertEq(
-            IERC20(token).balanceOf(relayer),
-            halfAmount,
-            "Relayer should have received unlocked tokens"
-        );
-
-        // Verify atomicity: since the third call failed, the first two calls should be reverted
-        // The agent should still have all tokens (no transfer occurred)
-        assertEq(
-            IERC20(token).balanceOf(assetHubAgent),
-            halfAmount,
-            "Agent should still have all tokens due to revert"
-        );
-        assertEq(
-            IERC20(token).balanceOf(address(helloWorld)),
-            0,
-            "HelloWorld should have no tokens due to revert"
-        );
+        vm.expectRevert(IGatewayV2.InsufficientGasLimit.selector);
+        // call v2_submit (verification overridden to true)
+        gw.v2_submit(msgv, proof, makeMockProof(), bytes32(0));
     }
 }

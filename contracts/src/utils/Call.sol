@@ -50,36 +50,4 @@ library Call {
         }
         return success;
     }
-
-    /**
-     * @notice Safely perform a low level call with a gas limit without copying any returndata
-     *
-     * @param target   Address to call
-     * @param data Calldata to pass to the call
-     */
-    function safeCallWithGasLimit(
-        address target,
-        bytes memory data,
-        uint256 value,
-        uint64 gasLimit
-    ) internal returns (bool) {
-        // Disallow zero gas to avoid silent no-op calls.
-        if (gasLimit == 0) {
-            revert InvalidGasLimit();
-        }
-
-        bool success;
-        assembly {
-            success := call(
-                gasLimit, // gas
-                target, // recipient
-                value, // ether value
-                add(data, 0x20), // inloc
-                mload(data), // inlen
-                0, // outloc
-                0 // outlen
-            )
-        }
-        return success;
-    }
 }

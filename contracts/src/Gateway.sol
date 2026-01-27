@@ -520,22 +520,12 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         HandlersV2.callContract(origin, AGENT_EXECUTOR, data);
     }
 
-    // Call multiple arbitrary contract functions
-    function _handleCallContracts(bytes32 origin, bytes calldata data) internal {
-        HandlersV2.callContracts(origin, AGENT_EXECUTOR, data);
-    }
-
     /**
      * APIv2 Internal functions
      */
 
     // Internal helper to dispatch a single command
     function _dispatchCommand(CommandV2 calldata command, bytes32 origin) internal {
-        // check that there is enough gas available to forward to the command handler
-        if (gasleft() * 63 / 64 < command.gas + DISPATCH_OVERHEAD_GAS_V2) {
-            revert IGatewayV2.InsufficientGasLimit();
-        }
-
         if (command.kind == CommandKind.Upgrade) {
             _handleUpgrade(command.payload);
         } else if (command.kind == CommandKind.SetOperatingMode) {
@@ -548,8 +538,6 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
             _handleMintForeignToken(command.payload);
         } else if (command.kind == CommandKind.CallContract) {
             _handleCallContract(origin, command.payload);
-        } else if (command.kind == CommandKind.CallContracts) {
-            _handleCallContracts(origin, command.payload);
         } else {
             revert IGatewayV2.InvalidCommand();
         }
@@ -562,15 +550,13 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         bool success = true;
         for (uint256 i = 0; i < message.commands.length; i++) {
             CommandV2 calldata command = message.commands[i];
-            try this.v2_dispatchCommand(command, message.origin) {}
+            // check that there is enough gas available to forward to the command handler
+            uint256 requiredGas = command.gas + DISPATCH_OVERHEAD_GAS_V2;
+            if (gasleft() * 63 / 64 < requiredGas) {
+                revert IGatewayV2.InsufficientGasLimit();
+            }
+            try this.v2_dispatchCommand{gas: requiredGas}(command, message.origin) {}
             catch (bytes memory reason) {
-                // Check if the error is InsufficientGasLimit and rethrow it
-                if (
-                    reason.length >= 4
-                        && bytes4(reason) == IGatewayV2.InsufficientGasLimit.selector
-                ) {
-                    revert IGatewayV2.InsufficientGasLimit();
-                }
                 emit IGatewayV2.CommandFailed(message.nonce, i);
                 success = false;
             }

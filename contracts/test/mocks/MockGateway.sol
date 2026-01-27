@@ -93,7 +93,7 @@ contract MockGateway is Gateway {
     }
 
     function callDispatch(CommandV2 calldata command, bytes32 origin) external {
-        this.v2_dispatchCommand(command, origin);
+        this.v2_dispatchCommand{gas: command.gas}(command, origin);
     }
 
     function deployAgent() external returns (address) {
