@@ -560,8 +560,9 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
     }
 
     // Dispatch all the commands within the batch of commands in the message payload. Each command is processed
-    // independently, such that failures emit a `CommandFailed` event without stopping execution of subsequent commands.
-    // Returns true if all commands executed successfully, false if any non-atomic command failed.
+    // independently, such that non-atomic failures emit a `CommandFailed` event without stopping execution of
+    // subsequent commands, while atomic failures revert the entire transaction. Returns true if all commands
+    // executed successfully, false if any non-atomic command failed.
     function v2_dispatch(InboundMessageV2 calldata message) external onlySelf returns (bool) {
         bool success = true;
         for (uint256 i = 0; i < message.commands.length; i++) {
@@ -575,10 +576,10 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
                 ) {
                     revert IGatewayV2.InsufficientGasLimit();
                 }
-                emit IGatewayV2.CommandFailed(message.nonce, i);
                 if (command.atomic) {
                     revert IGatewayV2.AtomicCommandFailed();
                 }
+                emit IGatewayV2.CommandFailed(message.nonce, i);
                 success = false;
             }
         }
