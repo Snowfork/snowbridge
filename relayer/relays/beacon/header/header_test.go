@@ -11,7 +11,6 @@ import (
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/mock"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/protocol"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/store"
 	"github.com/snowfork/snowbridge/relayer/relays/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -28,8 +27,7 @@ func TestSyncInterimFinalizedUpdate_WithDataFromAPI(t *testing.T) {
 	}
 	p := protocol.New(settings, MaxRedundancy)
 	client := mock.API{}
-	beaconStore := mock.Store{}
-
+	
 	headerAtSlot4571072, err := testutil.GetHeaderAtSlot(4571072)
 	require.NoError(t, err)
 	headerAtSlot4571136, err := testutil.GetHeaderAtSlot(4571136)
@@ -68,9 +66,9 @@ func TestSyncInterimFinalizedUpdate_WithDataFromAPI(t *testing.T) {
 		},
 		&client,
 		settings,
-		&beaconStore,
 		p,
 		316,
+		nil,
 	)
 
 	// Find a checkpoint for a slot that is just out of the on-chain synced finalized header block roots range
@@ -78,7 +76,9 @@ func TestSyncInterimFinalizedUpdate_WithDataFromAPI(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestSyncInterimFinalizedUpdate_WithDataFromStore(t *testing.T) {
+func TestSyncInterimFinalizedUpdate_WithDataFromAPI_PreviouslyStore(t *testing.T) {
+	// This test was previously testing store fallback, but since the syncer no longer uses
+	// a local store (state service handles all fallback), we now test with API data directly
 	settings := config.SpecSettings{
 		SlotsInEpoch:                 32,
 		EpochsPerSyncCommitteePeriod: 256,
@@ -86,7 +86,6 @@ func TestSyncInterimFinalizedUpdate_WithDataFromStore(t *testing.T) {
 	}
 	p := protocol.New(settings, MaxRedundancy)
 	client := mock.API{}
-	beaconStore := mock.Store{}
 
 	headerAtSlot4571072, err := testutil.GetHeaderAtSlot(4571072)
 	require.NoError(t, err)
@@ -108,17 +107,10 @@ func TestSyncInterimFinalizedUpdate_WithDataFromStore(t *testing.T) {
 	client.BlocksAtSlot = map[uint64]api.BeaconBlockResponse{
 		4571137: blockAtSlot4571137,
 	}
-
-	attestedState, err := testutil.LoadFile("4571136.ssz")
-	require.NoError(t, err)
-	finalizedState, err := testutil.LoadFile("4571072.ssz")
-	require.NoError(t, err)
-	// Return the beacon state from the stpore
-	beaconStore.StoredBeaconStateData = store.StoredBeaconData{
-		AttestedSlot:         4571136,
-		FinalizedSlot:        4571072,
-		AttestedBeaconState:  attestedState,
-		FinalizedBeaconState: finalizedState,
+	// Enable beacon states to be returned from API
+	client.BeaconStates = map[uint64]bool{
+		4571072: true,
+		4571136: true,
 	}
 
 	h := New(
@@ -132,9 +124,9 @@ func TestSyncInterimFinalizedUpdate_WithDataFromStore(t *testing.T) {
 		},
 		&client,
 		settings,
-		&beaconStore,
 		p,
 		316,
+		nil,
 	)
 
 	// Find a checkpoint for a slot that is just out of the on-chain synced finalized header block roots range
@@ -142,9 +134,8 @@ func TestSyncInterimFinalizedUpdate_WithDataFromStore(t *testing.T) {
 	require.NoError(t, err)
 }
 
-// Test a scenario where there is a usable beacon update in beacon data store, but it is a different attested and
-// finalized state that we calculated to use.
-func TestSyncInterimFinalizedUpdate_WithDataFromStoreWithDifferentBlocks(t *testing.T) {
+// Test a scenario where the API returns beacon data at different slots than initially calculated
+func TestSyncInterimFinalizedUpdate_WithDataFromAPI_DifferentBlocks(t *testing.T) {
 	settings := config.SpecSettings{
 		SlotsInEpoch:                 32,
 		EpochsPerSyncCommitteePeriod: 256,
@@ -152,7 +143,6 @@ func TestSyncInterimFinalizedUpdate_WithDataFromStoreWithDifferentBlocks(t *test
 	}
 	p := protocol.New(settings, MaxRedundancy)
 	client := mock.API{}
-	beaconStore := mock.Store{}
 
 	headerAtSlot4570752, err := testutil.GetHeaderAtSlot(4570752)
 	require.NoError(t, err)
@@ -174,17 +164,10 @@ func TestSyncInterimFinalizedUpdate_WithDataFromStoreWithDifferentBlocks(t *test
 	client.BlocksAtSlot = map[uint64]api.BeaconBlockResponse{
 		4570818: blockAtSlot4570818,
 	}
-
-	attestedState, err := testutil.LoadFile("4570816.ssz")
-	require.NoError(t, err)
-	finalizedState, err := testutil.LoadFile("4570752.ssz")
-	require.NoError(t, err)
-	// Return the beacon state from the store
-	beaconStore.StoredBeaconStateData = store.StoredBeaconData{
-		AttestedSlot:         4570816,
-		FinalizedSlot:        4570752,
-		AttestedBeaconState:  attestedState,
-		FinalizedBeaconState: finalizedState,
+	// Enable beacon states to be returned from API
+	client.BeaconStates = map[uint64]bool{
+		4570752: true,
+		4570816: true,
 	}
 
 	h := New(
@@ -198,9 +181,9 @@ func TestSyncInterimFinalizedUpdate_WithDataFromStoreWithDifferentBlocks(t *test
 		},
 		&client,
 		settings,
-		&beaconStore,
 		p,
 		316,
+		nil,
 	)
 
 	// Find a checkpoint for a slot that is just out of the on-chain synced finalized header block roots range
@@ -218,8 +201,7 @@ func TestSyncInterimFinalizedUpdate_BeaconStateNotAvailableInAPIAndStore(t *test
 	}
 	p := protocol.New(settings, MaxRedundancy)
 	client := mock.API{}
-	beaconStore := mock.Store{}
-
+	
 	headerAtSlot4571072, err := testutil.GetHeaderAtSlot(4571072)
 	require.NoError(t, err)
 	headerAtSlot4571136, err := testutil.GetHeaderAtSlot(4571136)
@@ -244,9 +226,9 @@ func TestSyncInterimFinalizedUpdate_BeaconStateNotAvailableInAPIAndStore(t *test
 		},
 		&client,
 		settings,
-		&beaconStore,
 		p,
 		316,
+		nil,
 	)
 
 	// Find a checkpoint for a slot that is just out of the on-chain synced finalized header block roots range
@@ -262,8 +244,7 @@ func TestSyncInterimFinalizedUpdate_NoValidBlocksFound(t *testing.T) {
 	}
 	p := protocol.New(settings, MaxRedundancy)
 	client := mock.API{}
-	beaconStore := mock.Store{}
-
+	
 	headerAtSlot4571072, err := testutil.GetHeaderAtSlot(4571072)
 	require.NoError(t, err)
 
@@ -283,9 +264,9 @@ func TestSyncInterimFinalizedUpdate_NoValidBlocksFound(t *testing.T) {
 		},
 		&client,
 		settings,
-		&beaconStore,
 		p,
 		316,
+		nil,
 	)
 
 	// Find a checkpoint for a slot that is just out of the on-chain synced finalized header block roots range
@@ -338,8 +319,7 @@ func TestFindLatestCheckPoint(t *testing.T) {
 	p := protocol.New(settings, maxRedundancy)
 	// Total circular array would be 4 * 2 * 2 = 16
 	client := mock.API{}
-	beaconStore := mock.Store{}
-
+	
 	headerIndex5 := common.HexToHash("0xd118e1464716db841f14ac1c3245f2b7900ee6f896ac85362deae3ff90c14c78")
 	headerIndex4 := common.HexToHash("0xe9d993e257b0d7ac775b8a03827209db2c7314a780c24a7fad64fd9fcee529f7")
 	headerIndex3 := common.HexToHash("0x7f2c1240dd714f3d74050638c642f14bf49f541d42f0808b7ae0c188c7edbb08")
@@ -405,9 +385,9 @@ func TestFindLatestCheckPoint(t *testing.T) {
 		},
 		&client,
 		settings,
-		&beaconStore,
 		p,
 		316,
+		nil,
 	)
 
 	// Slot 20 would be usable to prove slot 19

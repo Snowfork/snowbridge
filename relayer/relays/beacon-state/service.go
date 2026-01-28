@@ -1,0 +1,241 @@
+package beaconstate
+
+import (
+	"context"
+	"fmt"
+	"net/http"
+	"sync"
+	"time"
+
+	log "github.com/sirupsen/logrus"
+	"golang.org/x/sync/errgroup"
+
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/api"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/protocol"
+	"github.com/snowfork/snowbridge/relayer/relays/beacon/store"
+)
+
+type Service struct {
+	config     *Config
+	syncer     *syncer.Syncer
+	protocol   *protocol.Protocol
+	store      *store.Store
+	proofCache *ProofCache
+	httpServer *http.Server
+	downloadMu sync.Mutex // Ensures only one state download at a time
+}
+
+func New(config *Config) *Service {
+	return &Service{
+		config: config,
+	}
+}
+
+func (s *Service) Start(ctx context.Context, eg *errgroup.Group) error {
+	specSettings := s.config.Beacon.Spec
+	log.WithField("spec", specSettings).Info("spec settings")
+
+	// Initialize protocol
+	// HeaderRedundancy is not used in state service, set to 0
+	s.protocol = protocol.New(specSettings, 0)
+
+	// Initialize store
+	// Use persist.maxEntries if persist is enabled, otherwise fall back to beacon.datastore.maxEntries
+	maxEntries := s.config.Beacon.DataStore.MaxEntries
+	if s.config.Persist.Enabled && s.config.Persist.MaxEntries > 0 {
+		maxEntries = s.config.Persist.MaxEntries
+	}
+	st := store.New(s.config.Beacon.DataStore.Location, maxEntries, *s.protocol)
+	err := st.Connect()
+	if err != nil {
+		return fmt.Errorf("connect to store: %w", err)
+	}
+	s.store = &st
+
+	// Initialize beacon API client
+	beaconAPI := api.NewBeaconClient(s.config.Beacon.Endpoint)
+
+	// Initialize syncer without state service (this IS the state service)
+	// The syncer will fall back to beacon API directly
+	s.syncer = syncer.New(beaconAPI, s.protocol, nil)
+
+	// Initialize proof cache
+	proofTTL := time.Duration(s.config.Cache.ProofTTLSeconds) * time.Second
+	s.proofCache = NewProofCache(s.config.Cache.MaxProofs, proofTTL)
+
+	// Parse timeouts
+	readTimeout, _ := time.ParseDuration(s.config.HTTP.ReadTimeout)
+	writeTimeout, _ := time.ParseDuration(s.config.HTTP.WriteTimeout)
+
+	// Setup HTTP server
+	mux := http.NewServeMux()
+	mux.HandleFunc("/health", s.handleHealth)
+	mux.HandleFunc("/v1/proofs/finalized-header", s.handleFinalizedHeaderProof)
+	mux.HandleFunc("/v1/proofs/execution-state-root", s.handleExecutionStateRootProof)
+	mux.HandleFunc("/v1/proofs/block-root", s.handleBlockRootProof)
+	mux.HandleFunc("/v1/proofs/sync-committee", s.handleSyncCommitteeProof)
+	mux.HandleFunc("/v1/state", s.handleGetState)
+	mux.HandleFunc("/v1/state/range", s.handleGetStateInRange)
+
+	s.httpServer = &http.Server{
+		Addr:         fmt.Sprintf(":%d", s.config.HTTP.Port),
+		Handler:      mux,
+		ReadTimeout:  readTimeout,
+		WriteTimeout: writeTimeout,
+	}
+
+	// Start HTTP server in errgroup
+	eg.Go(func() error {
+		log.WithField("port", s.config.HTTP.Port).Info("Starting beacon state service HTTP server")
+		err := s.httpServer.ListenAndServe()
+		if err != nil && err != http.ErrServerClosed {
+			return fmt.Errorf("http server: %w", err)
+		}
+		return nil
+	})
+
+	// Graceful shutdown
+	eg.Go(func() error {
+		<-ctx.Done()
+		log.Info("Shutting down beacon state service HTTP server")
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		return s.httpServer.Shutdown(shutdownCtx)
+	})
+
+	// Start periodic state saving if enabled
+	if s.config.Persist.Enabled {
+		eg.Go(func() error {
+			return s.runPeriodicStateSaver(ctx)
+		})
+	}
+
+	return nil
+}
+
+// runPeriodicStateSaver periodically fetches and saves beacon states to disk
+func (s *Service) runPeriodicStateSaver(ctx context.Context) error {
+	interval := time.Duration(s.config.Persist.SaveIntervalHours) * time.Hour
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	log.WithField("interval", interval).Info("Starting periodic beacon state saver")
+
+	// Only save on startup if we don't have a recent state
+	if s.shouldSaveOnStartup(interval) {
+		if err := s.saveCurrentFinalizedState(); err != nil {
+			log.WithError(err).Warn("Failed to save initial beacon state")
+		}
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			log.Info("Stopping periodic beacon state saver")
+			return nil
+		case <-ticker.C:
+			if err := s.saveCurrentFinalizedState(); err != nil {
+				log.WithError(err).Warn("Failed to save beacon state")
+			}
+		}
+	}
+}
+
+// shouldSaveOnStartup checks if we need to save a beacon state on startup.
+// Returns true if no recent state exists (within the save interval).
+func (s *Service) shouldSaveOnStartup(interval time.Duration) bool {
+	latestTimestamp, err := s.store.GetLatestTimestamp()
+	if err != nil {
+		log.WithError(err).Warn("Failed to get latest beacon state timestamp, will save on startup")
+		return true
+	}
+
+	// No entries exist
+	if latestTimestamp.IsZero() {
+		log.Info("No existing beacon states found, will save on startup")
+		return true
+	}
+
+	// Check if the latest entry is older than the save interval
+	age := time.Since(latestTimestamp)
+	if age >= interval {
+		log.WithFields(log.Fields{
+			"lastSaved": latestTimestamp,
+			"age":       age,
+			"interval":  interval,
+		}).Info("Latest beacon state is older than save interval, will save on startup")
+		return true
+	}
+
+	log.WithFields(log.Fields{
+		"lastSaved":    latestTimestamp,
+		"age":          age,
+		"nextSaveIn":   interval - age,
+	}).Info("Recent beacon state exists, skipping startup save")
+	return false
+}
+
+// saveCurrentFinalizedState fetches and saves the current finalized beacon state
+func (s *Service) saveCurrentFinalizedState() error {
+	log.Info("Fetching and saving current finalized beacon state")
+
+	// Get the latest finalized update to find attested and finalized slots
+	update, err := s.syncer.GetFinalizedUpdate()
+	if err != nil {
+		return fmt.Errorf("get finalized update: %w", err)
+	}
+
+	attestedSlot := uint64(update.Payload.AttestedHeader.Slot)
+	finalizedSlot := uint64(update.Payload.FinalizedHeader.Slot)
+
+	log.WithFields(log.Fields{
+		"attestedSlot":  attestedSlot,
+		"finalizedSlot": finalizedSlot,
+	}).Info("Downloading beacon states")
+
+	// Download attested state
+	attestedData, err := s.syncer.Client.GetBeaconState(fmt.Sprintf("%d", attestedSlot))
+	if err != nil {
+		return fmt.Errorf("download attested state at slot %d: %w", attestedSlot, err)
+	}
+
+	// Download finalized state
+	finalizedData, err := s.syncer.Client.GetBeaconState(fmt.Sprintf("%d", finalizedSlot))
+	if err != nil {
+		return fmt.Errorf("download finalized state at slot %d: %w", finalizedSlot, err)
+	}
+
+	// Write to store
+	err = s.store.WriteEntry(attestedSlot, finalizedSlot, attestedData, finalizedData)
+	if err != nil {
+		return fmt.Errorf("write states to store: %w", err)
+	}
+
+	// Prune old states
+	deletedSlots, err := s.store.PruneOldStates()
+	if err != nil {
+		log.WithError(err).Warn("Failed to prune old states")
+	} else if len(deletedSlots) > 0 {
+		log.WithField("deletedSlots", deletedSlots).Info("Pruned old beacon states")
+	}
+
+	log.WithFields(log.Fields{
+		"attestedSlot":  attestedSlot,
+		"finalizedSlot": finalizedSlot,
+	}).Info("Successfully saved beacon states")
+
+	return nil
+}
+
+func (s *Service) GetSyncer() *syncer.Syncer {
+	return s.syncer
+}
+
+func (s *Service) GetProtocol() *protocol.Protocol {
+	return s.protocol
+}
+
+func (s *Service) GetProofCache() *ProofCache {
+	return s.proofCache
+}

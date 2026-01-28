@@ -1,24 +1,166 @@
-version: "3"
-
 services:
-  execution-assethub:
-    platform: linux/amd64
+  beacon-state-service:
     image: ghcr.io/snowfork/snowbridge-relay
-    build:
-      context: .
-    command: run execution --config /config/execution-relay-asset-hub-0.json --substrate.private-key ${EXECUTION_RELAY_ASSETHUB_SUB_KEY}
+    build: .
+    platform: linux/amd64
+    command: run beacon-state-service --config /config/beacon-state-service.json
     volumes:
-      - ${CONFIG_DIR}:/config
-    env_file:
-      - .env
+      - ./config/docker:/config
+      - beacon-state-data:/data
+    ports:
+      - "8080:8080"
+    environment:
+      - BEACON_ENDPOINT=${BEACON_ENDPOINT}
+      - FORK_DENEB=${FORK_DENEB}
+      - FORK_ELECTRA=${FORK_ELECTRA}
+      - FORK_FULU=${FORK_FULU}
+    restart: on-failure
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  beacon:
+    image: ghcr.io/snowfork/snowbridge-relay
+    platform: linux/amd64
+    command: >
+      run beacon
+      --config /config/beacon.json
+      --substrate.private-key-id ${BEACON_RELAY_SUBSTRATE_KEY_ID}
+    volumes:
+      - ./config/docker:/config
+      - beacon-data:/data
+    environment:
+      - AWS_REGION=${AWS_REGION}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - BEACON_ENDPOINT=${BEACON_ENDPOINT}
+      - BRIDGEHUB_ENDPOINT=${BRIDGEHUB_ENDPOINT}
+      - FORK_DENEB=${FORK_DENEB}
+      - FORK_ELECTRA=${FORK_ELECTRA}
+      - FORK_FULU=${FORK_FULU}
+      - MAX_WATCHED_EXTRINSICS=${MAX_WATCHED_EXTRINSICS:-200}
+    restart: on-failure
+    depends_on:
+      beacon-state-service:
+        condition: service_healthy
+
+  execution:
+    image: ghcr.io/snowfork/snowbridge-relay
+    platform: linux/amd64
+    command: >
+      run execution
+      --config /config/execution.json
+      --substrate.private-key-id ${EXECUTION_RELAY_SUBSTRATE_KEY_ID}
+    volumes:
+      - ./config/docker:/config
+    environment:
+      - AWS_REGION=${AWS_REGION}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - BEACON_ENDPOINT=${BEACON_ENDPOINT}
+      - ETHEREUM_ENDPOINT=${ETHEREUM_ENDPOINT}
+      - BRIDGEHUB_ENDPOINT=${BRIDGEHUB_ENDPOINT}
+      - ASSETHUB_ENDPOINT=${ASSETHUB_ENDPOINT}
+      - FORK_DENEB=${FORK_DENEB}
+      - FORK_ELECTRA=${FORK_ELECTRA}
+      - FORK_FULU=${FORK_FULU}
+      - GATEWAY_CONTRACT=${GATEWAY_CONTRACT}
+      - SCHEDULE_ID=${SCHEDULE_ID:-0}
+      - TOTAL_RELAYER_COUNT=${TOTAL_RELAYER_COUNT:-1}
+      - SLEEP_INTERVAL=${SLEEP_INTERVAL:-45}
+      - MAX_WATCHED_EXTRINSICS=${MAX_WATCHED_EXTRINSICS:-200}
+      - CHAINALYSIS_API_KEY=${CHAINALYSIS_API_KEY}
+      - OFAC_ENABLED=${OFAC_ENABLED:-false}
+    restart: on-failure
+    depends_on:
+      beacon-state-service:
+        condition: service_healthy
+
+  beefy:
+    image: ghcr.io/snowfork/snowbridge-relay
+    platform: linux/amd64
+    command: >
+      run beefy
+      --config /config/beefy.json
+      --ethereum.private-key-id ${BEEFY_RELAY_ETHEREUM_KEY_ID}
+    volumes:
+      - ./config/docker:/config
+    environment:
+      - AWS_REGION=${AWS_REGION}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - POLKADOT_ENDPOINT=${POLKADOT_ENDPOINT}
+      - BRIDGEHUB_ENDPOINT=${BRIDGEHUB_ENDPOINT}
+      - ETHEREUM_ENDPOINT=${ETHEREUM_ENDPOINT}
+      - GATEWAY_CONTRACT=${GATEWAY_CONTRACT}
+      - BEEFY_CLIENT_CONTRACT=${BEEFY_CLIENT_CONTRACT}
     restart: on-failure
 
-  parachain-assethub:
-    platform: linux/amd64
+  parachain:
     image: ghcr.io/snowfork/snowbridge-relay
-    command: run parachain --config /config/parachain-relay-asset-hub-0.json --ethereum.private-key ${PARACHAIN_RELAY_ASSETHUB_ETH_KEY}
+    platform: linux/amd64
+    command: >
+      run parachain
+      --config /config/parachain.json
+      --ethereum.private-key-id ${PARACHAIN_RELAY_ETHEREUM_KEY_ID}
+      --substrate.private-key-id ${PARACHAIN_RELAY_SUBSTRATE_KEY_ID}
     volumes:
-      - ${CONFIG_DIR}:/config
-    env_file:
-      - .env
+      - ./config/docker:/config
+    environment:
+      - AWS_REGION=${AWS_REGION}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - BEACON_ENDPOINT=${BEACON_ENDPOINT}
+      - ETHEREUM_ENDPOINT=${ETHEREUM_ENDPOINT}
+      - POLKADOT_ENDPOINT=${POLKADOT_ENDPOINT}
+      - BRIDGEHUB_ENDPOINT=${BRIDGEHUB_ENDPOINT}
+      - FLASHBOTS_ENDPOINT=${FLASHBOTS_ENDPOINT}
+      - FORK_DENEB=${FORK_DENEB}
+      - FORK_ELECTRA=${FORK_ELECTRA}
+      - FORK_FULU=${FORK_FULU}
+      - GATEWAY_CONTRACT=${GATEWAY_CONTRACT}
+      - BEEFY_CLIENT_CONTRACT=${BEEFY_CLIENT_CONTRACT}
+      - SCHEDULE_ID=${SCHEDULE_ID:-0}
+      - TOTAL_RELAYER_COUNT=${TOTAL_RELAYER_COUNT:-1}
+      - SLEEP_INTERVAL=${SLEEP_INTERVAL:-45}
+      - REWARD_ADDRESS=${REWARD_ADDRESS}
+      - CHAINALYSIS_API_KEY=${CHAINALYSIS_API_KEY}
+      - OFAC_ENABLED=${OFAC_ENABLED:-false}
     restart: on-failure
+    depends_on:
+      beacon-state-service:
+        condition: service_healthy
+
+  reward:
+    image: ghcr.io/snowfork/snowbridge-relay
+    platform: linux/amd64
+    command: >
+      run reward
+      --config /config/reward.json
+      --substrate.private-key-id ${REWARD_RELAY_SUBSTRATE_KEY_ID}
+    volumes:
+      - ./config/docker:/config
+    environment:
+      - AWS_REGION=${AWS_REGION}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - BEACON_ENDPOINT=${BEACON_ENDPOINT}
+      - ETHEREUM_ENDPOINT=${ETHEREUM_ENDPOINT}
+      - BRIDGEHUB_ENDPOINT=${BRIDGEHUB_ENDPOINT}
+      - FORK_DENEB=${FORK_DENEB}
+      - FORK_ELECTRA=${FORK_ELECTRA}
+      - FORK_FULU=${FORK_FULU}
+      - GATEWAY_CONTRACT=${GATEWAY_CONTRACT}
+      - MAX_WATCHED_EXTRINSICS=${MAX_WATCHED_EXTRINSICS:-200}
+      - REWARD_ADDRESS=${REWARD_ADDRESS}
+    restart: on-failure
+    depends_on:
+      beacon-state-service:
+        condition: service_healthy
+
+volumes:
+  beacon-state-data:
+  beacon-data:
