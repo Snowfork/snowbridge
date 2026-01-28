@@ -25,7 +25,7 @@ export function findL2TokenAddress(
     l2ChainId: number,
     tokenAddress: string,
 ): string | undefined {
-    const l2Chain = registry.ethereumChains[l2ChainId]
+    const l2Chain = registry.ethereumChains[`ethereum_l2_${l2ChainId}`]
     if (!l2Chain) {
         return undefined
     }

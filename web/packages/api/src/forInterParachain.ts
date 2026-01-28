@@ -58,16 +58,16 @@ function resolveInputs(
     sourceParaId: number,
     destParaId: number,
 ) {
-    const sourceParachain = registry.parachains[sourceParaId.toString()]
+    const sourceParachain = registry.parachains[`polkadot_${sourceParaId}`]
     if (!sourceParachain) {
         throw Error(`Could not find ${sourceParaId} in the asset registry.`)
     }
-    const destParachain = registry.parachains[destParaId.toString()]
+    const destParachain = registry.parachains[`polkadot_${destParaId}`]
     if (!destParachain) {
         throw Error(`Could not find ${destParaId} in the asset registry.`)
     }
 
-    if (destParachain.parachainId === sourceParachain.parachainId) {
+    if (destParachain.id === sourceParachain.id) {
         throw Error("Source and destination are the same.")
     }
 

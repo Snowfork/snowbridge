@@ -108,7 +108,7 @@ const registry = {
         },
     ],
     registry: {
-        timestamp: "2026-01-27T01:35:29.758Z",
+        timestamp: "2026-01-28T21:31:42.998Z",
         environment: "paseo_sepolia",
         ethChainId: 11155111,
         gatewayAddress: "0x1607C1368bc943130258318c91bBd8cFf3D063E6",
@@ -122,7 +122,7 @@ const registry = {
             accountType: "AccountId32",
             name: "Paseo Testnet",
             specName: "paseo",
-            specVersion: 2000004,
+            specVersion: 2000005,
         },
         bridgeHub: {
             tokenSymbols: "PAS",
@@ -132,11 +132,12 @@ const registry = {
             accountType: "AccountId32",
             name: "Paseo Bridge Hub",
             specName: "bridge-hub-paseo",
-            specVersion: 2000004,
+            specVersion: 2000005,
         },
         ethereumChains: {
-            "11155111": {
-                chainId: 11155111,
+            ethereum_11155111: {
+                kind: "ethereum",
+                id: 11155111,
                 assets: {
                     "0x0000000000000000000000000000000000000000": {
                         token: "0x0000000000000000000000000000000000000000",
@@ -180,13 +181,15 @@ const registry = {
                         deliveryGas: 80000n,
                     },
                 },
-                id: "sepolia",
+                key: "ethereum_11155111",
                 baseDeliveryGas: 120000n,
             },
         },
         parachains: {
-            "1000": {
-                parachainId: 1000,
+            polkadot_1000: {
+                id: 1000,
+                kind: "polkadot",
+                key: "polkadot_1000",
                 features: {
                     hasPalletXcm: true,
                     hasDryRunApi: true,
@@ -207,7 +210,7 @@ const registry = {
                     accountType: "AccountId32",
                     name: "Paseo Asset Hub",
                     specName: "asset-hub-paseo",
-                    specVersion: 2000004,
+                    specVersion: 2000005,
                 },
                 assets: {
                     "0x0000000000000000000000000000000000000000": {
@@ -262,8 +265,10 @@ const registry = {
                 estimatedExecutionFeeDOT: 0n,
                 estimatedDeliveryFeeDOT: 0n,
             },
-            "2043": {
-                parachainId: 2043,
+            polkadot_2043: {
+                id: 2043,
+                kind: "polkadot",
+                key: "polkadot_2043",
                 features: {
                     hasPalletXcm: true,
                     hasDryRunApi: true,
@@ -299,8 +304,10 @@ const registry = {
                 estimatedExecutionFeeDOT: 306833n,
                 estimatedDeliveryFeeDOT: 307250000n,
             },
-            "3369": {
-                parachainId: 3369,
+            polkadot_3369: {
+                id: 3369,
+                kind: "polkadot",
+                key: "polkadot_3369",
                 features: {
                     hasPalletXcm: true,
                     hasDryRunApi: true,

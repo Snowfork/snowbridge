@@ -57,7 +57,7 @@ export const transferForKusama = async (
         tokenAddress = "0x0000000000000000000000000000000000000000"
     } else {
         // look for Ethereum assets
-        const assets = registry.ethereumChains[registry.ethChainId].assets
+        const assets = registry.ethereumChains[`ethereum_${registry.ethChainId}`].assets
         for (const [token, asset] of Object.entries(assets)) {
             if (asset.symbol === tokenName) {
                 tokenAddress = token
@@ -67,7 +67,7 @@ export const transferForKusama = async (
 
     if (!tokenAddress) {
         // look for Parachain assets
-        const assets = registry.parachains[registry.assetHubParaId].assets
+        const assets = registry.parachains[`polkadot_${registry.assetHubParaId}`].assets
         for (const [token, asset] of Object.entries(assets)) {
             if (asset.symbol === tokenName) {
                 tokenAddress = token

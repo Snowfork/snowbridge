@@ -35,7 +35,7 @@ export const transferToPolkadot = async (
 
     console.log("eth", ETHEREUM_ACCOUNT_PUBLIC, "sub", POLKADOT_ACCOUNT_PUBLIC)
 
-    const assets = registry.ethereumChains[l2ChainId].assets
+    const assets = registry.ethereumChains[`ethereum_l2_${l2ChainId}`].assets
     const TOKEN_CONTRACT = Object.keys(assets)
         .map((t) => assets[t])
         .find((asset) => asset.symbol.toLowerCase().startsWith(symbol.toLowerCase()))?.token

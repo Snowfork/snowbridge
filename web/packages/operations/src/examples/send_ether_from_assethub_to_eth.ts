@@ -69,7 +69,7 @@ import { bridgeInfoFor } from "@snowbridge/registry"
         formatUnits(feePayment.partialFee, transfer.computed.sourceParachain.info.tokenDecimals),
     )
     console.log(
-        `delivery fee (${registry.parachains[registry.assetHubParaId].info.tokenSymbols}): `,
+        `delivery fee (${registry.parachains[`polkadot_${registry.assetHubParaId}`].info.tokenSymbols}): `,
         formatUnits(fee.totalFeeInDot, transfer.computed.sourceParachain.info.tokenDecimals),
     )
 

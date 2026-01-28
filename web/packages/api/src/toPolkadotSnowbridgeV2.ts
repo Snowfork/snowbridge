@@ -133,7 +133,7 @@ export function createL2TransferImplementation(
     registry: AssetRegistry,
     l2TokenAddress: string,
 ): L2TransferInterface {
-    const assets = registry.ethereumChains[l2ChainId].assets
+    const assets = registry.ethereumChains[`ethereum_l2_${l2ChainId}`].assets
     const tokenMetadata = assets[l2TokenAddress]
     if (!tokenMetadata) {
         throw Error(`No token ${l2TokenAddress} registered on ethereum chain ${l2ChainId}.`)
@@ -150,16 +150,20 @@ export function createL2TransferImplementation(
 
 function resolveInputs(registry: AssetRegistry, tokenAddress: string, destinationParaId: number) {
     const tokenErcMetadata =
-        registry.ethereumChains[registry.ethChainId.toString()].assets[tokenAddress.toLowerCase()]
+        registry.ethereumChains[`ethereum_${registry.ethChainId}`].assets[
+            tokenAddress.toLowerCase()
+        ]
     if (!tokenErcMetadata) {
         throw Error(`No token ${tokenAddress} registered on ethereum chain ${registry.ethChainId}.`)
     }
-    const destParachain = registry.parachains[destinationParaId.toString()]
+    const destParachain = registry.parachains[`polkadot_${destinationParaId}`]
     if (!destParachain) {
         throw Error(`Could not find ${destinationParaId} in the asset registry.`)
     }
     const ahAssetMetadata =
-        registry.parachains[registry.assetHubParaId].assets[tokenAddress.toLowerCase()]
+        registry.parachains[`polkadot_${registry.assetHubParaId}`].assets[
+            tokenAddress.toLowerCase()
+        ]
     if (!ahAssetMetadata) {
         throw Error(`Token ${tokenAddress} not registered on asset hub.`)
     }
@@ -317,11 +321,14 @@ export async function buildSwapCallData(
     amountOut: bigint,
     amountInMaximum: bigint,
 ): Promise<string> {
-    let tokenIn = registry.ethereumChains?.[l2ChainId]?.assets[l2TokenAddress]?.swapTokenAddress
+    let tokenIn =
+        registry.ethereumChains?.[`ethereum_l2_${l2ChainId}`]?.assets[l2TokenAddress]
+            ?.swapTokenAddress
     if (!tokenIn) {
         throw new Error("Token is not registered on Ethereum")
     }
-    let swapFee = registry.ethereumChains?.[l2ChainId]?.assets[l2TokenAddress]?.swapFee
+    let swapFee =
+        registry.ethereumChains?.[`ethereum_l2_${l2ChainId}`]?.assets[l2TokenAddress]?.swapFee
     let swapCalldata: string
     if (registry.environment === "polkadot_mainnet") {
         const l1SwapRouter = context.l1SwapRouter()

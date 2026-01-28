@@ -1,67 +1,82 @@
 import {
     AssetRegistry,
-    EthereumChain,
-    Parachain,
-    TransferRoute,
-    SourceType,
     TransferLocation,
+    BridgeInfo,
+    Source,
+    ChainKey,
+    ChainKind,
+    ChainId,
 } from "@snowbridge/base-types"
 
-export function getEthereumTransferLocation(
-    registry: AssetRegistry,
-    ethChain: EthereumChain,
-): TransferLocation {
-    if (!ethChain.evmParachainId) {
-        return {
-            id: "ethereum",
-            name: "Ethereum",
-            type: "ethereum",
-            key: ethChain.chainId.toString(),
-            ethChain,
+export function getTransferLocation(registry: AssetRegistry, chain: ChainId): TransferLocation {
+    let location: TransferLocation | null = null
+    if (chain.kind === "kusama" && registry.kusama) {
+        const parachain = registry.kusama.parachains[`${chain.kind}_${chain.id}`]
+        location = {
+            id: parachain.id,
+            kind: parachain.kind,
+            name: parachain.info.name,
+            key: parachain.key,
+            parachain,
         }
-    } else {
-        const evmChain = registry.parachains[ethChain.evmParachainId]
-        return {
-            id: ethChain.id,
-            name: `${evmChain.info.name} (EVM)`,
-            key: ethChain.chainId.toString(),
-            type: "ethereum",
-            ethChain,
-            parachain: evmChain,
+    } else if (chain.kind === "polkadot") {
+        const parachain = registry.parachains[`${chain.kind}_${chain.id}`]
+        location = {
+            id: parachain.id,
+            kind: parachain.kind,
+            name: parachain.info.name,
+            key: parachain.key,
+            parachain,
+        }
+    } else if (chain.kind === "ethereum") {
+        const ethChain = registry.ethereumChains[`${chain.kind}_${chain.id}`]
+        if (!ethChain.evmParachainId) {
+            location = {
+                kind: ethChain.kind,
+                id: ethChain.id,
+                key: ethChain.key,
+                name: "Ethereum",
+                ethChain,
+            }
+        } else {
+            const evmChain = registry.parachains[`polkadot_${ethChain.evmParachainId}`]
+            location = {
+                kind: ethChain.kind,
+                id: ethChain.id,
+                key: ethChain.key,
+                name: `${evmChain.info.name} (EVM)`,
+                ethChain,
+                parachain: evmChain,
+            }
         }
     }
+
+    if (location === null) throw Error(`Unknown ${chain.kind} chain ${chain.id}.`)
+
+    return location
 }
 
-export function getSubstrateTransferLocation(parachain: Parachain): TransferLocation {
-    return {
-        id: parachain.info.specName,
-        name: parachain.info.name,
-        key: parachain.parachainId.toString(),
-        type: "substrate",
-        parachain,
+export function getTransferLocations(info: BridgeInfo): Source[] {
+    let sources: Source[] = []
+    for (const route of info.routes) {
+        let source = sources.find((s) => s.id === route.from.id && s.kind === route.from.kind)
+        if (!source) {
+            source = {
+                key: `${route.from.kind}_${route.from.id}`,
+                ...route.from,
+                destinations: {},
+            }
+            sources.push(source)
+        }
+        const destId: ChainKey<ChainKind> = `${route.from.kind}_${route.from.id}`
+        let destination = source.destinations[destId]
+        if (!destination) {
+            destination = {
+                key: destId,
+                ...route.to,
+                assets: [...route.assets],
+            }
+        }
     }
-}
-
-export function getTransferLocation(
-    registry: AssetRegistry,
-    sourceType: string,
-    sourceKey: string,
-): TransferLocation {
-    if (sourceType === "ethereum") {
-        return getEthereumTransferLocation(registry, registry.ethereumChains[sourceKey])
-    } else {
-        return getSubstrateTransferLocation(registry.parachains[sourceKey])
-    }
-}
-
-export function getTransferLocationKusama(
-    registry: AssetRegistry,
-    network: string,
-    parachainId: string,
-): TransferLocation {
-    if (network === "kusama" && registry.kusama) {
-        return getSubstrateTransferLocation(registry.kusama?.parachains[parachainId])
-    } else {
-        return getSubstrateTransferLocation(registry.parachains[parachainId])
-    }
+    return sources
 }

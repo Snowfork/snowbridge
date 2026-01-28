@@ -56,7 +56,9 @@ export class PNAToAH implements TransferInterface {
                 : context
 
         const ahAssetMetadata =
-            registry.parachains[registry.assetHubParaId].assets[tokenAddress.toLowerCase()]
+            registry.parachains[`polkadot_${registry.assetHubParaId}`].assets[
+                tokenAddress.toLowerCase()
+            ]
         if (!ahAssetMetadata) {
             throw Error(`Token ${tokenAddress} not registered on asset hub.`)
         }
@@ -320,7 +322,7 @@ export class PNAToAH implements TransferInterface {
         }
 
         // Check if asset can be received on asset hub (dry run)
-        const ahParachain = registry.parachains[registry.assetHubParaId]
+        const ahParachain = registry.parachains[`polkadot_${registry.assetHubParaId}`]
         const assetHubImpl = await paraImplementation(assetHub)
         let dryRunAhSuccess, assetHubDryRunError
         if (!ahParachain.features.hasDryRunApi) {

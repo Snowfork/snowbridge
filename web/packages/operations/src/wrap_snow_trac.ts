@@ -25,10 +25,10 @@ const wrapSnowTRAC = async () => {
 
     const neuroWebParaId = 2043
 
-    if (!registry.parachains[neuroWebParaId]) {
+    if (!registry.parachains[`polkadot_${neuroWebParaId}`]) {
         throw Error("Neuroweb parachain config not set in registry")
     }
-    const parachainInfo = registry.parachains[neuroWebParaId].info
+    const parachainInfo = registry.parachains[`polkadot_${neuroWebParaId}`].info
 
     console.log("Wrap SnowTRAC to TRAC")
     {
