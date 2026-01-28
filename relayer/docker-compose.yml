@@ -79,6 +79,39 @@ services:
       beacon-state-service:
         condition: service_healthy
 
+  execution-v1:
+    image: ghcr.io/snowfork/snowbridge-relay
+    platform: linux/amd64
+    command: >
+      run execution-v1
+      --config /config/execution-v1.json
+      --substrate.private-key-id ${EXECUTION_V1_RELAY_SUBSTRATE_KEY_ID}
+    volumes:
+      - ./config/docker:/config
+    environment:
+      - AWS_REGION=${AWS_REGION}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - BEACON_ENDPOINT=${BEACON_ENDPOINT}
+      - ETHEREUM_ENDPOINT=${ETHEREUM_ENDPOINT}
+      - BRIDGEHUB_ENDPOINT=${BRIDGEHUB_ENDPOINT}
+      - FORK_DENEB=${FORK_DENEB}
+      - FORK_ELECTRA=${FORK_ELECTRA}
+      - FORK_FULU=${FORK_FULU}
+      - GATEWAY_CONTRACT=${GATEWAY_CONTRACT}
+      - CHANNEL_ID=${CHANNEL_ID}
+      - SS58_PREFIX=${SS58_PREFIX:-0}
+      - SCHEDULE_ID=${SCHEDULE_ID:-0}
+      - TOTAL_RELAYER_COUNT=${TOTAL_RELAYER_COUNT:-1}
+      - SLEEP_INTERVAL=${SLEEP_INTERVAL:-45}
+      - MAX_WATCHED_EXTRINSICS=${MAX_WATCHED_EXTRINSICS:-200}
+      - CHAINALYSIS_API_KEY=${CHAINALYSIS_API_KEY}
+      - OFAC_ENABLED=${OFAC_ENABLED:-false}
+    restart: on-failure
+    depends_on:
+      beacon-state-service:
+        condition: service_healthy
+
   beefy:
     image: ghcr.io/snowfork/snowbridge-relay
     platform: linux/amd64

@@ -187,15 +187,3 @@ func ByteArrayToPublicKeyArray(pubkeys [][]byte) ([][48]byte, error) {
 	return result, nil
 }
 
-// HexToH256 converts a hex string (with or without 0x prefix) to types.H256
-func HexToH256(hexStr string) (types.H256, error) {
-	hexStr = strings.TrimPrefix(hexStr, "0x")
-	bytes, err := hex.DecodeString(hexStr)
-	if err != nil {
-		return types.H256{}, fmt.Errorf("decode hex: %w", err)
-	}
-	if len(bytes) != 32 {
-		return types.H256{}, fmt.Errorf("invalid hash length: expected 32, got %d", len(bytes))
-	}
-	return types.NewH256(bytes), nil
-}

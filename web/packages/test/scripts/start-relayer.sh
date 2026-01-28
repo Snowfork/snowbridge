@@ -252,7 +252,7 @@ start_relayer() {
         : >"$output_dir"/beacon-state-service.log
         while :; do
             echo "Starting beacon state service at $(date)"
-            "${relayer_v2}" run beacon-state-service \
+            "${relayer}" run beacon-state-service \
                 --config "$output_dir/beacon-state-service.json" \
                 >>"$output_dir"/beacon-state-service.log 2>&1 || true
             sleep 20
