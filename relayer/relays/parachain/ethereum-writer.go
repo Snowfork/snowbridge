@@ -158,6 +158,18 @@ func (wr *EthereumWriter) WriteChannel(
 	commitmentProof *MessageProof,
 	proof *ProofOutput,
 ) error {
+	nonce := commitmentProof.Message.OriginalMessage.Nonce
+
+	// Step 4 (again): Final check before submission in case another relayer submitted while we were waiting
+	isDispatched, err := wr.gateway.V2IsDispatched(&bind.CallOpts{Context: ctx}, uint64(nonce))
+	if err != nil {
+		return fmt.Errorf("check if nonce %d is dispatched: %w", nonce, err)
+	}
+	if isDispatched {
+		log.WithField("nonce", nonce).Info("message already dispatched by another relayer, skipping")
+		return nil
+	}
+
 	message := commitmentProof.Message.OriginalMessage.IntoInboundMessage()
 
 	convertedHeader, err := convertHeader(proof.Header)
@@ -198,6 +210,11 @@ func (wr *EthereumWriter) WriteChannel(
 		options, message, commitmentProof.Proof.InnerHashes, verificationProof, rewardAddress,
 	)
 	if err != nil {
+		// Check if error is due to message already being dispatched (duplicate)
+		if strings.Contains(err.Error(), "AlreadyDispatched") || strings.Contains(err.Error(), "already dispatched") {
+			log.WithField("nonce", nonce).Info("message was already dispatched (duplicate), skipping")
+			return nil
+		}
 		return fmt.Errorf("send transaction Gateway.submit: %w", err)
 	}
 
