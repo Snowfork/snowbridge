@@ -129,7 +129,7 @@ export async function createTransferEvm(
     if (!sourceParachain.xcDOT) {
         throw Error(`Parachain ${sourceParachainImpl.parachainId} does not support XC20 DOT.`)
     }
-    const ethChain = registry.ethereumChains[sourceParachain.info.evmChainId.toString()]
+    const ethChain = registry.ethereumChains[`ethereum_${sourceParachain.info.evmChainId}`]
     if (!ethChain) {
         throw Error(
             `Cannot find eth chain ${sourceParachain.info.evmChainId} for parachain ${sourceParachainImpl.parachainId}.`,
@@ -256,7 +256,7 @@ export async function validateTransferEvm(
                   gateway: context.gateway(),
                   bridgeHub: await context.bridgeHub(),
                   assetHub: await context.assetHub(),
-                  sourceEthChain: context.ethChain(ethChain?.chainId!),
+                  sourceEthChain: context.ethChain(ethChain?.id!),
               }
             : context
     const { tx } = transfer

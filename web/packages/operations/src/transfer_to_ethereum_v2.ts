@@ -38,7 +38,7 @@ export const transferToEthereum = async (
 
     console.log("eth", ETHEREUM_ACCOUNT_PUBLIC, "sub", POLKADOT_ACCOUNT_PUBLIC)
 
-    const assets = registry.ethereumChains[registry.ethChainId].assets
+    const assets = registry.ethereumChains[`ethereum_${registry.ethChainId}`].assets
     const TOKEN_CONTRACT = Object.keys(assets)
         .map((t) => assets[t])
         .find((asset) => asset.symbol.toLowerCase().startsWith(symbol.toLowerCase()))?.token
@@ -92,7 +92,7 @@ export const transferToEthereum = async (
             ),
         )
         console.log(
-            `delivery fee (${registry.parachains[registry.assetHubParaId].info.tokenSymbols}): `,
+            `delivery fee (${registry.parachains[`polkadot_${registry.assetHubParaId}`].info.tokenSymbols}): `,
             formatUnits(fee.totalFeeInDot, transfer.computed.sourceParachain.info.tokenDecimals),
         )
 

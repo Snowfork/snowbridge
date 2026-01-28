@@ -317,7 +317,7 @@ export class ERC20ToAH implements TransferInterface {
         const assetHubImpl = await paraImplementation(assetHub)
 
         // Check if asset can be received on asset hub (dry run)
-        const ahParachain = registry.parachains[registry.assetHubParaId]
+        const ahParachain = registry.parachains[`polkadot_${registry.assetHubParaId}`]
         let dryRunAhSuccess, assetHubDryRunError
         if (!ahParachain.features.hasDryRunApi) {
             logs.push({

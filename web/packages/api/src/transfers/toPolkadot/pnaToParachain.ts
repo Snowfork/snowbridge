@@ -388,7 +388,7 @@ export class PNAToParachain implements TransferInterface {
         }
 
         // Check if asset can be received on asset hub (dry run)
-        const ahParachain = registry.parachains[registry.assetHubParaId]
+        const ahParachain = registry.parachains[`polkadot_${registry.assetHubParaId}`]
         const assetHubImpl = await paraImplementation(assetHub)
         let dryRunAhSuccess, forwardedDestination, assetHubDryRunError
         if (!ahParachain.features.hasDryRunApi) {

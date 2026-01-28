@@ -19,6 +19,8 @@ import {
     BridgeInfo,
     TransferRoute,
     ChainId,
+    ChainKey,
+    ParachainKind,
 } from "@snowbridge/base-types"
 import { ApiPromise, HttpProvider, WsProvider } from "@polkadot/api"
 import { isFunction } from "@polkadot/util"
@@ -297,10 +299,10 @@ function buildTransferLocations(
     registry: AssetRegistry,
     filter?: (path: Path) => boolean,
 ): TransferRoute[] {
-    const ethChain = registry.ethereumChains[registry.ethChainId]
-    const parachains = Object.keys(registry.parachains)
-        .filter((p) => p !== registry.bridgeHubParaId.toString())
-        .map((p) => registry.parachains[p])
+    const ethChain = registry.ethereumChains[`ethereum_${registry.ethChainId}`]
+    const parachains = Object.values(registry.parachains).filter(
+        (p) => !(p.kind === "polkadot" && p.id === registry.bridgeHubParaId),
+    )
 
     const pathFilter = filter ?? defaultPathFilter(registry.environment)
 
@@ -315,8 +317,8 @@ function buildTransferLocations(
         )
         for (const asset of commonAssets) {
             const p1: Path = {
-                source: { kind: "ethereum", id: ethChain.chainId },
-                destination: { kind: "polkadot", id: parachain.parachainId },
+                source: { kind: ethChain.kind, id: ethChain.id },
+                destination: { kind: parachain.kind, id: parachain.id },
                 asset,
             }
             if (pathFilter(p1)) {
@@ -330,7 +332,10 @@ function buildTransferLocations(
             if (pathFilter(p2)) {
                 locations.push(p2)
             }
-            if (parachain.info.evmChainId && registry.ethereumChains[parachain.info.evmChainId]) {
+            if (
+                parachain.info.evmChainId &&
+                registry.ethereumChains[`ethereum_${parachain.info.evmChainId}`]
+            ) {
                 const p3: Path = {
                     source: {
                         kind: "ethereum",
@@ -347,9 +352,9 @@ function buildTransferLocations(
     }
 
     // Local paths
-    const assetHub = registry.parachains[registry.assetHubParaId]
+    const assetHub = registry.parachains[`polkadot_${registry.assetHubParaId}`]
     for (const parachain of parachains) {
-        if (parachain.parachainId === assetHub.parachainId) continue
+        if (parachain.kind === assetHub.kind && parachain.id === assetHub.id) continue
         const assetHubAssets = Object.keys(assetHub.assets)
         const destinationAssets = Object.keys(parachain.assets)
 
@@ -363,8 +368,8 @@ function buildTransferLocations(
         )
         for (const asset of commonAssets) {
             const p1: Path = {
-                source: { kind: "polkadot", id: assetHub.parachainId },
-                destination: { kind: "polkadot", id: parachain.parachainId },
+                source: { kind: assetHub.kind, id: assetHub.id },
+                destination: { kind: parachain.kind, id: parachain.id },
                 asset,
             }
             if (pathFilter(p1)) {
@@ -518,6 +523,7 @@ async function buildRegistry(environment: Environment): Promise<AssetRegistry> {
                 const para = await indexParachain(
                     accessor,
                     providers[assetHubParaId.toString()].accessor,
+                    "polkadot",
                     ethChainId,
                     parachainId,
                     assetHubParaId,
@@ -528,7 +534,7 @@ async function buildRegistry(environment: Environment): Promise<AssetRegistry> {
                 return { parachainId, para }
             }),
     )) {
-        paras[parachainId.toString()] = para
+        paras[`polkadot_${parachainId}`] = para
     }
 
     // Index Ethereum chain
@@ -549,7 +555,7 @@ async function buildRegistry(environment: Environment): Promise<AssetRegistry> {
             )
         }),
     )) {
-        ethChains[ethChainInfo.chainId.toString()] = ethChainInfo
+        ethChains[ethChainInfo.key] = ethChainInfo
     }
 
     let kusamaConfig: KusamaConfig | undefined
@@ -566,6 +572,7 @@ async function buildRegistry(environment: Environment): Promise<AssetRegistry> {
         const para = await indexParachain(
             accessor,
             providers[assetHubParaId].accessor,
+            "kusama",
             ethChainId,
             accessor.parachainId,
             assetHubParaId,
@@ -574,7 +581,7 @@ async function buildRegistry(environment: Environment): Promise<AssetRegistry> {
         )
 
         const kusamaParas: ParachainMap = {}
-        kusamaParas[para.parachainId] = para
+        kusamaParas[para.key] = para
 
         kusamaConfig = {
             parachains: kusamaParas,
@@ -683,6 +690,7 @@ async function checkSnowbridgeV2Support(
 async function indexParachain(
     parachain: ParaImpl.ParachainBase,
     assetHub: ParaImpl.ParachainBase,
+    kind: ParachainKind,
     ethChainId: number,
     parachainId: number,
     assetHubParaId: number,
@@ -765,7 +773,9 @@ async function indexParachain(
         )
     }
     return {
-        parachainId,
+        id: parachainId,
+        kind,
+        key: `${kind}_${parachainId}`,
         features: {
             hasPalletXcm,
             hasDryRunApi,
@@ -801,7 +811,7 @@ async function indexEthChain(
     const id = networkName !== "unknown" ? networkName : undefined
     if (networkChainId == ethChainId) {
         // Asset Hub and get meta data
-        const assetHub = parachains[assetHubParaId.toString()]
+        const assetHub = parachains[`polkadot_${assetHubParaId}`]
         const gateway = IGateway__factory.connect(gatewayAddress, provider)
 
         const assets: ERC20MetadataMap = {}
@@ -854,9 +864,10 @@ async function indexEthChain(
             )
         }
         return {
-            chainId: networkChainId,
+            kind: "ethereum",
+            id: networkChainId,
             assets,
-            id: id ?? `chain_${networkChainId}`,
+            key: `ethereum_${networkChainId}`,
             baseDeliveryGas: 120_000n,
         }
     } else if (networkChainId in l2Chains) {
@@ -878,14 +889,15 @@ async function indexEthChain(
             swapFee: 0,
         }
         return {
-            chainId: networkChainId,
+            kind: "ethereum_l2",
+            id: networkChainId,
             assets,
-            id: id ?? `l2_${networkChainId}`,
+            key: `ethereum_l2_${networkChainId}`,
         }
     } else {
         let evmParachainChain: Parachain | undefined
         for (const paraId in parachains) {
-            const parachain = parachains[paraId]
+            const parachain = parachains[paraId as ChainKey<"polkadot">]
             if (parachain.info.evmChainId === networkChainId) {
                 evmParachainChain = parachain
                 break
@@ -905,7 +917,7 @@ async function indexEthChain(
             xcTokenMap[token] = xc20
             assets[xc20] = asset
         }
-        const paraId = evmParachainChain.parachainId.toString()
+        const paraId = evmParachainChain.id.toString()
         if (!(paraId in precompiles)) {
             throw Error(
                 `No precompile configured for parachain ${paraId} (ethereum chain ${networkChainId}).`,
@@ -927,13 +939,14 @@ async function indexEthChain(
         assets[evmParachainChain.xcDOT] = xc20DOTAsset
 
         return {
-            chainId: networkChainId,
-            evmParachainId: evmParachainChain.parachainId,
+            kind: "ethereum",
+            id: networkChainId,
+            key: `ethereum_${networkChainId}`,
+            evmParachainId: evmParachainChain.id,
             assets,
             precompile,
             xcDOT: evmParachainChain.xcDOT,
             xcTokenMap,
-            id: id ?? `evm_${evmParachainChain.info.specName}`,
         }
     }
 }

@@ -436,7 +436,7 @@ const registry = {
         },
     ],
     registry: {
-        timestamp: "2026-01-27T01:36:47.791Z",
+        timestamp: "2026-01-28T21:45:54.599Z",
         environment: "polkadot_mainnet",
         ethChainId: 1,
         gatewayAddress: "0x27ca963c279c93801941e1eb8799c23f407d68e7",
@@ -450,7 +450,7 @@ const registry = {
             accountType: "AccountId32",
             name: "Polkadot",
             specName: "polkadot",
-            specVersion: 2000001,
+            specVersion: 2000005,
         },
         bridgeHub: {
             tokenSymbols: "DOT",
@@ -460,11 +460,12 @@ const registry = {
             accountType: "AccountId32",
             name: "Polkadot BridgeHub",
             specName: "bridge-hub-polkadot",
-            specVersion: 2000003,
+            specVersion: 2000005,
         },
         ethereumChains: {
-            "1": {
-                chainId: 1,
+            ethereum_1: {
+                kind: "ethereum",
+                id: 1,
                 assets: {
                     "0x9d39a5de30e57443bff2a8307a4256c8797a3497": {
                         token: "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
@@ -739,11 +740,13 @@ const registry = {
                         deliveryGas: 80000n,
                     },
                 },
-                id: "mainnet",
+                key: "ethereum_1",
                 baseDeliveryGas: 120000n,
             },
-            "1284": {
-                chainId: 1284,
+            ethereum_1284: {
+                kind: "ethereum",
+                id: 1284,
+                key: "ethereum_1284",
                 evmParachainId: 2004,
                 assets: {
                     "0xffffffff86829afe1521ad2296719df3ace8ded7": {
@@ -813,10 +816,10 @@ const registry = {
                     "0xdac17f958d2ee523a2206206994597c13d831ec7":
                         "0xffffffff7bc304425217b49e9598415c514ae81b",
                 },
-                id: "evm_moonbeam",
             },
-            "8453": {
-                chainId: 8453,
+            ethereum_l2_8453: {
+                kind: "ethereum_l2",
+                id: 8453,
                 assets: {
                     "0x4200000000000000000000000000000000000006": {
                         token: "0x4200000000000000000000000000000000000006",
@@ -843,12 +846,14 @@ const registry = {
                         swapFee: 0,
                     },
                 },
-                id: "base",
+                key: "ethereum_l2_8453",
             },
         },
         parachains: {
-            "1000": {
-                parachainId: 1000,
+            polkadot_1000: {
+                id: 1000,
+                kind: "polkadot",
+                key: "polkadot_1000",
                 features: {
                     hasPalletXcm: true,
                     hasDryRunApi: true,
@@ -869,7 +874,7 @@ const registry = {
                     accountType: "AccountId32",
                     name: "Polkadot Asset Hub",
                     specName: "statemint",
-                    specVersion: 2000003,
+                    specVersion: 2000005,
                 },
                 assets: {
                     "0x9d39a5de30e57443bff2a8307a4256c8797a3497": {
@@ -1469,8 +1474,10 @@ const registry = {
                 estimatedExecutionFeeDOT: 0n,
                 estimatedDeliveryFeeDOT: 0n,
             },
-            "2000": {
-                parachainId: 2000,
+            polkadot_2000: {
+                id: 2000,
+                kind: "polkadot",
+                key: "polkadot_2000",
                 features: {
                     hasPalletXcm: true,
                     hasDryRunApi: true,
@@ -1506,8 +1513,10 @@ const registry = {
                 estimatedExecutionFeeDOT: 300000000n,
                 estimatedDeliveryFeeDOT: 307100000n,
             },
-            "2004": {
-                parachainId: 2004,
+            polkadot_2004: {
+                id: 2004,
+                kind: "polkadot",
+                key: "polkadot_2004",
                 features: {
                     hasPalletXcm: true,
                     hasDryRunApi: true,
@@ -1600,8 +1609,10 @@ const registry = {
                 estimatedExecutionFeeDOT: 105696134n,
                 estimatedDeliveryFeeDOT: 306500000n,
             },
-            "2030": {
-                parachainId: 2030,
+            polkadot_2030: {
+                id: 2030,
+                kind: "polkadot",
+                key: "polkadot_2030",
                 features: {
                     hasPalletXcm: true,
                     hasDryRunApi: true,
@@ -1643,11 +1654,13 @@ const registry = {
                         isSufficient: false,
                     },
                 },
-                estimatedExecutionFeeDOT: 94930073n,
+                estimatedExecutionFeeDOT: 90615265n,
                 estimatedDeliveryFeeDOT: 307100000n,
             },
-            "2034": {
-                parachainId: 2034,
+            polkadot_2034: {
+                id: 2034,
+                kind: "polkadot",
+                key: "polkadot_2034",
                 features: {
                     hasPalletXcm: true,
                     hasDryRunApi: true,
@@ -1825,11 +1838,13 @@ const registry = {
                         isSufficient: true,
                     },
                 },
-                estimatedExecutionFeeDOT: 1649508n,
+                estimatedExecutionFeeDOT: 1607624n,
                 estimatedDeliveryFeeDOT: 307100000n,
             },
-            "2043": {
-                parachainId: 2043,
+            polkadot_2043: {
+                id: 2043,
+                kind: "polkadot",
+                key: "polkadot_2043",
                 features: {
                     hasPalletXcm: true,
                     hasDryRunApi: true,
@@ -1865,8 +1880,10 @@ const registry = {
                 estimatedExecutionFeeDOT: 306833n,
                 estimatedDeliveryFeeDOT: 307100000n,
             },
-            "3369": {
-                parachainId: 3369,
+            polkadot_3369: {
+                id: 3369,
+                kind: "polkadot",
+                key: "polkadot_3369",
                 features: {
                     hasPalletXcm: true,
                     hasDryRunApi: true,
@@ -1905,8 +1922,10 @@ const registry = {
         },
         kusama: {
             parachains: {
-                "1000": {
-                    parachainId: 1000,
+                kusama_1000: {
+                    id: 1000,
+                    kind: "kusama",
+                    key: "kusama_1000",
                     features: {
                         hasPalletXcm: true,
                         hasDryRunApi: true,

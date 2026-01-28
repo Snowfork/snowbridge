@@ -77,21 +77,20 @@ function resolveInputs(
     sourceParaId: number,
     destParaId: number,
 ) {
-    const sourceParachain = registry.parachains[sourceParaId.toString()]
+    const sourceParachain = registry.parachains[`polkadot_${sourceParaId}`]
     if (!sourceParachain) {
         throw Error(`Could not find ${sourceParaId} in the asset registry.`)
     }
-    const destParachain = registry.kusama?.parachains[destParaId.toString()]
+    const destParachain = registry.kusama?.parachains[`kusama_${destParaId}`]
     if (!destParachain) {
         throw Error(`Could not find ${destParaId} in the asset registry.`)
     }
 
-    const sourceAssetMetadata = registry.parachains[sourceParaId].assets[tokenAddress.toLowerCase()]
+    const sourceAssetMetadata = sourceParachain.assets[tokenAddress.toLowerCase()]
     if (!sourceAssetMetadata) {
         throw Error(`Token ${tokenAddress} not registered on source asset hub.`)
     }
-    const destAssetMetadata =
-        registry.kusama?.parachains[destParaId].assets[tokenAddress.toLowerCase()]
+    const destAssetMetadata = destParachain.assets[tokenAddress.toLowerCase()]
     if (!destAssetMetadata) {
         throw Error(`Token ${tokenAddress} not registered on destination asset hub.`)
     }
@@ -216,13 +215,13 @@ export async function getDeliveryFee(
     if (direction == Direction.ToPolkadot) {
         feeAssetOnDest = ksmLocationOnPolkadotAssetHub
         minBalanceFeeDest = getDestFeeAssetMinimumBalance(
-            registry.parachains[registry.assetHubParaId].assets,
+            registry.parachains[`polkadot_${registry.assetHubParaId}`].assets,
             "kusama",
         )
     } else {
         feeAssetOnDest = dotLocationOnKusamaAssetHub
         minBalanceFeeDest = getDestFeeAssetMinimumBalance(
-            registry.kusama.parachains[registry.kusama.assetHubParaId].assets,
+            registry.kusama.parachains[`kusama_${registry.kusama.assetHubParaId}`].assets,
             "polkadot",
         )
     }
@@ -816,13 +815,15 @@ function getTokenLocation(registry: AssetRegistry, direction: Direction, tokenAd
     let location
     if (direction == Direction.ToPolkadot) {
         location =
-            registry.kusama?.parachains[registry.kusama?.assetHubParaId].assets[tokenAddress]
-                .location
+            registry.kusama?.parachains[`kusama_${registry.kusama?.assetHubParaId}`].assets[
+                tokenAddress
+            ].location
         if (!location) {
             location = erc20Location(registry.ethChainId, tokenAddress)
         }
     } else {
-        location = registry.parachains[registry.assetHubParaId].assets[tokenAddress].location
+        location =
+            registry.parachains[`polkadot_${registry.assetHubParaId}`].assets[tokenAddress].location
         if (!location) {
             location = erc20Location(registry.ethChainId, tokenAddress)
         }
@@ -849,9 +850,11 @@ function nativeFeeAsset(direction: Direction) {
 
 function getTransferAsset(direction: Direction, tokenAddress: string, registry: AssetRegistry) {
     if (direction == Direction.ToPolkadot) {
-        return registry.kusama?.parachains[registry.kusama?.assetHubParaId].assets[tokenAddress]
+        return registry.kusama?.parachains[`kusama_${registry.kusama?.assetHubParaId}`].assets[
+            tokenAddress
+        ]
     } else {
-        return registry.parachains[registry.assetHubParaId].assets[tokenAddress]
+        return registry.parachains[`polkadot_${registry.assetHubParaId}`].assets[tokenAddress]
     }
 }
 

@@ -227,7 +227,7 @@ export class RegisterToken implements RegistrationInterface {
         }
 
         // Dry run on AssetHub
-        const ahParachain = registry.parachains[registry.assetHubParaId]
+        const ahParachain = registry.parachains[`polkadot_${registry.assetHubParaId}`]
         let assetHubDryRunError: string | undefined
         if (!ahParachain.features.hasDryRunApi) {
             logs.push({

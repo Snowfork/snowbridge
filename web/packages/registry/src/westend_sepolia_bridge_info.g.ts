@@ -85,7 +85,7 @@ const registry = {
         },
     ],
     registry: {
-        timestamp: "2026-01-27T01:37:29.572Z",
+        timestamp: "2026-01-28T21:33:34.219Z",
         environment: "westend_sepolia",
         ethChainId: 11155111,
         gatewayAddress: "0x9ed8b47bc3417e3bd0507adc06e56e2fa360a4e9",
@@ -112,8 +112,9 @@ const registry = {
             specVersion: 1021000,
         },
         ethereumChains: {
-            "84532": {
-                chainId: 84532,
+            ethereum_l2_84532: {
+                kind: "ethereum_l2",
+                id: 84532,
                 assets: {
                     "0x4200000000000000000000000000000000000006": {
                         token: "0x4200000000000000000000000000000000000006",
@@ -140,10 +141,11 @@ const registry = {
                         swapFee: 0,
                     },
                 },
-                id: "base-sepolia",
+                key: "ethereum_l2_84532",
             },
-            "11155111": {
-                chainId: 11155111,
+            ethereum_11155111: {
+                kind: "ethereum",
+                id: 11155111,
                 assets: {
                     "0x0000000000000000000000000000000000000000": {
                         token: "0x0000000000000000000000000000000000000000",
@@ -200,13 +202,15 @@ const registry = {
                         deliveryGas: 80000n,
                     },
                 },
-                id: "sepolia",
+                key: "ethereum_11155111",
                 baseDeliveryGas: 120000n,
             },
         },
         parachains: {
-            "1000": {
-                parachainId: 1000,
+            polkadot_1000: {
+                id: 1000,
+                kind: "polkadot",
+                key: "polkadot_1000",
                 features: {
                     hasPalletXcm: true,
                     hasDryRunApi: true,

@@ -382,7 +382,7 @@ export async function validateTransfer(
     }
 
     // Check if asset can be received on asset hub (dry run)
-    const ahParachain = registry.parachains[registry.assetHubParaId]
+    const ahParachain = registry.parachains[`polkadot_${registry.assetHubParaId}`]
     let dryRunAhSuccess, forwardedDestination, assetHubDryRunError
     if (!ahParachain.features.hasDryRunApi) {
         logs.push({
@@ -625,16 +625,20 @@ export function resolveInputs(
     destinationParaId: number,
 ) {
     const tokenErcMetadata =
-        registry.ethereumChains[registry.ethChainId.toString()].assets[tokenAddress.toLowerCase()]
+        registry.ethereumChains[`ethereum_${registry.ethChainId}`].assets[
+            tokenAddress.toLowerCase()
+        ]
     if (!tokenErcMetadata) {
         throw Error(`No token ${tokenAddress} registered on ethereum chain ${registry.ethChainId}.`)
     }
-    const destParachain = registry.parachains[destinationParaId.toString()]
+    const destParachain = registry.parachains[`polkadot_${destinationParaId}`]
     if (!destParachain) {
         throw Error(`Could not find ${destinationParaId} in the asset registry.`)
     }
     const ahAssetMetadata =
-        registry.parachains[registry.assetHubParaId].assets[tokenAddress.toLowerCase()]
+        registry.parachains[`polkadot_${registry.assetHubParaId}`].assets[
+            tokenAddress.toLowerCase()
+        ]
     if (!ahAssetMetadata) {
         throw Error(`Token ${tokenAddress} not registered on asset hub.`)
     }

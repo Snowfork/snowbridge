@@ -245,7 +245,7 @@ export const estimateEthereumExecutionFee = async (
     const { tokenErcMetadata } = resolveInputs(registry, tokenAddress, sourceParaId)
 
     // Calculate execution cost on ethereum
-    let ethereumChain = registry.ethereumChains[registry.ethChainId.toString()]
+    let ethereumChain = registry.ethereumChains[`ethereum_${registry.ethChainId}`]
     let feeData = await ethereum.getFeeData()
     let ethereumExecutionFee =
         (feeData.gasPrice ?? 2_000_000_000n) *
@@ -392,7 +392,7 @@ export const estimateFeesFromParachains = async (
         contractCall?: ContractCall
     },
 ): Promise<DeliveryFee> => {
-    const sourceParachain = registry.parachains[sourceParaId.toString()]
+    const sourceParachain = registry.parachains[`polkadot_${sourceParaId}`]
     const sourceParachainImpl = await paraImplementation(await context.parachain(sourceParaId))
 
     const assetHub = await context.parachain(registry.assetHubParaId)

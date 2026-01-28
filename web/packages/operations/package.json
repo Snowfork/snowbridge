@@ -98,6 +98,7 @@
     "@polkadot/util": "13.5.6",
     "@polkadot/util-crypto": "13.5.6",
     "@snowbridge/api": "workspace:*",
+    "@snowbridge/base-types": "workspace:*",
     "@snowbridge/contract-types": "workspace:*",
     "@snowbridge/registry": "workspace:*",
     "@types/pino": "^7.0.5",

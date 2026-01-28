@@ -8,6 +8,10 @@ export type AccountType = "AccountId20" | "AccountId32";
 
 export type XcmVersion = "v4" | "v5";
 
+export type EthereumKind = "ethereum" | "ethereum_l2";
+export type ParachainKind = "polkadot" | "kusama";
+export type ChainKind = EthereumKind | ParachainKind;
+
 export interface XC20TokenMap {
   [xc20: string]: string;
 }
@@ -30,9 +34,9 @@ export interface ERC20MetadataMap {
   [token: string]: ERC20Metadata;
 }
 
-export type EthereumChain = {
-  chainId: number;
-  id: string;
+export type EthereumChain = ChainId & {
+  kind: EthereumKind;
+  key: `${EthereumKind}_${number}`;
   evmParachainId?: number;
   assets: ERC20MetadataMap;
   precompile?: `0x${string}`;
@@ -80,8 +84,9 @@ export interface AssetMap {
   [token: string]: Asset;
 }
 
-export type Parachain = {
-  parachainId: number;
+export type Parachain = ChainId & {
+  kind: ParachainKind;
+  key: `${ParachainKind}_${number}`;
   info: ChainProperties;
   features: {
     hasPalletXcm: boolean;
@@ -102,9 +107,12 @@ export type Parachain = {
   xcDOT?: string;
 };
 
-export interface ParachainMap {
-  [paraId: string]: Parachain;
-}
+export type EthereumChainMap = {
+  [key: ChainKey<EthereumKind>]: EthereumChain;
+};
+export type ParachainMap = {
+  [key: ChainKey<ParachainKind>]: Parachain;
+};
 
 export type KusamaConfig = {
   assetHubParaId: number;
@@ -154,9 +162,6 @@ export type Environment = {
   };
 };
 
-export type SourceType = "substrate" | "ethereum";
-
-export type ChainKind = "ethereum" | "polkadot" | "ethereum_l2" | "kusama";
 export type ChainId = {
   kind: ChainKind;
   /** Ethereum chain id or polkadot parachain id.
@@ -170,20 +175,18 @@ export type TransferRoute = {
   assets: readonly string[];
 };
 
-export type Source = {
-  type: SourceType;
-  id: string;
-  key: string;
+export type ChainKey<T extends string> = `${T}_${number}`;
+
+export type Source = ChainId & {
+  key: ChainKey<ChainKind>;
   destinations: {
-    [destination: string]: { type: SourceType; assets: readonly string[] };
+    [id: string]: ChainId & { key: ChainKey<ChainKind>; assets: string[] };
   };
 };
 
-export type TransferLocation = {
-  id: string;
+export type TransferLocation = ChainId & {
   name: string;
-  key: string;
-  type: SourceType;
+  key: ChainKey<ChainKind>;
   parachain?: Parachain;
   ethChain?: EthereumChain;
 };
@@ -212,9 +215,7 @@ export type AssetRegistry = {
   bridgeHubParaId: number;
   relaychain: ChainProperties;
   bridgeHub: ChainProperties;
-  ethereumChains: {
-    [chainId: string]: EthereumChain;
-  };
+  ethereumChains: EthereumChainMap;
   parachains: ParachainMap;
   kusama?: KusamaConfig;
 };
