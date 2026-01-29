@@ -496,9 +496,8 @@ contract GatewayV2Test is Test {
 
         vm.expectRevert();
         hoax(user1);
-        IGatewayV2(payable(address(gateway))).v2_sendMessage{value: 1 ether}(
-            "", assets, "", 0.1 ether, 0.4 ether
-        );
+        IGatewayV2(payable(address(gateway)))
+        .v2_sendMessage{value: 1 ether}("", assets, "", 0.1 ether, 0.4 ether);
 
         assertEq(feeToken.balanceOf(assetHubAgent), 0);
     }
@@ -1104,11 +1103,14 @@ contract GatewayV2Test is Test {
 
     function test_onlySelf_enforced_on_external_calls() public {
         MockGateway gw = MockGateway(address(gateway));
-        // calling the handler externally should revert with Unauthorized
+        // calling the dispatch entrypoint externally should revert with Unauthorized
         SetOperatingModeParams memory p = SetOperatingModeParams({mode: OperatingMode.Normal});
         bytes memory payload = abi.encode(p);
+        CommandV2 memory cmd = CommandV2({
+            kind: CommandKind.SetOperatingMode, gas: uint64(200_000), payload: payload
+        });
         vm.expectRevert(IGatewayBase.Unauthorized.selector);
-        gw.v2_handleSetOperatingMode(payload);
+        gw.v2_dispatchCommand(cmd, bytes32(0));
     }
 
     function test_call_handleSetOperatingMode_via_self_changes_mode() public {
@@ -1125,7 +1127,7 @@ contract GatewayV2Test is Test {
     function test_dispatch_unknown_command_returns_false() public {
         MockGateway gw = MockGateway(address(gateway));
         CommandV2 memory cmd = CommandV2({kind: 0xFF, gas: 100_000, payload: ""});
-        bool ok = gw.exposed_dispatchCommand(cmd, bytes32(0));
+        bool ok = gw.callDispatch(cmd, bytes32(0));
         assertFalse(ok, "unknown command must return false");
     }
 

@@ -209,9 +209,9 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
                 success = false;
             }
         } else if (message.command == CommandV1.MintForeignToken) {
-            try Gateway(this).v1_handleMintForeignToken{gas: maxDispatchGas}(
-                message.channelID, message.params
-            ) {} catch {
+            try Gateway(this)
+            .v1_handleMintForeignToken{gas: maxDispatchGas}(message.channelID, message.params) {}
+            catch {
                 success = false;
             }
         } else {
@@ -432,7 +432,18 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         }
 
         // Dispatch the message payload. The boolean returned indicates whether all commands succeeded.
-        bool success = v2_dispatch(message);
+        bool success = false;
+        try Gateway(this).v2_dispatch(message) returns (bool _success) {
+            success = _success;
+        } catch (bytes memory reason) {
+            // If insufficient gas limit, rethrow the error to stop processing
+            // Otherwise, silently ignore command failures
+            if (reason.length >= 4 && bytes4(reason) == IGatewayV2.InsufficientGasLimit.selector) {
+                assembly {
+                    revert(add(reason, 32), mload(reason))
+                }
+            }
+        }
 
         // Emit the event with a success value "true" if all commands successfully executed, otherwise "false"
         // if all or some of the commands failed.
@@ -481,32 +492,32 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
      */
 
     //  Perform an upgrade of the gateway
-    function v2_handleUpgrade(bytes calldata data) external onlySelf {
+    function _handleUpgrade(bytes calldata data) internal {
         HandlersV2.upgrade(data);
     }
 
     // Set the operating mode of the gateway
-    function v2_handleSetOperatingMode(bytes calldata data) external onlySelf {
+    function _handleSetOperatingMode(bytes calldata data) internal {
         HandlersV2.setOperatingMode(data);
     }
 
     // Unlock Native token
-    function v2_handleUnlockNativeToken(bytes calldata data) external onlySelf {
+    function _handleUnlockNativeToken(bytes calldata data) internal {
         HandlersV2.unlockNativeToken(AGENT_EXECUTOR, data);
     }
 
     // Register a new fungible Polkadot token for an agent
-    function v2_handleRegisterForeignToken(bytes calldata data) external onlySelf {
+    function _handleRegisterForeignToken(bytes calldata data) internal {
         HandlersV2.registerForeignToken(data);
     }
 
     // Mint foreign token from polkadot
-    function v2_handleMintForeignToken(bytes calldata data) external onlySelf {
+    function _handleMintForeignToken(bytes calldata data) internal {
         HandlersV2.mintForeignToken(data);
     }
 
     // Call an arbitrary contract function
-    function v2_handleCallContract(bytes32 origin, bytes calldata data) external onlySelf {
+    function _handleCallContract(bytes32 origin, bytes calldata data) internal {
         HandlersV2.callContract(origin, AGENT_EXECUTOR, data);
     }
 
@@ -515,65 +526,48 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
      */
 
     // Internal helper to dispatch a single command
-    function _dispatchCommand(CommandV2 calldata command, bytes32 origin)
-        internal
-        returns (bool)
-    {
-        // check that there is enough gas available to forward to the command handler
-        if (gasleft() * 63 / 64 < command.gas + DISPATCH_OVERHEAD_GAS_V2) {
-            revert IGatewayV2.InsufficientGasLimit();
-        }
-
+    function _dispatchCommand(CommandV2 calldata command, bytes32 origin) internal {
         if (command.kind == CommandKind.Upgrade) {
-            try Gateway(this).v2_handleUpgrade{gas: command.gas}(command.payload) {}
-            catch {
-                return false;
-            }
+            _handleUpgrade(command.payload);
         } else if (command.kind == CommandKind.SetOperatingMode) {
-            try Gateway(this).v2_handleSetOperatingMode{gas: command.gas}(command.payload) {}
-            catch {
-                return false;
-            }
+            _handleSetOperatingMode(command.payload);
         } else if (command.kind == CommandKind.UnlockNativeToken) {
-            try Gateway(this).v2_handleUnlockNativeToken{gas: command.gas}(command.payload) {}
-            catch {
-                return false;
-            }
+            _handleUnlockNativeToken(command.payload);
         } else if (command.kind == CommandKind.RegisterForeignToken) {
-            try Gateway(this).v2_handleRegisterForeignToken{gas: command.gas}(command.payload) {}
-            catch {
-                return false;
-            }
+            _handleRegisterForeignToken(command.payload);
         } else if (command.kind == CommandKind.MintForeignToken) {
-            try Gateway(this).v2_handleMintForeignToken{gas: command.gas}(command.payload) {}
-            catch {
-                return false;
-            }
+            _handleMintForeignToken(command.payload);
         } else if (command.kind == CommandKind.CallContract) {
-            try Gateway(this).v2_handleCallContract{gas: command.gas}(origin, command.payload) {}
-            catch {
-                return false;
-            }
+            _handleCallContract(origin, command.payload);
         } else {
-            // Unknown command
-            return false;
+            revert IGatewayV2.InvalidCommand();
         }
-        return true;
     }
 
     // Dispatch all the commands within the batch of commands in the message payload. Each command is processed
-    // independently, such that failures emit a `CommandFailed` event without stopping execution of subsequent commands.
-    function v2_dispatch(InboundMessageV2 calldata message) internal returns (bool) {
-        bool allCommandsSucceeded = true;
-
+    // independently, such that failures emit a `CommandFailed` event without stopping execution of
+    // subsequent commands. Returns true if all commands executed successfully, false if any command failed.
+    function v2_dispatch(InboundMessageV2 calldata message) external onlySelf returns (bool) {
+        bool success = true;
         for (uint256 i = 0; i < message.commands.length; i++) {
-            if (!_dispatchCommand(message.commands[i], message.origin)) {
+            CommandV2 calldata command = message.commands[i];
+            // check that there is enough gas available to forward to the command handler
+            uint256 requiredGas = command.gas + DISPATCH_OVERHEAD_GAS_V2;
+            if (gasleft() * 63 / 64 < requiredGas) {
+                revert IGatewayV2.InsufficientGasLimit();
+            }
+            try this.v2_dispatchCommand{gas: requiredGas}(command, message.origin) {}
+            catch (bytes memory reason) {
                 emit IGatewayV2.CommandFailed(message.nonce, i);
-                allCommandsSucceeded = false;
+                success = false;
             }
         }
+        return success;
+    }
 
-        return allCommandsSucceeded;
+    // Helper function to dispatch a single command with try-catch for error handling
+    function v2_dispatchCommand(CommandV2 calldata command, bytes32 origin) external onlySelf {
+        _dispatchCommand(command, origin);
     }
 
     /**
