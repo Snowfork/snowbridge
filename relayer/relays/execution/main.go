@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/big"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -121,10 +122,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	}
 
 	log.WithFields(log.Fields{
-		"relayerId":     r.config.Schedule.ID,
-		"relayerCount":  r.config.Schedule.TotalRelayerCount,
-		"sleepInterval": r.config.Schedule.SleepInterval,
-		"chainId":       r.chainID,
+		"chainId": r.chainID,
 	}).Info("relayer config")
 
 	for {
@@ -179,13 +177,28 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 						log.WithField("nonce", ev.Nonce).Info("beacon header not finalized yet")
 						continue
 					} else if err != nil {
-						log.WithFields(log.Fields{"nonce": ev.Nonce, "error": err}).Warn("submit event: message was not processed")
-						continue
+						return fmt.Errorf("The submit call failed and is not retryable: %w", err)
 					}
 				}
 			}
 		}
 	}
+}
+
+// ErrDuplicateMessage is returned when a message has already been processed
+var ErrDuplicateMessage = errors.New("message already processed")
+
+// isDuplicateError checks if an error indicates the message was already processed
+func isDuplicateError(err error) bool {
+	if err == nil {
+		return false
+	}
+	errStr := err.Error()
+	// Check for common duplicate/already processed error messages from Substrate
+	return strings.Contains(errStr, "InvalidNonce") ||
+		strings.Contains(errStr, "AlreadyProcessed") ||
+		strings.Contains(errStr, "Duplicate") ||
+		strings.Contains(errStr, "already processed")
 }
 
 func (r *Relay) writeToParachain(ctx context.Context, proof scale.ProofPayload, inboundMsg *parachain.Message) error {
@@ -200,6 +213,10 @@ func (r *Relay) writeToParachain(ctx context.Context, proof scale.ProofPayload, 
 	if proof.FinalizedPayload == nil {
 		err := r.writer.WriteToParachainAndWatch(ctx, "EthereumInboundQueueV2.submit", inboundMsg)
 		if err != nil {
+			if isDuplicateError(err) {
+				log.Info("message already processed (duplicate), skipping")
+				return ErrDuplicateMessage
+			}
 			return fmt.Errorf("submit message to inbound queue: %w", err)
 		}
 
@@ -217,6 +234,10 @@ func (r *Relay) writeToParachain(ctx context.Context, proof scale.ProofPayload, 
 	// Batch the finalized header update with the inbound message
 	err := r.writer.BatchCall(ctx, extrinsics, payloads)
 	if err != nil {
+		if isDuplicateError(err) {
+			log.Info("message already processed (duplicate), skipping")
+			return ErrDuplicateMessage
+		}
 		return fmt.Errorf("batch call containing finalized header update and inbound queue message: %w", err)
 	}
 
@@ -471,36 +492,21 @@ func (r *Relay) waitAndSendWithRetry(ctx context.Context, ev *contracts.GatewayO
 }
 
 func (r *Relay) waitAndSend(ctx context.Context, ev *contracts.GatewayOutboundMessageAccepted) (err error) {
-	ethNonce := ev.Nonce
-	waitingPeriod := (ethNonce + r.config.Schedule.TotalRelayerCount - r.config.Schedule.ID) % r.config.Schedule.TotalRelayerCount
-	log.WithFields(logrus.Fields{
-		"waitingPeriod": waitingPeriod,
-	}).Info("relayer waiting period")
-
-	var cnt uint64
-	for {
-		// Check the nonce again in case another relayer processed the message while this relayer downloading beacon state
-		isProcessed, err := r.isMessageProcessed(ev.Nonce)
-		if err != nil {
-			return fmt.Errorf("is message procssed: %w", err)
-		}
-		// If the message is already processed we shouldn't submit it again
-		if isProcessed {
-			return nil
-		}
-		// Check if the beacon header is finalized
-		err = r.isInFinalizedBlock(ctx, ev)
-		if err != nil {
-			return fmt.Errorf("check beacon header finalized: %w", err)
-		}
-		if cnt == waitingPeriod {
-			break
-		}
-		log.Info(fmt.Sprintf("sleeping for %d seconds.", time.Duration(r.config.Schedule.SleepInterval)))
-
-		time.Sleep(time.Duration(r.config.Schedule.SleepInterval) * time.Second)
-		cnt++
+	// Check the nonce again in case another relayer processed the message while this relayer downloading beacon state
+	isProcessed, err := r.isMessageProcessed(ev.Nonce)
+	if err != nil {
+		return fmt.Errorf("is message procssed: %w", err)
 	}
+	// If the message is already processed we shouldn't submit it again
+	if isProcessed {
+		return nil
+	}
+	// Check if the beacon header is finalized
+	err = r.isInFinalizedBlock(ctx, ev)
+	if err != nil {
+		return fmt.Errorf("check beacon header finalized: %w", err)
+	}
+
 	err = r.doSubmit(ctx, ev)
 	if err != nil {
 		return fmt.Errorf("submit inbound message: %w", err)
@@ -595,6 +601,10 @@ func (r *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayOutboundMessa
 
 	err = r.writeToParachain(ctx, proof, inboundMsg)
 	if err != nil {
+		if errors.Is(err, ErrDuplicateMessage) {
+			logger.Info("message was already processed by another relayer")
+			return nil
+		}
 		return fmt.Errorf("write to parachain: %w", err)
 	}
 
