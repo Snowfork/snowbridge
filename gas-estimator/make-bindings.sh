@@ -7,9 +7,9 @@ forge bind --module --overwrite \
 
 # Substrate chains metadata
 # Local westend
-#echo "local"
-#subxt metadata --url ws://127.0.0.1:12144 -o runtimes/asset-hub-westend-local/asset-hub-metadata.bin
-#subxt metadata --url ws://127.0.0.1:11144 -o runtimes/bridge-hub-westend-local/bridge-hub-metadata.bin
+echo "local"
+subxt metadata --url ws://127.0.0.1:12144 -o runtimes/asset-hub-westend-local/asset-hub-metadata.bin
+subxt metadata --url ws://127.0.0.1:11144 -o runtimes/bridge-hub-westend-local/bridge-hub-metadata.bin
 # Westend
 echo "westend"
 subxt metadata --url wss://westend-asset-hub-rpc.polkadot.io -o runtimes/asset-hub-westend/asset-hub-metadata.bin
