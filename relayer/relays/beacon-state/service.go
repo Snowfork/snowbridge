@@ -18,15 +18,17 @@ import (
 )
 
 type Service struct {
-	config            *Config
-	syncer            *syncer.Syncer
-	protocol          *protocol.Protocol
-	store             *store.Store
-	proofCache        *ProofCache
-	httpServer        *http.Server
-	downloadMu        sync.Mutex  // Ensures only one state download at a time
-	lastFinalizedSlot uint64      // Tracks the last seen finalized slot for the watcher
-	slotMu            sync.Mutex  // Protects lastFinalizedSlot
+	config              *Config
+	syncer              *syncer.Syncer
+	protocol            *protocol.Protocol
+	store               *store.Store
+	proofCache          *ProofCache
+	httpServer          *http.Server
+	downloadMu          sync.Mutex  // Ensures only one state download at a time
+	lastFinalizedSlot   uint64      // Tracks the last seen finalized slot for the watcher
+	slotMu              sync.Mutex  // Protects lastFinalizedSlot
+	watcherDownloading  bool        // True if watcher is currently downloading
+	watcherDownloadSlot uint64      // The slot currently being downloaded by watcher
 }
 
 func New(config *Config) *Service {
@@ -297,9 +299,10 @@ func (s *Service) checkAndDownloadFinalizedState(ctx context.Context) error {
 		return fmt.Errorf("parse finalized slot: %w", err)
 	}
 
-	// Check if this is a new finalized slot
+	// Check if this is a new finalized slot or if we're already downloading it
 	s.slotMu.Lock()
 	lastSeen := s.lastFinalizedSlot
+	alreadyDownloading := s.watcherDownloading && s.watcherDownloadSlot == finalizedSlot
 	s.slotMu.Unlock()
 
 	if finalizedSlot <= lastSeen {
@@ -310,14 +313,30 @@ func (s *Service) checkAndDownloadFinalizedState(ctx context.Context) error {
 		return nil
 	}
 
+	if alreadyDownloading {
+		log.WithField("finalizedSlot", finalizedSlot).Debug("Already downloading this finalized block")
+		return nil
+	}
+
 	log.WithFields(log.Fields{
 		"attestedSlot":  attestedSlot,
 		"finalizedSlot": finalizedSlot,
 		"lastSeen":      lastSeen,
 	}).Info("New finalized block detected, pre-downloading beacon states")
 
+	// Mark as downloading
+	s.slotMu.Lock()
+	s.watcherDownloading = true
+	s.watcherDownloadSlot = finalizedSlot
+	s.slotMu.Unlock()
+
 	// Download the states in a separate goroutine to not block the watcher
 	go func() {
+		defer func() {
+			s.slotMu.Lock()
+			s.watcherDownloading = false
+			s.slotMu.Unlock()
+		}()
 		s.downloadMu.Lock()
 		defer s.downloadMu.Unlock()
 
