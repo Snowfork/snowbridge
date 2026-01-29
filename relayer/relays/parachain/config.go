@@ -1,6 +1,7 @@
 package parachain
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/snowfork/snowbridge/relayer/config"
