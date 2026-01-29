@@ -117,10 +117,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	}
 
 	log.WithFields(log.Fields{
-		"relayerId":     r.config.Schedule.ID,
-		"relayerCount":  r.config.Schedule.TotalRelayerCount,
-		"sleepInterval": r.config.Schedule.SleepInterval,
-		"chainId":       r.chainID,
+		"chainId": r.chainID,
 	}).Info("relayer config")
 
 	for {
@@ -372,36 +369,21 @@ func (r *Relay) makeInboundMessage(
 }
 
 func (r *Relay) waitAndSend(ctx context.Context, ev *contracts.GatewayOutboundMessageAccepted) (err error) {
-	ethNonce := ev.Nonce
-	waitingPeriod := (ethNonce + r.config.Schedule.TotalRelayerCount - r.config.Schedule.ID) % r.config.Schedule.TotalRelayerCount
-	log.WithFields(logrus.Fields{
-		"waitingPeriod": waitingPeriod,
-	}).Info("relayer waiting period")
-
-	var cnt uint64
-	for {
-		// Check the nonce again in case another relayer processed the message while this relayer downloading beacon state
-		isProcessed, err := r.isMessageProcessed(ev.Nonce)
-		if err != nil {
-			return fmt.Errorf("is message procssed: %w", err)
-		}
-		// If the message is already processed we shouldn't submit it again
-		if isProcessed {
-			return nil
-		}
-		// Check if the beacon header is finalized
-		err = r.isInFinalizedBlock(ctx, ev)
-		if err != nil {
-			return fmt.Errorf("check beacon header finalized: %w", err)
-		}
-		if cnt == waitingPeriod {
-			break
-		}
-		log.Info(fmt.Sprintf("sleeping for %d seconds.", time.Duration(r.config.Schedule.SleepInterval)))
-
-		time.Sleep(time.Duration(r.config.Schedule.SleepInterval) * time.Second)
-		cnt++
+	// Check the nonce again in case another relayer processed the message while this relayer downloading beacon state
+	isProcessed, err := r.isMessageProcessed(ev.Nonce)
+	if err != nil {
+		return fmt.Errorf("is message procssed: %w", err)
 	}
+	// If the message is already processed we shouldn't submit it again
+	if isProcessed {
+		return nil
+	}
+	// Check if the beacon header is finalized
+	err = r.isInFinalizedBlock(ctx, ev)
+	if err != nil {
+		return fmt.Errorf("check beacon header finalized: %w", err)
+	}
+
 	err = r.doSubmit(ctx, ev)
 	if err != nil {
 		return fmt.Errorf("submit inbound message: %w", err)
