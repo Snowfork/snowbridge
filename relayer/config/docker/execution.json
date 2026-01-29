@@ -34,11 +34,6 @@
     }
   },
   "instantVerification": false,
-  "schedule": {
-    "id": ${SCHEDULE_ID:-0},
-    "totalRelayerCount": ${TOTAL_RELAYER_COUNT:-1},
-    "sleepInterval": ${SLEEP_INTERVAL:-45}
-  },
   "ofac": {
     "enabled": ${OFAC_ENABLED:-false},
     "apiKey": "${CHAINALYSIS_API_KEY}"

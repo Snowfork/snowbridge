@@ -42,12 +42,14 @@
     },
     "contracts": {
       "Gateway": "${GATEWAY_CONTRACT}"
+    },
+    "fees": {
+      "base-delivery-gas": 100000,
+      "base-unlock-gas": 60000,
+      "base-mint-gas": 60000,
+      "fee-ratio-numerator": 1,
+      "fee-ratio-denominator": 1
     }
-  },
-  "schedule": {
-    "id": ${SCHEDULE_ID:-0},
-    "totalRelayerCount": ${TOTAL_RELAYER_COUNT:-1},
-    "sleepInterval": ${SLEEP_INTERVAL:-45}
   },
   "reward-address": "${REWARD_ADDRESS}",
   "ofac": {
