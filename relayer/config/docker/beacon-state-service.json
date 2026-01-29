@@ -29,5 +29,9 @@
     "enabled": true,
     "saveIntervalHours": 12,
     "maxEntries": 10
+  },
+  "watch": {
+    "enabled": true,
+    "pollIntervalSeconds": 12
   }
 }
