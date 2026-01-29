@@ -145,7 +145,6 @@ config_relayer() {
           '
         .source.ethereum.endpoint = $eth_endpoint_ws
       | .source.contracts.Gateway = $k1
-      | .schedule.id = 0
       | .source.beacon.spec.forkVersions.electra = $electra_forked_epoch
       | .source.beacon.spec.forkVersions.fulu = $fulu_forked_epoch
 
