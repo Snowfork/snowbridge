@@ -35,11 +35,6 @@
     "ss58Prefix": 1
   },
   "instantVerification": false,
-  "schedule": {
-    "id": null,
-    "totalRelayerCount": 1,
-    "sleepInterval": 20
-  },
   "ofac": {
     "enabled": false,
     "apiKey": ""
