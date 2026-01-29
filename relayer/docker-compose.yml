@@ -133,7 +133,6 @@ services:
       run parachain
       --config /config/parachain.json
       --ethereum.private-key-id ${PARACHAIN_RELAY_ETHEREUM_KEY_ID}
-      --substrate.private-key-id ${PARACHAIN_RELAY_SUBSTRATE_KEY_ID}
     volumes:
       - ./config/docker:/config
     environment:
