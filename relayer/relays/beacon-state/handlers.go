@@ -404,10 +404,27 @@ func (s *Service) handleGetState(w http.ResponseWriter, r *http.Request) {
 
 	log.WithField("slot", slot).Debug("Handling get state request")
 
-	// Try persistent store first
+	// Try persistent store first (no lock needed for read)
 	data, err := s.store.GetBeaconStateData(slot)
 	if err == nil {
 		log.WithField("slot", slot).Debug("Found state in persistent store")
+		response := StateResponse{
+			Slot: slot,
+			Data: "0x" + hex.EncodeToString(data),
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	// Serialize beacon node downloads to prevent OOM from concurrent large state downloads
+	s.downloadMu.Lock()
+	defer s.downloadMu.Unlock()
+
+	// Double-check store after acquiring lock (another request may have populated it)
+	data, err = s.store.GetBeaconStateData(slot)
+	if err == nil {
+		log.WithField("slot", slot).Debug("Found state in persistent store after lock")
 		response := StateResponse{
 			Slot: slot,
 			Data: "0x" + hex.EncodeToString(data),

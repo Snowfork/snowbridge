@@ -1024,18 +1024,20 @@ func (s *Syncer) getBestMatchBeaconDataFromStore(minSlot, maxSlot uint64) (final
 }
 
 func (s *Syncer) getBeaconState(slot uint64) ([]byte, error) {
-	// Try beacon state service first if available
-	// The state service handles all internal fallback logic (cache -> beacon API -> persistent store)
+	// Use beacon state service if available - it handles all downloads with proper serialization
+	// to prevent OOM from concurrent large state downloads
 	if s.stateService != nil {
 		data, serviceErr := s.stateService.GetBeaconState(slot)
 		if serviceErr == nil {
 			log.WithField("slot", slot).Debug("fetched beacon state from state service")
 			return data, nil
 		}
-		log.WithError(serviceErr).WithField("slot", slot).Debug("state service unavailable, falling back to beacon API")
+		log.WithError(serviceErr).WithField("slot", slot).Error("state service failed to fetch beacon state")
+		return nil, fmt.Errorf("state service failed: %w", serviceErr)
 	}
 
-	// Fall back to beacon API directly
+	// No state service configured - fall back to beacon API directly
+	// This path should only be used in development/testing without state service
 	data, apiErr := s.Client.GetBeaconState(strconv.FormatUint(slot, 10))
 	if apiErr != nil {
 		log.WithError(apiErr).WithField("slot", slot).Warn("fetch beacon state from beacon API failed")

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
@@ -17,13 +18,15 @@ import (
 )
 
 type Service struct {
-	config     *Config
-	syncer     *syncer.Syncer
-	protocol   *protocol.Protocol
-	store      *store.Store
-	proofCache *ProofCache
-	httpServer *http.Server
-	downloadMu sync.Mutex // Ensures only one state download at a time
+	config            *Config
+	syncer            *syncer.Syncer
+	protocol          *protocol.Protocol
+	store             *store.Store
+	proofCache        *ProofCache
+	httpServer        *http.Server
+	downloadMu        sync.Mutex  // Ensures only one state download at a time
+	lastFinalizedSlot uint64      // Tracks the last seen finalized slot for the watcher
+	slotMu            sync.Mutex  // Protects lastFinalizedSlot
 }
 
 func New(config *Config) *Service {
@@ -111,6 +114,13 @@ func (s *Service) Start(ctx context.Context, eg *errgroup.Group) error {
 		})
 	}
 
+	// Start finality watcher if enabled
+	if s.config.Watch.Enabled {
+		eg.Go(func() error {
+			return s.runFinalityWatcher(ctx)
+		})
+	}
+
 	return nil
 }
 
@@ -194,6 +204,10 @@ func (s *Service) saveCurrentFinalizedState() error {
 		"finalizedSlot": finalizedSlot,
 	}).Info("Downloading beacon states")
 
+	// Serialize beacon state downloads to prevent OOM from concurrent large state downloads
+	s.downloadMu.Lock()
+	defer s.downloadMu.Unlock()
+
 	// Download attested state
 	attestedData, err := s.syncer.Client.GetBeaconState(fmt.Sprintf("%d", attestedSlot))
 	if err != nil {
@@ -238,4 +252,127 @@ func (s *Service) GetProtocol() *protocol.Protocol {
 
 func (s *Service) GetProofCache() *ProofCache {
 	return s.proofCache
+}
+
+// runFinalityWatcher polls for new finalized blocks and pre-downloads beacon states
+func (s *Service) runFinalityWatcher(ctx context.Context) error {
+	interval := time.Duration(s.config.Watch.PollIntervalSeconds) * time.Second
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	log.WithField("interval", interval).Info("Starting finality watcher")
+
+	// Do an initial check on startup
+	if err := s.checkAndDownloadFinalizedState(ctx); err != nil {
+		log.WithError(err).Warn("Initial finality check failed")
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			log.Info("Stopping finality watcher")
+			return nil
+		case <-ticker.C:
+			if err := s.checkAndDownloadFinalizedState(ctx); err != nil {
+				log.WithError(err).Warn("Finality check failed")
+			}
+		}
+	}
+}
+
+// checkAndDownloadFinalizedState checks for new finalized blocks and pre-downloads states
+func (s *Service) checkAndDownloadFinalizedState(ctx context.Context) error {
+	// Get the latest finalized update
+	update, err := s.syncer.Client.GetLatestFinalizedUpdate()
+	if err != nil {
+		return fmt.Errorf("get finalized update: %w", err)
+	}
+
+	attestedSlot, err := strconv.ParseUint(update.Data.AttestedHeader.Beacon.Slot, 10, 64)
+	if err != nil {
+		return fmt.Errorf("parse attested slot: %w", err)
+	}
+	finalizedSlot, err := strconv.ParseUint(update.Data.FinalizedHeader.Beacon.Slot, 10, 64)
+	if err != nil {
+		return fmt.Errorf("parse finalized slot: %w", err)
+	}
+
+	// Check if this is a new finalized slot
+	s.slotMu.Lock()
+	lastSeen := s.lastFinalizedSlot
+	s.slotMu.Unlock()
+
+	if finalizedSlot <= lastSeen {
+		log.WithFields(log.Fields{
+			"finalizedSlot": finalizedSlot,
+			"lastSeen":      lastSeen,
+		}).Debug("No new finalized block")
+		return nil
+	}
+
+	log.WithFields(log.Fields{
+		"attestedSlot":  attestedSlot,
+		"finalizedSlot": finalizedSlot,
+		"lastSeen":      lastSeen,
+	}).Info("New finalized block detected, pre-downloading beacon states")
+
+	// Download the states in a separate goroutine to not block the watcher
+	go func() {
+		s.downloadMu.Lock()
+		defer s.downloadMu.Unlock()
+
+		// Double-check we still need to download (another goroutine might have done it)
+		s.slotMu.Lock()
+		if finalizedSlot <= s.lastFinalizedSlot {
+			s.slotMu.Unlock()
+			return
+		}
+		s.slotMu.Unlock()
+
+		startTime := time.Now()
+
+		// Download attested state
+		log.WithField("slot", attestedSlot).Debug("Downloading attested beacon state")
+		attestedData, err := s.syncer.Client.GetBeaconState(fmt.Sprintf("%d", attestedSlot))
+		if err != nil {
+			log.WithError(err).WithField("slot", attestedSlot).Error("Failed to download attested beacon state")
+			return
+		}
+
+		// Download finalized state
+		log.WithField("slot", finalizedSlot).Debug("Downloading finalized beacon state")
+		finalizedData, err := s.syncer.Client.GetBeaconState(fmt.Sprintf("%d", finalizedSlot))
+		if err != nil {
+			log.WithError(err).WithField("slot", finalizedSlot).Error("Failed to download finalized beacon state")
+			return
+		}
+
+		// Write to store
+		err = s.store.WriteEntry(attestedSlot, finalizedSlot, attestedData, finalizedData)
+		if err != nil {
+			log.WithError(err).Error("Failed to write beacon states to store")
+			return
+		}
+
+		// Update the last seen slot
+		s.slotMu.Lock()
+		s.lastFinalizedSlot = finalizedSlot
+		s.slotMu.Unlock()
+
+		// Prune old states
+		deletedSlots, err := s.store.PruneOldStates()
+		if err != nil {
+			log.WithError(err).Warn("Failed to prune old states")
+		} else if len(deletedSlots) > 0 {
+			log.WithField("deletedSlots", deletedSlots).Debug("Pruned old beacon states")
+		}
+
+		log.WithFields(log.Fields{
+			"attestedSlot":  attestedSlot,
+			"finalizedSlot": finalizedSlot,
+			"duration":      time.Since(startTime),
+		}).Info("Successfully pre-downloaded beacon states for finalized block")
+	}()
+
+	return nil
 }

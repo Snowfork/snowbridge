@@ -13,6 +13,7 @@ type Config struct {
 	HTTP    HTTPConfig              `mapstructure:"http"`
 	Cache   CacheConfig             `mapstructure:"cache"`
 	Persist PersistConfig           `mapstructure:"persist"`
+	Watch   WatchConfig             `mapstructure:"watch"`
 }
 
 type HTTPConfig struct {
@@ -36,6 +37,16 @@ type PersistConfig struct {
 	MaxEntries uint64 `mapstructure:"maxEntries"`
 }
 
+type WatchConfig struct {
+	// Enabled controls whether the finality watcher is enabled.
+	// When enabled, the service proactively watches for new finalized blocks
+	// and pre-downloads beacon states before they're requested.
+	Enabled bool `mapstructure:"enabled"`
+	// PollIntervalSeconds is how often to poll for new finalized updates (in seconds).
+	// Default: 12 (one slot time)
+	PollIntervalSeconds int `mapstructure:"pollIntervalSeconds"`
+}
+
 func (c Config) Validate() error {
 	err := c.Beacon.ValidateForStateService()
 	if err != nil {
@@ -52,6 +63,10 @@ func (c Config) Validate() error {
 	err = c.Persist.Validate()
 	if err != nil {
 		return fmt.Errorf("persist config: %w", err)
+	}
+	err = c.Watch.Validate()
+	if err != nil {
+		return fmt.Errorf("watch config: %w", err)
 	}
 	return nil
 }
@@ -96,6 +111,16 @@ func (p PersistConfig) Validate() error {
 	}
 	if p.MaxEntries == 0 {
 		return errors.New("[persist.maxEntries] is not set")
+	}
+	return nil
+}
+
+func (w WatchConfig) Validate() error {
+	if !w.Enabled {
+		return nil
+	}
+	if w.PollIntervalSeconds == 0 {
+		return errors.New("[watch.pollIntervalSeconds] is not set")
 	}
 	return nil
 }
