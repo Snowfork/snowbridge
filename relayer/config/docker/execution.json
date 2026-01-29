@@ -28,14 +28,14 @@
   "sink": {
     "parachain": {
       "endpoint": "${BRIDGEHUB_ENDPOINT}",
-      "maxWatchedExtrinsics": ${MAX_WATCHED_EXTRINSICS:-200},
+      "maxWatchedExtrinsics": ${MAX_WATCHED_EXTRINSICS},
       "headerRedundancy": 20,
       "heartbeat-secs": 45
     }
   },
   "instantVerification": false,
   "ofac": {
-    "enabled": ${OFAC_ENABLED:-false},
+    "enabled": ${OFAC_ENABLED},
     "apiKey": "${CHAINALYSIS_API_KEY}"
   },
   "gasEstimation": {
