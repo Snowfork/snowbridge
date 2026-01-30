@@ -386,8 +386,14 @@ func (s *Service) checkAndDownloadFinalizedState(ctx context.Context) error {
 		}
 
 		// Pre-generate proofs - FINALIZED first since beacon relay needs it
+		// Process ONE state at a time: generate proofs, then release memory before next
 		s.preGenerateProofs(finalizedSlot, finalizedData)
+		finalizedData = nil // Release finalized data before processing attested
+		runtime.GC()
+
 		s.preGenerateProofs(attestedSlot, attestedData)
+		attestedData = nil // Release attested data
+		runtime.GC()
 
 		// Update the last seen slot
 		s.slotMu.Lock()
@@ -453,9 +459,14 @@ func (s *Service) downloadCurrentFinalizedStateSync() error {
 			"finalizedSlot": finalizedSlot,
 		}).Info("Found existing states in store, pre-generating proofs")
 
-		// Generate proofs - FINALIZED first since beacon relay needs it
+		// Generate proofs ONE at a time - release memory between each
 		s.preGenerateProofs(finalizedSlot, finalizedData)
+		finalizedData = nil
+		runtime.GC()
+
 		s.preGenerateProofs(attestedSlot, attestedData)
+		attestedData = nil
+		runtime.GC()
 
 		// Update the last seen slot so finality watcher doesn't re-download
 		s.slotMu.Lock()
@@ -502,9 +513,14 @@ func (s *Service) downloadCurrentFinalizedStateSync() error {
 	s.lastFinalizedSlot = finalizedSlot
 	s.slotMu.Unlock()
 
-	// Pre-generate proofs - FINALIZED first since beacon relay needs it
+	// Pre-generate proofs ONE at a time - release memory between each
 	s.preGenerateProofs(finalizedSlot, finalizedData)
+	finalizedData = nil
+	runtime.GC()
+
 	s.preGenerateProofs(attestedSlot, attestedData)
+	attestedData = nil
+	runtime.GC()
 
 	log.WithFields(log.Fields{
 		"attestedSlot":  attestedSlot,

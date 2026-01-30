@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"runtime"
 	"strconv"
 
 	"github.com/ferranbt/fastssz"
@@ -60,7 +59,7 @@ func (s *Service) handleFinalizedHeaderProof(w http.ResponseWriter, r *http.Requ
 
 	cacheKey := fmt.Sprintf("finalized-header:%d", slot)
 
-	// Check proof cache
+	// Only return from cache - finality watcher handles all proof generation
 	if cached, ok := s.proofCache.Get(cacheKey); ok {
 		log.WithField("slot", slot).Debug("Returning cached finalized header proof")
 		w.Header().Set("Content-Type", "application/json")
@@ -68,19 +67,8 @@ func (s *Service) handleFinalizedHeaderProof(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	// Proof not cached - try to generate from stored state
-	data, err := s.store.GetBeaconStateData(slot)
-	if err == nil {
-		s.preGenerateProofsFromData(slot, data)
-		if cached, ok := s.proofCache.Get(cacheKey); ok {
-			w.Header().Set("Content-Type", "application/json")
-			w.Write(cached)
-			return
-		}
-	}
-
-	// State not in store - return 503 to signal retry
-	log.WithField("slot", slot).Info("Proof not ready, returning 503 for client retry")
+	// Proof not cached - return 503 to signal retry
+	log.WithField("slot", slot).Debug("Proof not cached, returning 503 for client retry")
 	w.Header().Set("Retry-After", "5")
 	writeError(w, http.StatusServiceUnavailable, "proof not ready, please retry")
 }
@@ -94,7 +82,7 @@ func (s *Service) handleExecutionStateRootProof(w http.ResponseWriter, r *http.R
 
 	cacheKey := fmt.Sprintf("execution-state-root:%d", slot)
 
-	// Check proof cache
+	// Only return from cache - finality watcher handles all proof generation
 	if cached, ok := s.proofCache.Get(cacheKey); ok {
 		log.WithField("slot", slot).Debug("Returning cached execution state root proof")
 		w.Header().Set("Content-Type", "application/json")
@@ -102,19 +90,8 @@ func (s *Service) handleExecutionStateRootProof(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	// Proof not cached - try to generate from stored state
-	data, err := s.store.GetBeaconStateData(slot)
-	if err == nil {
-		s.preGenerateProofsFromData(slot, data)
-		if cached, ok := s.proofCache.Get(cacheKey); ok {
-			w.Header().Set("Content-Type", "application/json")
-			w.Write(cached)
-			return
-		}
-	}
-
-	// State not in store - return 503 to signal retry
-	log.WithField("slot", slot).Info("Proof not ready, returning 503 for client retry")
+	// Proof not cached - return 503 to signal retry
+	log.WithField("slot", slot).Debug("Proof not cached, returning 503 for client retry")
 	w.Header().Set("Retry-After", "5")
 	writeError(w, http.StatusServiceUnavailable, "proof not ready, please retry")
 }
@@ -128,7 +105,7 @@ func (s *Service) handleBlockRootProof(w http.ResponseWriter, r *http.Request) {
 
 	cacheKey := fmt.Sprintf("block-root:%d", slot)
 
-	// Check proof cache
+	// Only return from cache - finality watcher handles all proof generation
 	if cached, ok := s.proofCache.Get(cacheKey); ok {
 		log.WithField("slot", slot).Debug("Returning cached block root proof")
 		w.Header().Set("Content-Type", "application/json")
@@ -136,21 +113,9 @@ func (s *Service) handleBlockRootProof(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Proof not cached - try to generate it non-blocking
-	// First check if state is in store (fast path)
-	data, err := s.store.GetBeaconStateData(slot)
-	if err == nil {
-		// State is in store, generate proofs synchronously
-		s.preGenerateProofsFromData(slot, data)
-		if cached, ok := s.proofCache.Get(cacheKey); ok {
-			w.Header().Set("Content-Type", "application/json")
-			w.Write(cached)
-			return
-		}
-	}
-
-	// State not in store and not cached - return 503 to signal retry
-	log.WithField("slot", slot).Info("Proof not ready, returning 503 for client retry")
+	// Proof not cached - return 503 to signal retry
+	// Finality watcher will pre-generate proofs when state is downloaded
+	log.WithField("slot", slot).Debug("Proof not cached, returning 503 for client retry")
 	w.Header().Set("Retry-After", "5")
 	writeError(w, http.StatusServiceUnavailable, "proof not ready, please retry")
 }
@@ -169,7 +134,7 @@ func (s *Service) handleSyncCommitteeProof(w http.ResponseWriter, r *http.Reques
 
 	cacheKey := fmt.Sprintf("sync-committee:%d:%s", slot, period)
 
-	// Check proof cache
+	// Only return from cache - finality watcher handles all proof generation
 	if cached, ok := s.proofCache.Get(cacheKey); ok {
 		log.WithFields(log.Fields{"slot": slot, "period": period}).Debug("Returning cached sync committee proof")
 		w.Header().Set("Content-Type", "application/json")
@@ -177,19 +142,8 @@ func (s *Service) handleSyncCommitteeProof(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Proof not cached - try to generate from stored state
-	data, err := s.store.GetBeaconStateData(slot)
-	if err == nil {
-		s.preGenerateProofsFromData(slot, data)
-		if cached, ok := s.proofCache.Get(cacheKey); ok {
-			w.Header().Set("Content-Type", "application/json")
-			w.Write(cached)
-			return
-		}
-	}
-
-	// State not in store - return 503 to signal retry
-	log.WithFields(log.Fields{"slot": slot, "period": period}).Info("Proof not ready, returning 503 for client retry")
+	// Proof not cached - return 503 to signal retry
+	log.WithFields(log.Fields{"slot": slot, "period": period}).Debug("Proof not cached, returning 503 for client retry")
 	w.Header().Set("Retry-After", "5")
 	writeError(w, http.StatusServiceUnavailable, "proof not ready, please retry")
 }
@@ -322,44 +276,6 @@ func writeError(w http.ResponseWriter, status int, message string) {
 	json.NewEncoder(w).Encode(ErrorResponse{Error: message})
 }
 
-// preGenerateProofsFromData generates proofs from state data without downloading.
-// Used when state is already in the store but proofs aren't cached.
-// Uses downloadMu to serialize with other proof generations and prevent OOM.
-func (s *Service) preGenerateProofsFromData(slot uint64, data []byte) {
-	// Serialize proof generation to prevent concurrent memory-heavy operations
-	s.downloadMu.Lock()
-	defer s.downloadMu.Unlock()
-
-	// Double-check cache after acquiring lock
-	if s.hasAllProofsCached(slot) {
-		return
-	}
-
-	beaconState, err := s.unmarshalBeaconState(slot, data)
-	// Release data reference to help GC
-	data = nil
-	if err != nil {
-		log.WithError(err).WithField("slot", slot).Warn("Failed to unmarshal beacon state for proof generation")
-		return
-	}
-
-	tree, err := beaconState.GetTree()
-	if err != nil {
-		log.WithError(err).WithField("slot", slot).Warn("Failed to get state tree for proof generation")
-		return
-	}
-
-	_ = tree.Hash()
-	s.cacheAllProofs(slot, beaconState, tree)
-
-	// Release large objects and force GC
-	beaconState = nil
-	tree = nil
-	runtime.GC()
-
-	log.WithField("slot", slot).Info("Generated and cached proofs from stored state")
-}
-
 // StateResponse is the response for raw beacon state requests
 type StateResponse struct {
 	Slot uint64 `json:"slot"`
@@ -376,7 +292,7 @@ type StateRangeResponse struct {
 
 // handleGetState returns raw beacon state data for a given slot
 // Only returns from persistent store - does not download from beacon node
-// This endpoint is primarily for debugging/inspection, not for production use
+// Acquires downloadMu to ensure only ONE state is loaded at a time
 func (s *Service) handleGetState(w http.ResponseWriter, r *http.Request) {
 	slot, err := parseSlotParam(r)
 	if err != nil {
@@ -385,6 +301,10 @@ func (s *Service) handleGetState(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.WithField("slot", slot).Debug("Handling get state request")
+
+	// Acquire mutex to ensure only ONE state loaded at a time
+	s.downloadMu.Lock()
+	defer s.downloadMu.Unlock()
 
 	// Only serve from persistent store - no beacon downloads
 	data, err := s.store.GetBeaconStateData(slot)
@@ -407,6 +327,7 @@ func (s *Service) handleGetState(w http.ResponseWriter, r *http.Request) {
 
 // handleGetStateInRange finds beacon states within a slot range from the persistent store
 // Query params: minSlot, maxSlot
+// Acquires downloadMu to ensure only ONE state pair is loaded at a time
 func (s *Service) handleGetStateInRange(w http.ResponseWriter, r *http.Request) {
 	minSlotStr := r.URL.Query().Get("minSlot")
 	maxSlotStr := r.URL.Query().Get("maxSlot")
@@ -429,6 +350,10 @@ func (s *Service) handleGetStateInRange(w http.ResponseWriter, r *http.Request) 
 	}
 
 	log.WithFields(log.Fields{"minSlot": minSlot, "maxSlot": maxSlot}).Debug("Handling get state in range request")
+
+	// Acquire mutex to ensure only ONE state pair loaded at a time
+	s.downloadMu.Lock()
+	defer s.downloadMu.Unlock()
 
 	// Query persistent store
 	data, err := s.store.FindBeaconStateWithinRange(minSlot, maxSlot)
