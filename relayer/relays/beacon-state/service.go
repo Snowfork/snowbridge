@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"runtime"
 	"strconv"
 	"sync"
 	"time"
@@ -361,19 +362,19 @@ func (s *Service) checkAndDownloadFinalizedState(ctx context.Context) error {
 
 		startTime := time.Now()
 
+		// Download FINALIZED state FIRST - this is what beacon relay needs
+		log.WithField("slot", finalizedSlot).Debug("Downloading finalized beacon state")
+		finalizedData, err := s.syncer.Client.GetBeaconState(fmt.Sprintf("%d", finalizedSlot))
+		if err != nil {
+			log.WithError(err).WithField("slot", finalizedSlot).Error("Failed to download finalized beacon state")
+			return
+		}
+
 		// Download attested state
 		log.WithField("slot", attestedSlot).Debug("Downloading attested beacon state")
 		attestedData, err := s.syncer.Client.GetBeaconState(fmt.Sprintf("%d", attestedSlot))
 		if err != nil {
 			log.WithError(err).WithField("slot", attestedSlot).Error("Failed to download attested beacon state")
-			return
-		}
-
-		// Download finalized state
-		log.WithField("slot", finalizedSlot).Debug("Downloading finalized beacon state")
-		finalizedData, err := s.syncer.Client.GetBeaconState(fmt.Sprintf("%d", finalizedSlot))
-		if err != nil {
-			log.WithError(err).WithField("slot", finalizedSlot).Error("Failed to download finalized beacon state")
 			return
 		}
 
@@ -384,9 +385,9 @@ func (s *Service) checkAndDownloadFinalizedState(ctx context.Context) error {
 			return
 		}
 
-		// Pre-generate and cache proofs for both slots so beacon relay requests are instant
-		s.preGenerateProofs(attestedSlot, attestedData)
+		// Pre-generate proofs - FINALIZED first since beacon relay needs it
 		s.preGenerateProofs(finalizedSlot, finalizedData)
+		s.preGenerateProofs(attestedSlot, attestedData)
 
 		// Update the last seen slot
 		s.slotMu.Lock()
@@ -411,8 +412,10 @@ func (s *Service) checkAndDownloadFinalizedState(ctx context.Context) error {
 	return nil
 }
 
-// downloadCurrentFinalizedStateSync downloads the current finalized beacon states synchronously.
-// Used on startup to ensure states are cached before the HTTP server starts accepting requests.
+// downloadCurrentFinalizedStateSync ensures beacon states and proofs are available on startup.
+// First checks if states are already in the store (from previous run), and if so, just pre-generates proofs.
+// Otherwise downloads states from beacon node.
+// Holds downloadMu for the entire operation to ensure only ONE state is processed at a time.
 func (s *Service) downloadCurrentFinalizedStateSync() error {
 	update, err := s.syncer.Client.GetLatestFinalizedUpdate()
 	if err != nil {
@@ -431,25 +434,64 @@ func (s *Service) downloadCurrentFinalizedStateSync() error {
 	log.WithFields(log.Fields{
 		"attestedSlot":  attestedSlot,
 		"finalizedSlot": finalizedSlot,
-	}).Info("Downloading initial beacon states")
+	}).Info("Checking for beacon states on startup")
+
+	// Acquire mutex to ensure only ONE beacon state is processed at a time
+	s.downloadMu.Lock()
+	defer s.downloadMu.Unlock()
 
 	startTime := time.Now()
 
-	// Download attested state
-	log.WithField("slot", attestedSlot).Info("Downloading attested beacon state")
-	attestedData, err := s.syncer.Client.GetBeaconState(fmt.Sprintf("%d", attestedSlot))
-	if err != nil {
-		return fmt.Errorf("download attested state at slot %d: %w", attestedSlot, err)
+	// Check if states are already in store (from previous run)
+	attestedData, attestedErr := s.store.GetBeaconStateData(attestedSlot)
+	finalizedData, finalizedErr := s.store.GetBeaconStateData(finalizedSlot)
+
+	if attestedErr == nil && finalizedErr == nil {
+		// States already in store, just pre-generate proofs
+		log.WithFields(log.Fields{
+			"attestedSlot":  attestedSlot,
+			"finalizedSlot": finalizedSlot,
+		}).Info("Found existing states in store, pre-generating proofs")
+
+		// Generate proofs - FINALIZED first since beacon relay needs it
+		s.preGenerateProofs(finalizedSlot, finalizedData)
+		s.preGenerateProofs(attestedSlot, attestedData)
+
+		// Update the last seen slot so finality watcher doesn't re-download
+		s.slotMu.Lock()
+		s.lastFinalizedSlot = finalizedSlot
+		s.slotMu.Unlock()
+
+		log.WithFields(log.Fields{
+			"attestedSlot":  attestedSlot,
+			"finalizedSlot": finalizedSlot,
+			"duration":      time.Since(startTime),
+		}).Info("Proofs generated from existing states")
+
+		return nil
 	}
 
-	// Download finalized state
+	// States not in store, download from beacon node
+	log.WithFields(log.Fields{
+		"attestedSlot":  attestedSlot,
+		"finalizedSlot": finalizedSlot,
+	}).Info("Downloading initial beacon states")
+
+	// Download FINALIZED state FIRST - this is what beacon relay needs
 	log.WithField("slot", finalizedSlot).Info("Downloading finalized beacon state")
-	finalizedData, err := s.syncer.Client.GetBeaconState(fmt.Sprintf("%d", finalizedSlot))
+	finalizedData, err = s.syncer.Client.GetBeaconState(fmt.Sprintf("%d", finalizedSlot))
 	if err != nil {
 		return fmt.Errorf("download finalized state at slot %d: %w", finalizedSlot, err)
 	}
 
-	// Write to store
+	// Download attested state
+	log.WithField("slot", attestedSlot).Info("Downloading attested beacon state")
+	attestedData, err = s.syncer.Client.GetBeaconState(fmt.Sprintf("%d", attestedSlot))
+	if err != nil {
+		return fmt.Errorf("download attested state at slot %d: %w", attestedSlot, err)
+	}
+
+	// Write to store (INSERT OR IGNORE handles duplicates)
 	err = s.store.WriteEntry(attestedSlot, finalizedSlot, attestedData, finalizedData)
 	if err != nil {
 		return fmt.Errorf("write states to store: %w", err)
@@ -460,9 +502,9 @@ func (s *Service) downloadCurrentFinalizedStateSync() error {
 	s.lastFinalizedSlot = finalizedSlot
 	s.slotMu.Unlock()
 
-	// Pre-generate and cache proofs for both slots so beacon relay requests are instant
-	s.preGenerateProofs(attestedSlot, attestedData)
+	// Pre-generate proofs - FINALIZED first since beacon relay needs it
 	s.preGenerateProofs(finalizedSlot, finalizedData)
+	s.preGenerateProofs(attestedSlot, attestedData)
 
 	log.WithFields(log.Fields{
 		"attestedSlot":  attestedSlot,
@@ -476,6 +518,8 @@ func (s *Service) downloadCurrentFinalizedStateSync() error {
 // preGenerateProofs generates and caches all proofs for a slot from state data.
 // This is called by the finality watcher after downloading states, so proofs are
 // ready before the beacon relay needs them.
+// Note: This function is called while downloadMu is held by the finality watcher,
+// so it's already serialized with other downloads/proof generations.
 func (s *Service) preGenerateProofs(slot uint64, data []byte) {
 	// Check if proofs are already cached
 	if s.hasAllProofsCached(slot) {
@@ -486,6 +530,8 @@ func (s *Service) preGenerateProofs(slot uint64, data []byte) {
 	log.WithField("slot", slot).Info("Pre-generating proofs for slot")
 
 	beaconState, err := s.unmarshalBeaconState(slot, data)
+	// Release raw data reference to help GC
+	data = nil
 	if err != nil {
 		log.WithError(err).WithField("slot", slot).Warn("Failed to unmarshal beacon state for proof pre-generation")
 		return
@@ -500,6 +546,11 @@ func (s *Service) preGenerateProofs(slot uint64, data []byte) {
 	_ = tree.Hash()
 
 	s.cacheAllProofs(slot, beaconState, tree)
+
+	// Release large objects and force GC to prevent memory buildup
+	beaconState = nil
+	tree = nil
+	runtime.GC()
 
 	log.WithField("slot", slot).Info("Pre-generated and cached proofs for slot")
 }
