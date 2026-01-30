@@ -88,18 +88,7 @@ func (s *Service) Start(ctx context.Context, eg *errgroup.Group) error {
 		WriteTimeout: writeTimeout,
 	}
 
-	// Do initial state download synchronously before starting HTTP server
-	// This ensures states are cached before other services request them
-	if s.config.Watch.Enabled {
-		log.Info("Downloading initial finalized beacon states before starting HTTP server...")
-		if err := s.downloadCurrentFinalizedStateSync(); err != nil {
-			log.WithError(err).Warn("Failed to download initial beacon states, will retry in background")
-		} else {
-			log.Info("Initial beacon states downloaded successfully")
-		}
-	}
-
-	// Start HTTP server in errgroup
+	// Start HTTP server FIRST so health checks pass immediately
 	eg.Go(func() error {
 		log.WithField("port", s.config.HTTP.Port).Info("Starting beacon state service HTTP server")
 		err := s.httpServer.ListenAndServe()
@@ -108,6 +97,22 @@ func (s *Service) Start(ctx context.Context, eg *errgroup.Group) error {
 		}
 		return nil
 	})
+
+	// Do initial state download in background after HTTP server starts
+	// This ensures the service is healthy immediately while states are being cached
+	if s.config.Watch.Enabled {
+		eg.Go(func() error {
+			// Small delay to ensure HTTP server is up
+			time.Sleep(100 * time.Millisecond)
+			log.Info("Downloading initial finalized beacon states in background...")
+			if err := s.downloadCurrentFinalizedStateSync(); err != nil {
+				log.WithError(err).Warn("Failed to download initial beacon states, will retry via finality watcher")
+			} else {
+				log.Info("Initial beacon states downloaded successfully")
+			}
+			return nil
+		})
+	}
 
 	// Graceful shutdown
 	eg.Go(func() error {
