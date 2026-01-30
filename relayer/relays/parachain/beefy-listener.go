@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -24,7 +23,6 @@ import (
 
 type BeefyListener struct {
 	config              *SourceConfig
-	scheduleConfig      *ScheduleConfig
 	ethereumConn        *ethereum.Connection
 	beefyClientContract *contracts.BeefyClient
 	relaychainConn      *relaychain.Connection
@@ -37,7 +35,6 @@ type BeefyListener struct {
 
 func NewBeefyListener(
 	config *SourceConfig,
-	scheduleConfig *ScheduleConfig,
 	ethereumConn *ethereum.Connection,
 	relaychainConn *relaychain.Connection,
 	parachainConnection *parachain.Connection,
@@ -46,7 +43,6 @@ func NewBeefyListener(
 ) *BeefyListener {
 	return &BeefyListener{
 		config:              config,
-		scheduleConfig:      scheduleConfig,
 		ethereumConn:        ethereumConn,
 		relaychainConn:      relaychainConn,
 		parachainConnection: parachainConnection,
@@ -165,10 +161,9 @@ func (li *BeefyListener) doScan(ctx context.Context, beefyBlockNumber uint64) er
 	}
 	for _, task := range tasks {
 		paraNonce := (*task.MessageProofs)[0].Message.OriginalMessage.Nonce
-		waitingPeriod := (uint64(paraNonce) + li.scheduleConfig.TotalRelayerCount - li.scheduleConfig.ID) % li.scheduleConfig.TotalRelayerCount
-		err = li.waitAndSend(ctx, task, waitingPeriod)
+		err = li.sendTask(ctx, task)
 		if err != nil {
-			return fmt.Errorf("wait task for nonce %d: %w", paraNonce, err)
+			return fmt.Errorf("send task for nonce %d: %w", paraNonce, err)
 		}
 	}
 
@@ -325,31 +320,38 @@ func (li *BeefyListener) generateAndValidateParasHeadsMerkleProof(input *ProofIn
 	return &merkleProofData, paraHeads, nil
 }
 
-func (li *BeefyListener) waitAndSend(ctx context.Context, task *Task, waitingPeriod uint64) error {
+func (li *BeefyListener) sendTask(ctx context.Context, task *Task) error {
 	paraNonce := (*task.MessageProofs)[0].Message.OriginalMessage.Nonce
-	log.Info(fmt.Sprintf("waiting for nonce %d to be picked up by another relayer", paraNonce))
-	var cnt uint64
-	var err error
-	for {
-		isRelayed, err := li.scanner.isNonceRelayed(ctx, uint64(paraNonce))
-		if err != nil {
-			return err
-		}
-		if isRelayed {
-			log.Info(fmt.Sprintf("nonce %d picked up by another relayer, just skip", paraNonce))
-			return nil
-		}
-		if cnt == waitingPeriod {
-			break
-		}
-		time.Sleep(time.Duration(li.scheduleConfig.SleepInterval) * time.Second)
-		cnt++
+
+	// Step 2: Check if already relayed before doing work
+	isRelayed, err := li.scanner.isNonceRelayed(ctx, uint64(paraNonce))
+	if err != nil {
+		return err
 	}
-	log.Info(fmt.Sprintf("nonce %d is not picked up by any one, submit anyway", paraNonce))
+	if isRelayed {
+		log.Info(fmt.Sprintf("nonce %d already relayed, skipping", paraNonce))
+		return nil
+	}
+
+	// Step 3: Construct proofs
+	log.Info(fmt.Sprintf("generating proof for nonce %d", paraNonce))
 	task.ProofOutput, err = li.generateProof(ctx, task.ProofInput, task.Header)
 	if err != nil {
 		return err
 	}
+
+	// Step 4: Check again if already relayed (another relayer may have submitted while we were generating proofs)
+	isRelayed, err = li.scanner.isNonceRelayed(ctx, uint64(paraNonce))
+	if err != nil {
+		return err
+	}
+	if isRelayed {
+		log.Info(fmt.Sprintf("nonce %d was relayed by another relayer while generating proof, skipping", paraNonce))
+		return nil
+	}
+
+	// Step 5: Submit
+	log.Info(fmt.Sprintf("submitting nonce %d", paraNonce))
 	select {
 	case <-ctx.Done():
 		return ctx.Err()

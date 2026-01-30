@@ -10,7 +10,6 @@ import (
 type Config struct {
 	Source        SourceConfig      `mapstructure:"source"`
 	Sink          SinkConfig        `mapstructure:"sink"`
-	Schedule      ScheduleConfig    `mapstructure:"schedule"`
 	RewardAddress string            `mapstructure:"reward-address"`
 	OFAC          config.OFACConfig `mapstructure:"ofac"`
 }
@@ -37,15 +36,6 @@ type SinkContractsConfig struct {
 	Gateway string `mapstructure:"Gateway"`
 }
 
-type ScheduleConfig struct {
-	// ID of current relayer, starting from 0
-	ID uint64 `mapstructure:"id"`
-	// Number of total count of all relayers
-	TotalRelayerCount uint64 `mapstructure:"totalRelayerCount"`
-	// Sleep interval(in seconds) to check if message(nonce) has already been relayed
-	SleepInterval uint64 `mapstructure:"sleepInterval"`
-}
-
 type FeeConfig struct {
 	// The gas cost of v2_submit excludes command execution, mainly covers the verification
 	BaseDeliveryGas uint64 `mapstructure:"base-delivery-gas"`
@@ -63,16 +53,6 @@ func (f FeeConfig) Validate() error {
 	}
 	if f.FeeRatioNumerator == 0 {
 		return errors.New("fee-ratio-numerator must be non-zero")
-	}
-	return nil
-}
-
-func (r ScheduleConfig) Validate() error {
-	if r.TotalRelayerCount < 1 {
-		return errors.New("Number of relayer is not set")
-	}
-	if r.ID >= r.TotalRelayerCount {
-		return errors.New("ID of the Number of relayer is not set")
 	}
 	return nil
 }
@@ -111,11 +91,6 @@ func (c Config) Validate() error {
 		return fmt.Errorf("sink fees config: %w", err)
 	}
 
-	// Relay
-	err = c.Schedule.Validate()
-	if err != nil {
-		return fmt.Errorf("relay config: %w", err)
-	}
 	err = c.OFAC.Validate()
 	if err != nil {
 		return fmt.Errorf("ofac config: %w", err)

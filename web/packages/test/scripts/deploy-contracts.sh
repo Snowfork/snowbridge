@@ -6,13 +6,8 @@ source scripts/set-env.sh
 deploy_command() {
     local deploy_script=$1
 
-    if [ "$snowbridge_v1" = "true" ]; then
-        pushd "$v1_contract_dir"
-        rm -rf $v1_contract_dir/broadcast
-    else
-        pushd "$contract_dir"
-        rm -rf $contract_dir/broadcast
-    fi
+    pushd "$contract_dir"
+    rm -rf $contract_dir/broadcast
 
 
     if [ "$eth_network" != "localhost" ]; then

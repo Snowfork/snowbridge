@@ -142,8 +142,8 @@ func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 		store.Connect()
 		defer store.Close()
 
-		client := api.NewBeaconClient(conf.Source.Beacon.Endpoint, conf.Source.Beacon.StateEndpoint)
-		s := syncer.New(client, &store, p)
+		client := api.NewBeaconClient(conf.Source.Beacon.Endpoint)
+		s := syncer.New(client, p, nil)
 
 		var checkPointScale scale.BeaconCheckpoint
 		if finalizedSlot == 0 {
@@ -220,8 +220,8 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 		defer store.Close()
 
 		log.WithFields(log.Fields{"endpoint": conf.Source.Beacon.Endpoint}).Info("connecting to beacon API")
-		client := api.NewBeaconClient(conf.Source.Beacon.Endpoint, conf.Source.Beacon.StateEndpoint)
-		s := syncer.New(client, &store, p)
+		client := api.NewBeaconClient(conf.Source.Beacon.Endpoint)
+		s := syncer.New(client, p, nil)
 
 		viper.SetConfigFile("/tmp/snowbridge-v2/execution-relay-v1.json")
 
@@ -575,8 +575,8 @@ func generateExecutionUpdate(cmd *cobra.Command, _ []string) error {
 		defer store.Close()
 
 		// generate executionUpdate
-		client := api.NewBeaconClient(conf.Source.Beacon.Endpoint, conf.Source.Beacon.StateEndpoint)
-		s := syncer.New(client, &store, p)
+		client := api.NewBeaconClient(conf.Source.Beacon.Endpoint)
+		s := syncer.New(client, p, nil)
 		blockRoot, err := s.Client.GetBeaconBlockRoot(uint64(beaconSlot))
 		if err != nil {
 			return fmt.Errorf("fetch block: %w", err)
@@ -777,8 +777,8 @@ func generateInboundFixture(cmd *cobra.Command, _ []string) error {
 		defer store.Close()
 
 		log.WithFields(log.Fields{"endpoint": beaconConf.Source.Beacon.Endpoint}).Info("connecting to beacon API")
-		client := api.NewBeaconClient(beaconConf.Source.Beacon.Endpoint, beaconConf.Source.Beacon.StateEndpoint)
-		s := syncer.New(client, &store, p)
+		client := api.NewBeaconClient(beaconConf.Source.Beacon.Endpoint)
+		s := syncer.New(client, p, nil)
 
 		viper.SetConfigFile(executionConfig)
 
@@ -953,8 +953,8 @@ func generateDeliveryProofFixture(cmd *cobra.Command, _ []string) error {
 		defer store.Close()
 
 		log.WithFields(log.Fields{"endpoint": beaconConf.Source.Beacon.Endpoint}).Info("connecting to beacon API")
-		client := api.NewBeaconClient(beaconConf.Source.Beacon.Endpoint, beaconConf.Source.Beacon.StateEndpoint)
-		s := syncer.New(client, &store, p)
+		client := api.NewBeaconClient(beaconConf.Source.Beacon.Endpoint)
+		s := syncer.New(client, p, nil)
 
 		viper.SetConfigFile(executionConfig)
 
