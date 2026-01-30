@@ -9,8 +9,7 @@ gas_estimator_dir="$root_dir/gas-estimator"
 gas_estimator_bin="$root_dir/gas-estimator/target/release/snowbridge-gas-estimator "
 export output_dir="${OUTPUT_DIR:-/tmp/snowbridge-v2}"
 export output_bin_dir="$output_dir/bin"
-relayer_v1="$output_bin_dir/snowbridge-relay-v1"
-relayer_v2="$output_bin_dir/snowbridge-relay-v2"
+relayer="$output_bin_dir/snowbridge-relay"
 ethereum_data_dir="$output_dir/ethereum"
 zombienet_data_dir="$output_dir/zombienet"
 export PATH="$output_bin_dir:$PATH"
@@ -18,10 +17,6 @@ polkadot_sdk_dir="${POLKADOT_SDK_DIR:-../polkadot-sdk}"
 
 export GETH_VERSION=v1.16.4
 export LODESTAR_VERSION=v1.35.0
-export snowbridge_v1="${BUILD_V1:-false}"
-v1_root_dir="$root_dir/../snowbridge-v1"
-export v1_contract_dir="$v1_root_dir/contracts"
-v1_relay_dir="$v1_root_dir/relayer"
 rebuild_web_packages="${REBUILD_WEB_API:-false}"
 
 eth_network="${ETH_NETWORK:-localhost}"
