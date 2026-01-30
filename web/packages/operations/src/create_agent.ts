@@ -2,7 +2,7 @@ import "dotenv/config"
 import { Context, toEthereumSnowbridgeV2 } from "@snowbridge/api"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { Wallet } from "ethers"
-import { assetRegistryFor, environmentFor } from "@snowbridge/registry"
+import { bridgeInfoFor } from "@snowbridge/registry"
 
 // TODO add the ability to specify a location to create a agent from, using the EthereumSystemV2::agent_id API,
 // once https://github.com/polkadot-fellows/runtimes/pull/978 has been released on-chain.
@@ -15,7 +15,8 @@ export const createAgent = async (agentId: string) => {
     }
     console.log(`Using environment '${env}'`)
 
-    const context = new Context(environmentFor(env))
+    const { environment, registry } = bridgeInfoFor(env)
+    const context = new Context(environment)
 
     const ETHEREUM_ACCOUNT = new Wallet(
         process.env.ETHEREUM_KEY ?? "Your Key Goes Here",
@@ -24,8 +25,6 @@ export const createAgent = async (agentId: string) => {
     const ETHEREUM_ACCOUNT_PUBLIC = await ETHEREUM_ACCOUNT.getAddress()
 
     console.log("eth", ETHEREUM_ACCOUNT_PUBLIC)
-
-    const registry = assetRegistryFor(env)
 
     console.log("Creating agent with ID:", agentId)
 

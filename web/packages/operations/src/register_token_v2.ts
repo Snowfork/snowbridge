@@ -2,7 +2,7 @@ import "dotenv/config"
 import { Context, toPolkadotSnowbridgeV2 } from "@snowbridge/api"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { Wallet } from "ethers"
-import { assetRegistryFor, environmentFor } from "@snowbridge/registry"
+import { bridgeInfoFor } from "@snowbridge/registry"
 
 export const registerTokenV2 = async (tokenAddress: string) => {
     await cryptoWaitReady()
@@ -13,7 +13,8 @@ export const registerTokenV2 = async (tokenAddress: string) => {
     }
     console.log(`Using environment '${env}'`)
 
-    const context = new Context(environmentFor(env))
+    const { environment, registry } = bridgeInfoFor(env)
+    const context = new Context(environment)
 
     const ETHEREUM_ACCOUNT = new Wallet(
         process.env.ETHEREUM_KEY ?? "Your Key Goes Here",
@@ -22,8 +23,6 @@ export const registerTokenV2 = async (tokenAddress: string) => {
     const ETHEREUM_ACCOUNT_PUBLIC = await ETHEREUM_ACCOUNT.getAddress()
 
     console.log("eth", ETHEREUM_ACCOUNT_PUBLIC)
-
-    const registry = assetRegistryFor(env)
 
     const TOKEN_CONTRACT = tokenAddress.toLowerCase()
 

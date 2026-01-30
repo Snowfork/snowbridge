@@ -10,7 +10,12 @@ if (process.argv.length != 6) {
     process.exit(1)
 }
 
-transfer(parseInt(process.argv[2]), parseInt(process.argv[3]), process.argv[4], BigInt(process.argv[5]))
+transfer(
+    parseInt(process.argv[2]),
+    parseInt(process.argv[3]),
+    process.argv[4],
+    BigInt(process.argv[5]),
+)
     .then(() => process.exit(0))
     .catch((error) => {
         console.error("Error:", error)

@@ -2,8 +2,8 @@ import { u8aToHex } from "@polkadot/util"
 import { blake2AsU8a } from "@polkadot/util-crypto"
 import { Context, status, utils, subsquidV2 } from "@snowbridge/api"
 import { sendMetrics } from "./alarm"
-import { environmentFor } from "@snowbridge/registry"
 import { Environment } from "../../base-types/dist"
+import { bridgeInfoFor } from "@snowbridge/registry"
 
 export const monitorParams: {
     [id: string]: {
@@ -235,7 +235,7 @@ export const monitor = async (): Promise<status.AllMetrics> => {
     if (process.env.NODE_ENV !== undefined) {
         env = process.env.NODE_ENV
     }
-    const snowbridgeEnv = environmentFor(env)
+    const { environment: snowbridgeEnv } = bridgeInfoFor(env)
     if (snowbridgeEnv === undefined) {
         throw Error(`Unknown environment '${env}'`)
     }

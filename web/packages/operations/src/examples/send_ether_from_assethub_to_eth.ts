@@ -2,18 +2,18 @@ import { Keyring } from "@polkadot/keyring"
 import { assetsV2, Context, historyV2, toEthereumV2 } from "@snowbridge/api"
 import { formatUnits, Wallet } from "ethers"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
-import { assetRegistryFor, environmentFor } from "@snowbridge/registry"
 import { setTimeout } from "timers/promises"
+import { bridgeInfoFor } from "@snowbridge/registry"
 ;(async () => {
     // Initialize polkadot-js crypto
     await cryptoWaitReady()
 
     // Get the registry of parachains and assets.
-    const environment = "polkadot_mainnet"
-    const registry = assetRegistryFor(environment)
+    const env = "polkadot_mainnet"
+    const { environment, registry } = bridgeInfoFor(env)
 
     // Initialize the context which establishes and pool connections
-    const context = new Context(environmentFor(environment))
+    const context = new Context(environment)
 
     // Initialize ethereum wallet.
     const ETHEREUM_ACCOUNT = new Wallet(
@@ -69,7 +69,7 @@ import { setTimeout } from "timers/promises"
         formatUnits(feePayment.partialFee, transfer.computed.sourceParachain.info.tokenDecimals),
     )
     console.log(
-        `delivery fee (${registry.parachains[registry.assetHubParaId].info.tokenSymbols}): `,
+        `delivery fee (${registry.parachains[`polkadot_${registry.assetHubParaId}`].info.tokenSymbols}): `,
         formatUnits(fee.totalFeeInDot, transfer.computed.sourceParachain.info.tokenDecimals),
     )
 

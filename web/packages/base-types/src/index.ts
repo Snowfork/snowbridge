@@ -1,6 +1,16 @@
+export type BridgeInfo = {
+  environment: Environment;
+  routes: readonly TransferRoute[];
+  registry: AssetRegistry;
+};
+
 export type AccountType = "AccountId20" | "AccountId32";
 
 export type XcmVersion = "v4" | "v5";
+
+export type EthereumKind = "ethereum" | "ethereum_l2";
+export type ParachainKind = "polkadot" | "kusama";
+export type ChainKind = EthereumKind | ParachainKind;
 
 export interface XC20TokenMap {
   [xc20: string]: string;
@@ -24,9 +34,9 @@ export interface ERC20MetadataMap {
   [token: string]: ERC20Metadata;
 }
 
-export type EthereumChain = {
-  chainId: number;
-  id: string;
+export type EthereumChain = ChainId & {
+  kind: EthereumKind;
+  key: `${EthereumKind}_${number}`;
   evmParachainId?: number;
   assets: ERC20MetadataMap;
   precompile?: `0x${string}`;
@@ -74,8 +84,9 @@ export interface AssetMap {
   [token: string]: Asset;
 }
 
-export type Parachain = {
-  parachainId: number;
+export type Parachain = ChainId & {
+  kind: ParachainKind;
+  key: `${ParachainKind}_${number}`;
   info: ChainProperties;
   features: {
     hasPalletXcm: boolean;
@@ -96,27 +107,12 @@ export type Parachain = {
   xcDOT?: string;
 };
 
-export interface ParachainMap {
-  [paraId: string]: Parachain;
-}
-
-export function supportsEthereumToPolkadotV2(parachain: Parachain): boolean {
-  return (
-    parachain.features.hasXcmPaymentApi &&
-    parachain.features.xcmVersion === "v5" &&
-    parachain.features.supportsV2
-  );
-}
-
-export function supportsPolkadotToEthereumV2(parachain: Parachain): boolean {
-  return (
-    parachain.features.hasEthBalance &&
-    parachain.features.hasXcmPaymentApi &&
-    parachain.features.supportsAliasOrigin &&
-    parachain.features.xcmVersion === "v5" &&
-    parachain.features.supportsV2
-  );
-}
+export type EthereumChainMap = {
+  [key: ChainKey<EthereumKind>]: EthereumChain;
+};
+export type ParachainMap = {
+  [key: ChainKey<ParachainKind>]: Parachain;
+};
 
 export type KusamaConfig = {
   assetHubParaId: number;
@@ -138,7 +134,7 @@ export type Environment = {
   assetHubParaId: number;
   bridgeHubParaId: number;
   /** @deprecated Remove once V2 is fully rolled out to all parachains */
-  v2_parachains?: number[];
+  v2_parachains?: readonly number[];
   relaychainUrl: string;
   parachains: {
     [paraId: string]: string;
@@ -166,31 +162,31 @@ export type Environment = {
   };
 };
 
-export type SourceType = "substrate" | "ethereum";
-
-export type Path = {
-  type: SourceType;
-  id: string;
-  source: number;
-  destinationType: SourceType;
-  destination: number;
-  asset: string;
+export type ChainId = {
+  kind: ChainKind;
+  /** Ethereum chain id or polkadot parachain id.
+   */
+  id: number;
 };
 
-export type Source = {
-  type: SourceType;
-  id: string;
-  key: string;
+export type TransferRoute = {
+  from: ChainId;
+  to: ChainId;
+  assets: readonly string[];
+};
+
+export type ChainKey<T extends string> = `${T}_${number}`;
+
+export type Source = ChainId & {
+  key: ChainKey<ChainKind>;
   destinations: {
-    [destination: string]: { type: SourceType; assets: string[] };
+    [id: string]: ChainId & { key: ChainKey<ChainKind>; assets: string[] };
   };
 };
 
-export type TransferLocation = {
-  id: string;
+export type TransferLocation = ChainId & {
   name: string;
-  key: string;
-  type: SourceType;
+  key: ChainKey<ChainKind>;
   parachain?: Parachain;
   ethChain?: EthereumChain;
 };
@@ -219,9 +215,7 @@ export type AssetRegistry = {
   bridgeHubParaId: number;
   relaychain: ChainProperties;
   bridgeHub: ChainProperties;
-  ethereumChains: {
-    [chainId: string]: EthereumChain;
-  };
+  ethereumChains: EthereumChainMap;
   parachains: ParachainMap;
   kusama?: KusamaConfig;
 };
@@ -262,5 +256,5 @@ export type AssetSwapRoute = {
 export type L2ForwardMetadata = {
   adapterAddress: string;
   feeTokenAddress: string;
-  swapRoutes: AssetSwapRoute[];
+  swapRoutes: readonly AssetSwapRoute[];
 };

@@ -19,7 +19,6 @@ import {
     HERE_LOCATION,
     buildAssetHubERC20TransferFromParachainWithNativeFee,
 } from "./xcmBuilder"
-import { getAssetHubConversionPalletSwap } from "./assets_v2"
 import { getOperatingStatus, OperationStatus } from "./status"
 import {
     Asset,
@@ -367,7 +366,7 @@ export async function getDeliveryFee(
     let totalFeeInNative: bigint | undefined = undefined
     let assetHubExecutionFeeNative: bigint | undefined = undefined
     let returnToSenderExecutionFeeNative: bigint | undefined = undefined
-    if (!registry.parachains[parachain].features.hasDotBalance) {
+    if (!registry.parachains[`polkadot_${parachain}`].features.hasDotBalance) {
         // padding the bridging fee and bridge hub delivery by the slippage fee to make sure the trade goes through.
         totalFeeInDot =
             padFeeByPercentage(
@@ -384,15 +383,17 @@ export async function getDeliveryFee(
             assetHubExecutionFeeNativeRes,
             returnToSenderExecutionFeeNativeRes,
         ] = await Promise.all([
-            getAssetHubConversionPalletSwap(assetHub, nativeLocation, DOT_LOCATION, totalFeeInDot),
-            getAssetHubConversionPalletSwap(
-                assetHub,
+            assetHubImpl.getAssetHubConversionPalletSwap(
+                nativeLocation,
+                DOT_LOCATION,
+                totalFeeInDot,
+            ),
+            assetHubImpl.getAssetHubConversionPalletSwap(
                 nativeLocation,
                 DOT_LOCATION,
                 assetHubExecutionFeeDOT,
             ),
-            getAssetHubConversionPalletSwap(
-                assetHub,
+            assetHubImpl.getAssetHubConversionPalletSwap(
                 nativeLocation,
                 DOT_LOCATION,
                 returnToSenderExecutionFeeDOT,
@@ -868,16 +869,20 @@ export async function signAndSend(
 
 export function resolveInputs(registry: AssetRegistry, tokenAddress: string, sourceParaId: number) {
     const tokenErcMetadata =
-        registry.ethereumChains[registry.ethChainId.toString()].assets[tokenAddress.toLowerCase()]
+        registry.ethereumChains[`ethereum_${registry.ethChainId}`].assets[
+            tokenAddress.toLowerCase()
+        ]
     if (!tokenErcMetadata) {
         throw Error(`No token ${tokenAddress} registered on ethereum chain ${registry.ethChainId}.`)
     }
-    const sourceParachain = registry.parachains[sourceParaId.toString()]
+    const sourceParachain = registry.parachains[`polkadot_${sourceParaId}`]
     if (!sourceParachain) {
         throw Error(`Could not find ${sourceParaId} in the asset registry.`)
     }
     const ahAssetMetadata =
-        registry.parachains[registry.assetHubParaId].assets[tokenAddress.toLowerCase()]
+        registry.parachains[`polkadot_${registry.assetHubParaId}`].assets[
+            tokenAddress.toLowerCase()
+        ]
     if (!ahAssetMetadata) {
         throw Error(`Token ${tokenAddress} not registered on asset hub.`)
     }

@@ -2,22 +2,19 @@ import { Keyring } from "@polkadot/keyring"
 import { Context, toEthereumV2 } from "@snowbridge/api"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { formatUnits, Wallet } from "ethers"
-import { assetRegistryFor, environmentFor } from "@snowbridge/registry"
+import { bridgeInfoFor } from "@snowbridge/registry"
 
 export const transferToEthereum = async (sourceParaId: number, symbol: string, amount: bigint) => {
     let env = "local_e2e"
     if (process.env.NODE_ENV !== undefined) {
         env = process.env.NODE_ENV
     }
-    const snwobridgeEnv = environmentFor(env)
-    if (snwobridgeEnv === undefined) {
-        throw Error(`Unknown environment '${env}'`)
-    }
     console.log(`Using environment '${env}'`)
 
     await cryptoWaitReady()
 
-    const context = new Context(snwobridgeEnv)
+    const { registry, environment } = bridgeInfoFor(env)
+    const context = new Context(environment)
 
     const polkadot_keyring = new Keyring({ type: "sr25519" })
 
@@ -31,9 +28,7 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
 
     console.log("eth", ETHEREUM_ACCOUNT_PUBLIC, "sub", POLKADOT_ACCOUNT_PUBLIC)
 
-    const registry = assetRegistryFor(env)
-
-    const assets = registry.ethereumChains[registry.ethChainId].assets
+    const assets = registry.ethereumChains[`ethereum_${registry.ethChainId}`].assets
     const TOKEN_CONTRACT = Object.keys(assets)
         .map((t) => assets[t])
         .find((asset) => asset.symbol.toLowerCase().startsWith(symbol.toLowerCase()))?.token
@@ -77,7 +72,7 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
             ),
         )
         console.log(
-            `delivery fee (${registry.parachains[registry.assetHubParaId].info.tokenSymbols}): `,
+            `delivery fee (${registry.parachains[`polkadot_${registry.assetHubParaId}`].info.tokenSymbols}): `,
             formatUnits(fee.totalFeeInDot, transfer.computed.sourceParachain.info.tokenDecimals),
         )
         // console.log(

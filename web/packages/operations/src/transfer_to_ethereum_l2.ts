@@ -2,7 +2,7 @@ import { Keyring } from "@polkadot/keyring"
 import { Context, toEthereumSnowbridgeV2, toEthereumV2 } from "@snowbridge/api"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { formatUnits, Wallet } from "ethers"
-import { assetRegistryFor, environmentFor } from "@snowbridge/registry"
+import { bridgeInfoFor } from "@snowbridge/registry"
 import { ContractCall } from "../../base-types/dist"
 
 export const transferToEthereumL2 = async (
@@ -23,7 +23,8 @@ export const transferToEthereumL2 = async (
     }
     console.log(`Using environment '${env}'`)
 
-    const context = new Context(environmentFor(env))
+    const { registry, environment } = bridgeInfoFor(env)
+    const context = new Context(environment)
 
     const polkadot_keyring = new Keyring({ type: "sr25519" })
 
@@ -37,9 +38,7 @@ export const transferToEthereumL2 = async (
 
     console.log("eth", ETHEREUM_ACCOUNT_PUBLIC, "sub", POLKADOT_ACCOUNT_PUBLIC)
 
-    const registry = assetRegistryFor(env)
-
-    const assets = registry.ethereumChains[registry.ethChainId].assets
+    const assets = registry.ethereumChains[`ethereum_${registry.ethChainId}`].assets
     const TOKEN_CONTRACT = Object.keys(assets)
         .map((t) => assets[t])
         .find((asset) => asset.symbol.toLowerCase().startsWith(symbol.toLowerCase()))?.token
@@ -91,7 +90,7 @@ export const transferToEthereumL2 = async (
             ),
         )
         console.log(
-            `delivery fee (${registry.parachains[registry.assetHubParaId].info.tokenSymbols}): `,
+            `delivery fee (${registry.parachains[`polkadot_${registry.assetHubParaId}`].info.tokenSymbols}): `,
             formatUnits(fee.totalFeeInDot, transfer.computed.sourceParachain.info.tokenDecimals),
         )
 
