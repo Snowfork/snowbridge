@@ -24,6 +24,7 @@ import (
 var (
 	ErrCommitteeUpdateHeaderInDifferentSyncPeriod = errors.New("sync committee in different sync period")
 	ErrSyncCommitteeNotSuperMajority              = errors.New("update received was not signed by supermajority")
+	ErrNewerFinalizedHeaderAvailable              = errors.New("newer finalized header available, abandoning current request")
 )
 
 // StateServiceClient is an interface for the beacon state service HTTP client
@@ -303,6 +304,15 @@ func (s *Syncer) GetBlockRoots(slot uint64) (scale.BlockRootProof, error) {
 
 		// Check if it's a "not ready" error that we should retry
 		if err.Error() == "proof not ready, please retry" {
+			// Check if a newer finalized slot is available before retrying
+			if newerSlot, hasNewer := s.checkForNewerFinalizedSlot(slot); hasNewer {
+				log.WithFields(log.Fields{
+					"requestedSlot": slot,
+					"newerSlot":     newerSlot,
+				}).Info("newer finalized header available, abandoning current request")
+				return scale.BlockRootProof{}, ErrNewerFinalizedHeaderAvailable
+			}
+
 			waitTime := time.Duration(5*(i+1)) * time.Second
 			if waitTime > 30*time.Second {
 				waitTime = 30 * time.Second
@@ -339,6 +349,15 @@ func (s *Syncer) getSyncCommitteeProof(slot uint64, period string) (*scale.SyncC
 		}
 
 		if err.Error() == "proof not ready, please retry" {
+			// Check if a newer finalized slot is available before retrying
+			if newerSlot, hasNewer := s.checkForNewerFinalizedSlot(slot); hasNewer {
+				log.WithFields(log.Fields{
+					"requestedSlot": slot,
+					"newerSlot":     newerSlot,
+				}).Info("newer finalized header available, abandoning sync committee proof request")
+				return nil, ErrNewerFinalizedHeaderAvailable
+			}
+
 			waitTime := time.Duration(5*(i+1)) * time.Second
 			if waitTime > 30*time.Second {
 				waitTime = 30 * time.Second
@@ -374,6 +393,15 @@ func (s *Syncer) getFinalizedHeaderProof(slot uint64) ([]types.H256, error) {
 		}
 
 		if err.Error() == "proof not ready, please retry" {
+			// Check if a newer finalized slot is available before retrying
+			if newerSlot, hasNewer := s.checkForNewerFinalizedSlot(slot); hasNewer {
+				log.WithFields(log.Fields{
+					"requestedSlot": slot,
+					"newerSlot":     newerSlot,
+				}).Info("newer finalized header available, abandoning finalized header proof request")
+				return nil, ErrNewerFinalizedHeaderAvailable
+			}
+
 			waitTime := time.Duration(5*(i+1)) * time.Second
 			if waitTime > 30*time.Second {
 				waitTime = 30 * time.Second
@@ -391,6 +419,29 @@ func (s *Syncer) getFinalizedHeaderProof(slot uint64) ([]types.H256, error) {
 		return nil, fmt.Errorf("state service failed: %w", err)
 	}
 	return nil, fmt.Errorf("state service retries exhausted for finalized header proof at slot %d", slot)
+}
+
+// checkForNewerFinalizedSlot checks if a newer finalized slot is available than the one being requested.
+// Returns the newer slot and true if a newer one exists, otherwise returns 0 and false.
+func (s *Syncer) checkForNewerFinalizedSlot(requestedSlot uint64) (uint64, bool) {
+	finalizedUpdate, err := s.Client.GetLatestFinalizedUpdate()
+	if err != nil {
+		// If we can't check, assume no newer slot is available
+		log.WithError(err).Debug("failed to check for newer finalized slot")
+		return 0, false
+	}
+
+	currentFinalizedSlot, err := strconv.ParseUint(finalizedUpdate.Data.FinalizedHeader.Beacon.Slot, 10, 64)
+	if err != nil {
+		log.WithError(err).Debug("failed to parse current finalized slot")
+		return 0, false
+	}
+
+	if currentFinalizedSlot > requestedSlot {
+		return currentFinalizedSlot, true
+	}
+
+	return 0, false
 }
 
 func (s *Syncer) GetFinalizedHeader() (scale.BeaconHeader, error) {

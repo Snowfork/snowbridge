@@ -183,6 +183,27 @@ func (h *Header) SyncCommitteePeriodUpdate(ctx context.Context, period uint64) e
 }
 
 func (h *Header) SyncFinalizedHeader(ctx context.Context) error {
+	// Retry loop to handle cases where a newer finalized header becomes available while waiting for proofs
+	maxRetries := 3
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		err := h.syncFinalizedHeaderAttempt(ctx)
+		if err == nil {
+			return nil
+		}
+
+		// If a newer finalized header is available, retry with the new one
+		if errors.Is(err, syncer.ErrNewerFinalizedHeaderAvailable) {
+			log.WithField("attempt", attempt+1).Info("newer finalized header available, retrying sync")
+			continue
+		}
+
+		return err
+	}
+
+	return fmt.Errorf("sync finalized header: max retries exceeded due to newer headers becoming available")
+}
+
+func (h *Header) syncFinalizedHeaderAttempt(ctx context.Context) error {
 	// When the chain has been processed up until now, keep getting finalized block updates and send that to the parachain
 	finalizedHeader, err := h.syncer.GetFinalizedHeader()
 	if err != nil {

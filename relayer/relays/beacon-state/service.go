@@ -268,6 +268,28 @@ func (s *Service) GetSyncer() *syncer.Syncer {
 	return s.syncer
 }
 
+// checkForNewerFinalizedSlot checks if a newer finalized slot exists than the one being processed.
+// Returns the newer slot if one exists, otherwise returns 0.
+func (s *Service) checkForNewerFinalizedSlot(currentSlot uint64) uint64 {
+	update, err := s.syncer.Client.GetLatestFinalizedUpdate()
+	if err != nil {
+		log.WithError(err).Debug("Failed to check for newer finalized slot")
+		return 0
+	}
+
+	latestFinalizedSlot, err := strconv.ParseUint(update.Data.FinalizedHeader.Beacon.Slot, 10, 64)
+	if err != nil {
+		log.WithError(err).Debug("Failed to parse latest finalized slot")
+		return 0
+	}
+
+	if latestFinalizedSlot > currentSlot {
+		return latestFinalizedSlot
+	}
+
+	return 0
+}
+
 func (s *Service) GetProtocol() *protocol.Protocol {
 	return s.protocol
 }
@@ -378,6 +400,19 @@ func (s *Service) checkAndDownloadFinalizedState(ctx context.Context) error {
 			return
 		}
 
+		// Check if a newer finalized slot appeared while downloading - if so, skip this slot
+		if newerSlot := s.checkForNewerFinalizedSlot(finalizedSlot); newerSlot > 0 {
+			log.WithFields(log.Fields{
+				"currentSlot": finalizedSlot,
+				"newerSlot":   newerSlot,
+			}).Info("Newer finalized slot detected after download, skipping proof generation for old slot")
+			// Update lastFinalizedSlot so we can process the newer one
+			s.slotMu.Lock()
+			s.lastFinalizedSlot = finalizedSlot
+			s.slotMu.Unlock()
+			return
+		}
+
 		// Download attested state
 		log.WithField("slot", attestedSlot).Debug("Downloading attested beacon state")
 		attestedData, err := s.syncer.Client.GetBeaconState(fmt.Sprintf("%d", attestedSlot))
@@ -393,11 +428,35 @@ func (s *Service) checkAndDownloadFinalizedState(ctx context.Context) error {
 			return
 		}
 
+		// Check again before expensive proof generation
+		if newerSlot := s.checkForNewerFinalizedSlot(finalizedSlot); newerSlot > 0 {
+			log.WithFields(log.Fields{
+				"currentSlot": finalizedSlot,
+				"newerSlot":   newerSlot,
+			}).Info("Newer finalized slot detected before proof generation, skipping old slot")
+			s.slotMu.Lock()
+			s.lastFinalizedSlot = finalizedSlot
+			s.slotMu.Unlock()
+			return
+		}
+
 		// Pre-generate proofs - FINALIZED first since beacon relay needs it
 		// Process ONE state at a time: generate proofs, then release memory before next
 		s.preGenerateProofs(finalizedSlot, finalizedData)
 		finalizedData = nil // Release finalized data before processing attested
 		runtime.GC()
+
+		// Check if we should skip attested proof generation
+		if newerSlot := s.checkForNewerFinalizedSlot(finalizedSlot); newerSlot > 0 {
+			log.WithFields(log.Fields{
+				"currentSlot": finalizedSlot,
+				"newerSlot":   newerSlot,
+			}).Info("Newer finalized slot detected after finalized proofs, skipping attested proofs")
+			s.slotMu.Lock()
+			s.lastFinalizedSlot = finalizedSlot
+			s.slotMu.Unlock()
+			return
+		}
 
 		s.preGenerateProofs(attestedSlot, attestedData)
 		attestedData = nil // Release attested data
