@@ -317,18 +317,42 @@ func (s *Syncer) GetSyncCommitteePeriodUpdateFromEndpoint(from uint64) (scale.Up
 }
 
 func (s *Syncer) GetBlockRoots(slot uint64) (scale.BlockRootProof, error) {
-	// Try state service first if available
+	// Use state service if available - it handles all proof generation
 	if s.stateService != nil {
-		proof, err := s.stateService.GetBlockRootProof(slot)
-		if err != nil {
-			log.WithError(err).WithField("slot", slot).Warn("state service failed, falling back to direct state download")
-		} else {
-			log.WithField("slot", slot).Debug("got block root proof from state service")
-			return *proof, nil
+		// Retry with backoff if proof not ready
+		maxRetries := 20
+		for i := 0; i < maxRetries; i++ {
+			proof, err := s.stateService.GetBlockRootProof(slot)
+			if err == nil {
+				log.WithField("slot", slot).Debug("got block root proof from state service")
+				return *proof, nil
+			}
+
+			// Check if it's a "not ready" error that we should retry
+			if err.Error() == "proof not ready, please retry" {
+				waitTime := time.Duration(5*(i+1)) * time.Second
+				if waitTime > 30*time.Second {
+					waitTime = 30 * time.Second
+				}
+				log.WithFields(log.Fields{
+					"slot":    slot,
+					"attempt": i + 1,
+					"wait":    waitTime,
+				}).Info("proof not ready, retrying...")
+				time.Sleep(waitTime)
+				continue
+			}
+
+			// Other error - don't retry
+			log.WithError(err).WithField("slot", slot).Error("state service failed to get block root proof")
+			return scale.BlockRootProof{}, fmt.Errorf("state service failed: %w", err)
 		}
+
+		return scale.BlockRootProof{}, fmt.Errorf("state service retries exhausted for slot %d", slot)
 	}
 
-	// Fall back to direct state download
+	// No state service configured - fall back to direct state download
+	// This path should only be used in development/testing without state service
 	return s.getBlockRootsDirect(slot)
 }
 
