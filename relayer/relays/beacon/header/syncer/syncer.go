@@ -294,7 +294,12 @@ func (s *Syncer) GetBlockRoots(slot uint64) (scale.BlockRootProof, error) {
 	}
 
 	// Retry with backoff if proof not ready
-	maxRetries := 20
+	// Max wait: 5+10+15+20+25+30*5 = 225 seconds (~4 minutes)
+	// This is less than the ~6.4 minute finality period
+	maxRetries := 10
+	startTime := time.Now()
+	maxWaitTime := 4 * time.Minute
+
 	for i := 0; i < maxRetries; i++ {
 		proof, err := s.stateService.GetBlockRootProof(slot)
 		if err == nil {
@@ -310,6 +315,15 @@ func (s *Syncer) GetBlockRoots(slot uint64) (scale.BlockRootProof, error) {
 					"requestedSlot": slot,
 					"newerSlot":     newerSlot,
 				}).Info("newer finalized header available, abandoning current request")
+				return scale.BlockRootProof{}, ErrNewerFinalizedHeaderAvailable
+			}
+
+			// Check if we've been waiting too long - give up and let caller retry with fresh state
+			if time.Since(startTime) > maxWaitTime {
+				log.WithFields(log.Fields{
+					"slot":     slot,
+					"waitTime": time.Since(startTime),
+				}).Info("proof wait timeout exceeded, abandoning request")
 				return scale.BlockRootProof{}, ErrNewerFinalizedHeaderAvailable
 			}
 
@@ -340,7 +354,10 @@ func (s *Syncer) getSyncCommitteeProof(slot uint64, period string) (*scale.SyncC
 		return nil, fmt.Errorf("state service is required but not configured")
 	}
 
-	maxRetries := 20
+	maxRetries := 10
+	startTime := time.Now()
+	maxWaitTime := 4 * time.Minute
+
 	for i := 0; i < maxRetries; i++ {
 		proof, err := s.stateService.GetSyncCommitteeProof(slot, period)
 		if err == nil {
@@ -355,6 +372,16 @@ func (s *Syncer) getSyncCommitteeProof(slot uint64, period string) (*scale.SyncC
 					"requestedSlot": slot,
 					"newerSlot":     newerSlot,
 				}).Info("newer finalized header available, abandoning sync committee proof request")
+				return nil, ErrNewerFinalizedHeaderAvailable
+			}
+
+			// Check if we've been waiting too long
+			if time.Since(startTime) > maxWaitTime {
+				log.WithFields(log.Fields{
+					"slot":     slot,
+					"period":   period,
+					"waitTime": time.Since(startTime),
+				}).Info("sync committee proof wait timeout exceeded, abandoning request")
 				return nil, ErrNewerFinalizedHeaderAvailable
 			}
 
@@ -384,7 +411,10 @@ func (s *Syncer) getFinalizedHeaderProof(slot uint64) ([]types.H256, error) {
 		return nil, fmt.Errorf("state service is required but not configured")
 	}
 
-	maxRetries := 20
+	maxRetries := 10
+	startTime := time.Now()
+	maxWaitTime := 4 * time.Minute
+
 	for i := 0; i < maxRetries; i++ {
 		proof, err := s.stateService.GetFinalizedHeaderProof(slot)
 		if err == nil {
@@ -399,6 +429,15 @@ func (s *Syncer) getFinalizedHeaderProof(slot uint64) ([]types.H256, error) {
 					"requestedSlot": slot,
 					"newerSlot":     newerSlot,
 				}).Info("newer finalized header available, abandoning finalized header proof request")
+				return nil, ErrNewerFinalizedHeaderAvailable
+			}
+
+			// Check if we've been waiting too long
+			if time.Since(startTime) > maxWaitTime {
+				log.WithFields(log.Fields{
+					"slot":     slot,
+					"waitTime": time.Since(startTime),
+				}).Info("finalized header proof wait timeout exceeded, abandoning request")
 				return nil, ErrNewerFinalizedHeaderAvailable
 			}
 
