@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"runtime"
 	"strconv"
 
 	"github.com/ferranbt/fastssz"
@@ -323,8 +324,20 @@ func writeError(w http.ResponseWriter, status int, message string) {
 
 // preGenerateProofsFromData generates proofs from state data without downloading.
 // Used when state is already in the store but proofs aren't cached.
+// Uses downloadMu to serialize with other proof generations and prevent OOM.
 func (s *Service) preGenerateProofsFromData(slot uint64, data []byte) {
+	// Serialize proof generation to prevent concurrent memory-heavy operations
+	s.downloadMu.Lock()
+	defer s.downloadMu.Unlock()
+
+	// Double-check cache after acquiring lock
+	if s.hasAllProofsCached(slot) {
+		return
+	}
+
 	beaconState, err := s.unmarshalBeaconState(slot, data)
+	// Release data reference to help GC
+	data = nil
 	if err != nil {
 		log.WithError(err).WithField("slot", slot).Warn("Failed to unmarshal beacon state for proof generation")
 		return
@@ -338,6 +351,12 @@ func (s *Service) preGenerateProofsFromData(slot uint64, data []byte) {
 
 	_ = tree.Hash()
 	s.cacheAllProofs(slot, beaconState, tree)
+
+	// Release large objects and force GC
+	beaconState = nil
+	tree = nil
+	runtime.GC()
+
 	log.WithField("slot", slot).Info("Generated and cached proofs from stored state")
 }
 
