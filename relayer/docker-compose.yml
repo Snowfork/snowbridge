@@ -1,7 +1,11 @@
 services:
   beacon-state-service:
     image: ghcr.io/snowfork/snowbridge-relay
-    build: .
+    build:
+      context: ..
+      dockerfile: relayer/Dockerfile
+      args:
+        - GAS_ESTIMATOR_NETWORK=${GAS_ESTIMATOR_NETWORK:-polkadot}
     platform: linux/amd64
     command: run beacon-state-service --config /config/beacon-state-service.json
     volumes:
