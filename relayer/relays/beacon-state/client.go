@@ -33,15 +33,24 @@ func NewClient(endpoint string) *Client {
 }
 
 // GetFinalizedHeaderProof fetches the finalized header proof for a slot
-func (c *Client) GetFinalizedHeaderProof(slot uint64) (*ProofResponse, error) {
+// Returns ErrProofNotReady if the proof is not yet cached (503 response).
+func (c *Client) GetFinalizedHeaderProof(slot uint64) ([]types.H256, error) {
 	url := fmt.Sprintf("%s/v1/proofs/finalized-header?slot=%d", c.endpoint, slot)
-	return c.fetchProof(url)
-}
+	proofResp, err := c.fetchProof(url)
+	if err != nil {
+		return nil, err
+	}
 
-// GetExecutionStateRootProof fetches the execution state root proof for a slot
-func (c *Client) GetExecutionStateRootProof(slot uint64) (*ProofResponse, error) {
-	url := fmt.Sprintf("%s/v1/proofs/execution-state-root?slot=%d", c.endpoint, slot)
-	return c.fetchProof(url)
+	// Parse proof to []types.H256
+	proof := make([]types.H256, len(proofResp.Proof))
+	for i, p := range proofResp.Proof {
+		proof[i], err = util.HexToH256(p)
+		if err != nil {
+			return nil, fmt.Errorf("parse proof[%d]: %w", i, err)
+		}
+	}
+
+	return proof, nil
 }
 
 // GetBlockRootProof fetches the block root proof for a slot and returns a scale.BlockRootProof
@@ -119,10 +128,11 @@ func (c *Client) GetBlockRootProof(slot uint64) (*scale.BlockRootProof, error) {
 	}, nil
 }
 
-// GetBlockRootProofRaw fetches the raw block root proof response
-func (c *Client) GetBlockRootProofRaw(slot uint64) (*BlockRootProofResponse, error) {
-	url := fmt.Sprintf("%s/v1/proofs/block-root?slot=%d", c.endpoint, slot)
-	log.WithField("url", url).Debug("Fetching block root proof from beacon state service")
+// GetSyncCommitteeProof fetches the sync committee proof for a slot including pubkeys
+// Returns ErrProofNotReady if the proof is not yet cached (503 response).
+func (c *Client) GetSyncCommitteeProof(slot uint64, period string) (*scale.SyncCommitteeProof, error) {
+	url := fmt.Sprintf("%s/v1/proofs/sync-committee?slot=%d&period=%s", c.endpoint, slot, period)
+	log.WithField("url", url).Debug("Fetching sync committee proof from beacon state service")
 
 	resp, err := c.httpClient.Get(url)
 	if err != nil {
@@ -135,6 +145,10 @@ func (c *Client) GetBlockRootProofRaw(slot uint64) (*BlockRootProofResponse, err
 		return nil, fmt.Errorf("read response body: %w", err)
 	}
 
+	if resp.StatusCode == http.StatusServiceUnavailable {
+		return nil, ErrProofNotReady
+	}
+
 	if resp.StatusCode != http.StatusOK {
 		var errResp ErrorResponse
 		if json.Unmarshal(body, &errResp) == nil && errResp.Error != "" {
@@ -143,18 +157,49 @@ func (c *Client) GetBlockRootProofRaw(slot uint64) (*BlockRootProofResponse, err
 		return nil, fmt.Errorf("beacon state service returned status %d", resp.StatusCode)
 	}
 
-	var blockRootResp BlockRootProofResponse
-	if err := json.Unmarshal(body, &blockRootResp); err != nil {
+	var proofResp SyncCommitteeProofResponse
+	if err := json.Unmarshal(body, &proofResp); err != nil {
 		return nil, fmt.Errorf("unmarshal response: %w", err)
 	}
 
-	return &blockRootResp, nil
-}
+	// Parse proof
+	proof := make([]types.H256, len(proofResp.Proof))
+	for i, p := range proofResp.Proof {
+		proof[i], err = util.HexToH256(p)
+		if err != nil {
+			return nil, fmt.Errorf("parse proof[%d]: %w", i, err)
+		}
+	}
 
-// GetSyncCommitteeProof fetches the sync committee proof for a slot
-func (c *Client) GetSyncCommitteeProof(slot uint64, period string) (*ProofResponse, error) {
-	url := fmt.Sprintf("%s/v1/proofs/sync-committee?slot=%d&period=%s", c.endpoint, slot, period)
-	return c.fetchProof(url)
+	// Parse pubkeys
+	pubkeys := make([][48]byte, len(proofResp.Pubkeys))
+	for i, pk := range proofResp.Pubkeys {
+		pkBytes, err := util.HexStringToByteArray(pk)
+		if err != nil {
+			return nil, fmt.Errorf("parse pubkey[%d]: %w", i, err)
+		}
+		if len(pkBytes) != 48 {
+			return nil, fmt.Errorf("invalid pubkey length at index %d: got %d, want 48", i, len(pkBytes))
+		}
+		copy(pubkeys[i][:], pkBytes)
+	}
+
+	// Parse aggregate pubkey
+	aggPkBytes, err := util.HexStringToByteArray(proofResp.AggregatePubkey)
+	if err != nil {
+		return nil, fmt.Errorf("parse aggregate pubkey: %w", err)
+	}
+	var aggPk [48]byte
+	if len(aggPkBytes) != 48 {
+		return nil, fmt.Errorf("invalid aggregate pubkey length: got %d, want 48", len(aggPkBytes))
+	}
+	copy(aggPk[:], aggPkBytes)
+
+	return &scale.SyncCommitteeProof{
+		Pubkeys:         pubkeys,
+		AggregatePubkey: aggPk,
+		Proof:           proof,
+	}, nil
 }
 
 // Health checks if the beacon state service is healthy
@@ -186,6 +231,10 @@ func (c *Client) fetchProof(url string) (*ProofResponse, error) {
 		return nil, fmt.Errorf("read response body: %w", err)
 	}
 
+	if resp.StatusCode == http.StatusServiceUnavailable {
+		return nil, ErrProofNotReady
+	}
+
 	if resp.StatusCode != http.StatusOK {
 		var errResp ErrorResponse
 		if json.Unmarshal(body, &errResp) == nil && errResp.Error != "" {
@@ -202,92 +251,3 @@ func (c *Client) fetchProof(url string) (*ProofResponse, error) {
 	return &proofResp, nil
 }
 
-// GetBeaconState fetches raw SSZ beacon state data for a slot
-func (c *Client) GetBeaconState(slot uint64) ([]byte, error) {
-	url := fmt.Sprintf("%s/v1/state?slot=%d", c.endpoint, slot)
-	log.WithField("url", url).Debug("Fetching beacon state from beacon state service")
-
-	resp, err := c.httpClient.Get(url)
-	if err != nil {
-		return nil, fmt.Errorf("http request failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("read response body: %w", err)
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		var errResp ErrorResponse
-		if json.Unmarshal(body, &errResp) == nil && errResp.Error != "" {
-			return nil, fmt.Errorf("beacon state service error: %s", errResp.Error)
-		}
-		return nil, fmt.Errorf("beacon state service returned status %d", resp.StatusCode)
-	}
-
-	var stateResp StateResponse
-	if err := json.Unmarshal(body, &stateResp); err != nil {
-		return nil, fmt.Errorf("unmarshal response: %w", err)
-	}
-
-	// Decode hex data
-	data, err := util.HexStringToByteArray(stateResp.Data)
-	if err != nil {
-		return nil, fmt.Errorf("decode state data: %w", err)
-	}
-
-	return data, nil
-}
-
-// GetBeaconStateInRange fetches beacon states within a slot range from the persistent store
-func (c *Client) GetBeaconStateInRange(minSlot, maxSlot uint64) (*StateRangeResponse, error) {
-	url := fmt.Sprintf("%s/v1/state/range?minSlot=%d&maxSlot=%d", c.endpoint, minSlot, maxSlot)
-	log.WithField("url", url).Debug("Fetching beacon state range from beacon state service")
-
-	resp, err := c.httpClient.Get(url)
-	if err != nil {
-		return nil, fmt.Errorf("http request failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("read response body: %w", err)
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		var errResp ErrorResponse
-		if json.Unmarshal(body, &errResp) == nil && errResp.Error != "" {
-			return nil, fmt.Errorf("beacon state service error: %s", errResp.Error)
-		}
-		return nil, fmt.Errorf("beacon state service returned status %d", resp.StatusCode)
-	}
-
-	var rangeResp StateRangeResponse
-	if err := json.Unmarshal(body, &rangeResp); err != nil {
-		return nil, fmt.Errorf("unmarshal response: %w", err)
-	}
-
-	return &rangeResp, nil
-}
-
-// GetBeaconStateInRangeDecoded fetches beacon states within a slot range and decodes the hex data
-func (c *Client) GetBeaconStateInRangeDecoded(minSlot, maxSlot uint64) (attestedSlot, finalizedSlot uint64, attestedData, finalizedData []byte, err error) {
-	rangeResp, err := c.GetBeaconStateInRange(minSlot, maxSlot)
-	if err != nil {
-		return 0, 0, nil, nil, err
-	}
-
-	attestedData, err = util.HexStringToByteArray(rangeResp.AttestedData)
-	if err != nil {
-		return 0, 0, nil, nil, fmt.Errorf("decode attested data: %w", err)
-	}
-
-	finalizedData, err = util.HexStringToByteArray(rangeResp.FinalizedData)
-	if err != nil {
-		return 0, 0, nil, nil, fmt.Errorf("decode finalized data: %w", err)
-	}
-
-	return rangeResp.AttestedSlot, rangeResp.FinalizedSlot, attestedData, finalizedData, nil
-}

@@ -78,11 +78,8 @@ func (s *Service) Start(ctx context.Context, eg *errgroup.Group) error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", s.handleHealth)
 	mux.HandleFunc("/v1/proofs/finalized-header", s.handleFinalizedHeaderProof)
-	mux.HandleFunc("/v1/proofs/execution-state-root", s.handleExecutionStateRootProof)
 	mux.HandleFunc("/v1/proofs/block-root", s.handleBlockRootProof)
 	mux.HandleFunc("/v1/proofs/sync-committee", s.handleSyncCommitteeProof)
-	mux.HandleFunc("/v1/state", s.handleGetState)
-	mux.HandleFunc("/v1/state/range", s.handleGetStateInRange)
 
 	s.httpServer = &http.Server{
 		Addr:         fmt.Sprintf(":%d", s.config.HTTP.Port),
@@ -205,13 +202,19 @@ func (s *Service) saveCurrentFinalizedState() error {
 	log.Info("Fetching and saving current finalized beacon state")
 
 	// Get the latest finalized update to find attested and finalized slots
-	update, err := s.syncer.GetFinalizedUpdate()
+	update, err := s.syncer.Client.GetLatestFinalizedUpdate()
 	if err != nil {
 		return fmt.Errorf("get finalized update: %w", err)
 	}
 
-	attestedSlot := uint64(update.Payload.AttestedHeader.Slot)
-	finalizedSlot := uint64(update.Payload.FinalizedHeader.Slot)
+	attestedSlot, err := strconv.ParseUint(update.Data.AttestedHeader.Beacon.Slot, 10, 64)
+	if err != nil {
+		return fmt.Errorf("parse attested slot: %w", err)
+	}
+	finalizedSlot, err := strconv.ParseUint(update.Data.FinalizedHeader.Beacon.Slot, 10, 64)
+	if err != nil {
+		return fmt.Errorf("parse finalized slot: %w", err)
+	}
 
 	log.WithFields(log.Fields{
 		"attestedSlot":  attestedSlot,

@@ -95,8 +95,6 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) error {
 				log.WithFields(logFields).WithError(err).Warn("SyncCommittee latency found")
 			case errors.Is(err, ErrExecutionHeaderNotImported):
 				log.WithFields(logFields).WithError(err).Warn("ExecutionHeader not imported")
-			case errors.Is(err, syncer.ErrBeaconStateUnavailable):
-				log.WithFields(logFields).WithError(err).Warn("beacon state not available for finalized state yet")
 			case errors.Is(err, syncer.ErrSyncCommitteeNotSuperMajority):
 				log.WithFields(logFields).WithError(err).Warn("update received was not signed by supermajority")
 			case error_tracking.IsTransientError(err):
@@ -223,7 +221,26 @@ func (h *Header) SyncFinalizedHeader(ctx context.Context) error {
 // Write the provided finalized header update (possibly containing a sync committee) on-chain and check if it was
 // imported successfully. Update the cache if it has and add the finalized header to the checkpoint cache.
 func (h *Header) updateFinalizedHeaderOnchain(ctx context.Context, update scale.Update) error {
-	err := h.writer.WriteToParachainAndWatch(ctx, "EthereumBeaconClient.submit", update.Payload)
+	// Check if the header is already on-chain by querying from the best (non-finalized) block.
+	// This prevents duplicate submissions when the previous submission is still pending finalization.
+	currentOnchainState, err := h.writer.GetLastFinalizedHeaderStateAtBestBlock()
+	if err != nil {
+		return fmt.Errorf("fetch current on-chain finalized header state: %w", err)
+	}
+
+	if currentOnchainState.BeaconBlockRoot == update.FinalizedHeaderBlockRoot {
+		log.WithFields(log.Fields{
+			"slot":       update.Payload.FinalizedHeader.Slot,
+			"block_root": update.FinalizedHeaderBlockRoot.Hex(),
+		}).Info("skipping finalized header submission: header already exists on-chain")
+
+		// Update cache since the header is already on-chain
+		h.cache.SetLastSyncedFinalizedState(update.FinalizedHeaderBlockRoot, uint64(update.Payload.FinalizedHeader.Slot))
+		h.cache.AddCheckPoint(update.FinalizedHeaderBlockRoot, update.BlockRootsTree, uint64(update.Payload.FinalizedHeader.Slot))
+		return nil
+	}
+
+	err = h.writer.WriteToParachainAndWatch(ctx, "EthereumBeaconClient.submit", update.Payload)
 	if err != nil {
 		return fmt.Errorf("write to parachain: %w", err)
 	}
@@ -352,7 +369,7 @@ func (h *Header) populateFinalizedCheckpoint(slot uint64) error {
 	}
 
 	blockRootsProof, err := h.syncer.GetBlockRoots(slot)
-	if err != nil && !errors.Is(err, syncer.ErrBeaconStateUnavailable) {
+	if err != nil {
 		return fmt.Errorf("fetch block roots for slot %d: %w", slot, err)
 	}
 

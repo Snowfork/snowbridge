@@ -28,11 +28,20 @@ type ProofResponse struct {
 }
 
 type BlockRootProofResponse struct {
-	Slot             uint64     `json:"slot"`
-	Leaf             string     `json:"leaf"`
-	Proof            []string   `json:"proof"`
-	GeneralizedIndex int        `json:"generalizedIndex"`
-	BlockRoots       []string   `json:"blockRoots"`
+	Slot             uint64   `json:"slot"`
+	Leaf             string   `json:"leaf"`
+	Proof            []string `json:"proof"`
+	GeneralizedIndex int      `json:"generalizedIndex"`
+	BlockRoots       []string `json:"blockRoots"`
+}
+
+type SyncCommitteeProofResponse struct {
+	Slot             uint64   `json:"slot"`
+	Leaf             string   `json:"leaf"`
+	Proof            []string `json:"proof"`
+	GeneralizedIndex int      `json:"generalizedIndex"`
+	Pubkeys          []string `json:"pubkeys"`
+	AggregatePubkey  string   `json:"aggregatePubkey"`
 }
 
 type ErrorResponse struct {
@@ -62,29 +71,6 @@ func (s *Service) handleFinalizedHeaderProof(w http.ResponseWriter, r *http.Requ
 	// Only return from cache - finality watcher handles all proof generation
 	if cached, ok := s.proofCache.Get(cacheKey); ok {
 		log.WithField("slot", slot).Debug("Returning cached finalized header proof")
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(cached)
-		return
-	}
-
-	// Proof not cached - return 503 to signal retry
-	log.WithField("slot", slot).Debug("Proof not cached, returning 503 for client retry")
-	w.Header().Set("Retry-After", "5")
-	writeError(w, http.StatusServiceUnavailable, "proof not ready, please retry")
-}
-
-func (s *Service) handleExecutionStateRootProof(w http.ResponseWriter, r *http.Request) {
-	slot, err := parseSlotParam(r)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	cacheKey := fmt.Sprintf("execution-state-root:%d", slot)
-
-	// Only return from cache - finality watcher handles all proof generation
-	if cached, ok := s.proofCache.Get(cacheKey); ok {
-		log.WithField("slot", slot).Debug("Returning cached execution state root proof")
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(cached)
 		return
@@ -153,15 +139,12 @@ func (s *Service) cacheAllProofs(slot uint64, beaconState state.BeaconState, tre
 	// 1. Finalized header proof
 	s.cacheProof(slot, "finalized-header", s.protocol.FinalizedCheckpointGeneralizedIndex(slot), tree)
 
-	// 2. Execution state root proof
-	s.cacheProof(slot, "execution-state-root", s.protocol.ExecutionPayloadGeneralizedIndex(slot), tree)
-
-	// 3. Block root proof (includes block roots array)
+	// 2. Block root proof (includes block roots array)
 	s.cacheBlockRootProof(slot, beaconState, tree)
 
-	// 4. Sync committee proofs (current and next)
-	s.cacheProof(slot, "sync-committee:current", s.protocol.CurrentSyncCommitteeGeneralizedIndex(slot), tree)
-	s.cacheProof(slot, "sync-committee:next", s.protocol.NextSyncCommitteeGeneralizedIndex(slot), tree)
+	// 3. Sync committee proofs (current and next) - includes pubkeys
+	s.cacheSyncCommitteeProof(slot, "current", beaconState.GetCurrentSyncCommittee(), s.protocol.CurrentSyncCommitteeGeneralizedIndex(slot), tree)
+	s.cacheSyncCommitteeProof(slot, "next", beaconState.GetNextSyncCommittee(), s.protocol.NextSyncCommitteeGeneralizedIndex(slot), tree)
 
 	log.WithField("slot", slot).Info("Cached all proofs for slot")
 }
@@ -173,20 +156,41 @@ func (s *Service) cacheProof(slot uint64, proofType string, generalizedIndex int
 		return
 	}
 
-	var cacheKey string
-	if proofType == "sync-committee:current" {
-		cacheKey = fmt.Sprintf("sync-committee:%d:current", slot)
-	} else if proofType == "sync-committee:next" {
-		cacheKey = fmt.Sprintf("sync-committee:%d:next", slot)
-	} else {
-		cacheKey = fmt.Sprintf("%s:%d", proofType, slot)
-	}
+	cacheKey := fmt.Sprintf("%s:%d", proofType, slot)
 
 	response := ProofResponse{
 		Slot:             slot,
 		Leaf:             "0x" + hex.EncodeToString(proof.Leaf),
 		Proof:            hashesToHexStrings(proof.Hashes),
 		GeneralizedIndex: generalizedIndex,
+	}
+
+	jsonResponse, _ := json.Marshal(response)
+	s.proofCache.Put(cacheKey, jsonResponse)
+}
+
+func (s *Service) cacheSyncCommitteeProof(slot uint64, period string, syncCommittee *state.SyncCommittee, generalizedIndex int, tree *ssz.Node) {
+	proof, err := tree.Prove(generalizedIndex)
+	if err != nil {
+		log.WithError(err).WithFields(log.Fields{"slot": slot, "period": period}).Warn("Failed to generate sync committee proof")
+		return
+	}
+
+	// Convert pubkeys to hex strings
+	pubkeysHex := make([]string, len(syncCommittee.PubKeys))
+	for i, pk := range syncCommittee.PubKeys {
+		pubkeysHex[i] = "0x" + hex.EncodeToString(pk)
+	}
+
+	cacheKey := fmt.Sprintf("sync-committee:%d:%s", slot, period)
+
+	response := SyncCommitteeProofResponse{
+		Slot:             slot,
+		Leaf:             "0x" + hex.EncodeToString(proof.Leaf),
+		Proof:            hashesToHexStrings(proof.Hashes),
+		GeneralizedIndex: generalizedIndex,
+		Pubkeys:          pubkeysHex,
+		AggregatePubkey:  "0x" + hex.EncodeToString(syncCommittee.AggregatePubKey[:]),
 	}
 
 	jsonResponse, _ := json.Marshal(response)
@@ -274,102 +278,4 @@ func writeError(w http.ResponseWriter, status int, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(ErrorResponse{Error: message})
-}
-
-// StateResponse is the response for raw beacon state requests
-type StateResponse struct {
-	Slot uint64 `json:"slot"`
-	Data string `json:"data"` // hex-encoded SSZ state data
-}
-
-// StateRangeResponse is the response for beacon state range requests
-type StateRangeResponse struct {
-	AttestedSlot  uint64 `json:"attestedSlot"`
-	FinalizedSlot uint64 `json:"finalizedSlot"`
-	AttestedData  string `json:"attestedData"`  // hex-encoded SSZ state data
-	FinalizedData string `json:"finalizedData"` // hex-encoded SSZ state data
-}
-
-// handleGetState returns raw beacon state data for a given slot
-// Only returns from persistent store - does not download from beacon node
-// Acquires downloadMu to ensure only ONE state is loaded at a time
-func (s *Service) handleGetState(w http.ResponseWriter, r *http.Request) {
-	slot, err := parseSlotParam(r)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	log.WithField("slot", slot).Debug("Handling get state request")
-
-	// Acquire mutex to ensure only ONE state loaded at a time
-	s.downloadMu.Lock()
-	defer s.downloadMu.Unlock()
-
-	// Only serve from persistent store - no beacon downloads
-	data, err := s.store.GetBeaconStateData(slot)
-	if err == nil {
-		log.WithField("slot", slot).Debug("Found state in persistent store")
-		response := StateResponse{
-			Slot: slot,
-			Data: "0x" + hex.EncodeToString(data),
-		}
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(response)
-		return
-	}
-
-	// State not in store - return 503 to signal retry
-	log.WithField("slot", slot).Info("State not in store, returning 503 for client retry")
-	w.Header().Set("Retry-After", "5")
-	writeError(w, http.StatusServiceUnavailable, "state not ready, please retry")
-}
-
-// handleGetStateInRange finds beacon states within a slot range from the persistent store
-// Query params: minSlot, maxSlot
-// Acquires downloadMu to ensure only ONE state pair is loaded at a time
-func (s *Service) handleGetStateInRange(w http.ResponseWriter, r *http.Request) {
-	minSlotStr := r.URL.Query().Get("minSlot")
-	maxSlotStr := r.URL.Query().Get("maxSlot")
-
-	if minSlotStr == "" || maxSlotStr == "" {
-		writeError(w, http.StatusBadRequest, "minSlot and maxSlot parameters are required")
-		return
-	}
-
-	minSlot, err := strconv.ParseUint(minSlotStr, 10, 64)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid minSlot")
-		return
-	}
-
-	maxSlot, err := strconv.ParseUint(maxSlotStr, 10, 64)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid maxSlot")
-		return
-	}
-
-	log.WithFields(log.Fields{"minSlot": minSlot, "maxSlot": maxSlot}).Debug("Handling get state in range request")
-
-	// Acquire mutex to ensure only ONE state pair loaded at a time
-	s.downloadMu.Lock()
-	defer s.downloadMu.Unlock()
-
-	// Query persistent store
-	data, err := s.store.FindBeaconStateWithinRange(minSlot, maxSlot)
-	if err != nil {
-		log.WithError(err).WithFields(log.Fields{"minSlot": minSlot, "maxSlot": maxSlot}).Debug("No states found in range")
-		writeError(w, http.StatusNotFound, "no beacon states found in range")
-		return
-	}
-
-	response := StateRangeResponse{
-		AttestedSlot:  data.AttestedSlot,
-		FinalizedSlot: data.FinalizedSlot,
-		AttestedData:  "0x" + hex.EncodeToString(data.AttestedBeaconState),
-		FinalizedData: "0x" + hex.EncodeToString(data.FinalizedBeaconState),
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
 }
