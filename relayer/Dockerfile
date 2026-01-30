@@ -8,7 +8,7 @@ COPY relayer/ .
 RUN go build -v -o build/snowbridge-relay main.go
 
 # Stage 2: Build Rust gas estimator
-FROM rust:1.82 AS rust-builder
+FROM rust:1.85 AS rust-builder
 ARG GAS_ESTIMATOR_NETWORK
 WORKDIR /opt/gas-estimator
 RUN apt-get update && apt-get install -y build-essential && rm -rf /var/lib/apt/lists/*
