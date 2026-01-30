@@ -2,6 +2,7 @@ package beaconstate
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -13,6 +14,9 @@ import (
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
 	"github.com/snowfork/snowbridge/relayer/relays/util"
 )
+
+// ErrProofNotReady is returned when the proof is not yet cached and the client should retry
+var ErrProofNotReady = errors.New("proof not ready, please retry")
 
 type Client struct {
 	endpoint   string
@@ -41,7 +45,8 @@ func (c *Client) GetExecutionStateRootProof(slot uint64) (*ProofResponse, error)
 }
 
 // GetBlockRootProof fetches the block root proof for a slot and returns a scale.BlockRootProof
-// that includes the block roots tree for ancestry proofs
+// that includes the block roots tree for ancestry proofs.
+// Returns ErrProofNotReady if the proof is not yet cached (503 response).
 func (c *Client) GetBlockRootProof(slot uint64) (*scale.BlockRootProof, error) {
 	url := fmt.Sprintf("%s/v1/proofs/block-root?slot=%d", c.endpoint, slot)
 	log.WithField("url", url).Debug("Fetching block root proof from beacon state service")
@@ -55,6 +60,10 @@ func (c *Client) GetBlockRootProof(slot uint64) (*scale.BlockRootProof, error) {
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("read response body: %w", err)
+	}
+
+	if resp.StatusCode == http.StatusServiceUnavailable {
+		return nil, ErrProofNotReady
 	}
 
 	if resp.StatusCode != http.StatusOK {

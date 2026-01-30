@@ -384,6 +384,10 @@ func (s *Service) checkAndDownloadFinalizedState(ctx context.Context) error {
 			return
 		}
 
+		// Pre-generate and cache proofs for both slots so beacon relay requests are instant
+		s.preGenerateProofs(attestedSlot, attestedData)
+		s.preGenerateProofs(finalizedSlot, finalizedData)
+
 		// Update the last seen slot
 		s.slotMu.Lock()
 		s.lastFinalizedSlot = finalizedSlot
@@ -456,6 +460,10 @@ func (s *Service) downloadCurrentFinalizedStateSync() error {
 	s.lastFinalizedSlot = finalizedSlot
 	s.slotMu.Unlock()
 
+	// Pre-generate and cache proofs for both slots so beacon relay requests are instant
+	s.preGenerateProofs(attestedSlot, attestedData)
+	s.preGenerateProofs(finalizedSlot, finalizedData)
+
 	log.WithFields(log.Fields{
 		"attestedSlot":  attestedSlot,
 		"finalizedSlot": finalizedSlot,
@@ -463,4 +471,35 @@ func (s *Service) downloadCurrentFinalizedStateSync() error {
 	}).Info("Initial beacon states downloaded and cached")
 
 	return nil
+}
+
+// preGenerateProofs generates and caches all proofs for a slot from state data.
+// This is called by the finality watcher after downloading states, so proofs are
+// ready before the beacon relay needs them.
+func (s *Service) preGenerateProofs(slot uint64, data []byte) {
+	// Check if proofs are already cached
+	if s.hasAllProofsCached(slot) {
+		log.WithField("slot", slot).Debug("Proofs already cached, skipping pre-generation")
+		return
+	}
+
+	log.WithField("slot", slot).Info("Pre-generating proofs for slot")
+
+	beaconState, err := s.unmarshalBeaconState(slot, data)
+	if err != nil {
+		log.WithError(err).WithField("slot", slot).Warn("Failed to unmarshal beacon state for proof pre-generation")
+		return
+	}
+
+	tree, err := beaconState.GetTree()
+	if err != nil {
+		log.WithError(err).WithField("slot", slot).Warn("Failed to get state tree for proof pre-generation")
+		return
+	}
+
+	_ = tree.Hash()
+
+	s.cacheAllProofs(slot, beaconState, tree)
+
+	log.WithField("slot", slot).Info("Pre-generated and cached proofs for slot")
 }
