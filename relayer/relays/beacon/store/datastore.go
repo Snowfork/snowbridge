@@ -226,7 +226,7 @@ func (s *Store) GetLatestTimestamp() (time.Time, error) {
 
 func (s *Store) DeleteStateFile(filename string) error {
 	err := os.Remove(s.stateFileLocation(filename))
-	if err != nil {
+	if err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("remove file: %w", err)
 	}
 
