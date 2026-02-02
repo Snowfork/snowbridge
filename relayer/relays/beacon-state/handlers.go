@@ -165,7 +165,11 @@ func (s *Service) cacheProof(slot uint64, proofType string, generalizedIndex int
 		GeneralizedIndex: generalizedIndex,
 	}
 
-	jsonResponse, _ := json.Marshal(response)
+	jsonResponse, err := json.Marshal(response)
+	if err != nil {
+		log.WithError(err).WithFields(log.Fields{"slot": slot, "proofType": proofType}).Warn("Failed to marshal proof response")
+		return
+	}
 	s.proofCache.Put(cacheKey, jsonResponse)
 }
 
@@ -193,7 +197,11 @@ func (s *Service) cacheSyncCommitteeProof(slot uint64, period string, syncCommit
 		AggregatePubkey:  "0x" + hex.EncodeToString(syncCommittee.AggregatePubKey[:]),
 	}
 
-	jsonResponse, _ := json.Marshal(response)
+	jsonResponse, err := json.Marshal(response)
+	if err != nil {
+		log.WithError(err).WithFields(log.Fields{"slot": slot, "period": period}).Warn("Failed to marshal sync committee proof response")
+		return
+	}
 	s.proofCache.Put(cacheKey, jsonResponse)
 }
 
@@ -221,7 +229,11 @@ func (s *Service) cacheBlockRootProof(slot uint64, beaconState state.BeaconState
 	}
 
 	cacheKey := fmt.Sprintf("block-root:%d", slot)
-	jsonResponse, _ := json.Marshal(response)
+	jsonResponse, err := json.Marshal(response)
+	if err != nil {
+		log.WithError(err).WithField("slot", slot).Warn("Failed to marshal block root proof response")
+		return
+	}
 	s.proofCache.Put(cacheKey, jsonResponse)
 }
 
