@@ -14,7 +14,6 @@
       "endpoint": "${ETHEREUM_ENDPOINT}",
       "heartbeat-secs": 600
     },
-    "descendants-until-final": 3,
     "contracts": {
       "BeefyClient": "${BEEFY_CLIENT_CONTRACT}",
       "Gateway": "${GATEWAY_CONTRACT}"
