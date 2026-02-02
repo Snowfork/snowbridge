@@ -70,9 +70,17 @@ func (s *Service) Start(ctx context.Context, eg *errgroup.Group) error {
 	proofTTL := time.Duration(s.config.Cache.ProofTTLSeconds) * time.Second
 	s.proofCache = NewProofCache(s.config.Cache.MaxProofs, proofTTL)
 
-	// Parse timeouts
-	readTimeout, _ := time.ParseDuration(s.config.HTTP.ReadTimeout)
-	writeTimeout, _ := time.ParseDuration(s.config.HTTP.WriteTimeout)
+	// Parse timeouts with fallback defaults
+	readTimeout, err := time.ParseDuration(s.config.HTTP.ReadTimeout)
+	if err != nil {
+		log.WithError(err).WithField("value", s.config.HTTP.ReadTimeout).Warn("Failed to parse HTTP read timeout, using default 30s")
+		readTimeout = 30 * time.Second
+	}
+	writeTimeout, err := time.ParseDuration(s.config.HTTP.WriteTimeout)
+	if err != nil {
+		log.WithError(err).WithField("value", s.config.HTTP.WriteTimeout).Warn("Failed to parse HTTP write timeout, using default 30s")
+		writeTimeout = 30 * time.Second
+	}
 
 	// Setup HTTP server
 	mux := http.NewServeMux()
@@ -373,7 +381,7 @@ func (s *Service) checkAndDownloadFinalizedState(ctx context.Context) error {
 	s.slotMu.Unlock()
 
 	// Download the states in a separate goroutine to not block the watcher
-	go func() {
+	go func(ctx context.Context) {
 		defer func() {
 			s.slotMu.Lock()
 			s.watcherDownloading = false
@@ -381,6 +389,14 @@ func (s *Service) checkAndDownloadFinalizedState(ctx context.Context) error {
 		}()
 		s.downloadMu.Lock()
 		defer s.downloadMu.Unlock()
+
+		// Check for context cancellation after acquiring lock
+		select {
+		case <-ctx.Done():
+			log.Info("Download cancelled during lock acquisition")
+			return
+		default:
+		}
 
 		// Double-check we still need to download (another goroutine might have done it)
 		s.slotMu.Lock()
@@ -398,6 +414,14 @@ func (s *Service) checkAndDownloadFinalizedState(ctx context.Context) error {
 		if err != nil {
 			log.WithError(err).WithField("slot", finalizedSlot).Error("Failed to download finalized beacon state")
 			return
+		}
+
+		// Check for context cancellation after download
+		select {
+		case <-ctx.Done():
+			log.Info("Download cancelled after finalized state download")
+			return
+		default:
 		}
 
 		// Check if a newer finalized slot appeared while downloading - if so, skip this slot
@@ -421,6 +445,14 @@ func (s *Service) checkAndDownloadFinalizedState(ctx context.Context) error {
 			return
 		}
 
+		// Check for context cancellation after attested download
+		select {
+		case <-ctx.Done():
+			log.Info("Download cancelled after attested state download")
+			return
+		default:
+		}
+
 		// Write to store
 		err = s.store.WriteEntry(attestedSlot, finalizedSlot, attestedData, finalizedData)
 		if err != nil {
@@ -440,13 +472,31 @@ func (s *Service) checkAndDownloadFinalizedState(ctx context.Context) error {
 			return
 		}
 
+		// Check for context cancellation before proof generation
+		select {
+		case <-ctx.Done():
+			log.Info("Download cancelled before proof generation")
+			return
+		default:
+		}
+
 		// Pre-generate proofs - FINALIZED first since beacon relay needs it
 		// Process ONE state at a time: generate proofs, then release memory before next
 		s.preGenerateProofs(finalizedSlot, finalizedData)
 		finalizedData = nil // Release finalized data before processing attested
 		runtime.GC()
 
-		// Check if we should skip attested proof generation
+		// Check for context cancellation and if we should skip attested proof generation
+		select {
+		case <-ctx.Done():
+			log.Info("Download cancelled after finalized proof generation")
+			s.slotMu.Lock()
+			s.lastFinalizedSlot = finalizedSlot
+			s.slotMu.Unlock()
+			return
+		default:
+		}
+
 		if newerSlot := s.checkForNewerFinalizedSlot(finalizedSlot); newerSlot > 0 {
 			log.WithFields(log.Fields{
 				"currentSlot": finalizedSlot,
@@ -480,7 +530,7 @@ func (s *Service) checkAndDownloadFinalizedState(ctx context.Context) error {
 			"finalizedSlot": finalizedSlot,
 			"duration":      time.Since(startTime),
 		}).Info("Successfully pre-downloaded beacon states for finalized block")
-	}()
+	}(ctx)
 
 	return nil
 }
