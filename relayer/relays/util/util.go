@@ -121,6 +121,14 @@ func HexStringTo32Bytes(hexString string) ([32]byte, error) {
 	return pubkeyBytes, nil
 }
 
+func HexToH256(hexString string) (types.H256, error) {
+	bytes, err := HexStringTo32Bytes(hexString)
+	if err != nil {
+		return types.H256{}, err
+	}
+	return types.NewH256(bytes[:]), nil
+}
+
 func HexStringTo96Bytes(hexString string) ([96]byte, error) {
 	var pubkeyBytes [96]byte
 	key, err := hex.DecodeString(strings.Replace(hexString, "0x", "", 1))
