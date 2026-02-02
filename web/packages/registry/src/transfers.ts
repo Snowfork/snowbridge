@@ -1,11 +1,11 @@
 import {
     AssetRegistry,
     TransferLocation,
-    BridgeInfo,
     Source,
     ChainKey,
     ChainKind,
     ChainId,
+    TransferRoute,
 } from "@snowbridge/base-types"
 
 export function getTransferLocation(registry: AssetRegistry, chain: ChainId): TransferLocation {
@@ -56,9 +56,9 @@ export function getTransferLocation(registry: AssetRegistry, chain: ChainId): Tr
     return location
 }
 
-export function getTransferLocations(info: BridgeInfo): Source[] {
+export function getTransferLocations(routes: readonly TransferRoute[]): Source[] {
     let sources: Source[] = []
-    for (const route of info.routes) {
+    for (const route of routes) {
         let source = sources.find((s) => s.id === route.from.id && s.kind === route.from.kind)
         if (!source) {
             source = {
@@ -68,10 +68,10 @@ export function getTransferLocations(info: BridgeInfo): Source[] {
             }
             sources.push(source)
         }
-        const destId: ChainKey<ChainKind> = `${route.from.kind}_${route.from.id}`
+        const destId: ChainKey<ChainKind> = `${route.to.kind}_${route.to.id}`
         let destination = source.destinations[destId]
         if (!destination) {
-            destination = {
+            source.destinations[destId] = {
                 key: destId,
                 ...route.to,
                 assets: [...route.assets],

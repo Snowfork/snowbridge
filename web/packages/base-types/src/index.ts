@@ -180,16 +180,30 @@ export type ChainKey<T extends string> = `${T}_${number}`;
 export type Source = ChainId & {
   key: ChainKey<ChainKind>;
   destinations: {
-    [id: string]: ChainId & { key: ChainKey<ChainKind>; assets: string[] };
+    [key: ChainKey<ChainKind>]: ChainId & {
+      key: ChainKey<ChainKind>;
+      assets: string[];
+    };
   };
 };
 
-export type TransferLocation = ChainId & {
+export type TransferLocation = ParachainLocation | EthereumLocation;
+
+export type ParachainLocation = ChainId & {
   name: string;
-  key: ChainKey<ChainKind>;
-  parachain?: Parachain;
-  ethChain?: EthereumChain;
+  kind: ParachainKind;
+  key: ChainKey<ParachainKind>;
+  parachain: Parachain;
 };
+
+export type EthereumLocation = ChainId & {
+  name: string;
+  kind: EthereumKind;
+  key: ChainKey<EthereumKind>;
+  ethChain: EthereumChain;
+  parachain?: Parachain;
+};
+
 export interface AssetOverrideMap {
   [paraId: string]: Asset[];
 }

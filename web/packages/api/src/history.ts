@@ -20,7 +20,7 @@ export type TransferInfo = {
 }
 
 export type ToPolkadotTransferResult = {
-    sourceType: string
+    kind: "ethereum" | "kusama" | "ethereum_l2"
     id: string
     status: TransferStatus
     info: TransferInfo
@@ -63,7 +63,7 @@ export type ToPolkadotTransferResult = {
 }
 
 export type ToEthereumTransferResult = {
-    sourceType: "substrate"
+    kind: "polkadot"
     id: string
     status: TransferStatus
     info: TransferInfo
@@ -121,7 +121,7 @@ export type ToEthereumTransferResult = {
 }
 
 export type InterParachainTransfer = {
-    sourceType: "substrate"
+    kind: "polkadot"
     id: string
     status: TransferStatus
     info: TransferInfo
@@ -147,7 +147,7 @@ export type InterParachainTransfer = {
 
 export const buildToPolkadotTransferResult = (transfer: any): ToPolkadotTransferResult => {
     let result: ToPolkadotTransferResult = {
-        sourceType: "ethereum",
+        kind: "ethereum",
         id: transfer.id,
         status: TransferStatus.Pending,
         info: {
@@ -171,7 +171,7 @@ export const buildToPolkadotTransferResult = (transfer: any): ToPolkadotTransfer
         },
     }
     if (transfer.sourceNetwork == "kusama" || transfer.destinationNetwork == "kusama") {
-        result.sourceType = "kusama"
+        result.kind = "kusama"
     }
     let inboundMessageReceived = transfer.toBridgeHubInboundQueue
     if (inboundMessageReceived) {
@@ -216,7 +216,7 @@ export const buildToPolkadotTransferResult = (transfer: any): ToPolkadotTransfer
 export const buildToEthereumTransferResult = (transfer: any): ToEthereumTransferResult => {
     let bridgeHubMessageId = transfer.id
     const result: ToEthereumTransferResult = {
-        sourceType: "substrate",
+        kind: "polkadot",
         id: transfer.id,
         status: TransferStatus.Pending,
         info: {
