@@ -39,16 +39,21 @@ This guide explains how to deploy Snowbridge relayers using Docker Compose.
 
 ## Architecture
 
-The Docker Compose setup runs 6 relayer services:
+The Docker Compose setup runs the following relayer services:
 
-| Service | Description | Keys Required |
-|---------|-------------|---------------|
-| `beacon-state-service` | Caches beacon state proofs | None |
-| `beacon` | Relays Ethereum beacon headers to Polkadot | Substrate |
-| `execution` | Relays Ethereum messages to Polkadot | Substrate |
-| `beefy` | Relays BEEFY commitments to Ethereum | Ethereum |
-| `parachain` | Relays Polkadot messages to Ethereum | Ethereum + Substrate |
-| `reward` | Processes relayer rewards | Substrate |
+| Service | Description | Keys Required | Profile |
+|---------|-------------|---------------|---------|
+| `beacon-state-service` | Caches beacon state proofs | None | default |
+| `beacon` | Relays Ethereum beacon headers to Polkadot | Substrate | default |
+| `execution` | Relays Ethereum messages to Polkadot (v2) | Substrate | default |
+| `execution-v1` | Relays Ethereum messages to Polkadot (v1) | Substrate | default |
+| `beefy` | Relays BEEFY commitments to Ethereum | Ethereum | expensive |
+| `beefy-on-demand` | On-demand BEEFY relay | Ethereum | expensive |
+| `parachain` | Relays Polkadot messages to Ethereum (v2) | Ethereum | default |
+| `parachain-v1` | Relays Polkadot messages to Ethereum (v1) | Ethereum | default |
+| `reward` | Processes relayer rewards | Substrate | default |
+
+**Note:** Services in the `expensive` profile require `--profile expensive` to start.
 
 ### Service Dependencies
 
@@ -56,10 +61,13 @@ The Docker Compose setup runs 6 relayer services:
 beacon-state-service (starts first, health checked)
     ├── beacon
     ├── execution
+    ├── execution-v1
     ├── parachain
     └── reward
 
-beefy (independent)
+beefy (independent, expensive profile)
+beefy-on-demand (independent, expensive profile)
+parachain-v1 (independent)
 ```
 
 ## Configuration
