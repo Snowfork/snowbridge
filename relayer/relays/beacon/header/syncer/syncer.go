@@ -243,6 +243,14 @@ func (s *Syncer) GetSyncCommitteePeriodUpdateFromEndpoint(from uint64) (scale.Up
 		return scale.Update{}, fmt.Errorf("convert sync aggregate to scale: %w", err)
 	}
 
+	superMajority, err := s.protocol.SyncCommitteeSuperMajority(committeeUpdate.SyncAggregate.SyncCommitteeBits)
+	if err != nil {
+		return scale.Update{}, fmt.Errorf("compute sync committee supermajority: %w", err)
+	}
+	if !superMajority {
+		return scale.Update{}, ErrSyncCommitteeNotSuperMajority
+	}
+
 	signatureSlot, err := strconv.ParseUint(committeeUpdate.SignatureSlot, 10, 64)
 	if err != nil {
 		return scale.Update{}, fmt.Errorf("parse signature slot as int: %w", err)
@@ -533,12 +541,7 @@ func (s *Syncer) GetFinalizedUpdate() (scale.Update, error) {
 		return scale.Update{}, fmt.Errorf("parse signature slot as int: %w", err)
 	}
 
-	signatureBlock, err := s.Client.GetBeaconBlockBySlot(signatureSlot)
-	if err != nil {
-		return scale.Update{}, fmt.Errorf("get signature block: %w", err)
-	}
-
-	superMajority, err := s.protocol.SyncCommitteeSuperMajority(signatureBlock.Data.Message.Body.SyncAggregate.SyncCommitteeBits)
+	superMajority, err := s.protocol.SyncCommitteeSuperMajority(finalizedUpdate.Data.SyncAggregate.SyncCommitteeBits)
 	if err != nil {
 		return scale.Update{}, fmt.Errorf("compute sync committee supermajority: %d err: %w", signatureSlot, err)
 	}
@@ -934,6 +937,14 @@ func (s *Syncer) getFinalizedUpdateFromStateService(minSlot, maxSlot uint64, fet
 	scaleSyncAggregate, err := syncAggregate.ToScale()
 	if err != nil {
 		return scale.Update{}, fmt.Errorf("convert sync aggregate to scale: %w", err)
+	}
+
+	superMajority, err := s.protocol.SyncCommitteeSuperMajority(syncAggregate.SyncCommitteeBits)
+	if err != nil {
+		return scale.Update{}, fmt.Errorf("compute sync committee supermajority: %w", err)
+	}
+	if !superMajority {
+		return scale.Update{}, ErrSyncCommitteeNotSuperMajority
 	}
 
 	// Get finalized block root from beacon API
