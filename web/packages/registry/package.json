@@ -17,21 +17,21 @@
     "format": "prettier src --write && prettier scripts --write"
   },
   "devDependencies": {
-    "@snowbridge/api": "workspace:*",
-    "@snowbridge/contract-types": "workspace:*",
     "@polkadot/api": "16.4.8",
     "@polkadot/util": "13.5.6",
-    "ethers": "6.15.0",
+    "@snowbridge/api": "workspace:*",
+    "@snowbridge/contract-types": "workspace:*",
     "@types/node": "24.6.2",
     "@typescript-eslint/eslint-plugin": "8.45.0",
     "@typescript-eslint/parser": "8.45.0",
+    "dotenv": "^17.2.3",
     "eslint": "9.37.0",
     "eslint-config-prettier": "10.1.8",
+    "ethers": "6.16.0",
     "prettier": "3.6.2",
     "ts-node": "10.9.2",
     "tsconfig-paths": "4.2.0",
-    "typescript": "5.9.3",
-    "dotenv": "^17.2.3"
+    "typescript": "5.9.3"
   },
   "dependencies": {
     "@snowbridge/base-types": "workspace:*"

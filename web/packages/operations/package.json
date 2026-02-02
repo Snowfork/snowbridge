@@ -84,10 +84,10 @@
     "@typescript-eslint/parser": "^8.45.0",
     "eslint": "^9.37.0",
     "eslint-config-prettier": "^10.1.8",
+    "prettier": "3.6.2",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "5.9.3",
-    "prettier": "3.6.2"
+    "typescript": "5.9.3"
   },
   "dependencies": {
     "@aws-sdk/client-cloudwatch": "^3.901.0",
@@ -102,7 +102,7 @@
     "@snowbridge/registry": "workspace:*",
     "@types/pino": "^7.0.5",
     "dotenv": "^17.2.3",
-    "ethers": "^6.15.0",
+    "ethers": "^6.16.0",
     "lodash": "^4.17.21",
     "pino": "^10.0.0",
     "pino-pretty": "^13.1.1"
