@@ -188,6 +188,51 @@ services:
       beacon-state-service:
         condition: service_healthy
 
+  parachain-v1:
+    image: ghcr.io/snowfork/snowbridge-relay
+    platform: linux/amd64
+    command: >
+      run parachain-v1
+      --config /config/parachain-v1.json
+      --ethereum.private-key-id ${PARACHAIN_V1_RELAY_ETHEREUM_KEY_ID}
+    volumes:
+      - ./config/docker:/config
+    environment:
+      - AWS_REGION=${AWS_REGION}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - ETHEREUM_ENDPOINT=${ETHEREUM_ENDPOINT}
+      - POLKADOT_ENDPOINT=${POLKADOT_ENDPOINT}
+      - BRIDGEHUB_ENDPOINT=${BRIDGEHUB_ENDPOINT}
+      - FLASHBOTS_ENDPOINT=${FLASHBOTS_ENDPOINT}
+      - GATEWAY_CONTRACT=${GATEWAY_CONTRACT}
+      - BEEFY_CLIENT_CONTRACT=${BEEFY_CLIENT_CONTRACT}
+      - CHANNEL_ID=${CHANNEL_ID}
+      - CHAINALYSIS_API_KEY=${CHAINALYSIS_API_KEY}
+      - OFAC_ENABLED=${OFAC_ENABLED:-false}
+    restart: on-failure
+
+  beefy-on-demand:
+    image: ghcr.io/snowfork/snowbridge-relay
+    platform: linux/amd64
+    command: >
+      run beefy
+      --config /config/beefy.json
+      --ethereum.private-key-id ${BEEFY_ON_DEMAND_RELAY_ETHEREUM_KEY_ID}
+      --on-demand
+    volumes:
+      - ./config/docker:/config
+    environment:
+      - AWS_REGION=${AWS_REGION}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - POLKADOT_ENDPOINT=${POLKADOT_ENDPOINT}
+      - BRIDGEHUB_ENDPOINT=${BRIDGEHUB_ENDPOINT}
+      - ETHEREUM_ENDPOINT=${ETHEREUM_ENDPOINT}
+      - GATEWAY_CONTRACT=${GATEWAY_CONTRACT}
+      - BEEFY_CLIENT_CONTRACT=${BEEFY_CLIENT_CONTRACT}
+    restart: on-failure
+
 volumes:
   beacon-state-data:
   beacon-data:
