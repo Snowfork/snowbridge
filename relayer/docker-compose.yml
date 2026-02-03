@@ -1,3 +1,10 @@
+x-logging: &awslogs
+  driver: awslogs
+  options:
+    awslogs-region: ${AWS_REGION}
+    awslogs-group: snowbridge/${ENVIRONMENT:-prod}
+    awslogs-create-group: "true"
+
 services:
   beacon-state-service:
     image: ghcr.io/snowfork/snowbridge-relay
@@ -25,6 +32,13 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+    logging:
+      <<: *awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: snowbridge/${ENVIRONMENT:-prod}
+        awslogs-stream: beacon-state-service
+        awslogs-create-group: "true"
 
   beacon:
     image: ghcr.io/snowfork/snowbridge-relay
@@ -50,6 +64,13 @@ services:
     depends_on:
       beacon-state-service:
         condition: service_healthy
+    logging:
+      <<: *awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: snowbridge/${ENVIRONMENT:-prod}
+        awslogs-stream: beacon-relay
+        awslogs-create-group: "true"
 
   execution:
     image: ghcr.io/snowfork/snowbridge-relay
@@ -79,6 +100,13 @@ services:
     depends_on:
       beacon-state-service:
         condition: service_healthy
+    logging:
+      <<: *awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: snowbridge/${ENVIRONMENT:-prod}
+        awslogs-stream: execution-relay
+        awslogs-create-group: "true"
 
   execution-v1:
     image: ghcr.io/snowfork/snowbridge-relay
@@ -109,6 +137,13 @@ services:
     depends_on:
       beacon-state-service:
         condition: service_healthy
+    logging:
+      <<: *awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: snowbridge/${ENVIRONMENT:-prod}
+        awslogs-stream: execution-v1-relay
+        awslogs-create-group: "true"
 
   beefy:
     image: ghcr.io/snowfork/snowbridge-relay
@@ -131,6 +166,13 @@ services:
       - GATEWAY_CONTRACT=${GATEWAY_CONTRACT}
       - BEEFY_CLIENT_CONTRACT=${BEEFY_CLIENT_CONTRACT}
     restart: on-failure
+    logging:
+      <<: *awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: snowbridge/${ENVIRONMENT:-prod}
+        awslogs-stream: beefy-relay
+        awslogs-create-group: "true"
 
   parachain:
     image: ghcr.io/snowfork/snowbridge-relay
@@ -162,6 +204,13 @@ services:
     depends_on:
       beacon-state-service:
         condition: service_healthy
+    logging:
+      <<: *awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: snowbridge/${ENVIRONMENT:-prod}
+        awslogs-stream: parachain-relay
+        awslogs-create-group: "true"
 
   reward:
     image: ghcr.io/snowfork/snowbridge-relay
@@ -189,6 +238,13 @@ services:
     depends_on:
       beacon-state-service:
         condition: service_healthy
+    logging:
+      <<: *awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: snowbridge/${ENVIRONMENT:-prod}
+        awslogs-stream: reward-relay
+        awslogs-create-group: "true"
 
   parachain-v1:
     image: ghcr.io/snowfork/snowbridge-relay
@@ -213,6 +269,13 @@ services:
       - CHAINALYSIS_API_KEY=${CHAINALYSIS_API_KEY}
       - OFAC_ENABLED=${OFAC_ENABLED:-false}
     restart: on-failure
+    logging:
+      <<: *awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: snowbridge/${ENVIRONMENT:-prod}
+        awslogs-stream: parachain-v1-relay
+        awslogs-create-group: "true"
 
   beefy-on-demand:
     image: ghcr.io/snowfork/snowbridge-relay
@@ -236,6 +299,13 @@ services:
       - GATEWAY_CONTRACT=${GATEWAY_CONTRACT}
       - BEEFY_CLIENT_CONTRACT=${BEEFY_CLIENT_CONTRACT}
     restart: on-failure
+    logging:
+      <<: *awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: snowbridge/${ENVIRONMENT:-prod}
+        awslogs-stream: beefy-on-demand-relay
+        awslogs-create-group: "true"
 
 volumes:
   beacon-state-data:
