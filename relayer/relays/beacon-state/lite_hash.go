@@ -314,6 +314,28 @@ func hashHistoricalSummaries(data []byte) [32]byte {
 	return mixInLength(root, uint64(count))
 }
 
+// hashProposerLookahead computes the hash tree root of the proposer lookahead.
+// Fixed-size vector of 64 uint64s (512 bytes).
+func hashProposerLookahead(data []byte) [32]byte {
+	const count = 64
+	// 64 uint64s = 16 chunks of 4 uint64s each
+	numChunks := count / 4
+	leaves := make([][32]byte, numChunks)
+
+	for i := 0; i < numChunks; i++ {
+		for j := 0; j < 4; j++ {
+			idx := i*4 + j
+			if idx*8 < len(data) {
+				val := binary.LittleEndian.Uint64(data[idx*8 : (idx+1)*8])
+				binary.LittleEndian.PutUint64(leaves[i][j*8:], val)
+			}
+		}
+	}
+
+	// Fixed-size vector, no mix-in length
+	return merkleize(leaves)
+}
+
 // hashPendingDeposits computes the hash tree root of pending deposits.
 // Each PendingDeposit is 192 bytes (48 + 32 + 8 + 96 + 8). Limit is 2^27 = 134217728.
 func hashPendingDeposits(data []byte) [32]byte {

@@ -54,6 +54,10 @@ type LiteBeaconState struct {
 	earliestExitEpoch               uint64
 	consolidationBalanceToConsume   uint64
 	earliestConsolidationEpoch      uint64
+
+	// For Fulu fork only
+	proposerLookaheadHash [32]byte
+	isFuluState           bool
 }
 
 // SSZ byte offsets for BeaconState fixed part (shared by Deneb, Electra, Fulu)
@@ -103,6 +107,11 @@ const (
 	offsetPendingPartialWithdrawalsPtr  = 2736705
 	offsetPendingConsolidationsPtr      = 2736709
 	minStateSizeElectra                 = 2736713
+
+	// Fulu-specific offsets (after Electra fields)
+	offsetProposerLookahead = 2736713
+	offsetProposerLookaheadEnd = 2737225 // 2736713 + 64*8
+	minStateSizeFulu        = 2737225
 )
 
 // UnmarshalSSZLite unmarshals a Deneb beacon state, extracting only the fields
@@ -390,10 +399,33 @@ func UnmarshalSSZLiteElectra(buf []byte) (*LiteBeaconState, error) {
 	return s, nil
 }
 
+// UnmarshalSSZLiteFulu unmarshals a Fulu beacon state, extracting only the fields
+// needed for proof generation and computing hashes for the rest.
+// Fulu adds ProposerLookahead (field 37) compared to Electra.
+func UnmarshalSSZLiteFulu(buf []byte) (*LiteBeaconState, error) {
+	size := uint64(len(buf))
+	if size < minStateSizeFulu {
+		return nil, fmt.Errorf("buffer too small for Fulu beacon state: %d < %d", size, minStateSizeFulu)
+	}
+
+	// Parse as Electra first (shares most structure)
+	s, err := UnmarshalSSZLiteElectra(buf)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal electra base: %w", err)
+	}
+
+	// Add Fulu-specific field: ProposerLookahead (64 uint64s = 512 bytes)
+	// This is a fixed-size vector, so we hash it directly
+	s.proposerLookaheadHash = hashProposerLookahead(buf[offsetProposerLookahead:offsetProposerLookaheadEnd])
+	s.isFuluState = true
+
+	return s, nil
+}
+
 // UnmarshalSSZ implements the BeaconState interface but is not used for LiteBeaconState.
-// Use UnmarshalSSZLiteDeneb or UnmarshalSSZLiteElectra instead.
+// Use UnmarshalSSZLiteDeneb, UnmarshalSSZLiteElectra, or UnmarshalSSZLiteFulu instead.
 func (s *LiteBeaconState) UnmarshalSSZ(buf []byte) error {
-	return fmt.Errorf("UnmarshalSSZ not supported on LiteBeaconState; use UnmarshalSSZLiteDeneb or UnmarshalSSZLiteElectra")
+	return fmt.Errorf("UnmarshalSSZ not supported on LiteBeaconState; use UnmarshalSSZLiteDeneb, UnmarshalSSZLiteElectra, or UnmarshalSSZLiteFulu")
 }
 
 // GetSlot returns the slot of this beacon state
@@ -578,6 +610,12 @@ func (s *LiteBeaconState) HashTreeRootWith(hh ssz.HashWalker) (err error) {
 
 		// Field (36) 'PendingConsolidations' - use pre-computed hash
 		hh.PutBytes(s.pendingConsolidationsHash[:])
+
+		// Fulu-specific field
+		if s.isFuluState {
+			// Field (37) 'ProposerLookahead' - use pre-computed hash
+			hh.PutBytes(s.proposerLookaheadHash[:])
+		}
 	}
 
 	hh.Merkleize(indx)

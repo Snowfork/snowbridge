@@ -273,7 +273,15 @@ func (s *Service) unmarshalBeaconStateLite(slot uint64, data []byte) (state.Beac
 	forkVersion := s.protocol.ForkVersion(slot)
 	log.WithFields(log.Fields{"slot": slot, "forkVersion": forkVersion, "dataSize": len(data)}).Info("Unmarshaling beacon state with lite parser")
 
-	if forkVersion == protocol.Fulu || forkVersion == protocol.Electra {
+	if forkVersion == protocol.Fulu {
+		liteState, err := UnmarshalSSZLiteFulu(data)
+		if err != nil {
+			return nil, fmt.Errorf("unmarshal lite fulu state: %w", err)
+		}
+		return liteState, nil
+	}
+
+	if forkVersion == protocol.Electra {
 		liteState, err := UnmarshalSSZLiteElectra(data)
 		if err != nil {
 			return nil, fmt.Errorf("unmarshal lite electra state: %w", err)
