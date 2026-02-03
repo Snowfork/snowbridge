@@ -15,9 +15,6 @@ import (
 	"github.com/snowfork/snowbridge/relayer/relays/util"
 )
 
-// ErrProofNotReady is an alias for the shared error - kept for backwards compatibility
-var ErrProofNotReady = beaconerrors.ErrProofNotReady
-
 type Client struct {
 	endpoint   string
 	httpClient *http.Client
@@ -72,7 +69,7 @@ func (c *Client) GetBlockRootProof(slot uint64) (*scale.BlockRootProof, error) {
 	}
 
 	if resp.StatusCode == http.StatusServiceUnavailable {
-		return nil, ErrProofNotReady
+		return nil, beaconerrors.ErrProofNotReady
 	}
 
 	if resp.StatusCode != http.StatusOK {
@@ -146,7 +143,7 @@ func (c *Client) GetSyncCommitteeProof(slot uint64, period string) (*scale.SyncC
 	}
 
 	if resp.StatusCode == http.StatusServiceUnavailable {
-		return nil, ErrProofNotReady
+		return nil, beaconerrors.ErrProofNotReady
 	}
 
 	if resp.StatusCode != http.StatusOK {
@@ -232,7 +229,7 @@ func (c *Client) fetchProof(url string) (*ProofResponse, error) {
 	}
 
 	if resp.StatusCode == http.StatusServiceUnavailable {
-		return nil, ErrProofNotReady
+		return nil, beaconerrors.ErrProofNotReady
 	}
 
 	if resp.StatusCode != http.StatusOK {

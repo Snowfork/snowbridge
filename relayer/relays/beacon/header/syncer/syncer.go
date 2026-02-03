@@ -22,6 +22,12 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const (
+	// stateServiceErrorThreshold is the duration after which continuous errors
+	// from the beacon state service should trigger a relayer restart
+	stateServiceErrorThreshold = 3 * time.Minute
+)
+
 var (
 	ErrCommitteeUpdateHeaderInDifferentSyncPeriod = errors.New("sync committee in different sync period")
 	ErrSyncCommitteeNotSuperMajority              = errors.New("update received was not signed by supermajority")
@@ -298,10 +304,12 @@ func (s *Syncer) GetSyncCommitteePeriodUpdateFromEndpoint(from uint64) (scale.Up
 }
 
 // retryWithBackoff executes fetchFn with retry logic and backoff for proof not ready errors.
-// Returns ErrNewerFinalizedHeaderAvailable if a newer finalized slot is available or timeout exceeded.
+// Returns ErrNewerFinalizedHeaderAvailable if a newer finalized slot is available.
+// Triggers a relayer restart if:
+//   - "proof not ready" errors persist for more than stateServiceErrorThreshold (3 minutes)
+//   - any other error occurs (immediate restart)
 func (s *Syncer) retryWithBackoff(slot uint64, proofType string, fetchFn func() error) error {
 	const maxRetries = 10
-	const maxWaitTime = 4 * time.Minute
 	startTime := time.Now()
 
 	for i := 0; i < maxRetries; i++ {
@@ -322,14 +330,13 @@ func (s *Syncer) retryWithBackoff(slot uint64, proofType string, fetchFn func() 
 				return ErrNewerFinalizedHeaderAvailable
 			}
 
-			// Check if we've been waiting too long
-			if time.Since(startTime) > maxWaitTime {
+			// Check if we've been waiting too long - trigger restart
+			if time.Since(startTime) > stateServiceErrorThreshold {
 				log.WithFields(log.Fields{
 					"slot":      slot,
 					"proofType": proofType,
 					"waitTime":  time.Since(startTime),
-				}).Info("proof wait timeout exceeded, abandoning request")
-				return ErrNewerFinalizedHeaderAvailable
+				}).Fatal("beacon state service proof not ready for over 3 minutes, restarting relayer")
 			}
 
 			waitTime := time.Duration(5*(i+1)) * time.Second
@@ -346,15 +353,19 @@ func (s *Syncer) retryWithBackoff(slot uint64, proofType string, fetchFn func() 
 			continue
 		}
 
-		// Other error - don't retry
+		// Actual error, restart immediately
 		log.WithError(err).WithFields(log.Fields{
 			"slot":      slot,
 			"proofType": proofType,
-		}).Error("state service failed to get proof")
-		return fmt.Errorf("state service failed: %w", err)
+		}).Fatal("beacon state service returned error, restarting relayer")
 	}
 
-	return fmt.Errorf("state service retries exhausted for %s at slot %d", proofType, slot)
+	// Should not reach here, but if retries exhausted, restart
+	log.WithFields(log.Fields{
+		"slot":      slot,
+		"proofType": proofType,
+	}).Fatal("beacon state service retries exhausted, restarting relayer")
+	return nil // unreachable
 }
 
 func (s *Syncer) GetBlockRoots(slot uint64) (scale.BlockRootProof, error) {
