@@ -364,6 +364,13 @@ func hashPendingDeposits(data []byte) [32]byte {
 }
 
 // hashPendingDeposit hashes a single PendingDeposit
+// PendingDeposit has 5 fields, each producing a single 32-byte field root:
+// - pubkey (48 bytes) -> merkleized to 1 root
+// - withdrawal_credentials (32 bytes) -> 1 root
+// - amount (8 bytes) -> 1 root
+// - signature (96 bytes) -> merkleized to 1 root
+// - index (8 bytes) -> 1 root
+// These 5 field roots are then merkleized (padded to 8 leaves)
 func hashPendingDeposit(data []byte) [32]byte {
 	if len(data) < 192 {
 		return [32]byte{}
@@ -371,20 +378,19 @@ func hashPendingDeposit(data []byte) [32]byte {
 
 	leaves := make([][32]byte, 8)
 
-	// pubkey: 48 bytes -> 2 chunks, merkleized
-	// SSZ chunks bytes into 32-byte pieces and merkleizes
+	// Field 0: pubkey (48 bytes) -> merkleize 2 chunks to get root
 	var pubkeyC1, pubkeyC2 [32]byte
 	copy(pubkeyC1[:], data[0:32])
 	copy(pubkeyC2[:], data[32:48]) // bytes 32-47, rest is zeros
 	leaves[0] = hashTwo(pubkeyC1, pubkeyC2)
 
-	// withdrawal_credentials: 32 bytes
+	// Field 1: withdrawal_credentials (32 bytes) -> already a root
 	copy(leaves[1][:], data[48:80])
 
-	// amount: 8 bytes
+	// Field 2: amount (8 bytes)
 	leaves[2] = uint64ToLeaf(binary.LittleEndian.Uint64(data[80:88]))
 
-	// signature: 96 bytes -> 3 chunks padded to 4, merkleized
+	// Field 3: signature (96 bytes) -> merkleize 3 chunks (padded to 4) to get root
 	var sigC1, sigC2, sigC3, sigC4 [32]byte
 	copy(sigC1[:], data[88:120])
 	copy(sigC2[:], data[120:152])
@@ -392,8 +398,10 @@ func hashPendingDeposit(data []byte) [32]byte {
 	// sigC4 is zeros (padding to power of 2)
 	leaves[3] = hashTwo(hashTwo(sigC1, sigC2), hashTwo(sigC3, sigC4))
 
-	// index: 8 bytes
+	// Field 4: index (8 bytes)
 	leaves[4] = uint64ToLeaf(binary.LittleEndian.Uint64(data[184:192]))
+
+	// leaves[5-7] are zeros (padding to 8)
 
 	return merkleize(leaves)
 }
