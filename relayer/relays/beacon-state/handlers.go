@@ -274,10 +274,33 @@ func (s *Service) unmarshalBeaconStateLite(slot uint64, data []byte) (state.Beac
 	log.WithFields(log.Fields{"slot": slot, "forkVersion": forkVersion, "dataSize": len(data)}).Info("Unmarshaling beacon state with lite parser")
 
 	if forkVersion == protocol.Fulu {
+		// Parse with lite parser
 		liteState, err := UnmarshalSSZLiteFulu(data)
 		if err != nil {
 			return nil, fmt.Errorf("unmarshal lite fulu state: %w", err)
 		}
+
+		// DEBUG: Compare with full parser to verify tree roots match
+		fullState := &state.BeaconStateFulu{}
+		if err := fullState.UnmarshalSSZ(data); err != nil {
+			log.WithError(err).Warn("DEBUG: Failed to unmarshal full state for comparison")
+		} else {
+			fullRoot, err1 := fullState.HashTreeRoot()
+			liteRoot, err2 := liteState.HashTreeRoot()
+			if err1 != nil || err2 != nil {
+				log.WithFields(log.Fields{"fullErr": err1, "liteErr": err2}).Warn("DEBUG: Failed to compute tree roots")
+			} else {
+				if fullRoot != liteRoot {
+					log.WithFields(log.Fields{
+						"fullRoot": fmt.Sprintf("0x%x", fullRoot),
+						"liteRoot": fmt.Sprintf("0x%x", liteRoot),
+					}).Error("DEBUG: Tree root MISMATCH between full and lite state!")
+				} else {
+					log.WithField("root", fmt.Sprintf("0x%x", fullRoot)).Info("DEBUG: Tree roots match")
+				}
+			}
+		}
+
 		return liteState, nil
 	}
 
