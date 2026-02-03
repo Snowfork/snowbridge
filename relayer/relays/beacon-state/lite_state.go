@@ -582,8 +582,8 @@ func (s *LiteBeaconState) HashTreeRootWith(hh ssz.HashWalker) (err error) {
 	// Field (27) 'HistoricalSummaries' - use pre-computed hash
 	hh.PutBytes(s.historicalSummariesHash[:])
 
-	// Electra-specific fields (28-36)
-	if s.isElectra() {
+	// Electra/Fulu-specific fields (28-36)
+	if s.isElectra() || s.isFuluState {
 		// Field (28) 'DepositRequestsStartIndex'
 		hh.PutUint64(s.depositRequestsStartIndex)
 

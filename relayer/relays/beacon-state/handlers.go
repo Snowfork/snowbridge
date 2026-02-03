@@ -295,6 +295,27 @@ func (s *Service) unmarshalBeaconStateLite(slot uint64, data []byte) (state.Beac
 						"fullRoot": fmt.Sprintf("0x%x", fullRoot),
 						"liteRoot": fmt.Sprintf("0x%x", liteRoot),
 					}).Error("DEBUG: Tree root MISMATCH between full and lite state!")
+
+					// Compare individual field trees to find the mismatch
+					fullTree, _ := fullState.GetTree()
+					liteTree, _ := liteState.GetTree()
+					if fullTree != nil && liteTree != nil {
+						for fieldIdx := 0; fieldIdx < 40; fieldIdx++ {
+							gidx := 64 + fieldIdx // Generalized index for fields in a 64-leaf tree
+							fullProof, err1 := fullTree.Prove(gidx)
+							liteProof, err2 := liteTree.Prove(gidx)
+							if err1 != nil || err2 != nil {
+								continue
+							}
+							if string(fullProof.Leaf) != string(liteProof.Leaf) {
+								log.WithFields(log.Fields{
+									"field":    fieldIdx,
+									"fullLeaf": fmt.Sprintf("0x%x", fullProof.Leaf),
+									"liteLeaf": fmt.Sprintf("0x%x", liteProof.Leaf),
+								}).Warn("DEBUG: Field mismatch")
+							}
+						}
+					}
 				} else {
 					log.WithField("root", fmt.Sprintf("0x%x", fullRoot)).Info("DEBUG: Tree roots match")
 				}
