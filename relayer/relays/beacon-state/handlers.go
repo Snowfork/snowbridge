@@ -266,6 +266,28 @@ func (s *Service) unmarshalBeaconState(slot uint64, data []byte) (state.BeaconSt
 	return beaconState, nil
 }
 
+// unmarshalBeaconStateLite unmarshals beacon state using the memory-efficient lite parser.
+// This saves ~130MB+ by only extracting fields needed for proof generation and computing
+// hashes for the rest without storing the raw data.
+func (s *Service) unmarshalBeaconStateLite(slot uint64, data []byte) (state.BeaconState, error) {
+	forkVersion := s.protocol.ForkVersion(slot)
+
+	if forkVersion == protocol.Fulu || forkVersion == protocol.Electra {
+		liteState, err := UnmarshalSSZLiteElectra(data)
+		if err != nil {
+			return nil, fmt.Errorf("unmarshal lite electra state: %w", err)
+		}
+		return liteState, nil
+	}
+
+	// Deneb
+	liteState, err := UnmarshalSSZLiteDeneb(data)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal lite deneb state: %w", err)
+	}
+	return liteState, nil
+}
+
 func parseSlotParam(r *http.Request) (uint64, error) {
 	slotStr := r.URL.Query().Get("slot")
 	if slotStr == "" {

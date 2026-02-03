@@ -653,6 +653,10 @@ func (s *Service) downloadCurrentFinalizedStateSync() error {
 // ready before the beacon relay needs them.
 // Note: This function is called while downloadMu is held by the finality watcher,
 // so it's already serialized with other downloads/proof generations.
+//
+// Memory optimization: Uses the lite SSZ unmarshaler which saves ~130MB+ by:
+// - Only extracting fields needed for proof generation (BlockRoots, Checkpoints, SyncCommittees)
+// - Computing hashes for large fields (Validators, Balances, Participation) without storing them
 func (s *Service) preGenerateProofs(slot uint64, data []byte) {
 	// Check if proofs are already cached
 	if s.hasAllProofsCached(slot) {
@@ -660,9 +664,10 @@ func (s *Service) preGenerateProofs(slot uint64, data []byte) {
 		return
 	}
 
-	log.WithField("slot", slot).Info("Pre-generating proofs for slot")
+	log.WithField("slot", slot).Info("Pre-generating proofs for slot (using lite unmarshaler)")
 
-	beaconState, err := s.unmarshalBeaconState(slot, data)
+	// Use lite unmarshaler to save ~130MB+ of memory per state
+	beaconState, err := s.unmarshalBeaconStateLite(slot, data)
 	// Release raw data reference to help GC
 	data = nil
 	if err != nil {
