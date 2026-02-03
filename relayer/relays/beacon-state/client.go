@@ -2,7 +2,6 @@ package beaconstate
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,13 +9,14 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
+	beaconerrors "github.com/snowfork/snowbridge/relayer/relays/beacon/errors"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
 	"github.com/snowfork/snowbridge/relayer/relays/util"
 )
 
-// ErrProofNotReady is returned when the proof is not yet cached and the client should retry
-var ErrProofNotReady = errors.New("proof not ready, please retry")
+// ErrProofNotReady is an alias for the shared error - kept for backwards compatibility
+var ErrProofNotReady = beaconerrors.ErrProofNotReady
 
 type Client struct {
 	endpoint   string

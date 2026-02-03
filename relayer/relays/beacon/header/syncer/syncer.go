@@ -10,6 +10,7 @@ import (
 
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/cache"
+	beaconerrors "github.com/snowfork/snowbridge/relayer/relays/beacon/errors"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/api"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/protocol"
@@ -296,43 +297,39 @@ func (s *Syncer) GetSyncCommitteePeriodUpdateFromEndpoint(from uint64) (scale.Up
 	return syncCommitteePeriodUpdate, nil
 }
 
-func (s *Syncer) GetBlockRoots(slot uint64) (scale.BlockRootProof, error) {
-	if s.stateService == nil {
-		return scale.BlockRootProof{}, fmt.Errorf("state service is required but not configured")
-	}
-
-	// Retry with backoff if proof not ready
-	// Max wait: 5+10+15+20+25+30*5 = 225 seconds (~4 minutes)
-	// This is less than the ~6.4 minute finality period
-	maxRetries := 10
+// retryWithBackoff executes fetchFn with retry logic and backoff for proof not ready errors.
+// Returns ErrNewerFinalizedHeaderAvailable if a newer finalized slot is available or timeout exceeded.
+func (s *Syncer) retryWithBackoff(slot uint64, proofType string, fetchFn func() error) error {
+	const maxRetries = 10
+	const maxWaitTime = 4 * time.Minute
 	startTime := time.Now()
-	maxWaitTime := 4 * time.Minute
 
 	for i := 0; i < maxRetries; i++ {
-		proof, err := s.stateService.GetBlockRootProof(slot)
+		err := fetchFn()
 		if err == nil {
-			log.WithField("slot", slot).Debug("got block root proof from state service")
-			return *proof, nil
+			return nil
 		}
 
 		// Check if it's a "not ready" error that we should retry
-		if err.Error() == "proof not ready, please retry" {
+		if errors.Is(err, beaconerrors.ErrProofNotReady) {
 			// Check if a newer finalized slot is available before retrying
 			if newerSlot, hasNewer := s.checkForNewerFinalizedSlot(slot); hasNewer {
 				log.WithFields(log.Fields{
 					"requestedSlot": slot,
 					"newerSlot":     newerSlot,
+					"proofType":     proofType,
 				}).Info("newer finalized header available, abandoning current request")
-				return scale.BlockRootProof{}, ErrNewerFinalizedHeaderAvailable
+				return ErrNewerFinalizedHeaderAvailable
 			}
 
-			// Check if we've been waiting too long - give up and let caller retry with fresh state
+			// Check if we've been waiting too long
 			if time.Since(startTime) > maxWaitTime {
 				log.WithFields(log.Fields{
-					"slot":     slot,
-					"waitTime": time.Since(startTime),
+					"slot":      slot,
+					"proofType": proofType,
+					"waitTime":  time.Since(startTime),
 				}).Info("proof wait timeout exceeded, abandoning request")
-				return scale.BlockRootProof{}, ErrNewerFinalizedHeaderAvailable
+				return ErrNewerFinalizedHeaderAvailable
 			}
 
 			waitTime := time.Duration(5*(i+1)) * time.Second
@@ -340,20 +337,46 @@ func (s *Syncer) GetBlockRoots(slot uint64) (scale.BlockRootProof, error) {
 				waitTime = 30 * time.Second
 			}
 			log.WithFields(log.Fields{
-				"slot":    slot,
-				"attempt": i + 1,
-				"wait":    waitTime,
+				"slot":      slot,
+				"proofType": proofType,
+				"attempt":   i + 1,
+				"wait":      waitTime,
 			}).Info("proof not ready, retrying...")
 			time.Sleep(waitTime)
 			continue
 		}
 
 		// Other error - don't retry
-		log.WithError(err).WithField("slot", slot).Error("state service failed to get block root proof")
-		return scale.BlockRootProof{}, fmt.Errorf("state service failed: %w", err)
+		log.WithError(err).WithFields(log.Fields{
+			"slot":      slot,
+			"proofType": proofType,
+		}).Error("state service failed to get proof")
+		return fmt.Errorf("state service failed: %w", err)
 	}
 
-	return scale.BlockRootProof{}, fmt.Errorf("state service retries exhausted for slot %d", slot)
+	return fmt.Errorf("state service retries exhausted for %s at slot %d", proofType, slot)
+}
+
+func (s *Syncer) GetBlockRoots(slot uint64) (scale.BlockRootProof, error) {
+	if s.stateService == nil {
+		return scale.BlockRootProof{}, fmt.Errorf("state service is required but not configured")
+	}
+
+	var result *scale.BlockRootProof
+	err := s.retryWithBackoff(slot, "block root proof", func() error {
+		proof, err := s.stateService.GetBlockRootProof(slot)
+		if err != nil {
+			return err
+		}
+		log.WithField("slot", slot).Debug("got block root proof from state service")
+		result = proof
+		return nil
+	})
+
+	if err != nil {
+		return scale.BlockRootProof{}, err
+	}
+	return *result, nil
 }
 
 // getSyncCommitteeProof fetches sync committee proof with pubkeys from state service with retry logic
@@ -362,55 +385,21 @@ func (s *Syncer) getSyncCommitteeProof(slot uint64, period string) (*scale.SyncC
 		return nil, fmt.Errorf("state service is required but not configured")
 	}
 
-	maxRetries := 10
-	startTime := time.Now()
-	maxWaitTime := 4 * time.Minute
-
-	for i := 0; i < maxRetries; i++ {
+	var result *scale.SyncCommitteeProof
+	err := s.retryWithBackoff(slot, "sync committee proof", func() error {
 		proof, err := s.stateService.GetSyncCommitteeProof(slot, period)
-		if err == nil {
-			log.WithFields(log.Fields{"slot": slot, "period": period}).Debug("got sync committee proof from state service")
-			return proof, nil
+		if err != nil {
+			return err
 		}
+		log.WithFields(log.Fields{"slot": slot, "period": period}).Debug("got sync committee proof from state service")
+		result = proof
+		return nil
+	})
 
-		if err.Error() == "proof not ready, please retry" {
-			// Check if a newer finalized slot is available before retrying
-			if newerSlot, hasNewer := s.checkForNewerFinalizedSlot(slot); hasNewer {
-				log.WithFields(log.Fields{
-					"requestedSlot": slot,
-					"newerSlot":     newerSlot,
-				}).Info("newer finalized header available, abandoning sync committee proof request")
-				return nil, ErrNewerFinalizedHeaderAvailable
-			}
-
-			// Check if we've been waiting too long
-			if time.Since(startTime) > maxWaitTime {
-				log.WithFields(log.Fields{
-					"slot":     slot,
-					"period":   period,
-					"waitTime": time.Since(startTime),
-				}).Info("sync committee proof wait timeout exceeded, abandoning request")
-				return nil, ErrNewerFinalizedHeaderAvailable
-			}
-
-			waitTime := time.Duration(5*(i+1)) * time.Second
-			if waitTime > 30*time.Second {
-				waitTime = 30 * time.Second
-			}
-			log.WithFields(log.Fields{
-				"slot":    slot,
-				"period":  period,
-				"attempt": i + 1,
-				"wait":    waitTime,
-			}).Info("sync committee proof not ready, retrying...")
-			time.Sleep(waitTime)
-			continue
-		}
-
-		log.WithError(err).WithFields(log.Fields{"slot": slot, "period": period}).Error("state service failed to get sync committee proof")
-		return nil, fmt.Errorf("state service failed: %w", err)
+	if err != nil {
+		return nil, err
 	}
-	return nil, fmt.Errorf("state service retries exhausted for sync committee proof at slot %d", slot)
+	return result, nil
 }
 
 // getFinalizedHeaderProof fetches finalized header proof from state service with retry logic
@@ -419,53 +408,21 @@ func (s *Syncer) getFinalizedHeaderProof(slot uint64) ([]types.H256, error) {
 		return nil, fmt.Errorf("state service is required but not configured")
 	}
 
-	maxRetries := 10
-	startTime := time.Now()
-	maxWaitTime := 4 * time.Minute
-
-	for i := 0; i < maxRetries; i++ {
+	var result []types.H256
+	err := s.retryWithBackoff(slot, "finalized header proof", func() error {
 		proof, err := s.stateService.GetFinalizedHeaderProof(slot)
-		if err == nil {
-			log.WithField("slot", slot).Debug("got finalized header proof from state service")
-			return proof, nil
+		if err != nil {
+			return err
 		}
+		log.WithField("slot", slot).Debug("got finalized header proof from state service")
+		result = proof
+		return nil
+	})
 
-		if err.Error() == "proof not ready, please retry" {
-			// Check if a newer finalized slot is available before retrying
-			if newerSlot, hasNewer := s.checkForNewerFinalizedSlot(slot); hasNewer {
-				log.WithFields(log.Fields{
-					"requestedSlot": slot,
-					"newerSlot":     newerSlot,
-				}).Info("newer finalized header available, abandoning finalized header proof request")
-				return nil, ErrNewerFinalizedHeaderAvailable
-			}
-
-			// Check if we've been waiting too long
-			if time.Since(startTime) > maxWaitTime {
-				log.WithFields(log.Fields{
-					"slot":     slot,
-					"waitTime": time.Since(startTime),
-				}).Info("finalized header proof wait timeout exceeded, abandoning request")
-				return nil, ErrNewerFinalizedHeaderAvailable
-			}
-
-			waitTime := time.Duration(5*(i+1)) * time.Second
-			if waitTime > 30*time.Second {
-				waitTime = 30 * time.Second
-			}
-			log.WithFields(log.Fields{
-				"slot":    slot,
-				"attempt": i + 1,
-				"wait":    waitTime,
-			}).Info("finalized header proof not ready, retrying...")
-			time.Sleep(waitTime)
-			continue
-		}
-
-		log.WithError(err).WithField("slot", slot).Error("state service failed to get finalized header proof")
-		return nil, fmt.Errorf("state service failed: %w", err)
+	if err != nil {
+		return nil, err
 	}
-	return nil, fmt.Errorf("state service retries exhausted for finalized header proof at slot %d", slot)
+	return result, nil
 }
 
 // checkForNewerFinalizedSlot checks if a newer finalized slot is available than the one being requested.
