@@ -271,6 +271,7 @@ func (s *Service) unmarshalBeaconState(slot uint64, data []byte) (state.BeaconSt
 // hashes for the rest without storing the raw data.
 func (s *Service) unmarshalBeaconStateLite(slot uint64, data []byte) (state.BeaconState, error) {
 	forkVersion := s.protocol.ForkVersion(slot)
+	log.WithFields(log.Fields{"slot": slot, "forkVersion": forkVersion, "dataSize": len(data)}).Info("Unmarshaling beacon state with lite parser")
 
 	if forkVersion == protocol.Fulu || forkVersion == protocol.Electra {
 		liteState, err := UnmarshalSSZLiteElectra(data)
