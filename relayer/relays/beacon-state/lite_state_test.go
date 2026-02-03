@@ -194,6 +194,108 @@ func debugFieldHashes(t *testing.T, fullState state.BeaconState, liteState *Lite
 	}
 }
 
+// TestFuluLiteStateMatchesFullState verifies that the lite Fulu unmarshaler produces
+// the same Merkle tree root as the full unmarshaler.
+func TestFuluLiteStateMatchesFullState(t *testing.T) {
+	// Load Fulu test beacon state
+	data, err := os.ReadFile("testdata/beacon_state_fulu.ssz")
+	if err != nil {
+		t.Skipf("Skipping test: could not read Fulu test data: %v", err)
+	}
+
+	t.Logf("Loaded Fulu beacon state: %d bytes", len(data))
+
+	// Verify it meets Fulu minimum size
+	if len(data) < minStateSizeFulu {
+		t.Fatalf("Data too small for Fulu state: %d < %d", len(data), minStateSizeFulu)
+	}
+
+	// Unmarshal with full Fulu unmarshaler
+	fullState := &state.BeaconStateFulu{}
+	err = fullState.UnmarshalSSZ(data)
+	if err != nil {
+		t.Fatalf("Failed to unmarshal full Fulu state: %v", err)
+	}
+	t.Logf("Full Fulu state slot: %d", fullState.GetSlot())
+
+	// Unmarshal with lite Fulu unmarshaler
+	liteState, err := UnmarshalSSZLiteFulu(data)
+	if err != nil {
+		t.Fatalf("Failed to unmarshal lite Fulu state: %v", err)
+	}
+	t.Logf("Lite Fulu state slot: %d", liteState.GetSlot())
+
+	// Compare slots
+	if fullState.GetSlot() != liteState.GetSlot() {
+		t.Errorf("Slot mismatch: full=%d, lite=%d", fullState.GetSlot(), liteState.GetSlot())
+	}
+
+	// Compare block roots
+	fullBlockRoots := fullState.GetBlockRoots()
+	liteBlockRoots := liteState.GetBlockRoots()
+	if len(fullBlockRoots) != len(liteBlockRoots) {
+		t.Errorf("BlockRoots length mismatch: full=%d, lite=%d", len(fullBlockRoots), len(liteBlockRoots))
+	} else {
+		for i := 0; i < len(fullBlockRoots); i++ {
+			if !bytes.Equal(fullBlockRoots[i], liteBlockRoots[i]) {
+				t.Errorf("BlockRoots[%d] mismatch", i)
+				break
+			}
+		}
+	}
+
+	// Compare finalized checkpoint
+	fullCheckpoint := fullState.GetFinalizedCheckpoint()
+	liteCheckpoint := liteState.GetFinalizedCheckpoint()
+	if fullCheckpoint.Epoch != liteCheckpoint.Epoch {
+		t.Errorf("FinalizedCheckpoint.Epoch mismatch: full=%d, lite=%d",
+			fullCheckpoint.Epoch, liteCheckpoint.Epoch)
+	}
+	if !bytes.Equal(fullCheckpoint.Root, liteCheckpoint.Root) {
+		t.Errorf("FinalizedCheckpoint.Root mismatch")
+	}
+
+	// Get trees from both
+	fullTree, err := fullState.GetTree()
+	if err != nil {
+		t.Fatalf("Failed to get full Fulu state tree: %v", err)
+	}
+
+	liteTree, err := liteState.GetTree()
+	if err != nil {
+		t.Fatalf("Failed to get lite Fulu state tree: %v", err)
+	}
+
+	// Compare tree roots
+	fullRoot := fullTree.Hash()
+	liteRoot := liteTree.Hash()
+
+	t.Logf("Full Fulu state tree root: 0x%s", hex.EncodeToString(fullRoot))
+	t.Logf("Lite Fulu state tree root: 0x%s", hex.EncodeToString(liteRoot))
+
+	if !bytes.Equal(fullRoot, liteRoot) {
+		t.Errorf("Fulu tree root mismatch!\n  Full: 0x%s\n  Lite: 0x%s",
+			hex.EncodeToString(fullRoot), hex.EncodeToString(liteRoot))
+
+		// Debug: compare field-by-field
+		t.Log("Comparing fields...")
+		for fieldIdx := 0; fieldIdx < 40; fieldIdx++ {
+			gidx := 64 + fieldIdx // Generalized index for fields in a 64-leaf tree
+			fullProof, err1 := fullTree.Prove(gidx)
+			liteProof, err2 := liteTree.Prove(gidx)
+			if err1 != nil || err2 != nil {
+				continue
+			}
+			if !bytes.Equal(fullProof.Leaf, liteProof.Leaf) {
+				t.Logf("  Field %d MISMATCH: full=0x%s lite=0x%s",
+					fieldIdx,
+					hex.EncodeToString(fullProof.Leaf),
+					hex.EncodeToString(liteProof.Leaf))
+			}
+		}
+	}
+}
+
 // TestBlockRootsTreeHash specifically tests the block roots tree hash
 func TestBlockRootsTreeHash(t *testing.T) {
 	data, err := os.ReadFile("testdata/beacon_state_sepolia.ssz")

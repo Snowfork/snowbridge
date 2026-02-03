@@ -136,10 +136,12 @@ func hashValidator(data []byte) [32]byte {
 
 	leaves := make([][32]byte, 8)
 
-	// Field 0: pubkey (48 bytes, padded to 64, then hashed)
-	pubkeyPadded := make([]byte, 64)
-	copy(pubkeyPadded, data[0:48])
-	leaves[0] = sha256Hash(pubkeyPadded)
+	// Field 0: pubkey (48 bytes -> 2 chunks, merkleized)
+	// SSZ chunks bytes into 32-byte pieces and merkleizes
+	var pubkeyC1, pubkeyC2 [32]byte
+	copy(pubkeyC1[:], data[0:32])
+	copy(pubkeyC2[:], data[32:48]) // bytes 32-47, rest is zeros
+	leaves[0] = hashTwo(pubkeyC1, pubkeyC2)
 
 	// Field 1: withdrawal_credentials (32 bytes)
 	copy(leaves[1][:], data[48:80])
@@ -369,10 +371,12 @@ func hashPendingDeposit(data []byte) [32]byte {
 
 	leaves := make([][32]byte, 8)
 
-	// pubkey: 48 bytes, padded to 64
-	pubkeyPadded := make([]byte, 64)
-	copy(pubkeyPadded, data[0:48])
-	leaves[0] = sha256Hash(pubkeyPadded)
+	// pubkey: 48 bytes -> 2 chunks, merkleized
+	// SSZ chunks bytes into 32-byte pieces and merkleizes
+	var pubkeyC1, pubkeyC2 [32]byte
+	copy(pubkeyC1[:], data[0:32])
+	copy(pubkeyC2[:], data[32:48]) // bytes 32-47, rest is zeros
+	leaves[0] = hashTwo(pubkeyC1, pubkeyC2)
 
 	// withdrawal_credentials: 32 bytes
 	copy(leaves[1][:], data[48:80])
@@ -380,8 +384,13 @@ func hashPendingDeposit(data []byte) [32]byte {
 	// amount: 8 bytes
 	leaves[2] = uint64ToLeaf(binary.LittleEndian.Uint64(data[80:88]))
 
-	// signature: 96 bytes, hashed to 32
-	leaves[3] = sha256Hash(data[88:184])
+	// signature: 96 bytes -> 3 chunks padded to 4, merkleized
+	var sigC1, sigC2, sigC3, sigC4 [32]byte
+	copy(sigC1[:], data[88:120])
+	copy(sigC2[:], data[120:152])
+	copy(sigC3[:], data[152:184])
+	// sigC4 is zeros (padding to power of 2)
+	leaves[3] = hashTwo(hashTwo(sigC1, sigC2), hashTwo(sigC3, sigC4))
 
 	// index: 8 bytes
 	leaves[4] = uint64ToLeaf(binary.LittleEndian.Uint64(data[184:192]))
