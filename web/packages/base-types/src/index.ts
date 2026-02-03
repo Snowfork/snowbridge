@@ -12,9 +12,7 @@ export type EthereumKind = "ethereum" | "ethereum_l2";
 export type ParachainKind = "polkadot" | "kusama";
 export type ChainKind = EthereumKind | ParachainKind;
 
-export interface XC20TokenMap {
-  [xc20: string]: string;
-}
+export type XC20TokenMap = Record<string, string>;
 
 export type ERC20Metadata = {
   token: string;
@@ -30,9 +28,7 @@ export type ERC20Metadata = {
   swapFee?: number;
 };
 
-export interface ERC20MetadataMap {
-  [token: string]: ERC20Metadata;
-}
+export type ERC20MetadataMap = Record<string, ERC20Metadata>;
 
 export type EthereumChain = ChainId & {
   kind: EthereumKind;
@@ -80,9 +76,7 @@ export type Asset = {
   foreignId?: string;
 };
 
-export interface AssetMap {
-  [token: string]: Asset;
-}
+export type AssetMap = Record<string, Asset>;
 
 export type Parachain = ChainId & {
   kind: ParachainKind;
@@ -107,12 +101,8 @@ export type Parachain = ChainId & {
   xcDOT?: string;
 };
 
-export type EthereumChainMap = {
-  [key: ChainKey<EthereumKind>]: EthereumChain;
-};
-export type ParachainMap = {
-  [key: ChainKey<ParachainKind>]: Parachain;
-};
+export type EthereumChainMap = Record<ChainKey<EthereumKind>, EthereumChain>;
+export type ParachainMap = Record<ChainKey<ParachainKind>, Parachain>;
 
 export type KusamaConfig = {
   assetHubParaId: number;
@@ -127,9 +117,7 @@ export type Environment = {
   gatewayContract: string;
   beefyContract: string;
   beaconApiUrl: string;
-  ethereumChains: {
-    [chainId: string]: string;
-  };
+  ethereumChains: Record<string, string>;
   // Substrate
   assetHubParaId: number;
   bridgeHubParaId: number;
@@ -144,7 +132,7 @@ export type Environment = {
   kusama?: {
     assetHubParaId: number;
     bridgeHubParaId: number;
-    parachains: { [paraId: string]: string };
+    parachains: Record<string, string>;
   };
   // Assets
   assetOverrides?: AssetOverrideMap;
@@ -158,7 +146,7 @@ export type Environment = {
     l1FeeTokenAddress: string;
     l1SwapRouterAddress: string;
     l1SwapQuoterAddress: string;
-    l2Chains: { [l2ChainId: number]: L2ForwardMetadata };
+    l2Chains: Record<number, L2ForwardMetadata>;
   };
 };
 
@@ -179,12 +167,13 @@ export type ChainKey<T extends string> = `${T}_${number}`;
 
 export type Source = ChainId & {
   key: ChainKey<ChainKind>;
-  destinations: {
-    [key: ChainKey<ChainKind>]: ChainId & {
+  destinations: Record<
+    ChainKey<ChainKind>,
+    ChainId & {
       key: ChainKey<ChainKind>;
       assets: string[];
-    };
-  };
+    }
+  >;
 };
 
 export type TransferLocation = ParachainLocation | EthereumLocation;
@@ -204,21 +193,18 @@ export type EthereumLocation = ChainId & {
   parachain?: Parachain;
 };
 
-export interface AssetOverrideMap {
-  [paraId: string]: Asset[];
-}
+export type AssetOverrideMap = Record<string, Asset[]>;
 
-export interface ERC20MetadataOverrideMap {
-  [token: string]: {
+export type ERC20MetadataOverrideMap = Record<
+  string,
+  {
     name?: string;
     symbol?: string;
     decimals?: number;
-  };
-}
+  }
+>;
 
-export interface PrecompileMap {
-  [chainId: string]: `0x${string}`;
-}
+export type PrecompileMap = Record<string, `0x${string}`>;
 
 export type AssetRegistry = {
   timestamp: string;
@@ -253,13 +239,14 @@ export type SubstrateAccount = {
   };
 };
 
-export interface PNAMap {
-  [token: string]: {
+export type PNAMap = Record<
+  string,
+  {
     token: string;
     foreignId: string;
     ethereumlocation: any;
-  };
-}
+  }
+>;
 
 export type AssetSwapRoute = {
   inputToken: string;
