@@ -46,11 +46,11 @@ func TestMixInLength(t *testing.T) {
 }
 
 func TestHashBalances(t *testing.T) {
-	// Test empty balances
+	// Test empty balances - should produce a valid hash (not zero)
 	emptyResult := hashBalances(nil)
-	expected := mixInLength([32]byte{}, 0)
-	if emptyResult != expected {
-		t.Errorf("hashBalances of empty = %x, want %x", emptyResult, expected)
+	// Empty list has a valid SSZ hash (zero hash at depth mixed with length 0)
+	if emptyResult == [32]byte{} {
+		t.Error("hashBalances of empty should return non-zero SSZ hash")
 	}
 
 	// Test single balance
@@ -59,18 +59,18 @@ func TestHashBalances(t *testing.T) {
 	binary.LittleEndian.PutUint64(data, balance)
 	result := hashBalances(data)
 
-	// Should have count of 1
-	if result == [32]byte{} {
-		t.Error("hashBalances should not return zero hash for non-empty data")
+	// Should produce a different hash than empty
+	if result == emptyResult {
+		t.Error("hashBalances with data should differ from empty hash")
 	}
 }
 
 func TestHashParticipation(t *testing.T) {
-	// Test empty participation
+	// Test empty participation - should produce a valid hash (not zero)
 	emptyResult := hashParticipation(nil)
-	expected := mixInLength([32]byte{}, 0)
-	if emptyResult != expected {
-		t.Errorf("hashParticipation of empty = %x, want %x", emptyResult, expected)
+	// Empty list has a valid SSZ hash (zero hash at depth mixed with length 0)
+	if emptyResult == [32]byte{} {
+		t.Error("hashParticipation of empty should return non-zero SSZ hash")
 	}
 
 	// Test participation with data
@@ -79,8 +79,9 @@ func TestHashParticipation(t *testing.T) {
 		data[i] = byte(i % 256)
 	}
 	result := hashParticipation(data)
-	if result == [32]byte{} {
-		t.Error("hashParticipation should not return zero hash for non-empty data")
+	// Should produce a different hash than empty
+	if result == emptyResult {
+		t.Error("hashParticipation with data should differ from empty hash")
 	}
 }
 

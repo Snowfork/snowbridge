@@ -38,9 +38,9 @@ type LiteBeaconState struct {
 	justificationBits               []byte
 	previousJustifiedCheckpoint     *state.Checkpoint
 	currentJustifiedCheckpoint      *state.Checkpoint
-	inactivityScoresHash            [32]byte // Hash (~8MB saved)
-	latestExecutionPayloadHeader    []byte   // Keep raw for hash
-	nextWithdrawalIndex             uint64
+	inactivityScoresHash               [32]byte // Hash (~8MB saved)
+	latestExecutionPayloadHeaderHash  [32]byte // Hash of execution payload header
+	nextWithdrawalIndex               uint64
 	nextWithdrawalValidatorIndex    uint64
 	historicalSummariesHash         [32]byte
 
@@ -181,7 +181,7 @@ func UnmarshalSSZLiteDeneb(buf []byte) (*LiteBeaconState, error) {
 	s.stateRootsHash = hashFixedVector(buf[offsetStateRoots:offsetStateRootsEnd], 32, 8192)
 
 	// Field 7: HistoricalRoots - compute hash
-	s.historicalRootsHash = hashVariableList(buf[o7:o9], 32)
+	s.historicalRootsHash = hashHistoricalRoots(buf[o7:o9])
 
 	// Field 8: Eth1Data
 	s.eth1Data = new(state.Eth1Data)
@@ -190,7 +190,7 @@ func UnmarshalSSZLiteDeneb(buf []byte) (*LiteBeaconState, error) {
 	}
 
 	// Field 9: Eth1DataVotes - compute hash
-	s.eth1DataVotesHash = hashVariableList(buf[o9:o11], 72)
+	s.eth1DataVotesHash = hashEth1DataVotes(buf[o9:o11])
 
 	// Field 10: Eth1DepositIndex
 	s.eth1DepositIndex = binary.LittleEndian.Uint64(buf[offsetEth1DepositIndex:])
@@ -232,9 +232,16 @@ func UnmarshalSSZLiteDeneb(buf []byte) (*LiteBeaconState, error) {
 	// Field 21: InactivityScores - compute hash (SAVINGS: ~8MB)
 	s.inactivityScoresHash = hashInactivityScores(buf[o21:o24])
 
-	// Field 24: LatestExecutionPayloadHeader - store raw for hashing
-	s.latestExecutionPayloadHeader = make([]byte, len(buf[o24:o27]))
-	copy(s.latestExecutionPayloadHeader, buf[o24:o27])
+	// Field 24: LatestExecutionPayloadHeader - unmarshal and compute hash
+	execHeader := new(state.ExecutionPayloadHeaderDeneb)
+	if err := execHeader.UnmarshalSSZ(buf[o24:o27]); err != nil {
+		return nil, fmt.Errorf("unmarshal execution payload header: %w", err)
+	}
+	execHash, err := execHeader.HashTreeRoot()
+	if err != nil {
+		return nil, fmt.Errorf("hash execution payload header: %w", err)
+	}
+	s.latestExecutionPayloadHeaderHash = execHash
 
 	// Field 25: NextWithdrawalIndex
 	s.nextWithdrawalIndex = binary.LittleEndian.Uint64(buf[offsetNextWithdrawalIndex:])
@@ -321,14 +328,14 @@ func UnmarshalSSZLiteElectra(buf []byte) (*LiteBeaconState, error) {
 	}
 
 	s.stateRootsHash = hashFixedVector(buf[offsetStateRoots:offsetStateRootsEnd], 32, 8192)
-	s.historicalRootsHash = hashVariableList(buf[o7:o9], 32)
+	s.historicalRootsHash = hashHistoricalRoots(buf[o7:o9])
 
 	s.eth1Data = new(state.Eth1Data)
 	if err := s.eth1Data.UnmarshalSSZ(buf[offsetEth1Data : offsetEth1Data+72]); err != nil {
 		return nil, fmt.Errorf("unmarshal eth1 data: %w", err)
 	}
 
-	s.eth1DataVotesHash = hashVariableList(buf[o9:o11], 72)
+	s.eth1DataVotesHash = hashEth1DataVotes(buf[o9:o11])
 	s.eth1DepositIndex = binary.LittleEndian.Uint64(buf[offsetEth1DepositIndex:])
 	s.validatorsHash = hashValidators(buf[o11:o12])
 	s.balancesHash = hashBalances(buf[o12:o15])
@@ -351,8 +358,17 @@ func UnmarshalSSZLiteElectra(buf []byte) (*LiteBeaconState, error) {
 	}
 
 	s.inactivityScoresHash = hashInactivityScores(buf[o21:o24])
-	s.latestExecutionPayloadHeader = make([]byte, len(buf[o24:o27]))
-	copy(s.latestExecutionPayloadHeader, buf[o24:o27])
+
+	// Field 24: LatestExecutionPayloadHeader - unmarshal and compute hash
+	execHeader := new(state.ExecutionPayloadHeaderDeneb)
+	if err := execHeader.UnmarshalSSZ(buf[o24:o27]); err != nil {
+		return nil, fmt.Errorf("unmarshal execution payload header: %w", err)
+	}
+	execHash, err := execHeader.HashTreeRoot()
+	if err != nil {
+		return nil, fmt.Errorf("hash execution payload header: %w", err)
+	}
+	s.latestExecutionPayloadHeaderHash = execHash
 
 	s.nextWithdrawalIndex = binary.LittleEndian.Uint64(buf[offsetNextWithdrawalIndex:])
 	s.nextWithdrawalValidatorIndex = binary.LittleEndian.Uint64(buf[offsetNextWithdrawalValIdx:])
@@ -413,172 +429,163 @@ func (s *LiteBeaconState) GetNextSyncCommittee() *state.SyncCommittee {
 // GetTree builds an SSZ Merkle tree for this lite state.
 // This uses pre-computed hashes for large fields, saving significant memory.
 func (s *LiteBeaconState) GetTree() (*ssz.Node, error) {
-	return s.buildMerkleTree()
+	return ssz.ProofTree(s)
 }
 
-// buildMerkleTree constructs the SSZ Merkle tree using pre-computed hashes
-func (s *LiteBeaconState) buildMerkleTree() (*ssz.Node, error) {
-	// Determine if this is Electra (has additional fields)
-	isElectra := s.depositRequestsStartIndex != 0 || s.pendingDepositsHash != [32]byte{}
+// HashTreeRoot returns the hash tree root of the lite beacon state
+func (s *LiteBeaconState) HashTreeRoot() ([32]byte, error) {
+	return ssz.HashWithDefaultHasher(s)
+}
 
-	// Build leaf nodes for each field
-	numFields := 28 // Deneb has 28 fields (indices 0-27)
-	if isElectra {
-		numFields = 37 // Electra has 37 fields (indices 0-36)
+// HashTreeRootWith implements the ssz.HashRoot interface.
+// This is the key method that enables memory-efficient proof generation by using
+// pre-computed hashes for large fields (Validators, Balances, etc.) instead of
+// iterating through all the data.
+func (s *LiteBeaconState) HashTreeRootWith(hh ssz.HashWalker) (err error) {
+	indx := hh.Index()
+
+	// Field (0) 'GenesisTime'
+	hh.PutUint64(s.genesisTime)
+
+	// Field (1) 'GenesisValidatorsRoot'
+	hh.PutBytes(s.genesisValidatorsRoot[:])
+
+	// Field (2) 'Slot'
+	hh.PutUint64(s.Slot)
+
+	// Field (3) 'Fork'
+	if err = s.fork.HashTreeRootWith(hh); err != nil {
+		return
 	}
-	leaves := make([]*ssz.Node, numFields)
 
-	// Field 0: GenesisTime
-	leaves[0] = ssz.LeafFromUint64(s.genesisTime)
-
-	// Field 1: GenesisValidatorsRoot
-	leaves[1] = ssz.LeafFromBytes(s.genesisValidatorsRoot[:])
-
-	// Field 2: Slot
-	leaves[2] = ssz.LeafFromUint64(s.Slot)
-
-	// Field 3: Fork
-	forkNode, err := s.fork.GetTree()
-	if err != nil {
-		return nil, fmt.Errorf("get fork tree: %w", err)
+	// Field (4) 'LatestBlockHeader'
+	if err = s.LatestBlockHeader.HashTreeRootWith(hh); err != nil {
+		return
 	}
-	leaves[3] = forkNode
 
-	// Field 4: LatestBlockHeader
-	headerNode, err := s.LatestBlockHeader.GetTree()
-	if err != nil {
-		return nil, fmt.Errorf("get header tree: %w", err)
+	// Field (5) 'BlockRoots' - we have full data
+	{
+		subIndx := hh.Index()
+		for _, i := range s.BlockRoots {
+			hh.Append(i)
+		}
+		hh.Merkleize(subIndx)
 	}
-	leaves[4] = headerNode
 
-	// Field 5: BlockRoots (we have the actual data)
-	blockRootsNode, err := buildBlockRootsTree(s.BlockRoots)
-	if err != nil {
-		return nil, fmt.Errorf("build block roots tree: %w", err)
+	// Field (6) 'StateRoots' - use pre-computed hash
+	hh.PutBytes(s.stateRootsHash[:])
+
+	// Field (7) 'HistoricalRoots' - use pre-computed hash
+	hh.PutBytes(s.historicalRootsHash[:])
+
+	// Field (8) 'Eth1Data'
+	if err = s.eth1Data.HashTreeRootWith(hh); err != nil {
+		return
 	}
-	leaves[5] = blockRootsNode
 
-	// Field 6: StateRoots (use pre-computed hash)
-	leaves[6] = ssz.LeafFromBytes(s.stateRootsHash[:])
+	// Field (9) 'Eth1DataVotes' - use pre-computed hash
+	hh.PutBytes(s.eth1DataVotesHash[:])
 
-	// Field 7: HistoricalRoots (use pre-computed hash)
-	leaves[7] = ssz.LeafFromBytes(s.historicalRootsHash[:])
+	// Field (10) 'Eth1DepositIndex'
+	hh.PutUint64(s.eth1DepositIndex)
 
-	// Field 8: Eth1Data
-	eth1Node, err := s.eth1Data.GetTree()
-	if err != nil {
-		return nil, fmt.Errorf("get eth1 data tree: %w", err)
+	// Field (11) 'Validators' - use pre-computed hash (HUGE MEMORY SAVINGS)
+	hh.PutBytes(s.validatorsHash[:])
+
+	// Field (12) 'Balances' - use pre-computed hash
+	hh.PutBytes(s.balancesHash[:])
+
+	// Field (13) 'RandaoMixes' - use pre-computed hash
+	hh.PutBytes(s.randaoMixesHash[:])
+
+	// Field (14) 'Slashings' - use pre-computed hash
+	hh.PutBytes(s.slashingsHash[:])
+
+	// Field (15) 'PreviousEpochParticipation' - use pre-computed hash
+	hh.PutBytes(s.previousEpochParticipationHash[:])
+
+	// Field (16) 'CurrentEpochParticipation' - use pre-computed hash
+	hh.PutBytes(s.currentEpochParticipationHash[:])
+
+	// Field (17) 'JustificationBits'
+	hh.PutBytes(s.justificationBits)
+
+	// Field (18) 'PreviousJustifiedCheckpoint'
+	if err = s.previousJustifiedCheckpoint.HashTreeRootWith(hh); err != nil {
+		return
 	}
-	leaves[8] = eth1Node
 
-	// Field 9: Eth1DataVotes (use pre-computed hash)
-	leaves[9] = ssz.LeafFromBytes(s.eth1DataVotesHash[:])
-
-	// Field 10: Eth1DepositIndex
-	leaves[10] = ssz.LeafFromUint64(s.eth1DepositIndex)
-
-	// Field 11: Validators (use pre-computed hash - HUGE SAVINGS)
-	leaves[11] = ssz.LeafFromBytes(s.validatorsHash[:])
-
-	// Field 12: Balances (use pre-computed hash)
-	leaves[12] = ssz.LeafFromBytes(s.balancesHash[:])
-
-	// Field 13: RandaoMixes (use pre-computed hash)
-	leaves[13] = ssz.LeafFromBytes(s.randaoMixesHash[:])
-
-	// Field 14: Slashings (use pre-computed hash)
-	leaves[14] = ssz.LeafFromBytes(s.slashingsHash[:])
-
-	// Field 15: PreviousEpochParticipation (use pre-computed hash)
-	leaves[15] = ssz.LeafFromBytes(s.previousEpochParticipationHash[:])
-
-	// Field 16: CurrentEpochParticipation (use pre-computed hash)
-	leaves[16] = ssz.LeafFromBytes(s.currentEpochParticipationHash[:])
-
-	// Field 17: JustificationBits
-	leaves[17] = ssz.LeafFromBytes(s.justificationBits)
-
-	// Field 18: PreviousJustifiedCheckpoint
-	prevJustNode, err := s.previousJustifiedCheckpoint.GetTree()
-	if err != nil {
-		return nil, fmt.Errorf("get prev justified checkpoint tree: %w", err)
+	// Field (19) 'CurrentJustifiedCheckpoint'
+	if err = s.currentJustifiedCheckpoint.HashTreeRootWith(hh); err != nil {
+		return
 	}
-	leaves[18] = prevJustNode
 
-	// Field 19: CurrentJustifiedCheckpoint
-	currJustNode, err := s.currentJustifiedCheckpoint.GetTree()
-	if err != nil {
-		return nil, fmt.Errorf("get curr justified checkpoint tree: %w", err)
+	// Field (20) 'FinalizedCheckpoint'
+	if err = s.FinalizedCheckpoint.HashTreeRootWith(hh); err != nil {
+		return
 	}
-	leaves[19] = currJustNode
 
-	// Field 20: FinalizedCheckpoint
-	finalizedNode, err := s.FinalizedCheckpoint.GetTree()
-	if err != nil {
-		return nil, fmt.Errorf("get finalized checkpoint tree: %w", err)
+	// Field (21) 'InactivityScores' - use pre-computed hash
+	hh.PutBytes(s.inactivityScoresHash[:])
+
+	// Field (22) 'CurrentSyncCommittee'
+	if err = s.CurrentSyncCommittee.HashTreeRootWith(hh); err != nil {
+		return
 	}
-	leaves[20] = finalizedNode
 
-	// Field 21: InactivityScores (use pre-computed hash)
-	leaves[21] = ssz.LeafFromBytes(s.inactivityScoresHash[:])
-
-	// Field 22: CurrentSyncCommittee
-	currSyncNode, err := s.CurrentSyncCommittee.GetTree()
-	if err != nil {
-		return nil, fmt.Errorf("get current sync committee tree: %w", err)
+	// Field (23) 'NextSyncCommittee'
+	if err = s.NextSyncCommittee.HashTreeRootWith(hh); err != nil {
+		return
 	}
-	leaves[22] = currSyncNode
 
-	// Field 23: NextSyncCommittee
-	nextSyncNode, err := s.NextSyncCommittee.GetTree()
-	if err != nil {
-		return nil, fmt.Errorf("get next sync committee tree: %w", err)
-	}
-	leaves[23] = nextSyncNode
+	// Field (24) 'LatestExecutionPayloadHeader' - use pre-computed hash
+	hh.PutBytes(s.latestExecutionPayloadHeaderHash[:])
 
-	// Field 24: LatestExecutionPayloadHeader (hash the raw bytes)
-	execPayloadHash := hashExecutionPayloadHeader(s.latestExecutionPayloadHeader)
-	leaves[24] = ssz.LeafFromBytes(execPayloadHash[:])
+	// Field (25) 'NextWithdrawalIndex'
+	hh.PutUint64(s.nextWithdrawalIndex)
 
-	// Field 25: NextWithdrawalIndex
-	leaves[25] = ssz.LeafFromUint64(s.nextWithdrawalIndex)
+	// Field (26) 'NextWithdrawalValidatorIndex'
+	hh.PutUint64(s.nextWithdrawalValidatorIndex)
 
-	// Field 26: NextWithdrawalValidatorIndex
-	leaves[26] = ssz.LeafFromUint64(s.nextWithdrawalValidatorIndex)
-
-	// Field 27: HistoricalSummaries (use pre-computed hash)
-	leaves[27] = ssz.LeafFromBytes(s.historicalSummariesHash[:])
+	// Field (27) 'HistoricalSummaries' - use pre-computed hash
+	hh.PutBytes(s.historicalSummariesHash[:])
 
 	// Electra-specific fields (28-36)
-	if isElectra {
-		leaves[28] = ssz.LeafFromUint64(s.depositRequestsStartIndex)
-		leaves[29] = ssz.LeafFromUint64(s.depositBalanceToConsume)
-		leaves[30] = ssz.LeafFromUint64(s.exitBalanceToConsume)
-		leaves[31] = ssz.LeafFromUint64(s.earliestExitEpoch)
-		leaves[32] = ssz.LeafFromUint64(s.consolidationBalanceToConsume)
-		leaves[33] = ssz.LeafFromUint64(s.earliestConsolidationEpoch)
-		leaves[34] = ssz.LeafFromBytes(s.pendingDepositsHash[:])
-		leaves[35] = ssz.LeafFromBytes(s.pendingPartialWithdrawalsHash[:])
-		leaves[36] = ssz.LeafFromBytes(s.pendingConsolidationsHash[:])
+	if s.isElectra() {
+		// Field (28) 'DepositRequestsStartIndex'
+		hh.PutUint64(s.depositRequestsStartIndex)
+
+		// Field (29) 'DepositBalanceToConsume'
+		hh.PutUint64(s.depositBalanceToConsume)
+
+		// Field (30) 'ExitBalanceToConsume'
+		hh.PutUint64(s.exitBalanceToConsume)
+
+		// Field (31) 'EarliestExitEpoch'
+		hh.PutUint64(s.earliestExitEpoch)
+
+		// Field (32) 'ConsolidationBalanceToConsume'
+		hh.PutUint64(s.consolidationBalanceToConsume)
+
+		// Field (33) 'EarliestConsolidationEpoch'
+		hh.PutUint64(s.earliestConsolidationEpoch)
+
+		// Field (34) 'PendingDeposits' - use pre-computed hash
+		hh.PutBytes(s.pendingDepositsHash[:])
+
+		// Field (35) 'PendingPartialWithdrawals' - use pre-computed hash
+		hh.PutBytes(s.pendingPartialWithdrawalsHash[:])
+
+		// Field (36) 'PendingConsolidations' - use pre-computed hash
+		hh.PutBytes(s.pendingConsolidationsHash[:])
 	}
 
-	// Build the tree from leaves (pad to power of 2)
-	targetSize := 32
-	if isElectra {
-		targetSize = 64 // Next power of 2 after 37
-	}
-	for len(leaves) < targetSize {
-		leaves = append(leaves, ssz.LeafFromBytes(make([]byte, 32)))
-	}
-
-	return ssz.TreeFromNodes(leaves, targetSize)
+	hh.Merkleize(indx)
+	return
 }
 
-// buildBlockRootsTree builds a Merkle tree from block roots
-func buildBlockRootsTree(blockRoots [][]byte) (*ssz.Node, error) {
-	leaves := make([]*ssz.Node, len(blockRoots))
-	for i, root := range blockRoots {
-		leaves[i] = ssz.LeafFromBytes(root)
-	}
-	return ssz.TreeFromNodes(leaves, 8192)
+// isElectra returns true if this is an Electra state
+func (s *LiteBeaconState) isElectra() bool {
+	return s.depositRequestsStartIndex != 0 || s.pendingDepositsHash != [32]byte{}
 }
+

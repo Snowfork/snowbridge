@@ -22,34 +22,79 @@ func hashFixedVector(data []byte, elementSize, count int) [32]byte {
 	return merkleize(leaves)
 }
 
-// hashVariableList computes the hash tree root of a variable-length list.
-// The hash includes the length mixed in.
-func hashVariableList(data []byte, elementSize int) [32]byte {
-	if len(data) == 0 || elementSize == 0 {
-		// Empty list: hash of zero mixed with length 0
-		return mixInLength([32]byte{}, 0)
+// hashHistoricalRoots computes the hash tree root of the HistoricalRoots list.
+// Each element is a 32-byte root. Limit is 2^24 = 16777216.
+func hashHistoricalRoots(data []byte) [32]byte {
+	const limit uint64 = 16777216 // 2^24
+	// Each element is 32 bytes, so chunk limit = limit
+	const chunkLimit = limit
+
+	if len(data) == 0 {
+		root := merkleizeWithLimit(nil, chunkLimit)
+		return mixInLength(root, 0)
 	}
 
-	count := len(data) / elementSize
+	count := len(data) / 32
 	leaves := make([][32]byte, count)
 	for i := 0; i < count; i++ {
-		// For each element, compute its hash
-		element := data[i*elementSize : (i+1)*elementSize]
-		leaves[i] = sha256Hash(element)
+		copy(leaves[i][:], data[i*32:(i+1)*32])
 	}
 
-	root := merkleize(leaves)
+	root := merkleizeWithLimit(leaves, chunkLimit)
 	return mixInLength(root, uint64(count))
+}
+
+// hashEth1DataVotes computes the hash tree root of the Eth1DataVotes list.
+// Each Eth1Data is 72 bytes. Limit is 2048 (EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH).
+func hashEth1DataVotes(data []byte) [32]byte {
+	const limit uint64 = 2048
+	// Each Eth1Data hashes to one 32-byte leaf
+	const chunkLimit = limit
+
+	if len(data) == 0 {
+		root := merkleizeWithLimit(nil, chunkLimit)
+		return mixInLength(root, 0)
+	}
+
+	const eth1DataSize = 72
+	count := len(data) / eth1DataSize
+	leaves := make([][32]byte, count)
+	for i := 0; i < count; i++ {
+		element := data[i*eth1DataSize : (i+1)*eth1DataSize]
+		leaves[i] = hashEth1Data(element)
+	}
+
+	root := merkleizeWithLimit(leaves, chunkLimit)
+	return mixInLength(root, uint64(count))
+}
+
+// hashEth1Data computes the hash of a single Eth1Data (72 bytes)
+func hashEth1Data(data []byte) [32]byte {
+	if len(data) < 72 {
+		return [32]byte{}
+	}
+	// Eth1Data: deposit_root (32) + deposit_count (8) + block_hash (32)
+	leaves := make([][32]byte, 4) // 3 fields, padded to 4 for merkleization
+	copy(leaves[0][:], data[0:32])
+	leaves[1] = uint64ToLeaf(binary.LittleEndian.Uint64(data[32:40]))
+	copy(leaves[2][:], data[40:72])
+	return merkleize(leaves)
 }
 
 // hashValidators computes the hash tree root of the validators list.
 // Each validator is 121 bytes. We hash them in a streaming fashion.
+// SSZ lists require merkleization to a depth based on the limit, not actual count.
+// Validator list limit is 2^40 = 1099511627776.
 func hashValidators(data []byte) [32]byte {
+	const validatorSize = 121
+	const validatorLimit = 1099511627776 // 2^40
+
 	if len(data) == 0 {
-		return mixInLength([32]byte{}, 0)
+		// Empty list: merkle root at depth 40, mixed with length 0
+		root := merkleizeWithLimit(nil, validatorLimit)
+		return mixInLength(root, 0)
 	}
 
-	const validatorSize = 121
 	count := len(data) / validatorSize
 
 	// Process validators in chunks to limit memory
@@ -69,7 +114,7 @@ func hashValidators(data []byte) [32]byte {
 		}
 	}
 
-	root := merkleize(leaves)
+	root := merkleizeWithLimit(leaves, validatorLimit)
 	return mixInLength(root, uint64(count))
 }
 
@@ -124,9 +169,17 @@ func hashValidator(data []byte) [32]byte {
 
 // hashBalances computes the hash tree root of the balances list.
 // Each balance is a uint64 (8 bytes).
+// SSZ lists require merkleization to a depth based on the limit.
+// Balances list limit is 2^40 = 1099511627776.
+// Chunk count for uint64 list: (limit * 8 + 31) / 32 = limit / 4 (when limit is power of 2)
 func hashBalances(data []byte) [32]byte {
+	const balancesLimit uint64 = 1099511627776 // 2^40
+	// For uint64 elements (8 bytes), chunk limit = (limit * 8 + 31) / 32
+	const chunkLimit uint64 = (balancesLimit*8 + 31) / 32 // = 2^38
+
 	if len(data) == 0 {
-		return mixInLength([32]byte{}, 0)
+		root := merkleizeWithLimit(nil, chunkLimit)
+		return mixInLength(root, 0)
 	}
 
 	count := len(data) / 8
@@ -145,7 +198,7 @@ func hashBalances(data []byte) [32]byte {
 		}
 	}
 
-	root := merkleize(leaves)
+	root := merkleizeWithLimit(leaves, chunkLimit)
 	return mixInLength(root, uint64(count))
 }
 
@@ -172,10 +225,15 @@ func hashSlashings(data []byte) [32]byte {
 }
 
 // hashParticipation computes the hash tree root of epoch participation.
-// This is a byte list (one byte per validator).
+// This is a byte list (one byte per validator). Limit is 2^40 = 1099511627776.
 func hashParticipation(data []byte) [32]byte {
+	const limit uint64 = 1099511627776 // 2^40
+	// Each byte is 1 byte, 32 bytes per chunk, so chunk limit = (limit + 31) / 32
+	const chunkLimit = (limit + 31) / 32
+
 	if len(data) == 0 {
-		return mixInLength([32]byte{}, 0)
+		root := merkleizeWithLimit(nil, chunkLimit)
+		return mixInLength(root, 0)
 	}
 
 	// Pack 32 bytes into each chunk
@@ -191,15 +249,20 @@ func hashParticipation(data []byte) [32]byte {
 		copy(leaves[i][:], data[start:end])
 	}
 
-	root := merkleize(leaves)
+	root := merkleizeWithLimit(leaves, chunkLimit)
 	return mixInLength(root, uint64(len(data)))
 }
 
 // hashInactivityScores computes the hash tree root of inactivity scores.
-// List of uint64 values.
+// List of uint64 values. Limit is 2^40 = 1099511627776.
 func hashInactivityScores(data []byte) [32]byte {
+	const limit uint64 = 1099511627776 // 2^40
+	// For uint64 elements (8 bytes), chunk limit = (limit * 8 + 31) / 32 = 2^38
+	const chunkLimit = (limit*8 + 31) / 32
+
 	if len(data) == 0 {
-		return mixInLength([32]byte{}, 0)
+		root := merkleizeWithLimit(nil, chunkLimit)
+		return mixInLength(root, 0)
 	}
 
 	count := len(data) / 8
@@ -218,15 +281,20 @@ func hashInactivityScores(data []byte) [32]byte {
 		}
 	}
 
-	root := merkleize(leaves)
+	root := merkleizeWithLimit(leaves, chunkLimit)
 	return mixInLength(root, uint64(count))
 }
 
 // hashHistoricalSummaries computes the hash tree root of historical summaries.
-// Each summary is 64 bytes (two 32-byte roots).
+// Each summary is 64 bytes (two 32-byte roots). Limit is 2^24 = 16777216.
 func hashHistoricalSummaries(data []byte) [32]byte {
+	const limit uint64 = 16777216 // 2^24
+	// Each HistoricalSummary hashes to one 32-byte leaf
+	const chunkLimit = limit
+
 	if len(data) == 0 {
-		return mixInLength([32]byte{}, 0)
+		root := merkleizeWithLimit(nil, chunkLimit)
+		return mixInLength(root, 0)
 	}
 
 	const summarySize = 64
@@ -242,23 +310,20 @@ func hashHistoricalSummaries(data []byte) [32]byte {
 		leaves[i] = hashTwo(leaf1, leaf2)
 	}
 
-	root := merkleize(leaves)
+	root := merkleizeWithLimit(leaves, chunkLimit)
 	return mixInLength(root, uint64(count))
 }
 
-// hashExecutionPayloadHeader computes the hash of the execution payload header
-func hashExecutionPayloadHeader(data []byte) [32]byte {
-	if len(data) == 0 {
-		return [32]byte{}
-	}
-	return sha256Hash(data)
-}
-
 // hashPendingDeposits computes the hash tree root of pending deposits.
-// Each PendingDeposit is 192 bytes (48 + 32 + 8 + 96 + 8).
+// Each PendingDeposit is 192 bytes (48 + 32 + 8 + 96 + 8). Limit is 2^27 = 134217728.
 func hashPendingDeposits(data []byte) [32]byte {
+	const limit uint64 = 134217728 // 2^27
+	// Each PendingDeposit hashes to one 32-byte leaf
+	const chunkLimit = limit
+
 	if len(data) == 0 {
-		return mixInLength([32]byte{}, 0)
+		root := merkleizeWithLimit(nil, chunkLimit)
+		return mixInLength(root, 0)
 	}
 
 	const depositSize = 192
@@ -270,7 +335,7 @@ func hashPendingDeposits(data []byte) [32]byte {
 		leaves[i] = hashPendingDeposit(deposit)
 	}
 
-	root := merkleize(leaves)
+	root := merkleizeWithLimit(leaves, chunkLimit)
 	return mixInLength(root, uint64(count))
 }
 
@@ -303,10 +368,15 @@ func hashPendingDeposit(data []byte) [32]byte {
 }
 
 // hashPendingPartialWithdrawals computes the hash of pending partial withdrawals.
-// Each PendingPartialWithdrawal is 24 bytes (8 + 8 + 8).
+// Each PendingPartialWithdrawal is 24 bytes (8 + 8 + 8). Limit is 2^27 = 134217728.
 func hashPendingPartialWithdrawals(data []byte) [32]byte {
+	const limit uint64 = 134217728 // 2^27
+	// Each withdrawal hashes to one 32-byte leaf
+	const chunkLimit = limit
+
 	if len(data) == 0 {
-		return mixInLength([32]byte{}, 0)
+		root := merkleizeWithLimit(nil, chunkLimit)
+		return mixInLength(root, 0)
 	}
 
 	const withdrawalSize = 24
@@ -323,15 +393,20 @@ func hashPendingPartialWithdrawals(data []byte) [32]byte {
 		)
 	}
 
-	root := merkleize(leaves)
+	root := merkleizeWithLimit(leaves, chunkLimit)
 	return mixInLength(root, uint64(count))
 }
 
 // hashPendingConsolidations computes the hash of pending consolidations.
-// Each PendingConsolidation is 16 bytes (8 + 8).
+// Each PendingConsolidation is 16 bytes (8 + 8). Limit is 2^18 = 262144.
 func hashPendingConsolidations(data []byte) [32]byte {
+	const limit uint64 = 262144 // 2^18
+	// Each consolidation hashes to one 32-byte leaf
+	const chunkLimit = limit
+
 	if len(data) == 0 {
-		return mixInLength([32]byte{}, 0)
+		root := merkleizeWithLimit(nil, chunkLimit)
+		return mixInLength(root, 0)
 	}
 
 	const consolidationSize = 16
@@ -347,7 +422,7 @@ func hashPendingConsolidations(data []byte) [32]byte {
 		)
 	}
 
-	root := merkleize(leaves)
+	root := merkleizeWithLimit(leaves, chunkLimit)
 	return mixInLength(root, uint64(count))
 }
 
@@ -391,6 +466,102 @@ func merkleize(leaves [][32]byte) [32]byte {
 	}
 
 	return padded[0]
+}
+
+// merkleizeWithLimit computes the Merkle root for an SSZ list with a specific limit.
+// The tree depth is based on the limit, not the actual count of elements.
+// This matches fastssz's MerkleizeWithMixin behavior.
+func merkleizeWithLimit(leaves [][32]byte, limit uint64) [32]byte {
+	// Calculate the depth needed for the limit
+	depth := getDepth(limit)
+
+	if len(leaves) == 0 {
+		// Return zero hash at the appropriate depth
+		return getZeroHash(depth)
+	}
+
+	if len(leaves) == 1 && depth == 0 {
+		return leaves[0]
+	}
+
+	// Build tree from bottom up
+	layer := make([][32]byte, len(leaves))
+	copy(layer, leaves)
+
+	for d := uint8(0); d < depth; d++ {
+		// Calculate size of next layer (round up)
+		nextSize := (len(layer) + 1) / 2
+
+		// If this is the last layer before reaching the target depth,
+		// we might need to combine with zero hashes
+		newLayer := make([][32]byte, nextSize)
+
+		for i := 0; i < len(layer); i += 2 {
+			left := layer[i]
+			var right [32]byte
+			if i+1 < len(layer) {
+				right = layer[i+1]
+			} else {
+				right = getZeroHash(d)
+			}
+			newLayer[i/2] = hashTwo(left, right)
+		}
+
+		layer = newLayer
+	}
+
+	// If we still have more than one element, continue until we have one
+	for len(layer) > 1 {
+		newLayer := make([][32]byte, (len(layer)+1)/2)
+		for i := 0; i < len(layer); i += 2 {
+			left := layer[i]
+			var right [32]byte
+			if i+1 < len(layer) {
+				right = layer[i+1]
+			}
+			newLayer[i/2] = hashTwo(left, right)
+		}
+		layer = newLayer
+	}
+
+	return layer[0]
+}
+
+// getDepth returns the depth of a merkle tree for a given limit
+func getDepth(limit uint64) uint8 {
+	if limit <= 1 {
+		return 0
+	}
+	depth := uint8(0)
+	for (uint64(1) << depth) < limit {
+		depth++
+	}
+	return depth
+}
+
+// zeroHashes contains precomputed zero hashes at each depth
+var zeroHashes [][32]byte
+
+func init() {
+	// Precompute zero hashes up to depth 64 (more than enough for any SSZ type)
+	zeroHashes = make([][32]byte, 65)
+	zeroHashes[0] = [32]byte{}
+	for i := 1; i < 65; i++ {
+		zeroHashes[i] = hashTwo(zeroHashes[i-1], zeroHashes[i-1])
+	}
+}
+
+// getZeroHash returns the zero hash at a given depth
+func getZeroHash(depth uint8) [32]byte {
+	if int(depth) < len(zeroHashes) {
+		return zeroHashes[depth]
+	}
+	// Should not happen, but compute if needed
+	hash := zeroHashes[len(zeroHashes)-1]
+	for i := len(zeroHashes) - 1; i < int(depth); i++ {
+		hash = hashTwo(hash, hash)
+	}
+	return hash
 }
 
 // hashTwo computes SHA256(left || right)
