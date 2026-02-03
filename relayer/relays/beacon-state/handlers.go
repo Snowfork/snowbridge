@@ -271,57 +271,12 @@ func (s *Service) unmarshalBeaconState(slot uint64, data []byte) (state.BeaconSt
 // hashes for the rest without storing the raw data.
 func (s *Service) unmarshalBeaconStateLite(slot uint64, data []byte) (state.BeaconState, error) {
 	forkVersion := s.protocol.ForkVersion(slot)
-	log.WithFields(log.Fields{"slot": slot, "forkVersion": forkVersion, "dataSize": len(data)}).Info("Unmarshaling beacon state with lite parser")
 
 	if forkVersion == protocol.Fulu {
-		// Parse with lite parser
 		liteState, err := UnmarshalSSZLiteFulu(data)
 		if err != nil {
 			return nil, fmt.Errorf("unmarshal lite fulu state: %w", err)
 		}
-
-		// DEBUG: Compare with full parser to verify tree roots match
-		fullState := &state.BeaconStateFulu{}
-		if err := fullState.UnmarshalSSZ(data); err != nil {
-			log.WithError(err).Warn("DEBUG: Failed to unmarshal full state for comparison")
-		} else {
-			fullRoot, err1 := fullState.HashTreeRoot()
-			liteRoot, err2 := liteState.HashTreeRoot()
-			if err1 != nil || err2 != nil {
-				log.WithFields(log.Fields{"fullErr": err1, "liteErr": err2}).Warn("DEBUG: Failed to compute tree roots")
-			} else {
-				if fullRoot != liteRoot {
-					log.WithFields(log.Fields{
-						"fullRoot": fmt.Sprintf("0x%x", fullRoot),
-						"liteRoot": fmt.Sprintf("0x%x", liteRoot),
-					}).Error("DEBUG: Tree root MISMATCH between full and lite state!")
-
-					// Compare individual field trees to find the mismatch
-					fullTree, _ := fullState.GetTree()
-					liteTree, _ := liteState.GetTree()
-					if fullTree != nil && liteTree != nil {
-						for fieldIdx := 0; fieldIdx < 40; fieldIdx++ {
-							gidx := 64 + fieldIdx // Generalized index for fields in a 64-leaf tree
-							fullProof, err1 := fullTree.Prove(gidx)
-							liteProof, err2 := liteTree.Prove(gidx)
-							if err1 != nil || err2 != nil {
-								continue
-							}
-							if string(fullProof.Leaf) != string(liteProof.Leaf) {
-								log.WithFields(log.Fields{
-									"field":    fieldIdx,
-									"fullLeaf": fmt.Sprintf("0x%x", fullProof.Leaf),
-									"liteLeaf": fmt.Sprintf("0x%x", liteProof.Leaf),
-								}).Warn("DEBUG: Field mismatch")
-							}
-						}
-					}
-				} else {
-					log.WithField("root", fmt.Sprintf("0x%x", fullRoot)).Info("DEBUG: Tree roots match")
-				}
-			}
-		}
-
 		return liteState, nil
 	}
 
