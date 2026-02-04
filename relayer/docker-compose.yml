@@ -72,7 +72,7 @@ services:
         awslogs-stream: beacon-relay
         awslogs-create-group: "true"
 
-  execution:
+  ethereum-v2:
     image: ghcr.io/snowfork/snowbridge-relay
     platform: linux/amd64
     command: >
@@ -105,10 +105,10 @@ services:
       options:
         awslogs-region: ${AWS_REGION}
         awslogs-group: snowbridge/${ENVIRONMENT:-prod}
-        awslogs-stream: execution-relay
+        awslogs-stream: ethereum-v2-relay
         awslogs-create-group: "true"
 
-  execution-v1:
+  ethereum:
     image: ghcr.io/snowfork/snowbridge-relay
     platform: linux/amd64
     command: >
@@ -142,7 +142,7 @@ services:
       options:
         awslogs-region: ${AWS_REGION}
         awslogs-group: snowbridge/${ENVIRONMENT:-prod}
-        awslogs-stream: execution-v1-relay
+        awslogs-stream: ethereum-relay
         awslogs-create-group: "true"
 
   beefy:
@@ -174,7 +174,7 @@ services:
         awslogs-stream: beefy-relay
         awslogs-create-group: "true"
 
-  parachain:
+  parachain-v2:
     image: ghcr.io/snowfork/snowbridge-relay
     platform: linux/amd64
     command: >
@@ -209,7 +209,7 @@ services:
       options:
         awslogs-region: ${AWS_REGION}
         awslogs-group: snowbridge/${ENVIRONMENT:-prod}
-        awslogs-stream: parachain-relay
+        awslogs-stream: parachain-v2-relay
         awslogs-create-group: "true"
 
   reward:
@@ -246,7 +246,7 @@ services:
         awslogs-stream: reward-relay
         awslogs-create-group: "true"
 
-  parachain-v1:
+  parachain:
     image: ghcr.io/snowfork/snowbridge-relay
     platform: linux/amd64
     command: >
@@ -274,7 +274,7 @@ services:
       options:
         awslogs-region: ${AWS_REGION}
         awslogs-group: snowbridge/${ENVIRONMENT:-prod}
-        awslogs-stream: parachain-v1-relay
+        awslogs-stream: parachain-relay
         awslogs-create-group: "true"
 
   beefy-on-demand:
