@@ -18,7 +18,7 @@ contract DeployBeefyClientWrapper is Script {
     function readConfig() internal returns (Config memory config) {
         config = Config({
             beefyClient: vm.envAddress("BEEFY_CLIENT_ADDRESS"),
-            owner: vm.envAddress("REFUND_PROXY_OWNER"),
+            owner: vm.envAddress("WRAPPER_OWNER"),
             maxGasPrice: vm.envOr("MAX_GAS_PRICE", uint256(100 gwei)),
             maxRefundAmount: vm.envOr("MAX_REFUND_AMOUNT", uint256(0.05 ether)),
             refundTarget: vm.envOr("REFUND_TARGET", uint256(350)) // ~35 min for 100% refund
