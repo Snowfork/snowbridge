@@ -18,8 +18,9 @@ type SourceConfig struct {
 }
 
 type SinkConfig struct {
-	Ethereum  config.EthereumConfig `mapstructure:"ethereum"`
-	Contracts ContractsConfig       `mapstructure:"contracts"`
+	Ethereum         config.EthereumConfig `mapstructure:"ethereum"`
+	Contracts        ContractsConfig       `mapstructure:"contracts"`
+	EnableFiatShamir bool                  `mapstructure:"enable-fiat-shamir"`
 }
 
 type ContractsConfig struct {
