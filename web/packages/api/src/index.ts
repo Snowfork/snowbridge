@@ -40,7 +40,7 @@ export * as toPolkadotSnowbridgeV2 from "./toPolkadotSnowbridgeV2"
 export * as addTip from "./addTip"
 
 interface Parachains {
-    [paraId: string]: ApiPromise
+    [paraId: string]: Promise<ApiPromise>
 }
 interface EthereumChains {
     [ethChainId: string]: AbstractProvider
@@ -121,73 +121,69 @@ export class Context {
     async parachain(paraId: number): Promise<ApiPromise> {
         const paraIdKey = paraId.toString()
         if (paraIdKey in this.#polkadotParachains) {
-            return this.#polkadotParachains[paraIdKey]
+            return await this.#polkadotParachains[paraIdKey]
         }
-        const { parachains } = this.environment
-        if (paraIdKey in parachains) {
-            const url = parachains[paraIdKey]
-            console.log("Connecting to parachain ", paraIdKey, url)
-            let options: any = {
-                noInitWarn: true,
-                provider: url.startsWith("http") ? new HttpProvider(url) : new WsProvider(url),
-            }
-            if (paraId === this.environment.bridgeHubParaId) {
-                options.types = {
-                    ContractCall: {
-                        target: "[u8; 20]",
-                        calldata: "Vec<u8>",
-                        value: "u128",
-                        gas: "u64",
-                    },
+        this.#polkadotParachains[paraIdKey] = new Promise((resolve, reject) => {
+            const { parachains } = this.environment
+            if (paraIdKey in parachains) {
+                const url = parachains[paraIdKey]
+                let options: any = {
+                    noInitWarn: true,
+                    provider: url.startsWith("http") ? new HttpProvider(url) : new WsProvider(url),
                 }
+                if (paraId === this.environment.bridgeHubParaId) {
+                    options.types = {
+                        ContractCall: {
+                            target: "[u8; 20]",
+                            calldata: "Vec<u8>",
+                            value: "u128",
+                            gas: "u64",
+                        },
+                    }
+                }
+                console.log("Connecting to parachain", paraIdKey, url)
+                ApiPromise.create(options)
+                    .then((a) => {
+                        console.log("Connected to parachain", paraIdKey)
+                        resolve(a)
+                    })
+                    .catch(reject)
+            } else {
+                reject(Error(`Parachain id ${paraId} not in the list of parachain urls.`))
             }
-            const api = await ApiPromise.create(options)
-            const onChainParaId = (
-                await api.query.parachainInfo.parachainId()
-            ).toPrimitive() as number
-            if (onChainParaId !== paraId) {
-                console.warn(
-                    `Parachain id configured does not match onchain value. Configured = ${paraId}, OnChain=${onChainParaId}, url=${url}`,
-                )
-            }
-            this.#polkadotParachains[onChainParaId] = api
-            console.log("Connected to parachain ", paraIdKey)
-            return this.#polkadotParachains[onChainParaId]
-        } else {
-            throw Error(`Parachain id ${paraId} not in the list of parachain urls.`)
-        }
+        })
+        return await this.#polkadotParachains[paraIdKey]
     }
 
     async kusamaParachain(paraId: number): Promise<ApiPromise> {
         const paraIdKey = paraId.toString()
         if (paraIdKey in this.#kusamaParachains) {
-            return this.#kusamaParachains[paraIdKey]
+            return await this.#kusamaParachains[paraIdKey]
         }
-        if (!this.environment.kusama) {
-            throw Error(`Kusama config is not set.`)
-        }
-        const { parachains } = this.environment.kusama
-        if (paraIdKey in parachains) {
-            const url = parachains[paraIdKey]
-            console.log("Connecting to Kusama parachain ", paraIdKey, url)
-            const api = await ApiPromise.create({
-                noInitWarn: true,
-                provider: url.startsWith("http") ? new HttpProvider(url) : new WsProvider(url),
-            })
-            const onChainParaId = (
-                await api.query.parachainInfo.parachainId()
-            ).toPrimitive() as number
-            if (onChainParaId !== paraId) {
-                console.warn(
-                    `Parachain id configured does not match onchain value. Configured = ${paraId}, OnChain=${onChainParaId}, url=${url}`,
-                )
+        this.#kusamaParachains[paraIdKey] = new Promise((resolve, reject) => {
+            if (!this.environment.kusama) {
+                reject(Error(`Kusama config is not set.`))
+                return
             }
-            this.#kusamaParachains[onChainParaId] = api
-            console.log("Connected to Kusama parachain ", paraIdKey)
-            return this.#kusamaParachains[onChainParaId]
-        } else {
-            throw Error(`Parachain id ${paraId} not in the list of parachain urls.`)
-        }
+            const { parachains } = this.environment.kusama
+            if (paraIdKey in parachains) {
+                const url = parachains[paraIdKey]
+                const options = {
+                    noInitWarn: true,
+                    provider: url.startsWith("http") ? new HttpProvider(url) : new WsProvider(url),
+                }
+                console.log("Connecting to Kusama parachain", paraIdKey, url)
+                ApiPromise.create(options)
+                    .then((a) => {
+                        console.log("Connected to Kusama parachain", paraIdKey)
+                        resolve(a)
+                    })
+                    .catch(reject)
+            } else {
+                reject(Error(`Parachain id ${paraId} not in the list of parachain urls.`))
+            }
+        })
+        return await this.#kusamaParachains[paraIdKey]
     }
 
     setEthProvider(ethChainId: number, provider: AbstractProvider) {
@@ -286,10 +282,10 @@ export class Context {
         }
 
         for (const paraId of Object.keys(this.#polkadotParachains)) {
-            await this.#polkadotParachains[Number(paraId)].disconnect()
+            await (await this.#polkadotParachains[Number(paraId)]).disconnect()
         }
         for (const paraId of Object.keys(this.#kusamaParachains)) {
-            await this.#kusamaParachains[Number(paraId)].disconnect()
+            await (await this.#kusamaParachains[Number(paraId)]).disconnect()
         }
     }
 
