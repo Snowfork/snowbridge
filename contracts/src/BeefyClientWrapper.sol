@@ -160,6 +160,33 @@ contract BeefyClientWrapper {
         return beefyClient.nextValidatorSet();
     }
 
+    /* Fiat-Shamir Proxy Functions */
+
+    function createFiatShamirFinalBitfield(IBeefyClient.Commitment calldata commitment, uint256[] calldata bitfield)
+        external
+        view
+        returns (uint256[] memory)
+    {
+        return beefyClient.createFiatShamirFinalBitfield(commitment, bitfield);
+    }
+
+    function submitFiatShamir(
+        IBeefyClient.Commitment calldata commitment,
+        uint256[] calldata bitfield,
+        IBeefyClient.ValidatorProof[] calldata proofs,
+        IBeefyClient.MMRLeaf calldata leaf,
+        bytes32[] calldata leafProof,
+        uint256 leafProofOrder
+    ) external {
+        beefyClient.submitFiatShamir(commitment, bitfield, proofs, leaf, leafProof, leafProofOrder);
+
+        // Clear highest pending block if light client has caught up
+        if (beefyClient.latestBeefyBlock() >= highestPendingBlock) {
+            highestPendingBlock = 0;
+            highestPendingBlockTimestamp = 0;
+        }
+    }
+
     /**
      * @dev Abandon a ticket. Useful if another relayer is competing for the same commitment.
      * Credited gas is forfeited when clearing a ticket.

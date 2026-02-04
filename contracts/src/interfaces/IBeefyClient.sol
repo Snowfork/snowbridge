@@ -79,4 +79,18 @@ interface IBeefyClient {
         external
         view
         returns (uint128 id, uint128 length, bytes32 root);
+
+    function createFiatShamirFinalBitfield(Commitment calldata commitment, uint256[] calldata bitfield)
+        external
+        view
+        returns (uint256[] memory);
+
+    function submitFiatShamir(
+        Commitment calldata commitment,
+        uint256[] calldata bitfield,
+        ValidatorProof[] calldata proofs,
+        MMRLeaf calldata leaf,
+        bytes32[] calldata leafProof,
+        uint256 leafProofOrder
+    ) external;
 }
