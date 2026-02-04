@@ -12,7 +12,8 @@ import {IInitializable} from "../../src/interfaces/IInitializable.sol";
 
 import {UD60x18} from "prb/math/src/UD60x18.sol";
 
-import {Command as CommandV2} from "../../src/v2/Types.sol";
+import {Command as CommandV2, CommandKind} from "../../src/v2/Types.sol";
+import {IGatewayV2} from "../../src/v2/IGateway.sol";
 import {Agent} from "../../src/Agent.sol";
 import {AgentExecutor} from "../../src/AgentExecutor.sol";
 import {Constants} from "../../src/Constants.sol";
@@ -92,8 +93,41 @@ contract MockGateway is Gateway {
         return super.v1_transactionBaseGas();
     }
 
-    function callDispatch(CommandV2 calldata command, bytes32 origin) external {
-        this.v2_dispatchCommand{gas: command.gas}(command, origin);
+    // Dispatch a single V2 command (used by tests). Must be called via `this`.
+    function v2_dispatchCommand(CommandV2 calldata command, bytes32 origin)
+        external
+        override
+        onlySelf
+    {
+        if (command.kind == CommandKind.Upgrade) {
+            HandlersV2.upgrade(command.payload);
+        } else if (command.kind == CommandKind.SetOperatingMode) {
+            HandlersV2.setOperatingMode(command.payload);
+        } else if (command.kind == CommandKind.UnlockNativeToken) {
+            HandlersV2.unlockNativeToken(AGENT_EXECUTOR, command.payload);
+        } else if (command.kind == CommandKind.RegisterForeignToken) {
+            HandlersV2.registerForeignToken(command.payload);
+        } else if (command.kind == CommandKind.MintForeignToken) {
+            HandlersV2.mintForeignToken(command.payload);
+        } else if (command.kind == CommandKind.CallContract) {
+            HandlersV2.callContract(origin, AGENT_EXECUTOR, command.payload);
+        } else {
+            revert IGatewayV2.InvalidCommand();
+        }
+    }
+
+    function callDispatch(CommandV2 calldata command, bytes32 origin) external returns (bool) {
+        // Mirror v2_dispatch per-command behavior: enforce gas budget and surface failure as false
+        uint256 requiredGas = command.gas + DISPATCH_OVERHEAD_GAS_V2;
+        if (gasleft() * 63 / 64 < requiredGas) {
+            revert IGatewayV2.InsufficientGasLimit();
+        }
+
+        try this.v2_dispatchCommand{gas: requiredGas}(command, origin) {
+            return true;
+        } catch {
+            return false;
+        }
     }
 
     function deployAgent() external returns (address) {
@@ -112,11 +146,6 @@ contract MockGateway is Gateway {
     // Expose internal helper for testing
     function exposed_v1_transactionBaseGas() external pure returns (uint256) {
         return v1_transactionBaseGas();
-    }
-
-    // Wrapper to call an internal dispatch command
-    function exposed_dispatchCommand(CommandV2 calldata cmd, bytes32 origin) external {
-        _dispatchCommand(cmd, origin);
     }
 
     // Helper to call vulnerable-onlySelf handler from within the contract (so msg.sender == this)
