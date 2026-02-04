@@ -1,4 +1,4 @@
-package parachainv1
+package parachain
 
 import (
 	"context"
@@ -15,8 +15,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
-	contracts "github.com/snowfork/snowbridge/relayer/contracts/v1"
+	"github.com/snowfork/snowbridge/relayer/contracts"
 	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
+	"github.com/snowfork/snowbridge/relayer/relays/util"
 
 	gsrpcTypes "github.com/snowfork/go-substrate-rpc-client/v4/types"
 
@@ -24,23 +25,26 @@ import (
 )
 
 type EthereumWriter struct {
-	config     *SinkConfig
-	conn       *ethereum.Connection
-	gateway    *contracts.Gateway
-	tasks      <-chan *Task
-	gatewayABI abi.ABI
+	config      *SinkConfig
+	conn        *ethereum.Connection
+	gateway     *contracts.Gateway
+	tasks       <-chan *Task
+	gatewayABI  abi.ABI
+	relayConfig *Config
 }
 
 func NewEthereumWriter(
 	config *SinkConfig,
 	conn *ethereum.Connection,
 	tasks <-chan *Task,
+	relayConfig *Config,
 ) (*EthereumWriter, error) {
 	return &EthereumWriter{
-		config:  config,
-		conn:    conn,
-		gateway: nil,
-		tasks:   tasks,
+		config:      config,
+		conn:        conn,
+		gateway:     nil,
+		tasks:       tasks,
+		relayConfig: relayConfig,
 	}, nil
 }
 
@@ -96,13 +100,66 @@ func (wr *EthereumWriter) WriteChannels(
 	task *Task,
 ) error {
 	for _, proof := range *task.MessageProofs {
-		err := wr.WriteChannel(ctx, options, &proof, task.ProofOutput)
+		profitable, err := wr.isRelayMessageProfitable(ctx, &proof)
 		if err != nil {
-			return fmt.Errorf("write eth gateway: %w", err)
+			return fmt.Errorf("determine message profitability: %w", err)
+		}
+		if profitable {
+			err = wr.WriteChannel(ctx, options, &proof, task.ProofOutput)
+			if err != nil {
+				return fmt.Errorf("write eth gateway: %w", err)
+			}
+		} else {
+			log.WithField("nonce", proof.Message.OriginalMessage.Nonce).
+				Info("Skipping unprofitable message relay to Ethereum")
 		}
 	}
 
 	return nil
+}
+
+func (wr *EthereumWriter) commandGas(command *CommandWrapper) uint64 {
+	var gas uint64
+	switch command.Kind {
+	// ERC20 transfer
+	case 2:
+		// BaseUnlockGas should cover most of the ERC20 token. Specific gas costs can be set per token if needed
+		gas = wr.config.Fees.BaseUnlockGas
+	// PNA transfer
+	case 4:
+		gas = wr.config.Fees.BaseMintGas
+	default:
+		gas = uint64(command.MaxDispatchGas)
+	}
+	return gas
+}
+
+func (wr *EthereumWriter) isRelayMessageProfitable(ctx context.Context, proof *MessageProof) (bool, error) {
+	var result bool
+	gasPrice, err := wr.conn.Client().SuggestGasPrice(ctx)
+	if err != nil {
+		return result, err
+	}
+	var totalDispatchGas uint64
+	commands := proof.Message.OriginalMessage.Commands
+	for _, command := range commands {
+		totalDispatchGas += wr.commandGas(&command)
+	}
+	totalDispatchGas += wr.config.Fees.BaseDeliveryGas
+
+	// gasFee = gasPrice * totalDispatchGas * (numerator / denominator)
+	gasFee := new(big.Int).Mul(gasPrice, new(big.Int).SetUint64(totalDispatchGas))
+
+	numerator := new(big.Int).SetUint64(wr.config.Fees.FeeRatioNumerator)
+	denominator := new(big.Int).SetUint64(wr.config.Fees.FeeRatioDenominator)
+
+	// Apply ratio safely: (gasPrice * gas * num) / denom
+	gasFee.Mul(gasFee, numerator)
+	gasFee.Div(gasFee, denominator)
+	if proof.Message.Fee.Cmp(gasFee) >= 0 {
+		return true, nil
+	}
+	return false, nil
 }
 
 // Submit sends a SCALE-encoded message to an application deployed on the Ethereum network
@@ -112,7 +169,19 @@ func (wr *EthereumWriter) WriteChannel(
 	commitmentProof *MessageProof,
 	proof *ProofOutput,
 ) error {
-	message := commitmentProof.Message.IntoInboundMessage()
+	nonce := commitmentProof.Message.OriginalMessage.Nonce
+
+	// Step 4 (again): Final check before submission in case another relayer submitted while we were waiting
+	isDispatched, err := wr.gateway.V2IsDispatched(&bind.CallOpts{Context: ctx}, uint64(nonce))
+	if err != nil {
+		return fmt.Errorf("check if nonce %d is dispatched: %w", nonce, err)
+	}
+	if isDispatched {
+		log.WithField("nonce", nonce).Info("message already dispatched by another relayer, skipping")
+		return nil
+	}
+
+	message := commitmentProof.Message.OriginalMessage.IntoInboundMessage()
 
 	convertedHeader, err := convertHeader(proof.Header)
 	if err != nil {
@@ -143,17 +212,20 @@ func (wr *EthereumWriter) WriteChannel(
 		LeafProofOrder: new(big.Int).SetUint64(proof.MMRProof.MerkleProofOrder),
 	}
 
-	// Use latest nonce to avoid "tx rejected: nonce too high"
-	nonce, err := wr.conn.Client().NonceAt(ctx, wr.conn.Keypair().CommonAddress(), nil)
+	rewardAddress, err := util.HexStringTo32Bytes(wr.relayConfig.RewardAddress)
 	if err != nil {
-		return fmt.Errorf("get latest nonce: %w", err)
+		return fmt.Errorf("convert to reward address: %w", err)
 	}
-	options.Nonce = big.NewInt(0).SetUint64(nonce)
 
-	tx, err := wr.gateway.SubmitV1(
-		options, message, commitmentProof.Proof.InnerHashes, verificationProof,
+	tx, err := wr.gateway.V2Submit(
+		options, message, commitmentProof.Proof.InnerHashes, verificationProof, rewardAddress,
 	)
 	if err != nil {
+		// Check if error is due to message already being dispatched (duplicate)
+		if strings.Contains(err.Error(), "AlreadyDispatched") || strings.Contains(err.Error(), "already dispatched") {
+			log.WithField("nonce", nonce).Info("message was already dispatched (duplicate), skipping")
+			return nil
+		}
 		return fmt.Errorf("send transaction Gateway.submit: %w", err)
 	}
 
@@ -190,9 +262,8 @@ func (wr *EthereumWriter) WriteChannel(
 				return fmt.Errorf("unpack event log: %w", err)
 			}
 			log.WithFields(log.Fields{
-				"channelID": Hex(holder.ChannelID[:]),
-				"nonce":     holder.Nonce,
-				"success":   holder.Success,
+				"nonce":   holder.Nonce,
+				"success": holder.Success,
 			}).Info("Message dispatched")
 		}
 	}

@@ -1,4 +1,4 @@
-package parachain
+package parachainv1
 
 import (
 	"context"
@@ -11,7 +11,6 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
 	"github.com/snowfork/snowbridge/relayer/crypto/secp256k1"
-
 	"github.com/snowfork/snowbridge/relayer/ofac"
 
 	log "github.com/sirupsen/logrus"
@@ -45,7 +44,6 @@ func NewRelay(config *Config, keypair *secp256k1.Keypair) (*Relay, error) {
 		&config.Sink,
 		ethereumConnWriter,
 		tasks,
-		config,
 	)
 	if err != nil {
 		return nil, err

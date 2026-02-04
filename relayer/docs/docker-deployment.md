@@ -45,12 +45,12 @@ The Docker Compose setup runs the following relayer services:
 |---------|-------------|---------------|---------|
 | `beacon-state-service` | Caches beacon state proofs | None | default |
 | `beacon` | Relays Ethereum beacon headers to Polkadot | Substrate | default |
-| `execution` | Relays Ethereum messages to Polkadot (v2) | Substrate | default |
-| `execution-v1` | Relays Ethereum messages to Polkadot (v1) | Substrate | default |
+| `ethereum-v2` | Relays Ethereum messages to Polkadot (v2) | Substrate | default |
+| `ethereum` | Relays Ethereum messages to Polkadot (v1) | Substrate | default |
 | `beefy` | Relays BEEFY commitments to Ethereum | Ethereum | expensive |
 | `beefy-on-demand` | On-demand BEEFY relay | Ethereum | expensive |
-| `parachain` | Relays Polkadot messages to Ethereum (v2) | Ethereum | default |
-| `parachain-v1` | Relays Polkadot messages to Ethereum (v1) | Ethereum | default |
+| `parachain-v2` | Relays Polkadot messages to Ethereum (v2) | Ethereum | default |
+| `parachain` | Relays Polkadot messages to Ethereum (v1) | Ethereum | default |
 | `reward` | Processes relayer rewards | Substrate | default |
 
 **Note:** Services in the `expensive` profile require `--profile expensive` to start.
@@ -60,14 +60,14 @@ The Docker Compose setup runs the following relayer services:
 ```
 beacon-state-service (starts first, health checked)
     ├── beacon
-    ├── execution
-    ├── execution-v1
-    ├── parachain
+    ├── ethereum-v2
+    ├── ethereum
     └── reward
 
 beefy (independent, expensive profile)
 beefy-on-demand (independent, expensive profile)
-parachain-v1 (independent)
+parachain-v2 (independent)
+parachain (independent)
 ```
 
 ## Configuration
@@ -141,7 +141,7 @@ docker compose down
 ### Restart a specific relayer
 
 ```bash
-docker compose restart execution
+docker compose restart ethereum-v2
 ```
 
 ### Check health

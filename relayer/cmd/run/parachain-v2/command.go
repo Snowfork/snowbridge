@@ -1,20 +1,16 @@
-package parachainv1
+package parachainv2
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"log"
 	"os"
 	"os/signal"
-	"reflect"
-	"strings"
 	"syscall"
 
-	"github.com/mitchellh/mapstructure"
 	"github.com/sirupsen/logrus"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
-	parachain "github.com/snowfork/snowbridge/relayer/relays/parachain-v1"
+	"github.com/snowfork/snowbridge/relayer/relays/parachain-v2"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"golang.org/x/sync/errgroup"
@@ -29,8 +25,8 @@ var (
 
 func Command() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "parachain-v1",
-		Short: "Start the parachain relay (v1)",
+		Use:   "parachain-v2",
+		Short: "Start the parachain relay (v2)",
 		Args:  cobra.ExactArgs(0),
 		RunE:  run,
 	}
@@ -49,7 +45,7 @@ func run(_ *cobra.Command, _ []string) error {
 	log.SetOutput(logrus.WithFields(logrus.Fields{"logger": "stdlib"}).WriterLevel(logrus.InfoLevel))
 	logrus.SetLevel(logrus.DebugLevel)
 
-	logrus.Info("Parachain relayer (v1) started up")
+	logrus.Info("Parachain relayer (v2) started up")
 
 	viper.SetConfigFile(configFile)
 	if err := viper.ReadInConfig(); err != nil {
@@ -57,7 +53,7 @@ func run(_ *cobra.Command, _ []string) error {
 	}
 
 	var config parachain.Config
-	err := viper.UnmarshalExact(&config, viper.DecodeHook(HexHookFunc()))
+	err := viper.UnmarshalExact(&config)
 	if err != nil {
 		return err
 	}
@@ -110,50 +106,4 @@ func run(_ *cobra.Command, _ []string) error {
 	}
 
 	return nil
-}
-
-func HexHookFunc() mapstructure.DecodeHookFuncType {
-	return func(
-		f reflect.Type,
-		t reflect.Type,
-		data interface{},
-	) (interface{}, error) {
-		// Check that the data is string
-		if f.Kind() != reflect.String {
-			return data, nil
-		}
-
-		// Check that the target type is our custom type
-		if t != reflect.TypeOf(parachain.ChannelID{}) {
-			return data, nil
-		}
-
-		foo, err := HexDecodeString(data.(string))
-		if err != nil {
-			return nil, err
-		}
-
-		var out [32]byte
-		copy(out[:], foo)
-
-		// Return the parsed value
-		return parachain.ChannelID(out), nil
-	}
-}
-
-// HexDecodeString decodes bytes from a hex string. Contrary to hex.DecodeString, this function does not error if "0x"
-// is prefixed, and adds an extra 0 if the hex string has an odd length.
-func HexDecodeString(s string) ([]byte, error) {
-	s = strings.TrimPrefix(s, "0x")
-
-	if len(s)%2 != 0 {
-		s = "0" + s
-	}
-
-	b, err := hex.DecodeString(s)
-	if err != nil {
-		return nil, err
-	}
-
-	return b, nil
 }

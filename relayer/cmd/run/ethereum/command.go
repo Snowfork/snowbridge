@@ -1,4 +1,4 @@
-package execution
+package ethereum
 
 import (
 	"context"
@@ -14,7 +14,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/sirupsen/logrus"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
-	"github.com/snowfork/snowbridge/relayer/relays/execution"
+	execution "github.com/snowfork/snowbridge/relayer/relays/ethereum"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"golang.org/x/sync/errgroup"
@@ -29,8 +29,8 @@ var (
 
 func Command() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "execution",
-		Short: "Start the execution chain relay",
+		Use:   "ethereum",
+		Short: "Start the ethereum relay",
 		Args:  cobra.ExactArgs(0),
 		RunE:  run,
 	}
@@ -49,7 +49,7 @@ func run(_ *cobra.Command, _ []string) error {
 	log.SetOutput(logrus.WithFields(logrus.Fields{"logger": "stdlib"}).WriterLevel(logrus.InfoLevel))
 	logrus.SetLevel(logrus.DebugLevel)
 
-	logrus.Info("Execution relayer started up")
+	logrus.Info("Ethereum relayer started up")
 
 	viper.SetConfigFile(configFile)
 	if err := viper.ReadInConfig(); err != nil {

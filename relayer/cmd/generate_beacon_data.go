@@ -13,7 +13,7 @@ import (
 
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
-	"github.com/snowfork/snowbridge/relayer/cmd/run/execution"
+	ethereumv2 "github.com/snowfork/snowbridge/relayer/cmd/run/ethereum-v2"
 	"github.com/snowfork/snowbridge/relayer/contracts"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/cache"
 	beaconConf "github.com/snowfork/snowbridge/relayer/relays/beacon/config"
@@ -23,7 +23,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/protocol"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/store"
-	executionConf "github.com/snowfork/snowbridge/relayer/relays/execution"
+	executionConf "github.com/snowfork/snowbridge/relayer/relays/ethereum-v2"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/cbroglie/mustache"
@@ -230,7 +230,7 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 		}
 
 		var executionConfig executionConf.Config
-		err = viper.Unmarshal(&executionConfig, viper.DecodeHook(execution.HexHookFunc()))
+		err = viper.Unmarshal(&executionConfig, viper.DecodeHook(ethereumv2.HexHookFunc()))
 		if err != nil {
 			return fmt.Errorf("unable to parse execution relay config: %w", err)
 		}
@@ -787,7 +787,7 @@ func generateInboundFixture(cmd *cobra.Command, _ []string) error {
 		}
 
 		var executionConf executionConf.Config
-		err = viper.Unmarshal(&executionConf, viper.DecodeHook(execution.HexHookFunc()))
+		err = viper.Unmarshal(&executionConf, viper.DecodeHook(ethereumv2.HexHookFunc()))
 		if err != nil {
 			return fmt.Errorf("unable to parse execution relay config: %w", err)
 		}
@@ -963,7 +963,7 @@ func generateDeliveryProofFixture(cmd *cobra.Command, _ []string) error {
 		}
 
 		var executionConf executionConf.Config
-		err = viper.Unmarshal(&executionConf, viper.DecodeHook(execution.HexHookFunc()))
+		err = viper.Unmarshal(&executionConf, viper.DecodeHook(ethereumv2.HexHookFunc()))
 		if err != nil {
 			return fmt.Errorf("unable to parse execution relay config: %w", err)
 		}

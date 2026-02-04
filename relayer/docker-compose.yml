@@ -76,8 +76,8 @@ services:
     image: ghcr.io/snowfork/snowbridge-relay
     platform: linux/amd64
     command: >
-      run execution
-      --config /config/execution.json
+      run ethereum-v2
+      --config /config/ethereum-v2.json
       --substrate.private-key-id ${EXECUTION_RELAY_SUBSTRATE_KEY_ID}
     volumes:
       - ./config/docker:/config
@@ -112,8 +112,8 @@ services:
     image: ghcr.io/snowfork/snowbridge-relay
     platform: linux/amd64
     command: >
-      run execution-v1
-      --config /config/execution-v1.json
+      run ethereum
+      --config /config/ethereum.json
       --substrate.private-key-id ${EXECUTION_V1_RELAY_SUBSTRATE_KEY_ID}
     volumes:
       - ./config/docker:/config
@@ -178,8 +178,8 @@ services:
     image: ghcr.io/snowfork/snowbridge-relay
     platform: linux/amd64
     command: >
-      run parachain
-      --config /config/parachain.json
+      run parachain-v2
+      --config /config/parachain-v2.json
       --ethereum.private-key-id ${PARACHAIN_RELAY_ETHEREUM_KEY_ID}
     volumes:
       - ./config/docker:/config
@@ -187,23 +187,16 @@ services:
       - AWS_REGION=${AWS_REGION}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - BEACON_ENDPOINT=${BEACON_ENDPOINT}
       - ETHEREUM_ENDPOINT=${ETHEREUM_ENDPOINT}
       - POLKADOT_ENDPOINT=${POLKADOT_ENDPOINT}
       - BRIDGEHUB_ENDPOINT=${BRIDGEHUB_ENDPOINT}
       - FLASHBOTS_ENDPOINT=${FLASHBOTS_ENDPOINT}
-      - FORK_DENEB=${FORK_DENEB}
-      - FORK_ELECTRA=${FORK_ELECTRA}
-      - FORK_FULU=${FORK_FULU}
       - GATEWAY_CONTRACT=${GATEWAY_CONTRACT}
       - BEEFY_CLIENT_CONTRACT=${BEEFY_CLIENT_CONTRACT}
       - REWARD_ADDRESS=${REWARD_ADDRESS}
       - CHAINALYSIS_API_KEY=${CHAINALYSIS_API_KEY}
       - OFAC_ENABLED=${OFAC_ENABLED:-false}
     restart: on-failure
-    depends_on:
-      beacon-state-service:
-        condition: service_healthy
     logging:
       <<: *awslogs
       options:
@@ -250,8 +243,8 @@ services:
     image: ghcr.io/snowfork/snowbridge-relay
     platform: linux/amd64
     command: >
-      run parachain-v1
-      --config /config/parachain-v1.json
+      run parachain
+      --config /config/parachain.json
       --ethereum.private-key-id ${PARACHAIN_V1_RELAY_ETHEREUM_KEY_ID}
     volumes:
       - ./config/docker:/config

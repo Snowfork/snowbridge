@@ -1,11 +1,11 @@
-package parachain
+package parachainv1
 
 import (
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
-	"github.com/snowfork/snowbridge/relayer/contracts"
+	contracts "github.com/snowfork/snowbridge/relayer/contracts/v1"
 )
 
 func Hex(b []byte) string {
@@ -43,9 +43,10 @@ func (wr *EthereumWriter) logFieldsForSubmission(
 
 	params := log.Fields{
 		"message": log.Fields{
-			"nonce":    message.Nonce,
-			"commands": message.Commands,
-			"origin":   Hex(message.Origin[:]),
+			"channelID": Hex(message.ChannelID[:]),
+			"nonce":     message.Nonce,
+			"command":   message.Command,
+			"params":    Hex(message.Params),
 		},
 		"messageProof": messageProofHexes,
 		"proof": log.Fields{

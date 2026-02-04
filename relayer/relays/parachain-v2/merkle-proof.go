@@ -1,4 +1,4 @@
-package parachainv1
+package parachain
 
 import (
 	"encoding/hex"
@@ -11,7 +11,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
 )
 
-// ByLeafIndex implements sort.Interface based on the LeafIndex field.
+// ByParaID implements sort.Interface based on the LeafIndex field.
 type ByParaID []relaychain.ParaHead
 
 func (b ByParaID) Len() int           { return len(b) }
