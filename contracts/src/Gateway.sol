@@ -431,10 +431,7 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
             revert IGatewayBase.InvalidProof();
         }
 
-        // Dispatch all the commands within the batch of commands in the message payload. Each command is processed
-        // independently, returns:
-        // 1. insufficientGasLimit: true if the gas limit provided was insufficient for any command
-        // 2. success: true if all commands executed successfully, false if any command failed.
+        // Dispatch all commands in the message
         (bool insufficientGasLimit, bool success) =
             Gateway(this).v2_dispatch(message.commands, message.origin, message.nonce);
         // Revert if the gas limit provided was insufficient for any command
@@ -482,10 +479,10 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         CallsV2.createAgent(id);
     }
 
-    /**
-     * APIv2 Internal functions
-     */
-
+    // Dispatch all the commands within the batch of commands in the message payload. Each command is processed
+    // independently, returns:
+    // 1. insufficientGasLimit: true if the gas limit provided was insufficient for any command
+    // 2. success: true if all commands executed successfully, false if any command failed.
     function v2_dispatch(CommandV2[] calldata commands, bytes32 origin, uint64 nonce)
         external
         onlySelf
@@ -508,6 +505,7 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         return (false, success);
     }
 
+    // Dispatch a single command to its handler
     function v2_dispatchCommand(CommandV2 calldata command, bytes32 origin)
         external
         virtual
