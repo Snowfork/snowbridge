@@ -279,3 +279,50 @@ func proofToLog(proof contracts.IBeefyClientValidatorProof) logrus.Fields {
 		"Proof":   hexProof,
 	}
 }
+
+// Converter functions for direct BeefyClient contract (without wrapper)
+func ToBeefyClientCommitment(c *contracts.IBeefyClientCommitment) contracts.BeefyClientCommitment {
+	payload := make([]contracts.BeefyClientPayloadItem, len(c.Payload))
+	for i, item := range c.Payload {
+		payload[i] = contracts.BeefyClientPayloadItem{
+			PayloadID: item.PayloadID,
+			Data:      item.Data,
+		}
+	}
+	return contracts.BeefyClientCommitment{
+		BlockNumber:    c.BlockNumber,
+		ValidatorSetID: c.ValidatorSetID,
+		Payload:        payload,
+	}
+}
+
+func ToBeefyClientValidatorProof(p *contracts.IBeefyClientValidatorProof) contracts.BeefyClientValidatorProof {
+	return contracts.BeefyClientValidatorProof{
+		V:       p.V,
+		R:       p.R,
+		S:       p.S,
+		Index:   p.Index,
+		Account: p.Account,
+		Proof:   p.Proof,
+	}
+}
+
+func ToBeefyClientValidatorProofs(proofs []contracts.IBeefyClientValidatorProof) []contracts.BeefyClientValidatorProof {
+	result := make([]contracts.BeefyClientValidatorProof, len(proofs))
+	for i, p := range proofs {
+		result[i] = ToBeefyClientValidatorProof(&p)
+	}
+	return result
+}
+
+func ToBeefyClientMMRLeaf(leaf *contracts.IBeefyClientMMRLeaf) contracts.BeefyClientMMRLeaf {
+	return contracts.BeefyClientMMRLeaf{
+		Version:              leaf.Version,
+		ParentNumber:         leaf.ParentNumber,
+		ParentHash:           leaf.ParentHash,
+		ParachainHeadsRoot:   leaf.ParachainHeadsRoot,
+		NextAuthoritySetID:   leaf.NextAuthoritySetID,
+		NextAuthoritySetLen:  leaf.NextAuthoritySetLen,
+		NextAuthoritySetRoot: leaf.NextAuthoritySetRoot,
+	}
+}
