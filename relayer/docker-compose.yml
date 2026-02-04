@@ -78,7 +78,7 @@ services:
     command: >
       run ethereum-v2
       --config /config/ethereum-v2.json
-      --substrate.private-key-id ${EXECUTION_RELAY_SUBSTRATE_KEY_ID}
+      --substrate.private-key-id ${ETHEREUM_V2_RELAY_SUBSTRATE_KEY_ID}
     volumes:
       - ./config/docker:/config
     environment:
@@ -114,7 +114,7 @@ services:
     command: >
       run ethereum
       --config /config/ethereum.json
-      --substrate.private-key-id ${EXECUTION_V1_RELAY_SUBSTRATE_KEY_ID}
+      --substrate.private-key-id ${ETHEREUM_RELAY_SUBSTRATE_KEY_ID}
     volumes:
       - ./config/docker:/config
     environment:
@@ -180,7 +180,7 @@ services:
     command: >
       run parachain-v2
       --config /config/parachain-v2.json
-      --ethereum.private-key-id ${PARACHAIN_RELAY_ETHEREUM_KEY_ID}
+      --ethereum.private-key-id ${PARACHAIN_V2_RELAY_ETHEREUM_KEY_ID}
     volumes:
       - ./config/docker:/config
     environment:
@@ -245,7 +245,7 @@ services:
     command: >
       run parachain
       --config /config/parachain.json
-      --ethereum.private-key-id ${PARACHAIN_V1_RELAY_ETHEREUM_KEY_ID}
+      --ethereum.private-key-id ${PARACHAIN_RELAY_ETHEREUM_KEY_ID}
     volumes:
       - ./config/docker:/config
     environment:

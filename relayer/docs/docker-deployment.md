@@ -1,19 +1,50 @@
-# Docker Deployment Guide
+# Running Snowbridge Relayers
 
-This guide explains how to deploy Snowbridge relayers using Docker Compose.
+This guide explains how to run Snowbridge relayers using Docker Compose.
+
+## Overview
+
+Snowbridge relayers are off-chain agents that facilitate message passing between Ethereum and Polkadot. Running a relayer helps decentralize the bridge and you can earn rewards for successfully relaying messages.
+
+### Which Relayers Should I Run?
+
+For new operators, we recommend starting with:
+
+| Relayer | Direction | Reward Potential | Complexity |
+|---------|-----------|------------------|------------|
+| `parachain-v2` | Polkadot → Ethereum | High | Medium |
+| `ethereum-v2` | Ethereum → Polkadot | Medium | Low |
+
+**Note:** The `beefy` relayer is expensive to operate (high gas costs) and is typically run by the Snowbridge team. Only run it if you understand the costs involved.
+
+### Hardware Requirements
+
+Minimum recommended specifications:
+- **CPU:** 2 cores
+- **RAM:** 4 GB
+- **Storage:** 20 GB SSD
+- **Network:** Stable internet connection with low latency
+
+### Cost Considerations
+
+- **Ethereum relayers** (`parachain-v2`): Require ETH for gas fees when submitting proofs to Ethereum
+- **Polkadot relayers** (`ethereum-v2`, `beacon`): Require DOT/KSM for transaction fees (very low cost)
+- **RPC endpoints**: You'll need access to archive nodes (can use public endpoints or run your own)
 
 ## Prerequisites
 
 - Docker and Docker Compose installed
-- AWS account with Secrets Manager access (for private key storage)
+- Private keys for signing transactions (Ethereum and/or Substrate)
 - RPC endpoints for:
   - Ethereum execution layer (WebSocket)
   - Ethereum beacon chain (HTTP)
   - Polkadot relay chain (WebSocket)
   - BridgeHub parachain (WebSocket)
-  - AssetHub parachain (WebSocket, for execution relay gas estimation)
+  - AssetHub parachain (WebSocket, for ethereum relay gas estimation)
 
 ## Quick Start
+
+### Option A: Run All Relayers (Full Setup)
 
 1. **Copy the environment file for your network:**
    ```bash
@@ -29,13 +60,31 @@ This guide explains how to deploy Snowbridge relayers using Docker Compose.
 
 2. **Configure your .env file with:**
    - RPC endpoints
-   - AWS credentials and secret key IDs
+   - Private key references (see Private Keys section)
    - (Mainnet only) Chainalysis API key for OFAC compliance
 
 3. **Start the relayers:**
    ```bash
    docker compose up -d
    ```
+
+### Option B: Run a Single Relayer (Recommended for Beginners)
+
+Example: Running only the `parachain-v2` relayer on mainnet:
+
+1. **Create your .env file:**
+   ```bash
+   cp .env.mainnet.example .env
+   ```
+
+2. **Edit .env with your RPC endpoints and Ethereum private key**
+
+3. **Start only the parachain-v2 relayer:**
+   ```bash
+   docker compose up -d parachain-v2
+   ```
+
+This is the simplest way to start earning rewards by relaying Polkadot → Ethereum messages.
 
 ## Architecture
 
@@ -88,17 +137,48 @@ The environment files include:
 - Schedule parameters (mainnet vs testnet defaults)
 - OFAC settings (enabled on mainnet, disabled on testnets)
 
-### Private Keys (AWS Secrets Manager)
+### Private Keys
 
-Private keys are stored in AWS Secrets Manager and referenced by ID:
+There are three options for providing private keys:
+
+#### Option 1: Environment Variable (Simplest)
+
+Set the private key directly in your `.env` file:
+
+```bash
+# For Substrate relayers (ethereum-v2, beacon, reward)
+# Use the secret seed phrase or hex-encoded private key
+BEACON_RELAY_SUBSTRATE_KEY="//Alice"  # Dev account
+BEACON_RELAY_SUBSTRATE_KEY="0x..."    # Hex private key
+
+# For Ethereum relayers (parachain-v2, beefy)
+PARACHAIN_RELAY_ETHEREUM_KEY="0x..."  # Hex private key (without 0x prefix)
+```
+
+Then update docker-compose.yml to use `--substrate.private-key` or `--ethereum.private-key` instead of the `-id` variants.
+
+#### Option 2: Private Key File
+
+Store the key in a file and mount it:
+
+```bash
+echo "0x..." > /path/to/keyfile
+chmod 600 /path/to/keyfile
+```
+
+Use `--substrate.private-key-file /path/to/keyfile` in the command.
+
+#### Option 3: AWS Secrets Manager (Production)
+
+For production deployments, use AWS Secrets Manager:
 
 ```bash
 # Pattern: {network}/{relay-name}
 BEACON_RELAY_SUBSTRATE_KEY_ID=mainnet/beacon-relay
-EXECUTION_RELAY_SUBSTRATE_KEY_ID=mainnet/asset-hub-ethereum-relay-v2
+ETHEREUM_V2_RELAY_SUBSTRATE_KEY_ID=mainnet/ethereum-relay-v2
 ```
 
-Create secrets in AWS Secrets Manager containing the raw private key strings.
+Create secrets in AWS Secrets Manager containing the raw private key strings. Requires AWS credentials configured.
 
 ### Endpoint Configuration
 
@@ -197,7 +277,64 @@ Common issues:
 - Verify AWS credentials in `.env`
 - Check endpoint connectivity
 
-### Gas estimation failures (execution relay)
+### Gas estimation failures (ethereum relay)
 
 - Ensure `snowbridge-gas-estimator` binary is available in the container
 - Verify AssetHub and BridgeHub endpoints are correct
+
+### Relayer not picking up messages
+
+- Check that your relayer ID and total count are configured correctly in the config
+- Multiple relayers coordinate using the `schedule` config to avoid duplicate submissions
+- Ensure your endpoints are synced and not lagging
+
+## Rewards
+
+Relayers earn rewards for successfully delivering messages:
+
+- **Polkadot → Ethereum** (`parachain-v2`): Rewards are paid in ETH on Ethereum
+- **Ethereum → Polkadot** (`ethereum-v2`): Rewards are paid in DOT on AssetHub
+
+To claim rewards, configure the `REWARD_ADDRESS` environment variable with your reward destination address.
+
+The `reward` relayer service automatically claims accumulated rewards periodically.
+
+## Monitoring
+
+### CloudWatch Logging (AWS)
+
+If running on AWS EC2, logs are automatically sent to CloudWatch when configured:
+
+1. Attach an IAM role with CloudWatch Logs permissions to your EC2 instance
+2. Set `AWS_REGION` in your `.env` file
+3. Logs will appear in CloudWatch under `snowbridge/{environment}/`
+
+### Local Logging
+
+View logs locally:
+
+```bash
+# Follow all logs
+docker compose logs -f
+
+# Follow specific service
+docker compose logs -f parachain-v2
+
+# View last 100 lines
+docker compose logs --tail 100 ethereum-v2
+```
+
+### Health Checks
+
+```bash
+# Beacon state service health
+curl http://localhost:8080/health
+
+# Check container status
+docker compose ps
+```
+
+## Getting Help
+
+- GitHub Issues: https://github.com/Snowfork/snowbridge/issues
+- Discord: Join the Snowbridge Discord for community support
