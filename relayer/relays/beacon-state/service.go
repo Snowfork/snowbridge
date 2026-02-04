@@ -664,9 +664,11 @@ func (s *Service) preGenerateProofs(slot uint64, data []byte) {
 		return
 	}
 
+	startTime := time.Now()
 	log.WithField("slot", slot).Info("Pre-generating proofs for slot (using lite unmarshaler)")
 
 	// Use lite unmarshaler to save ~130MB+ of memory per state
+	unmarshalStart := time.Now()
 	beaconState, err := s.unmarshalBeaconStateLite(slot, data)
 	// Release raw data reference to help GC
 	data = nil
@@ -674,21 +676,36 @@ func (s *Service) preGenerateProofs(slot uint64, data []byte) {
 		log.WithError(err).WithField("slot", slot).Warn("Failed to unmarshal beacon state for proof pre-generation")
 		return
 	}
+	unmarshalDuration := time.Since(unmarshalStart)
 
+	treeStart := time.Now()
 	tree, err := beaconState.GetTree()
 	if err != nil {
 		log.WithError(err).WithField("slot", slot).Warn("Failed to get state tree for proof pre-generation")
 		return
 	}
+	treeDuration := time.Since(treeStart)
 
-	_ = tree.Hash()
+	// Note: tree.Hash() was previously called here but is redundant.
+	// tree.Prove() internally computes sibling hashes on-demand via hashNode(),
+	// and hashNode() does not cache - it recomputes on every call. So calling
+	// tree.Hash() first just adds extra work. Better to let Prove() compute
+	// only the hashes it needs along each proof path.
 
+	proofsStart := time.Now()
 	s.cacheAllProofs(slot, beaconState, tree)
+	proofsDuration := time.Since(proofsStart)
 
 	// Release large objects and force GC to prevent memory buildup
 	beaconState = nil
 	tree = nil
 	runtime.GC()
 
-	log.WithField("slot", slot).Info("Pre-generated and cached proofs for slot")
+	log.WithFields(log.Fields{
+		"slot":             slot,
+		"unmarshalMs":      unmarshalDuration.Milliseconds(),
+		"treeMs":           treeDuration.Milliseconds(),
+		"proofsMs":         proofsDuration.Milliseconds(),
+		"totalMs":          time.Since(startTime).Milliseconds(),
+	}).Info("Pre-generated and cached proofs for slot")
 }
