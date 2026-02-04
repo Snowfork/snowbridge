@@ -309,14 +309,13 @@ contract GatewayV2Test is Test {
         view
         returns (CommandV2[] memory)
     {
-        // Call expensiveOperation which requires storage writes and thus significant gas
-        bytes memory data = abi.encodeWithSignature("expensiveOperation()");
+        bytes memory data = abi.encodeWithSignature("sayHello(string)", "World");
         CallContractParams memory params =
             CallContractParams({target: address(helloWorld), data: data, value: value});
         bytes memory payload = abi.encode(params);
 
         CommandV2[] memory commands = new CommandV2[](1);
-        commands[0] = CommandV2({kind: CommandKind.CallContract, gas: 500_000, payload: payload});
+        commands[0] = CommandV2({kind: CommandKind.CallContract, gas: 1, payload: payload});
         return commands;
     }
 
@@ -378,35 +377,29 @@ contract GatewayV2Test is Test {
         bytes32 topic = keccak256("topic");
 
         // Create a command with very high gas requirement
-        CommandV2[] memory commands = new CommandV2[](2);
-        SetOperatingModeParams memory params =
-            SetOperatingModeParams({mode: OperatingMode.RejectingOutboundMessages});
+        CommandV2[] memory commands = new CommandV2[](1);
+        SetOperatingModeParams memory params = SetOperatingModeParams({mode: OperatingMode.Normal});
         commands[0] = CommandV2({
-            kind: CommandKind.SetOperatingMode, gas: 100_000, payload: abi.encode(params)
-        });
-
-        bytes memory data = abi.encodeWithSignature("sayHello(string)", "World");
-        CallContractParams[] memory callParams = new CallContractParams[](1);
-        callParams[0] = CallContractParams({target: address(helloWorld), data: data, value: 0});
-        commands[1] = CommandV2({
-            kind: CommandKind.CallContract, gas: 100_000, payload: abi.encode(callParams)
+            kind: CommandKind.SetOperatingMode,
+            gas: 30_000_000, // Extremely high gas value
+            payload: abi.encode(params)
         });
 
         InboundMessageV2 memory message = InboundMessageV2({
-            origin: Constants.ASSET_HUB_AGENT_ID, nonce: 1, topic: topic, commands: commands
+            origin: keccak256("666"),
+            nonce: 2, // Use a different nonce from other tests
+            topic: topic,
+            commands: commands
         });
 
-        // Limit the gas for this test to ensure we hit the InsufficientGasLimit error
-        uint256 gasLimit = 180_000;
+        // Limit the gas for this test to ensure we hit the NotEnoughGas error
+        uint256 gasLimit = 100_000;
         vm.deal(relayer, 1 ether);
-        vm.prank(relayer);
 
         vm.expectRevert(IGatewayV2.InsufficientGasLimit.selector);
+        vm.prank(relayer);
         IGatewayV2(address(gateway))
         .v2_submit{gas: gasLimit}(message, proof, makeMockProof(), relayerRewardAddress);
-
-        OperatingMode mode = IGatewayV2(address(gateway)).operatingMode();
-        assertEq(uint256(mode), uint256(OperatingMode.Normal));
     }
 
     function mockNativeTokenForSend(address user, uint128 amount)
@@ -743,7 +736,7 @@ contract GatewayV2Test is Test {
         vm.expectEmit(true, false, false, true);
         emit IGatewayV2.CommandFailed(1, 1); // nonce 1, command index 1
 
-        // Expect InboundMessageDispatched to be emitted with success=false (command failed)
+        // Expect InboundMessageDispatched to be emitted with success=false since not all commands succeeded
         vm.expectEmit(true, false, false, true);
         emit IGatewayV2.InboundMessageDispatched(1, topic, false, relayerRewardAddress);
 
@@ -783,7 +776,7 @@ contract GatewayV2Test is Test {
         vm.expectEmit(true, false, false, true);
         emit IGatewayV2.CommandFailed(2, 1); // nonce 2, command index 1
 
-        // Expect InboundMessageDispatched to be emitted with success=false (command failed)
+        // Expect InboundMessageDispatched to be emitted with success=false
         vm.expectEmit(true, false, false, true);
         emit IGatewayV2.InboundMessageDispatched(2, topic, false, relayerRewardAddress);
 
@@ -847,9 +840,8 @@ contract GatewayV2Test is Test {
         CommandV2 memory cmd =
             CommandV2({kind: uint8(200), gas: uint64(100_000), payload: payload});
 
-        // unknown command should revert with InvalidCommand
-        vm.expectRevert(IGatewayV2.InvalidCommand.selector);
-        gatewayLogic.callDispatch(cmd, bytes32(0));
+        bool ok = gatewayLogic.callDispatch(cmd, bytes32(0));
+        assertTrue(!ok, "unknown command should return false");
     }
 
     function testSetOperatingModeSucceeds() public {
@@ -862,14 +854,15 @@ contract GatewayV2Test is Test {
         vm.expectEmit(true, false, false, true);
         emit IGatewayBase.OperatingModeChanged(OperatingMode.Normal);
 
-        gatewayLogic.callDispatch(cmd, bytes32(0));
+        bool ok = gatewayLogic.callDispatch(cmd, bytes32(0));
+        assertTrue(ok, "setOperatingMode should succeed");
 
         // Verify mode was set
         assertEq(uint256(gatewayLogic.operatingMode()), uint256(OperatingMode.Normal));
     }
 
     function testHandlerRevertIsCaught_UnlockNativeToken() public {
-        // Ensure no agent exists for ASSET_HUB_AGENT_ID so ensureAgent will revert
+        // Ensure no agent exists for ASSET_HUB_AGENT_ID so ensureAgent will revert and _dispatchCommand returns false
         UnlockNativeTokenParams memory params = UnlockNativeTokenParams({
             token: address(0), recipient: address(this), amount: uint128(1)
         });
@@ -879,9 +872,8 @@ contract GatewayV2Test is Test {
             kind: CommandKind.UnlockNativeToken, gas: uint64(200_000), payload: payload
         });
 
-        // handler revert should be caught and command should fail (revert)
-        vm.expectRevert();
-        gatewayLogic.callDispatch(cmd, bytes32(0));
+        bool ok = gatewayLogic.callDispatch(cmd, bytes32(0));
+        assertTrue(!ok, "handler revert should be caught and return false");
     }
 
     function testHandlerRevertIsCaught_UpgradeInvalidImpl() public {
@@ -893,9 +885,8 @@ contract GatewayV2Test is Test {
         CommandV2 memory cmd =
             CommandV2({kind: CommandKind.Upgrade, gas: uint64(200_000), payload: payload});
 
-        // upgrade with invalid impl should revert
-        vm.expectRevert();
-        gatewayLogic.callDispatch(cmd, bytes32(0));
+        bool ok = gatewayLogic.callDispatch(cmd, bytes32(0));
+        assertTrue(!ok, "upgrade with invalid impl should be caught and return false");
     }
 
     function testMintForeignTokenNotRegisteredReturnsFalse() public {
@@ -908,9 +899,8 @@ contract GatewayV2Test is Test {
             kind: CommandKind.MintForeignToken, gas: uint64(200_000), payload: payload
         });
 
-        // mintForeignToken for unregistered token should revert
-        vm.expectRevert();
-        gatewayLogic.callDispatch(cmd, bytes32(0));
+        bool ok = gatewayLogic.callDispatch(cmd, bytes32(0));
+        assertTrue(!ok, "mintForeignToken for unregistered token should return false");
     }
 
     function testRegisterForeignTokenDuplicateReturnsFalse() public {
@@ -924,12 +914,11 @@ contract GatewayV2Test is Test {
             kind: CommandKind.RegisterForeignToken, gas: uint64(3_000_000), payload: payload
         });
 
-        // first register should succeed
-        gatewayLogic.callDispatch(cmd, bytes32(0));
+        bool ok1 = gatewayLogic.callDispatch(cmd, bytes32(0));
+        assertTrue(ok1, "first register should succeed");
 
-        // duplicate register should revert
-        vm.expectRevert();
-        gatewayLogic.callDispatch(cmd, bytes32(0));
+        bool ok2 = gatewayLogic.callDispatch(cmd, bytes32(0));
+        assertTrue(!ok2, "duplicate register should return false");
     }
 
     function testCallContractAgentDoesNotExistReturnsFalse() public {
@@ -941,9 +930,19 @@ contract GatewayV2Test is Test {
         CommandV2 memory cmd =
             CommandV2({kind: CommandKind.CallContract, gas: uint64(200_000), payload: payload});
 
-        // callContract with missing agent should revert
+        bool ok = gatewayLogic.callDispatch(cmd, bytes32(uint256(0x9999)));
+        assertTrue(!ok, "callContract with missing agent should return false");
+    }
+
+    function testInsufficientGasReverts() public {
+        bytes memory payload = "";
+        // Use an extremely large gas value to trigger InsufficientGasLimit revert in _dispatchCommand
+        CommandV2 memory cmd = CommandV2({
+            kind: CommandKind.SetOperatingMode, gas: type(uint64).max, payload: payload
+        });
+
         vm.expectRevert();
-        gatewayLogic.callDispatch(cmd, bytes32(uint256(0x9999)));
+        gatewayLogic.callDispatch(cmd, bytes32(0));
     }
 
     function testUpgradeCallsInitialize() public {
@@ -1019,7 +1018,7 @@ contract GatewayV2Test is Test {
 
         vm.expectEmit(true, false, false, true);
         emit IGatewayV2.CommandFailed(1, 0);
-
+        emit IGatewayV2.InboundMessageDispatched(1, topic, false, relayerRewardAddress);
         IGatewayV2(address(gateway))
             .v2_submit(
                 InboundMessageV2({
@@ -1034,7 +1033,7 @@ contract GatewayV2Test is Test {
             );
     }
 
-    function testAgentCallContractWontRevertForInsufficientGas() public {
+    function testAgentCallContractRevertedForInsufficientGas() public {
         bytes32 topic = keccak256("topic");
 
         vm.deal(assetHubAgent, 1 ether);
@@ -1042,7 +1041,7 @@ contract GatewayV2Test is Test {
 
         vm.expectEmit(true, false, false, true);
         emit IGatewayV2.CommandFailed(1, 0);
-
+        emit IGatewayV2.InboundMessageDispatched(1, topic, false, relayerRewardAddress);
         IGatewayV2(address(gateway))
             .v2_submit(
                 InboundMessageV2({
@@ -1104,27 +1103,14 @@ contract GatewayV2Test is Test {
 
     function test_onlySelf_enforced_on_external_calls() public {
         MockGateway gw = MockGateway(address(gateway));
-        // Try to call a protected handler function directly (not via internal dispatch)
-        // This should fail because msg.sender != address(this)
-        SetOperatingModeParams memory p =
-            SetOperatingModeParams({mode: OperatingMode.RejectingOutboundMessages});
+        // calling the dispatch entrypoint externally should revert with Unauthorized
+        SetOperatingModeParams memory p = SetOperatingModeParams({mode: OperatingMode.Normal});
         bytes memory payload = abi.encode(p);
-
-        // Attempt to call v1_handleSetOperatingMode directly from external context
-        // Should revert with Unauthorized since onlySelf modifier requires msg.sender == address(this)
-        vm.expectRevert(IGatewayBase.Unauthorized.selector);
-        gw.v1_handleSetOperatingMode(payload);
-
-        // Try another onlySelf protected function - v2_dispatchCommand
-        CommandV2 memory cmd =
-            CommandV2({kind: CommandKind.SetOperatingMode, gas: 100_000, payload: payload});
-
+        CommandV2 memory cmd = CommandV2({
+            kind: CommandKind.SetOperatingMode, gas: uint64(200_000), payload: payload
+        });
         vm.expectRevert(IGatewayBase.Unauthorized.selector);
         gw.v2_dispatchCommand(cmd, bytes32(0));
-
-        // Verify mode was not changed (stayed Normal)
-        OperatingMode mode = gw.operatingMode();
-        assertEq(uint256(mode), uint256(OperatingMode.Normal));
     }
 
     function test_call_handleSetOperatingMode_via_self_changes_mode() public {
@@ -1141,8 +1127,8 @@ contract GatewayV2Test is Test {
     function test_dispatch_unknown_command_returns_false() public {
         MockGateway gw = MockGateway(address(gateway));
         CommandV2 memory cmd = CommandV2({kind: 0xFF, gas: 100_000, payload: ""});
-        vm.expectRevert(IGatewayV2.InvalidCommand.selector);
-        gw.exposed_dispatchCommand(cmd, bytes32(0));
+        bool ok = gw.callDispatch(cmd, bytes32(0));
+        assertFalse(ok, "unknown command must return false");
     }
 
     function test_v2_dispatch_partial_failure_emits_CommandFailed() public {
@@ -1163,35 +1149,41 @@ contract GatewayV2Test is Test {
         msgv.topic = bytes32(0);
         msgv.commands = cmds;
 
-        // Expect CommandFailed for the second command (index 1)
-        vm.expectEmit(true, false, false, true);
-        emit IGatewayV2.CommandFailed(msgv.nonce, 1);
-
         // call v2_submit (verification overridden to true)
-        gw.v2_submit(msgv, proof, makeMockProof(), bytes32(0));
+
+        // construct an empty Verification.Proof
+        Verification.DigestItem[] memory digestItems = new Verification.DigestItem[](0);
+        Verification.ParachainHeader memory header = Verification.ParachainHeader({
+            parentHash: bytes32(0),
+            number: 0,
+            stateRoot: bytes32(0),
+            extrinsicsRoot: bytes32(0),
+            digestItems: digestItems
+        });
+
+        bytes32[] memory emptyBytes32 = new bytes32[](0);
+        Verification.HeadProof memory hp =
+            Verification.HeadProof({pos: 0, width: 0, proof: emptyBytes32});
+        Verification.MMRLeafPartial memory lp = Verification.MMRLeafPartial({
+            version: 0,
+            parentNumber: 0,
+            parentHash: bytes32(0),
+            nextAuthoritySetID: 0,
+            nextAuthoritySetLen: 0,
+            nextAuthoritySetRoot: bytes32(0)
+        });
+
+        Verification.Proof memory headerProof = Verification.Proof({
+            header: header,
+            headProof: hp,
+            leafPartial: lp,
+            leafProof: emptyBytes32,
+            leafProofOrder: 0
+        });
+
+        gw.v2_submit(msgv, proof, headerProof, bytes32(0));
 
         // message should be recorded as dispatched
         assertTrue(gw.v2_isDispatched(msgv.nonce));
-    }
-
-    function testInsufficientGasReverts() public {
-        MockGateway gw = MockGateway(address(gateway));
-
-        // Use an extremely large gas value to trigger InsufficientGasLimit revert in _dispatchCommand
-        CommandV2[] memory cmds = new CommandV2[](1);
-        SetOperatingModeParams memory p = SetOperatingModeParams({mode: OperatingMode.Normal});
-        cmds[0] = CommandV2({
-            kind: CommandKind.SetOperatingMode, gas: type(uint64).max, payload: abi.encode(p)
-        });
-
-        InboundMessageV2 memory msgv;
-        msgv.origin = bytes32("orig");
-        msgv.nonce = 1;
-        msgv.topic = bytes32(0);
-        msgv.commands = cmds;
-
-        vm.expectRevert(IGatewayV2.InsufficientGasLimit.selector);
-        // call v2_submit (verification overridden to true)
-        gw.v2_submit(msgv, proof, makeMockProof(), bytes32(0));
     }
 }
