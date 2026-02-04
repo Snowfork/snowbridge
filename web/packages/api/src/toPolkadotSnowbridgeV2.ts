@@ -1,5 +1,7 @@
 import { TransferInterface } from "./transfers/toPolkadot/transferInterface"
+import { TransferInterface as L2TransferInterface } from "./transfers/l2ToPolkadot/transferInterface"
 import { ERC20ToAH } from "./transfers/toPolkadot/erc20ToAH"
+import { ERC20ToAH as ERC20FromL2ToAH } from "./transfers/l2ToPolkadot/erc20ToAH"
 import { RegisterToken } from "./registration/toPolkadot/registerToken"
 import { TokenRegistration } from "./registration/toPolkadot/registrationInterface"
 import { Asset, AssetRegistry, ERC20Metadata, Parachain } from "@snowbridge/base-types"
@@ -18,6 +20,7 @@ import { accountToLocation, DOT_LOCATION, erc20Location } from "./xcmBuilder"
 import { Codec } from "@polkadot/types/types"
 import { ETHER_TOKEN_ADDRESS, swapAsset1ForAsset2 } from "./assets_v2"
 import { padFeeByPercentage } from "./utils"
+import { Context } from "./index"
 export { ValidationKind } from "./toPolkadot_v2"
 
 export type DeliveryFee = {
@@ -30,6 +33,8 @@ export type DeliveryFee = {
     extrinsicFeeDot: bigint // Fee for submitting to BridgeHub in DOT (part of relayerFee)
     extrinsicFeeEther: bigint // Fee for submitting to BridgeHub in Ether (part of relayerFee)
     totalFeeInWei: bigint
+    bridgeFeeInL2Token?: bigint // Fee for the actual token transfer in the input L2 token.
+    swapFeeInL1Token?: bigint // Fee for Gateway.v2_sendMessage in the output L1 token.
 }
 
 export type Transfer = {
@@ -42,6 +47,8 @@ export type Transfer = {
         amount: bigint
         fee: DeliveryFee
         customXcm?: any[] // Optional custom XCM instructions
+        l2TokenAddress?: string
+        sourceChainId?: number
     }
     computed: {
         gatewayAddress: string
@@ -55,6 +62,7 @@ export type Transfer = {
         minimalBalance: bigint
         claimer: any
         topic: string
+        l2AdapterAddress?: string
     }
     tx: ContractTransaction
 }
@@ -72,6 +80,7 @@ export type ValidationResult = {
         bridgeStatus: OperationStatus
         assetHubDryRunError?: string
         destinationParachainDryRunError?: string
+        l2BridgeDryRunError?: string
     }
     transfer: Transfer
 }
@@ -114,6 +123,27 @@ export function createTransferImplementation(
             transferImpl = new ERC20ToParachain()
         }
     }
+    return transferImpl
+}
+
+export function createL2TransferImplementation(
+    l2ChainId: number,
+    destinationParaId: number,
+    registry: AssetRegistry,
+    l2TokenAddress: string,
+): L2TransferInterface {
+    const assets = registry.ethereumChains[l2ChainId].assets
+    const tokenMetadata = assets[l2TokenAddress]
+    if (!tokenMetadata) {
+        throw Error(`No token ${l2TokenAddress} registered on ethereum chain ${l2ChainId}.`)
+    }
+    const tokenAddress = tokenMetadata.swapTokenAddress
+    if (!tokenAddress) {
+        throw Error(`No swap token address for ${l2TokenAddress} on ethereum chain ${l2ChainId}.`)
+    }
+
+    // Todo: Resolve inputs based on the token address and support non-system destination parachain
+    let transferImpl: L2TransferInterface = new ERC20FromL2ToAH()
     return transferImpl
 }
 
@@ -277,4 +307,55 @@ export async function calculateRelayerFee(
         relayerFee = padFeeByPercentage(relayerFee, 30n)
     }
     return { relayerFee, extrinsicFeeDot, extrinsicFeeEther }
+}
+
+export async function buildSwapCallData(
+    context: Context,
+    registry: AssetRegistry,
+    l2ChainId: number,
+    l2TokenAddress: string,
+    amountOut: bigint,
+    amountInMaximum: bigint,
+): Promise<string> {
+    let tokenIn = registry.ethereumChains?.[l2ChainId]?.assets[l2TokenAddress]?.swapTokenAddress
+    if (!tokenIn) {
+        throw new Error("Token is not registered on Ethereum")
+    }
+    let swapFee = registry.ethereumChains?.[l2ChainId]?.assets[l2TokenAddress]?.swapFee
+    let swapCalldata: string
+    if (registry.environment === "polkadot_mainnet") {
+        const l1SwapRouter = context.l1SwapRouter()
+        swapCalldata = l1SwapRouter.interface.encodeFunctionData("exactOutputSingle", [
+            {
+                tokenIn: tokenIn,
+                tokenOut: context.l1FeeTokenAddress(),
+                fee: swapFee ?? 500, // Stable default to 0.05% pool fee
+                recipient: context.l1HandlerAddress(),
+                deadline: Math.floor(Date.now() / 1000) + 600, // 10 minutes from now
+                amountOut: amountOut,
+                amountInMaximum: amountInMaximum,
+                sqrtPriceLimitX96: 0n, // No price limit should be fine as we protect the swap using amountInMaximum
+            },
+        ])
+    } // On Sepolia, only the legacy swap router is available, and it supports exactOutputSingle parameters without a deadline.
+    else if (
+        registry.environment === "paseo_sepolia" ||
+        registry.environment === "westend_sepolia"
+    ) {
+        const l1SwapRouter = context.l1LegacySwapRouter()
+        swapCalldata = l1SwapRouter.interface.encodeFunctionData("exactOutputSingle", [
+            {
+                tokenIn: tokenIn,
+                tokenOut: context.l1FeeTokenAddress(),
+                fee: swapFee ?? 500, // Stable default to 0.05% pool fee
+                recipient: context.l1HandlerAddress(),
+                amountOut: amountOut,
+                amountInMaximum: amountInMaximum,
+                sqrtPriceLimitX96: 0n, // No price limit should be fine as we protect the swap using amountInMaximum
+            },
+        ])
+    } else {
+        throw new Error(`Unsupported environment ${registry.environment} for L1 swap router.`)
+    }
+    return swapCalldata
 }

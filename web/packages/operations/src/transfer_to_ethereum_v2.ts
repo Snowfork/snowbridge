@@ -1,8 +1,8 @@
 import { Keyring } from "@polkadot/keyring"
-import { Context, toEthereumSnowbridgeV2, contextConfigFor, toEthereumV2 } from "@snowbridge/api"
+import { Context, toEthereumSnowbridgeV2, toEthereumV2 } from "@snowbridge/api"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { formatUnits, Wallet } from "ethers"
-import { assetRegistryFor } from "@snowbridge/registry"
+import { assetRegistryFor, environmentFor } from "@snowbridge/registry"
 import { ContractCall } from "../../base-types"
 
 export const transferToEthereum = async (
@@ -22,16 +22,16 @@ export const transferToEthereum = async (
     }
     console.log(`Using environment '${env}'`)
 
-    const context = new Context(contextConfigFor(env))
+    const context = new Context(environmentFor(env))
 
     const polkadot_keyring = new Keyring({ type: "sr25519" })
 
     const ETHEREUM_ACCOUNT = new Wallet(
-        process.env.ETHEREUM_KEY ??
-            "0x5e002a1af63fd31f1c25258f3082dc889762664cb8f218d86da85dff8b07b342",
+        process.env.ETHEREUM_KEY ?? "Your Key Goes Here",
         context.ethereum(),
     )
-    const ETHEREUM_ACCOUNT_PUBLIC = await ETHEREUM_ACCOUNT.getAddress()
+    const ETHEREUM_ACCOUNT_PUBLIC =
+        process.env.ETHEREUM_ACCOUNT_PUBLIC ?? (await ETHEREUM_ACCOUNT.getAddress())
     const POLKADOT_ACCOUNT = polkadot_keyring.addFromUri(process.env.SUBSTRATE_KEY ?? "//Ferdie")
     const POLKADOT_ACCOUNT_PUBLIC = POLKADOT_ACCOUNT.address
 

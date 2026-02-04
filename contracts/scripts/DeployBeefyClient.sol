@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.28;
+pragma solidity 0.8.33;
 
 import {Script} from "forge-std/Script.sol";
 import {BeefyClient} from "../src/BeefyClient.sol";
@@ -16,7 +16,22 @@ contract DeployBeefyClient is Script {
         uint256 fiatShamirRequiredSignatures;
     }
 
-    function readConfig() internal pure returns (Config memory config) {
+    function readConfig() internal view returns (Config memory config) {
+        // Checkpoint generated using the script `./beefy-checkpoint.js` script in Polkadot-JS.
+        if (
+            keccak256(abi.encodePacked(vm.envString("NODE_ENV")))
+                == keccak256(abi.encodePacked("polkadot_mainnet"))
+        ) {
+            return mainnetConfig();
+        } else if (
+            keccak256(abi.encodePacked(vm.envString("NODE_ENV")))
+                == keccak256(abi.encodePacked("westend_sepolia"))
+        ) {
+            return westendConfig();
+        }
+    }
+
+    function mainnetConfig() internal pure returns (Config memory config) {
         // Checkpoint generated using the script `./beefy-checkpoint.js` script in Polkadot-JS.
         config = Config({
             startBlock: 27_895_089,
@@ -33,6 +48,26 @@ contract DeployBeefyClient is Script {
             randaoCommitDelay: 128,
             randaoCommitExpiration: 24,
             minimumSignatures: 17,
+            fiatShamirRequiredSignatures: 101
+        });
+    }
+
+    function westendConfig() internal pure returns (Config memory config) {
+        config = Config({
+            startBlock: 29_265_008,
+            current: BeefyClient.ValidatorSet({
+                id: 18_823,
+                length: 20,
+                root: 0xff1d13b4dc453f2f88261fbc1ec53922bce47d740489c9022bed06f345395f8c
+            }),
+            next: BeefyClient.ValidatorSet({
+                id: 18_824,
+                length: 20,
+                root: 0xff1d13b4dc453f2f88261fbc1ec53922bce47d740489c9022bed06f345395f8c
+            }),
+            randaoCommitDelay: 0,
+            randaoCommitExpiration: 1024,
+            minimumSignatures: 12,
             fiatShamirRequiredSignatures: 101
         });
     }

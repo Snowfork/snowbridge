@@ -14,6 +14,10 @@ export type ERC20Metadata = {
   foreignId?: string;
   // The gas cost of a local transfer, which involves unlocking for ENA and minting for PNA.
   deliveryGas?: bigint;
+  // For ERC-20 tokens on L2 chains that have a corresponding mapped L1 token address.
+  swapTokenAddress?: string;
+  // fee tier for uniswap call in basis points (e.g., 500 = 0.05%)
+  swapFee?: number;
 };
 
 export interface ERC20MetadataMap {
@@ -83,6 +87,8 @@ export type Parachain = {
     hasXcmPaymentApi: boolean;
     supportsAliasOrigin: boolean;
     xcmVersion: XcmVersion;
+    /** @deprecated Remove once V2 is fully rolled out to all parachains */
+    supportsV2: boolean;
   };
   assets: AssetMap;
   estimatedExecutionFeeDOT: bigint;
@@ -97,7 +103,8 @@ export interface ParachainMap {
 export function supportsEthereumToPolkadotV2(parachain: Parachain): boolean {
   return (
     parachain.features.hasXcmPaymentApi &&
-    parachain.features.xcmVersion === "v5"
+    parachain.features.xcmVersion === "v5" &&
+    parachain.features.supportsV2
   );
 }
 
@@ -106,7 +113,8 @@ export function supportsPolkadotToEthereumV2(parachain: Parachain): boolean {
     parachain.features.hasEthBalance &&
     parachain.features.hasXcmPaymentApi &&
     parachain.features.supportsAliasOrigin &&
-    parachain.features.xcmVersion === "v5"
+    parachain.features.xcmVersion === "v5" &&
+    parachain.features.supportsV2
   );
 }
 
@@ -115,6 +123,92 @@ export type KusamaConfig = {
   bridgeHubParaId: number;
   parachains: ParachainMap;
 };
+
+export type Environment = {
+  name: string;
+  // Ethereum
+  ethChainId: number;
+  gatewayContract: string;
+  beefyContract: string;
+  beaconApiUrl: string;
+  ethereumChains: {
+    [chainId: string]: string;
+  };
+  // Substrate
+  assetHubParaId: number;
+  bridgeHubParaId: number;
+  /** @deprecated Remove once V2 is fully rolled out to all parachains */
+  v2_parachains?: number[];
+  relaychainUrl: string;
+  parachains: {
+    [paraId: string]: string;
+  };
+  // Indexer
+  indexerGraphQlUrl: string;
+  kusama?: {
+    assetHubParaId: number;
+    bridgeHubParaId: number;
+    parachains: { [paraId: string]: string };
+  };
+  // Assets
+  assetOverrides?: AssetOverrideMap;
+  precompiles?: PrecompileMap;
+  metadataOverrides?: ERC20MetadataOverrideMap;
+  // L2 Forwarding
+  l2Bridge?: {
+    acrossAPIUrl: string;
+    l1AdapterAddress: string;
+    l1HandlerAddress: string;
+    l1FeeTokenAddress: string;
+    l1SwapRouterAddress: string;
+    l1SwapQuoterAddress: string;
+    l2Chains: { [l2ChainId: number]: L2ForwardMetadata };
+  };
+};
+
+export type SourceType = "substrate" | "ethereum";
+
+export type Path = {
+  type: SourceType;
+  id: string;
+  source: number;
+  destinationType: SourceType;
+  destination: number;
+  asset: string;
+};
+
+export type Source = {
+  type: SourceType;
+  id: string;
+  key: string;
+  destinations: {
+    [destination: string]: { type: SourceType; assets: string[] };
+  };
+};
+
+export type TransferLocation = {
+  id: string;
+  name: string;
+  key: string;
+  type: SourceType;
+  parachain?: Parachain;
+  ethChain?: EthereumChain;
+};
+export interface AssetOverrideMap {
+  [paraId: string]: Asset[];
+}
+
+export interface ERC20MetadataOverrideMap {
+  [token: string]: {
+    name?: string;
+    symbol?: string;
+    decimals?: number;
+  };
+}
+
+export interface PrecompileMap {
+  [chainId: string]: `0x${string}`;
+}
 
 export type AssetRegistry = {
   timestamp: string;
@@ -129,7 +223,7 @@ export type AssetRegistry = {
     [chainId: string]: EthereumChain;
   };
   parachains: ParachainMap;
-  kusama: KusamaConfig | undefined;
+  kusama?: KusamaConfig;
 };
 
 export type ContractCall = {
@@ -137,4 +231,36 @@ export type ContractCall = {
   calldata: string;
   value: bigint;
   gas: bigint;
+};
+
+export type SubstrateAccount = {
+  nonce: bigint;
+  consumers: bigint;
+  providers: bigint;
+  sufficients: bigint;
+  data: {
+    free: bigint;
+    reserved: bigint;
+    frozen: bigint;
+  };
+};
+
+export interface PNAMap {
+  [token: string]: {
+    token: string;
+    foreignId: string;
+    ethereumlocation: any;
+  };
+}
+
+export type AssetSwapRoute = {
+  inputToken: string;
+  outputToken: string;
+  swapFee: number; // fee tier for uniswap call in basis points (e.g., 500 = 0.05%)
+};
+
+export type L2ForwardMetadata = {
+  adapterAddress: string;
+  feeTokenAddress: string;
+  swapRoutes: AssetSwapRoute[];
 };

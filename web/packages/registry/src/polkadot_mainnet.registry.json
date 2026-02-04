@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-11-24T11:57:28.867Z",
+  "timestamp": "2026-01-19T12:15:32.614Z",
   "environment": "polkadot_mainnet",
   "ethChainId": 1,
   "gatewayAddress": "0x27ca963c279c93801941e1eb8799c23f407d68e7",
@@ -23,7 +23,7 @@
     "accountType": "AccountId32",
     "name": "Polkadot BridgeHub",
     "specName": "bridge-hub-polkadot",
-    "specVersion": 2000000
+    "specVersion": 2000003
   },
   "ethereumChains": {
     "1": {
@@ -363,6 +363,36 @@
         "0xdac17f958d2ee523a2206206994597c13d831ec7": "0xffffffff7bc304425217b49e9598415c514ae81b"
       },
       "id": "evm_moonbeam"
+    },
+    "8453": {
+      "chainId": 8453,
+      "assets": {
+        "0x4200000000000000000000000000000000000006": {
+          "token": "0x4200000000000000000000000000000000000006",
+          "name": "Wrapped Ether",
+          "symbol": "WETH",
+          "decimals": 18,
+          "swapTokenAddress": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+          "swapFee": 0
+        },
+        "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913": {
+          "token": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+          "name": "USD Coin",
+          "symbol": "USDC",
+          "decimals": 6,
+          "swapTokenAddress": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          "swapFee": 500
+        },
+        "0x0000000000000000000000000000000000000000": {
+          "token": "0x0000000000000000000000000000000000000000",
+          "name": "Ether",
+          "symbol": "Ether",
+          "decimals": 18,
+          "swapTokenAddress": "0x0000000000000000000000000000000000000000",
+          "swapFee": 0
+        }
+      },
+      "id": "base"
     }
   },
   "parachains": {
@@ -377,7 +407,8 @@
         "hasEthBalance": true,
         "hasXcmPaymentApi": true,
         "supportsAliasOrigin": true,
-        "xcmVersion": "v5"
+        "xcmVersion": "v5",
+        "supportsV2": true
       },
       "info": {
         "tokenSymbols": "DOT",
@@ -387,7 +418,7 @@
         "accountType": "AccountId32",
         "name": "Polkadot Asset Hub",
         "specName": "statemint",
-        "specVersion": 2000002
+        "specVersion": 2000003
       },
       "assets": {
         "0x9d39a5de30e57443bff2a8307a4256c8797a3497": {
@@ -991,7 +1022,8 @@
         "hasEthBalance": true,
         "hasXcmPaymentApi": true,
         "supportsAliasOrigin": true,
-        "xcmVersion": "v5"
+        "xcmVersion": "v5",
+        "supportsV2": false
       },
       "info": {
         "tokenSymbols": "ACA",
@@ -1001,7 +1033,7 @@
         "accountType": "AccountId32",
         "name": "Acala",
         "specName": "acala",
-        "specVersion": 2320
+        "specVersion": 2330
       },
       "assets": {
         "0x0000000000000000000000000000000000000000": {
@@ -1027,7 +1059,8 @@
         "hasEthBalance": false,
         "hasXcmPaymentApi": true,
         "supportsAliasOrigin": false,
-        "xcmVersion": "v5"
+        "xcmVersion": "v5",
+        "supportsV2": false
       },
       "info": {
         "tokenSymbols": "GLMR",
@@ -1038,7 +1071,7 @@
         "evmChainId": 1284,
         "name": "Moonbeam",
         "specName": "moonbeam",
-        "specVersion": 3901
+        "specVersion": 4001
       },
       "xcDOT": "0xffffffff1fcacbd218edc0eba20fc2308c778080",
       "assets": {
@@ -1106,7 +1139,7 @@
           "xc20": "0xffffffff7bc304425217b49e9598415c514ae81b"
         }
       },
-      "estimatedExecutionFeeDOT": "bigint:104787198",
+      "estimatedExecutionFeeDOT": "bigint:105696134",
       "estimatedDeliveryFeeDOT": "bigint:306500000"
     },
     "2030": {
@@ -1120,7 +1153,8 @@
         "hasEthBalance": true,
         "hasXcmPaymentApi": true,
         "supportsAliasOrigin": true,
-        "xcmVersion": "v5"
+        "xcmVersion": "v5",
+        "supportsV2": false
       },
       "info": {
         "tokenSymbols": "BNC",
@@ -1131,7 +1165,7 @@
         "evmChainId": 996,
         "name": "Bifrost Polkadot",
         "specName": "bifrost_polkadot",
-        "specVersion": 22002
+        "specVersion": 23000
       },
       "assets": {
         "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2": {
@@ -1151,7 +1185,7 @@
           "isSufficient": false
         }
       },
-      "estimatedExecutionFeeDOT": "bigint:91177752",
+      "estimatedExecutionFeeDOT": "bigint:94936522",
       "estimatedDeliveryFeeDOT": "bigint:307100000"
     },
     "2034": {
@@ -1165,7 +1199,8 @@
         "hasEthBalance": false,
         "hasXcmPaymentApi": true,
         "supportsAliasOrigin": false,
-        "xcmVersion": "v4"
+        "xcmVersion": "v4",
+        "supportsV2": false
       },
       "info": {
         "tokenSymbols": "HDX",
@@ -1176,7 +1211,7 @@
         "evmChainId": 222222,
         "name": "Hydration",
         "specName": "hydradx",
-        "specVersion": 359
+        "specVersion": 378
       },
       "assets": {
         "0x45804880de22913dafe09f4980848ece6ecbaf78": {
@@ -1332,7 +1367,7 @@
           "isSufficient": true
         }
       },
-      "estimatedExecutionFeeDOT": "bigint:1740820",
+      "estimatedExecutionFeeDOT": "bigint:1774411",
       "estimatedDeliveryFeeDOT": "bigint:307100000"
     },
     "2043": {
@@ -1346,7 +1381,8 @@
         "hasEthBalance": false,
         "hasXcmPaymentApi": true,
         "supportsAliasOrigin": false,
-        "xcmVersion": "v4"
+        "xcmVersion": "v4",
+        "supportsV2": false
       },
       "info": {
         "tokenSymbols": "NEURO",
@@ -1356,7 +1392,7 @@
         "accountType": "AccountId32",
         "name": "NeuroWeb",
         "specName": "origintrail-parachain",
-        "specVersion": 149
+        "specVersion": 151
       },
       "assets": {
         "0xaa7a9ca87d3694b5755f213b5d04094b8d0f0a6f": {
@@ -1382,7 +1418,8 @@
         "hasEthBalance": false,
         "hasXcmPaymentApi": false,
         "supportsAliasOrigin": false,
-        "xcmVersion": "v4"
+        "xcmVersion": "v4",
+        "supportsV2": false
       },
       "info": {
         "tokenSymbols": "MYTH",
@@ -1421,7 +1458,8 @@
           "hasEthBalance": false,
           "hasXcmPaymentApi": true,
           "supportsAliasOrigin": true,
-          "xcmVersion": "v5"
+          "xcmVersion": "v5",
+          "supportsV2": false
         },
         "info": {
           "tokenSymbols": "KSM",
@@ -1431,7 +1469,7 @@
           "accountType": "AccountId32",
           "name": "Kusama Asset Hub",
           "specName": "statemine",
-          "specVersion": 2000002
+          "specVersion": 2000004
         },
         "assets": {
           "0x9d39a5de30e57443bff2a8307a4256c8797a3497": {

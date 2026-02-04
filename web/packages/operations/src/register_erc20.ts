@@ -1,8 +1,9 @@
 import { Keyring } from "@polkadot/keyring"
-import { Context, contextConfigFor } from "@snowbridge/api"
+import { Context } from "@snowbridge/api"
 import { IGatewayV1__factory as IGateway__factory } from "@snowbridge/contract-types"
 import { Contract, ethers, LogDescription, Wallet } from "ethers"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
+import { environmentFor } from "@snowbridge/registry"
 
 export const registerERC20 = async (tokenAddress: string) => {
     let env = "local_e2e"
@@ -12,11 +13,10 @@ export const registerERC20 = async (tokenAddress: string) => {
     console.log(`Using environment '${env}'`)
     await cryptoWaitReady()
 
-    const context = new Context(contextConfigFor(env))
+    const context = new Context(environmentFor(env))
 
     const ETHEREUM_ACCOUNT = new Wallet(
-        process.env.ETHEREUM_KEY ??
-            "0x5e002a1af63fd31f1c25258f3082dc889762664cb8f218d86da85dff8b07b342",
+        process.env.ETHEREUM_KEY ?? "Your Key Goes Here",
         context.ethereum(),
     )
     const ETHEREUM_ACCOUNT_PUBLIC = await ETHEREUM_ACCOUNT.getAddress()
@@ -30,7 +30,7 @@ export const registerERC20 = async (tokenAddress: string) => {
     const TOKEN_CONTRACT = tokenAddress
 
     const ifce = IGateway__factory.createInterface()
-    const gateway = new Contract(context.config.appContracts.gateway, ifce)
+    const gateway = new Contract(context.environment.gatewayContract, ifce)
     const tx = await gateway.getFunction("registerToken").populateTransaction(TOKEN_CONTRACT, {
         value: ethers.parseEther("1"),
         from: ETHEREUM_ACCOUNT_PUBLIC,

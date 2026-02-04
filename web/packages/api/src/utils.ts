@@ -28,16 +28,6 @@ export const paraIdToChannelId = (paraId: number): string => {
     return u8aToHex(channelId)
 }
 
-export const forwardedTopicId = (messageId: string): string => {
-    // From rust code
-    // (b"forward_id_for", original_id).using_encoded(sp_io::hashing::blake2_256)
-    const typeEncoded = stringToU8a("forward_id_for")
-    const paraIdEncoded = hexToU8a(messageId)
-    const joined = new Uint8Array([...typeEncoded, ...paraIdEncoded])
-    const newTopicId = blake2AsU8a(joined, 256)
-    return u8aToHex(newTopicId)
-}
-
 export const beneficiaryMultiAddress = (beneficiary: string) => {
     const abi = ethers.AbiCoder.defaultAbiCoder()
 

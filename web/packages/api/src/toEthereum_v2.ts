@@ -60,6 +60,7 @@ export type Transfer = {
         sourceAssetMetadata: Asset
         sourceParachain: Parachain
         messageId?: string
+        contractCall?: ContractCall
     }
     tx: SubmittableExtrinsic<"promise", ISubmittableResult>
 }
@@ -81,6 +82,7 @@ export type DeliveryFee = {
     localExecutionFeeInNative?: bigint
     localDeliveryFeeInNative?: bigint
     ethereumExecutionFeeInNative?: bigint
+    l2BridgeFeeInL1Token?: bigint // Fee for the actual token bridge to L2 is paid in the L1 input token.
 }
 
 export type FeeInfo = {
@@ -429,6 +431,7 @@ export enum ValidationReason {
     DryRunFailed,
     InsufficientEtherBalance,
     ContractCallInvalidTarget,
+    ContractCallAgentNotRegistered,
 }
 
 export type ValidationLog = {

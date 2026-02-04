@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.28;
+pragma solidity 0.8.33;
 
 library ScaleCodec {
     error UnsupportedCompactEncoding();
@@ -153,7 +153,7 @@ library ScaleCodec {
         // prefix = 0x03 + ((numValueBytes - 4) << 2)
         //   where numValueBytes is how many bytes needed to represent `value`.
         bytes memory littleEndian = _toLittleEndianNoLeadingZeros(value);
-        uint8 len = uint8(littleEndian.length); // # of bytes needed
+        uint8 len = uint8(littleEndian.length); // number of bytes needed
 
         // Substrate: prefix's lower 2 bits = 0b11,
         // the remaining upper bits = (len - 4).

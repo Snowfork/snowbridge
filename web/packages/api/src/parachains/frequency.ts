@@ -1,5 +1,4 @@
-import { PNAMap } from "../assets_v2"
-import { AssetMap } from "@snowbridge/base-types"
+import { AssetMap, PNAMap } from "@snowbridge/base-types"
 import { ParachainBase } from "./parachainBase"
 import { DOT_LOCATION, HERE_LOCATION, WESTEND_GENESIS } from "../xcmBuilder"
 

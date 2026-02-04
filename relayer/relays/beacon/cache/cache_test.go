@@ -1,9 +1,10 @@
 package cache
 
 import (
+	"testing"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func TestCalculateClosestCheckpointSlot(t *testing.T) {

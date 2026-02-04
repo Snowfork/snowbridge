@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.28;
+pragma solidity 0.8.33;
 
 import {MerkleProof} from "openzeppelin/utils/cryptography/MerkleProof.sol";
 import {Verification} from "./Verification.sol";
@@ -600,7 +600,7 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
     ///         if (ERC1967.load() == address(0)) {
     ///             revert Unauthorized();
     ///         }
-    ///         # Initialization routines here...
+    ///         // Initialization routines here...
     ///     }
     /// }
     /// ```

@@ -1,15 +1,15 @@
 import { Keyring } from "@polkadot/keyring"
-import { Context, environment, toEthereumV2, assetsV2, contextConfigFor } from "@snowbridge/api"
+import { Context, toEthereumV2 } from "@snowbridge/api"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { formatUnits, Wallet } from "ethers"
-import { assetRegistryFor } from "@snowbridge/registry"
+import { assetRegistryFor, environmentFor } from "@snowbridge/registry"
 
 export const transferToEthereum = async (sourceParaId: number, symbol: string, amount: bigint) => {
     let env = "local_e2e"
     if (process.env.NODE_ENV !== undefined) {
         env = process.env.NODE_ENV
     }
-    const snwobridgeEnv = environment.SNOWBRIDGE_ENV[env]
+    const snwobridgeEnv = environmentFor(env)
     if (snwobridgeEnv === undefined) {
         throw Error(`Unknown environment '${env}'`)
     }
@@ -17,13 +17,12 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
 
     await cryptoWaitReady()
 
-    const context = new Context(contextConfigFor(env))
+    const context = new Context(snwobridgeEnv)
 
     const polkadot_keyring = new Keyring({ type: "sr25519" })
 
     const ETHEREUM_ACCOUNT = new Wallet(
-        process.env.ETHEREUM_KEY ??
-            "0x5e002a1af63fd31f1c25258f3082dc889762664cb8f218d86da85dff8b07b342",
+        process.env.ETHEREUM_KEY ?? "Your Key Goes Here",
         context.ethereum(),
     )
     const ETHEREUM_ACCOUNT_PUBLIC = await ETHEREUM_ACCOUNT.getAddress()

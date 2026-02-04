@@ -18,12 +18,10 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/sync/errgroup"
-
+	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/snowbridge/relayer/config"
 	"github.com/snowfork/snowbridge/relayer/crypto/secp256k1"
-
-	log "github.com/sirupsen/logrus"
+	"golang.org/x/sync/errgroup"
 )
 
 type Connection struct {

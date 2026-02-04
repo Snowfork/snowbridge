@@ -1,8 +1,8 @@
 import { Keyring } from "@polkadot/keyring"
-import { Context, toPolkadotSnowbridgeV2, contextConfigFor, toPolkadotV2 } from "@snowbridge/api"
+import { Context, toPolkadotSnowbridgeV2, toPolkadotV2 } from "@snowbridge/api"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { formatEther, Wallet } from "ethers"
-import { assetRegistryFor } from "@snowbridge/registry"
+import { assetRegistryFor, environmentFor } from "@snowbridge/registry"
 import { WETH9__factory } from "@snowbridge/contract-types"
 
 export const transferToPolkadot = async (destParaId: number, symbol: string, amount: bigint) => {
@@ -14,13 +14,12 @@ export const transferToPolkadot = async (destParaId: number, symbol: string, amo
     }
     console.log(`Using environment '${env}'`)
 
-    const context = new Context(contextConfigFor(env))
+    const context = new Context(environmentFor(env))
 
     const polkadot_keyring = new Keyring({ type: "sr25519" })
 
     const ETHEREUM_ACCOUNT = new Wallet(
-        process.env.ETHEREUM_KEY ??
-            "0x5e002a1af63fd31f1c25258f3082dc889762664cb8f218d86da85dff8b07b342",
+        process.env.ETHEREUM_KEY ?? "Your Key Goes Here",
         context.ethereum(),
     )
     const ETHEREUM_ACCOUNT_PUBLIC = await ETHEREUM_ACCOUNT.getAddress()
@@ -50,7 +49,7 @@ export const transferToPolkadot = async (destParaId: number, symbol: string, amo
             const depositResult = await weth9.deposit({ value: amount })
             const depositReceipt = await depositResult.wait()
 
-            const approveResult = await weth9.approve(context.config.appContracts.gateway, amount)
+            const approveResult = await weth9.approve(context.environment.gatewayContract, amount)
             const approveReceipt = await approveResult.wait()
 
             console.log("deposit tx", depositReceipt?.hash, "approve tx", approveReceipt?.hash)

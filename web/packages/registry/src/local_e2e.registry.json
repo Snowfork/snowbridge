@@ -79,7 +79,12 @@
         "hasDryRunApi": true,
         "hasTxPaymentApi": true,
         "hasDryRunRpc": true,
-        "hasDotBalance": true
+        "hasDotBalance": true,
+        "hasEthBalance": true,
+        "hasXcmPaymentApi": true,
+        "supportsAliasOrigin": true,
+        "xcmVersion": "v5",
+        "supportsV2": true
       },
       "info": {
         "tokenSymbols": "WND",
@@ -255,7 +260,12 @@
         "hasDryRunApi": true,
         "hasTxPaymentApi": true,
         "hasDryRunRpc": true,
-        "hasDotBalance": true
+        "hasDotBalance": true,
+        "hasEthBalance": false,
+        "hasXcmPaymentApi": true,
+        "supportsAliasOrigin": false,
+        "xcmVersion": "v5",
+        "supportsV2": false
       },
       "info": {
         "tokenSymbols": "undefined",

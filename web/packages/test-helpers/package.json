@@ -24,10 +24,10 @@
     "@typescript-eslint/parser": "^8.45.0",
     "eslint": "9.37.0",
     "eslint-config-prettier": "^10.1.8",
+    "prettier": "3.6.2",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "5.9.3",
-    "prettier": "3.6.2"
+    "typescript": "5.9.3"
   },
   "dependencies": {
     "@polkadot/api": "16.4.8",
@@ -43,7 +43,7 @@
     "@types/secp256k1": "^4.0.7",
     "@types/seedrandom": "^3.0.8",
     "bitfield": "^4.2.0",
-    "ethers": "^6.15.0",
+    "ethers": "^6.16.0",
     "keccak": "^3.0.4",
     "lodash": "^4.17.21",
     "merkletreejs": "^0.6.0",
