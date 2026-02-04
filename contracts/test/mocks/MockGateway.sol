@@ -12,7 +12,7 @@ import {IInitializable} from "../../src/interfaces/IInitializable.sol";
 
 import {UD60x18} from "prb/math/src/UD60x18.sol";
 
-import {Command as CommandV2, CommandKind} from "../../src/v2/Types.sol";
+import {Command as CommandV2} from "../../src/v2/Types.sol";
 import {IGatewayV2} from "../../src/v2/IGateway.sol";
 import {Agent} from "../../src/Agent.sol";
 import {AgentExecutor} from "../../src/AgentExecutor.sol";
@@ -91,29 +91,6 @@ contract MockGateway is Gateway {
 
     function transactionBaseGas() public pure returns (uint256) {
         return super.v1_transactionBaseGas();
-    }
-
-    // Dispatch a single V2 command (used by tests). Must be called via `this`.
-    function v2_dispatchCommand(CommandV2 calldata command, bytes32 origin)
-        external
-        override
-        onlySelf
-    {
-        if (command.kind == CommandKind.Upgrade) {
-            HandlersV2.upgrade(command.payload);
-        } else if (command.kind == CommandKind.SetOperatingMode) {
-            HandlersV2.setOperatingMode(command.payload);
-        } else if (command.kind == CommandKind.UnlockNativeToken) {
-            HandlersV2.unlockNativeToken(AGENT_EXECUTOR, command.payload);
-        } else if (command.kind == CommandKind.RegisterForeignToken) {
-            HandlersV2.registerForeignToken(command.payload);
-        } else if (command.kind == CommandKind.MintForeignToken) {
-            HandlersV2.mintForeignToken(command.payload);
-        } else if (command.kind == CommandKind.CallContract) {
-            HandlersV2.callContract(origin, AGENT_EXECUTOR, command.payload);
-        } else {
-            revert IGatewayV2.InvalidCommand();
-        }
     }
 
     function callDispatch(CommandV2 calldata command, bytes32 origin) external returns (bool) {
