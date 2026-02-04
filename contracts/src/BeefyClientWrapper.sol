@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.28;
+pragma solidity 0.8.33;
 
 import {IBeefyClient} from "./interfaces/IBeefyClient.sol";
 import {ScaleCodec} from "./utils/ScaleCodec.sol";
@@ -9,16 +9,13 @@ import {ScaleCodec} from "./utils/ScaleCodec.sol";
  * @title BeefyClientWrapper
  * @dev Forwards BeefyClient submissions and refunds gas costs to relayers.
  * Anyone can relay. Uses progress-based refunds: the more blocks a relayer
- * advances the light client, the higher percentage of gas refund and rewards they receive.
+ * advances the light client, the higher percentage of gas refund they receive.
  */
 contract BeefyClientWrapper {
     event GasCredited(address indexed relayer, bytes32 indexed commitmentHash, uint256 gasUsed);
-    event SubmissionRefunded(
-        address indexed relayer, uint256 progress, uint256 refundAmount, uint256 rewardAmount, uint256 totalGasUsed
-    );
+    event SubmissionRefunded(address indexed relayer, uint256 progress, uint256 refundAmount, uint256 totalGasUsed);
     event FundsDeposited(address indexed depositor, uint256 amount);
     event FundsWithdrawn(address indexed recipient, uint256 amount);
-    event RewardPoolFunded(address indexed funder, uint256 amount);
 
     error Unauthorized();
     error InvalidAddress();
@@ -36,18 +33,15 @@ contract BeefyClientWrapper {
     uint256 public maxGasPrice;
     uint256 public maxRefundAmount;
 
-    // Progress-based refund/reward targets
+    // Progress-based refund target
     uint256 public refundTarget; // Blocks of progress for 100% gas refund (e.g., 300 = ~30 min)
-    uint256 public rewardTarget; // Blocks of progress for 100% reward (e.g., 2400 = ~4 hours)
-    uint256 public rewardPool; // Available reward pool
 
     constructor(
         address _beefyClient,
         address _owner,
         uint256 _maxGasPrice,
         uint256 _maxRefundAmount,
-        uint256 _refundTarget,
-        uint256 _rewardTarget
+        uint256 _refundTarget
     ) {
         if (_beefyClient == address(0) || _owner == address(0)) {
             revert InvalidAddress();
@@ -58,7 +52,6 @@ contract BeefyClientWrapper {
         maxGasPrice = _maxGasPrice;
         maxRefundAmount = _maxRefundAmount;
         refundTarget = _refundTarget;
-        rewardTarget = _rewardTarget;
     }
 
     /* Beefy Client Proxy Functions */
@@ -165,14 +158,6 @@ contract BeefyClientWrapper {
         delete ticketOwner[commitmentHash];
     }
 
-    /**
-     * @dev Fund the reward pool. Anyone can contribute.
-     */
-    function fundRewardPool() external payable {
-        rewardPool += msg.value;
-        emit RewardPoolFunded(msg.sender, msg.value);
-    }
-
     /* Internal Functions */
 
     function _checkOwner() internal view {
@@ -188,16 +173,14 @@ contract BeefyClientWrapper {
     }
 
     /**
-     * @dev Calculate and send refund + reward based on progress made.
+     * @dev Calculate and send refund based on progress made.
      *
      * Refund: Scales from 0% to 100% as progress goes from 0 to refundTarget.
-     * Reward: Kicks in after refundTarget, scales to 100% at rewardTarget.
      *
-     * Example with refundTarget=300, rewardTarget=2400:
-     * - 150 blocks progress: 50% gas refund, 0% reward
-     * - 300 blocks progress: 100% gas refund, 0% reward
-     * - 600 blocks progress: 100% gas refund, 14.3% reward (300/2100)
-     * - 2400+ blocks progress: 100% gas refund, 100% reward
+     * Example with refundTarget=300:
+     * - 150 blocks progress: 50% gas refund
+     * - 300 blocks progress: 100% gas refund
+     * - 600 blocks progress: 100% gas refund (capped)
      */
     function _refundWithProgress(uint256 startGas, uint256 previousGas, uint256 progress) internal {
         uint256 currentGas = startGas - gasleft() + 21000;
@@ -214,27 +197,10 @@ contract BeefyClientWrapper {
         uint256 refundRatio = progress >= refundTarget ? 100 : (progress * 100) / refundTarget;
         uint256 refundAmount = (baseRefund * refundRatio) / 100;
 
-        // Calculate reward ratio (0-100%, only kicks in after refundTarget)
-        uint256 rewardAmount = 0;
-        if (progress > refundTarget && rewardPool > 0 && rewardTarget > refundTarget) {
-            uint256 extraProgress = progress - refundTarget;
-            uint256 rewardWindow = rewardTarget - refundTarget;
-            uint256 rewardRatio = extraProgress >= rewardWindow ? 100 : (extraProgress * 100) / rewardWindow;
-            rewardAmount = (rewardPool * rewardRatio) / 100;
-
-            // Deduct from reward pool
-            if (rewardAmount > rewardPool) {
-                rewardAmount = rewardPool;
-            }
-            rewardPool -= rewardAmount;
-        }
-
-        uint256 totalPayout = refundAmount + rewardAmount;
-
-        if (totalPayout > 0 && address(this).balance >= totalPayout) {
-            (bool success,) = payable(msg.sender).call{value: totalPayout}("");
+        if (refundAmount > 0 && address(this).balance >= refundAmount) {
+            (bool success,) = payable(msg.sender).call{value: refundAmount}("");
             if (success) {
-                emit SubmissionRefunded(msg.sender, progress, refundAmount, rewardAmount, totalGasUsed);
+                emit SubmissionRefunded(msg.sender, progress, refundAmount, totalGasUsed);
             }
         }
     }
@@ -274,11 +240,6 @@ contract BeefyClientWrapper {
         refundTarget = _refundTarget;
     }
 
-    function setRewardTarget(uint256 _rewardTarget) external {
-        _checkOwner();
-        rewardTarget = _rewardTarget;
-    }
-
     function withdrawFunds(address payable recipient, uint256 amount) external {
         _checkOwner();
         if (recipient == address(0)) {
@@ -303,26 +264,14 @@ contract BeefyClientWrapper {
 
     /* View Functions */
 
-    function getBalance() external view returns (uint256) {
-        return address(this).balance;
-    }
-
-    function getCreditedGas(bytes32 commitmentHash) external view returns (uint256) {
-        return creditedGas[commitmentHash];
-    }
-
-    function getRewardPool() external view returns (uint256) {
-        return rewardPool;
-    }
-
     /**
-     * @dev Calculate expected refund and reward for a given progress.
+     * @dev Calculate expected refund for a given progress.
      * Useful for relayers to estimate payouts before submitting.
      */
     function estimatePayout(uint256 gasUsed, uint256 gasPrice, uint256 progress)
         external
         view
-        returns (uint256 refundAmount, uint256 rewardAmount)
+        returns (uint256 refundAmount)
     {
         uint256 effectiveGasPrice = gasPrice < maxGasPrice ? gasPrice : maxGasPrice;
         uint256 baseRefund = gasUsed * effectiveGasPrice;
@@ -333,13 +282,6 @@ contract BeefyClientWrapper {
 
         uint256 refundRatio = progress >= refundTarget ? 100 : (progress * 100) / refundTarget;
         refundAmount = (baseRefund * refundRatio) / 100;
-
-        if (progress > refundTarget && rewardPool > 0 && rewardTarget > refundTarget) {
-            uint256 extraProgress = progress - refundTarget;
-            uint256 rewardWindow = rewardTarget - refundTarget;
-            uint256 rewardRatio = extraProgress >= rewardWindow ? 100 : (extraProgress * 100) / rewardWindow;
-            rewardAmount = (rewardPool * rewardRatio) / 100;
-        }
     }
 
     receive() external payable {

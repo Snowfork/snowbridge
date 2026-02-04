@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.28;
+pragma solidity 0.8.33;
 
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
@@ -13,7 +13,6 @@ contract DeployBeefyClientWrapper is Script {
         uint256 maxGasPrice;
         uint256 maxRefundAmount;
         uint256 refundTarget;
-        uint256 rewardTarget;
     }
 
     function readConfig() internal returns (Config memory config) {
@@ -21,9 +20,8 @@ contract DeployBeefyClientWrapper is Script {
             beefyClient: vm.envAddress("BEEFY_CLIENT_ADDRESS"),
             owner: vm.envAddress("REFUND_PROXY_OWNER"),
             maxGasPrice: vm.envOr("MAX_GAS_PRICE", uint256(100 gwei)),
-            maxRefundAmount: vm.envOr("MAX_REFUND_AMOUNT", uint256(1 ether)),
-            refundTarget: vm.envOr("REFUND_TARGET", uint256(300)), // ~30 min for 100% refund
-            rewardTarget: vm.envOr("REWARD_TARGET", uint256(2400)) // ~4 hours for 100% reward
+            maxRefundAmount: vm.envOr("MAX_REFUND_AMOUNT", uint256(0.05 ether)),
+            refundTarget: vm.envOr("REFUND_TARGET", uint256(300)) // ~30 min for 100% refund
         });
     }
 
@@ -37,8 +35,7 @@ contract DeployBeefyClientWrapper is Script {
             config.owner,
             config.maxGasPrice,
             config.maxRefundAmount,
-            config.refundTarget,
-            config.rewardTarget
+            config.refundTarget
         );
 
         console.log("BeefyClientWrapper:", address(wrapper));

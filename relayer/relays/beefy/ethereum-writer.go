@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math/big"
 	"math/rand"
-	"time"
 
 	"golang.org/x/sync/errgroup"
 
@@ -65,21 +64,11 @@ func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group, request
 					continue
 				}
 
-				// Wait until we're eligible to submit (turn-based scheduling)
-				err = wr.waitForTurnEligibility(ctx)
-				if err != nil {
-					return fmt.Errorf("wait for turn eligibility: %w", err)
-				}
-
 				// Mandatory commitments are always signed by the next validator set recorded in
 				// the beefy light client
 				task.ValidatorsRoot = state.NextValidatorSetRoot
 
-				if wr.config.EnableFiatShamir {
-					err = wr.submitFiatShamir(ctx, &task)
-				} else {
-					err = wr.submit(ctx, &task)
-				}
+				err = wr.submit(ctx, &task)
 				if err != nil {
 					return fmt.Errorf("submit request: %w", err)
 				}
@@ -319,7 +308,6 @@ func (wr *EthereumWriter) doSubmitFinal(ctx context.Context, commitmentHash [32]
 		params.Leaf,
 		params.LeafProof,
 		params.LeafProofOrder,
-		[]uint32{}, // claimTipBlocks - empty for now, can be populated to claim tips
 	)
 	if err != nil {
 		return nil, fmt.Errorf("final submission: %w", err)
@@ -330,70 +318,6 @@ func (wr *EthereumWriter) doSubmitFinal(ctx context.Context, commitmentHash [32]
 		Info("Sent SubmitFinal transaction")
 
 	return tx, nil
-}
-
-func (wr *EthereumWriter) waitForTurnEligibility(ctx context.Context) error {
-	for {
-		eligible, err := wr.checkTurnEligibility(ctx)
-		if err != nil {
-			return err
-		}
-		if eligible {
-			return nil
-		}
-
-		// Wait before checking again
-		log.Debug("Not eligible yet, waiting 12 seconds before rechecking...")
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(12 * time.Second):
-			// Check again
-		}
-	}
-}
-
-func (wr *EthereumWriter) checkTurnEligibility(ctx context.Context) (bool, error) {
-	callOpts := bind.CallOpts{
-		Context: ctx,
-	}
-
-	myAddress := wr.conn.Keypair().CommonAddress()
-
-	currentTurnRelayer, err := wr.contract.GetCurrentTurnRelayer(&callOpts)
-	if err != nil {
-		return false, fmt.Errorf("get current turn relayer: %w", err)
-	}
-
-	if currentTurnRelayer == myAddress {
-		log.WithFields(logrus.Fields{
-			"currentTurnRelayer": currentTurnRelayer.Hex(),
-			"myAddress":          myAddress.Hex(),
-		}).Debug("It's our turn to submit")
-		return true, nil
-	}
-
-	gracePeriodActive, err := wr.contract.IsGracePeriodActive(&callOpts)
-	if err != nil {
-		return false, fmt.Errorf("check grace period: %w", err)
-	}
-
-	if gracePeriodActive {
-		log.WithFields(logrus.Fields{
-			"currentTurnRelayer": currentTurnRelayer.Hex(),
-			"myAddress":          myAddress.Hex(),
-			"gracePeriodActive":  true,
-		}).Debug("Not our turn, but grace period is active - proceeding")
-		return true, nil
-	}
-
-	log.WithFields(logrus.Fields{
-		"currentTurnRelayer": currentTurnRelayer.Hex(),
-		"myAddress":          myAddress.Hex(),
-		"gracePeriodActive":  false,
-	}).Info("Not our turn and grace period not active - waiting")
-
-	return false, nil
 }
 
 func (wr *EthereumWriter) initialize(ctx context.Context) error {
@@ -414,93 +338,6 @@ func (wr *EthereumWriter) initialize(ctx context.Context) error {
 	}
 	wr.blockWaitPeriod = blockWaitPeriod.Uint64()
 	log.WithField("randaoCommitDelay", wr.blockWaitPeriod).Trace("Fetched randaoCommitDelay")
-
-	return nil
-}
-
-func (wr *EthereumWriter) submitFiatShamir(ctx context.Context, task *Request) error {
-	signedValidators := []*big.Int{}
-	for i, signature := range task.SignedCommitment.Signatures {
-		if signature.IsSome() {
-			signedValidators = append(signedValidators, big.NewInt(int64(i)))
-		}
-	}
-	validatorCount := big.NewInt(int64(len(task.SignedCommitment.Signatures)))
-
-	// Pick a random validator who signs beefy commitment
-	chosenValidator := signedValidators[rand.Intn(len(signedValidators))].Int64()
-
-	log.WithFields(logrus.Fields{
-		"validatorCount":       validatorCount,
-		"signedValidators":     signedValidators,
-		"signedValidatorCount": len(signedValidators),
-		"chosenValidator":      chosenValidator,
-	}).Info("Creating initial bitfield")
-
-	initialBitfield, err := wr.contract.CreateInitialBitfield(
-		&bind.CallOpts{
-			Pending: true,
-			From:    wr.conn.Keypair().CommonAddress(),
-		},
-		signedValidators, validatorCount,
-	)
-	if err != nil {
-		return fmt.Errorf("create initial bitfield: %w", err)
-	}
-
-	commitment := toBeefyClientCommitment(&task.SignedCommitment.Commitment)
-
-	finalBitfield, err := wr.contract.CreateFiatShamirFinalBitfield(
-		&bind.CallOpts{
-			Pending: true,
-			From:    wr.conn.Keypair().CommonAddress(),
-		},
-		*commitment,
-		initialBitfield,
-	)
-
-	if err != nil {
-		return fmt.Errorf("create validator final bitfield: %w", err)
-	}
-
-	validatorIndices := bitfield.New(finalBitfield).Members()
-
-	params, err := task.MakeSubmitFinalParams(validatorIndices, initialBitfield)
-	if err != nil {
-		return fmt.Errorf("make submit final params: %w", err)
-	}
-
-	logFields, err := wr.makeSubmitFinalLogFields(task, params)
-	if err != nil {
-		return fmt.Errorf("logging params: %w", err)
-	}
-
-	tx, err := wr.contract.SubmitFiatShamir(
-		wr.conn.MakeTxOpts(ctx),
-		params.Commitment,
-		params.Bitfield,
-		params.Proofs,
-		params.Leaf,
-		params.LeafProof,
-		params.LeafProofOrder,
-	)
-	if err != nil {
-		return fmt.Errorf("SubmitFiatShamir: %w", err)
-	}
-
-	log.WithField("txHash", tx.Hash().Hex()).
-		WithFields(logFields).
-		Info("Sent SubmitFiatShamir transaction")
-
-	_, err = wr.conn.WatchTransaction(ctx, tx, 0)
-	if err != nil {
-		return fmt.Errorf("Wait receipt for SubmitFiatShamir: %w", err)
-	}
-
-	log.WithFields(logrus.Fields{
-		"tx":          tx.Hash().Hex(),
-		"blockNumber": task.SignedCommitment.Commitment.BlockNumber,
-	}).Debug("Transaction submitFiatShamir succeeded")
 
 	return nil
 }

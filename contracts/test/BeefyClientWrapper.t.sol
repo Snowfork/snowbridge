@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.28;
+pragma solidity 0.8.33;
 
 import {Test} from "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
@@ -128,9 +128,8 @@ contract BeefyClientWrapperTest is Test {
     address anyone = address(0x5);
 
     uint256 constant MAX_GAS_PRICE = 100 gwei;
-    uint256 constant MAX_REFUND_AMOUNT = 1 ether;
+    uint256 constant MAX_REFUND_AMOUNT = 0.05 ether;
     uint256 constant REFUND_TARGET = 300; // 300 blocks for 100% refund
-    uint256 constant REWARD_TARGET = 2400; // 2400 blocks for 100% reward
     uint256 constant INITIAL_BEEFY_BLOCK = 1000;
 
     function setUp() public {
@@ -143,8 +142,7 @@ contract BeefyClientWrapperTest is Test {
             owner,
             MAX_GAS_PRICE,
             MAX_REFUND_AMOUNT,
-            REFUND_TARGET,
-            REWARD_TARGET
+            REFUND_TARGET
         );
 
         // Fund the wrapper with ETH for refunds
@@ -204,7 +202,6 @@ contract BeefyClientWrapperTest is Test {
         assertEq(wrapper.maxGasPrice(), MAX_GAS_PRICE);
         assertEq(wrapper.maxRefundAmount(), MAX_REFUND_AMOUNT);
         assertEq(wrapper.refundTarget(), REFUND_TARGET);
-        assertEq(wrapper.rewardTarget(), REWARD_TARGET);
     }
 
     function test_invalidBeefyClientAddress() public {
@@ -214,8 +211,7 @@ contract BeefyClientWrapperTest is Test {
             owner,
             MAX_GAS_PRICE,
             MAX_REFUND_AMOUNT,
-            REFUND_TARGET,
-            REWARD_TARGET
+            REFUND_TARGET
         );
     }
 
@@ -226,8 +222,7 @@ contract BeefyClientWrapperTest is Test {
             address(0),
             MAX_GAS_PRICE,
             MAX_REFUND_AMOUNT,
-            REFUND_TARGET,
-            REWARD_TARGET
+            REFUND_TARGET
         );
     }
 
@@ -323,12 +318,12 @@ contract BeefyClientWrapperTest is Test {
 
         bytes32 commitmentHash = computeCommitmentHash(commitment);
         assertEq(wrapper.ticketOwner(commitmentHash), relayer1);
-        assertGt(wrapper.getCreditedGas(commitmentHash), 0);
+        assertGt(wrapper.creditedGas(commitmentHash), 0);
 
         // Clear ticket - gas should be forfeited
         wrapper.clearTicket(commitmentHash);
         assertEq(wrapper.ticketOwner(commitmentHash), address(0));
-        assertEq(wrapper.getCreditedGas(commitmentHash), 0);
+        assertEq(wrapper.creditedGas(commitmentHash), 0);
         vm.stopPrank();
     }
 
@@ -366,7 +361,7 @@ contract BeefyClientWrapperTest is Test {
 
         // Gas should be credited
         bytes32 commitmentHash = computeCommitmentHash(commitment);
-        assertGt(wrapper.getCreditedGas(commitmentHash), 0);
+        assertGt(wrapper.creditedGas(commitmentHash), 0);
     }
 
     function test_refundSentOnlyAfterSubmitFinal() public {
@@ -395,7 +390,7 @@ contract BeefyClientWrapperTest is Test {
 
         vm.stopPrank();
 
-        assertEq(wrapper.getCreditedGas(commitmentHash), 0);
+        assertEq(wrapper.creditedGas(commitmentHash), 0);
     }
 
     function test_partialRefundForLowProgress() public {
@@ -535,107 +530,21 @@ contract BeefyClientWrapperTest is Test {
         assertEq(mockBeefyClient.submitFinalCount(), 1); // Submission succeeded
     }
 
-    /* Reward Pool Tests */
-
-    function test_fundRewardPool() public {
-        vm.deal(address(this), 10 ether);
-
-        wrapper.fundRewardPool{value: 5 ether}();
-
-        assertEq(wrapper.getRewardPool(), 5 ether);
-    }
-
-    function test_rewardPaidForHighProgress() public {
-        // Fund the reward pool
-        vm.deal(address(this), 10 ether);
-        wrapper.fundRewardPool{value: 5 ether}();
-
-        // Progress beyond refundTarget triggers rewards
-        uint32 progress = uint32(REWARD_TARGET); // Max progress = max reward
-        uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + progress);
-        IBeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
-        uint256[] memory bitfield = new uint256[](1);
-        IBeefyClient.ValidatorProof memory proof = createValidatorProof();
-        IBeefyClient.ValidatorProof[] memory proofs = createValidatorProofs(1);
-        IBeefyClient.MMRLeaf memory leaf = createMMRLeaf();
-        bytes32[] memory leafProof = new bytes32[](0);
-
-        uint256 relayerBalanceBefore = relayer1.balance;
-        uint256 rewardPoolBefore = wrapper.getRewardPool();
-
-        vm.startPrank(relayer1);
-        vm.txGasPrice(50 gwei);
-        wrapper.submitInitial(commitment, bitfield, proof);
-        bytes32 commitmentHash = computeCommitmentHash(commitment);
-        wrapper.commitPrevRandao(commitmentHash);
-        wrapper.submitFinal(commitment, bitfield, proofs, leaf, leafProof, 0);
-        vm.stopPrank();
-
-        uint256 relayerPayout = relayer1.balance - relayerBalanceBefore;
-        uint256 rewardPoolAfter = wrapper.getRewardPool();
-
-        // Relayer should receive refund + reward
-        assertGt(relayerPayout, 0);
-        // Reward pool should be depleted
-        assertLt(rewardPoolAfter, rewardPoolBefore);
-    }
-
-    function test_noRewardForLowProgress() public {
-        // Fund the reward pool
-        vm.deal(address(this), 10 ether);
-        wrapper.fundRewardPool{value: 5 ether}();
-
-        // Progress below refundTarget = no reward (only partial refund)
-        uint32 progress = uint32(REFUND_TARGET / 2);
-        uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + progress);
-        IBeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
-        uint256[] memory bitfield = new uint256[](1);
-        IBeefyClient.ValidatorProof memory proof = createValidatorProof();
-        IBeefyClient.ValidatorProof[] memory proofs = createValidatorProofs(1);
-        IBeefyClient.MMRLeaf memory leaf = createMMRLeaf();
-        bytes32[] memory leafProof = new bytes32[](0);
-
-        uint256 rewardPoolBefore = wrapper.getRewardPool();
-
-        vm.startPrank(relayer1);
-        vm.txGasPrice(50 gwei);
-        wrapper.submitInitial(commitment, bitfield, proof);
-        bytes32 commitmentHash = computeCommitmentHash(commitment);
-        wrapper.commitPrevRandao(commitmentHash);
-        wrapper.submitFinal(commitment, bitfield, proofs, leaf, leafProof, 0);
-        vm.stopPrank();
-
-        // Reward pool should be unchanged (no reward paid)
-        assertEq(wrapper.getRewardPool(), rewardPoolBefore);
-    }
-
     function test_estimatePayout() public {
         uint256 gasUsed = 500000;
         uint256 gasPrice = 50 gwei;
 
-        // Test 50% progress (50% refund, 0% reward)
-        (uint256 refund50, uint256 reward50) = wrapper.estimatePayout(gasUsed, gasPrice, REFUND_TARGET / 2);
+        // Test 50% progress (50% refund)
+        uint256 refund50 = wrapper.estimatePayout(gasUsed, gasPrice, REFUND_TARGET / 2);
         assertEq(refund50, (gasUsed * gasPrice * 50) / 100);
-        assertEq(reward50, 0);
 
-        // Test 100% refund progress (100% refund, 0% reward)
-        (uint256 refund100, uint256 reward100) = wrapper.estimatePayout(gasUsed, gasPrice, REFUND_TARGET);
+        // Test 100% refund progress (100% refund)
+        uint256 refund100 = wrapper.estimatePayout(gasUsed, gasPrice, REFUND_TARGET);
         assertEq(refund100, gasUsed * gasPrice);
-        assertEq(reward100, 0);
-    }
 
-    function test_estimatePayout_withRewardPool() public {
-        // Fund the reward pool
-        vm.deal(address(this), 10 ether);
-        wrapper.fundRewardPool{value: 5 ether}();
-
-        uint256 gasUsed = 500000;
-        uint256 gasPrice = 50 gwei;
-
-        // Test max progress (100% refund, 100% reward)
-        (uint256 refundMax, uint256 rewardMax) = wrapper.estimatePayout(gasUsed, gasPrice, REWARD_TARGET);
-        assertEq(refundMax, gasUsed * gasPrice);
-        assertEq(rewardMax, 5 ether); // Full reward pool
+        // Test > 100% progress (still capped at 100% refund)
+        uint256 refund200 = wrapper.estimatePayout(gasUsed, gasPrice, REFUND_TARGET * 2);
+        assertEq(refund200, gasUsed * gasPrice);
     }
 
     /* Admin Function Tests */
@@ -659,13 +568,6 @@ contract BeefyClientWrapperTest is Test {
         wrapper.setRefundTarget(600);
 
         assertEq(wrapper.refundTarget(), 600);
-    }
-
-    function test_setRewardTarget() public {
-        vm.prank(owner);
-        wrapper.setRewardTarget(4800);
-
-        assertEq(wrapper.rewardTarget(), 4800);
     }
 
     function test_withdrawFunds() public {
@@ -700,9 +602,6 @@ contract BeefyClientWrapperTest is Test {
         wrapper.setRefundTarget(1);
 
         vm.expectRevert(BeefyClientWrapper.Unauthorized.selector);
-        wrapper.setRewardTarget(1);
-
-        vm.expectRevert(BeefyClientWrapper.Unauthorized.selector);
         wrapper.withdrawFunds(payable(anyone), 1);
 
         vm.expectRevert(BeefyClientWrapper.Unauthorized.selector);
@@ -724,10 +623,6 @@ contract BeefyClientWrapperTest is Test {
     }
 
     /* View Function Tests */
-
-    function test_getBalance() public {
-        assertEq(wrapper.getBalance(), 100 ether);
-    }
 
     function test_latestBeefyBlock() public {
         assertEq(wrapper.latestBeefyBlock(), INITIAL_BEEFY_BLOCK);
