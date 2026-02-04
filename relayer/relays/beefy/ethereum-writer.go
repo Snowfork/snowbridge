@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/big"
 	"math/rand"
+	"time"
 
 	"golang.org/x/sync/errgroup"
 
@@ -21,6 +22,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 )
+
+// SessionTimeout is the duration after which a pending session is considered expired
+const SessionTimeout = 40 * time.Minute
 
 type EthereumWriter struct {
 	config          *SinkConfig
@@ -116,6 +120,18 @@ func (wr *EthereumWriter) queryBeefyClientState(ctx context.Context) (*BeefyClie
 }
 
 func (wr *EthereumWriter) submit(ctx context.Context, task *Request) error {
+	// Check if another relayer already has a session in progress
+	shouldSkip, err := wr.shouldSkipDueToPendingSession(ctx, task)
+	if err != nil {
+		return fmt.Errorf("check pending session: %w", err)
+	}
+	if shouldSkip {
+		log.WithFields(logrus.Fields{
+			"beefyBlock": task.SignedCommitment.Commitment.BlockNumber,
+		}).Info("Skipping submission: another session already in progress with sufficient progress")
+		return nil
+	}
+
 	// Initial submission
 	tx, initialBitfield, err := wr.doSubmitInitial(ctx, task)
 	if err != nil {
@@ -352,4 +368,63 @@ func (wr *EthereumWriter) isTaskOutdated(ctx context.Context, task *Request) (bo
 		return true, nil
 	}
 	return false, nil
+}
+
+// shouldSkipDueToPendingSession checks if another relayer already has a session in progress
+// that would advance the light client sufficiently. Returns true if we should skip.
+func (wr *EthereumWriter) shouldSkipDueToPendingSession(ctx context.Context, task *Request) (bool, error) {
+	callOpts := bind.CallOpts{
+		Context: ctx,
+	}
+
+	highestPendingBlock, err := wr.contract.HighestPendingBlock(&callOpts)
+	if err != nil {
+		return false, fmt.Errorf("get highest pending block: %w", err)
+	}
+
+	// No pending session
+	if highestPendingBlock.Uint64() == 0 {
+		return false, nil
+	}
+
+	latestBeefyBlock, err := wr.contract.LatestBeefyBlock(&callOpts)
+	if err != nil {
+		return false, fmt.Errorf("get latest beefy block: %w", err)
+	}
+
+	refundTarget, err := wr.contract.RefundTarget(&callOpts)
+	if err != nil {
+		return false, fmt.Errorf("get refund target: %w", err)
+	}
+
+	// Check if the pending session would give sufficient progress
+	pendingProgress := highestPendingBlock.Uint64() - latestBeefyBlock
+	if pendingProgress < refundTarget.Uint64() {
+		// Pending session wouldn't give good progress, ok to proceed
+		return false, nil
+	}
+
+	// Check if the session has expired (> 40 minutes old)
+	pendingTimestamp, err := wr.contract.HighestPendingBlockTimestamp(&callOpts)
+	if err != nil {
+		return false, fmt.Errorf("get highest pending block timestamp: %w", err)
+	}
+
+	sessionAge := time.Now().Unix() - pendingTimestamp.Int64()
+	if sessionAge > int64(SessionTimeout.Seconds()) {
+		log.WithFields(logrus.Fields{
+			"highestPendingBlock": highestPendingBlock.Uint64(),
+			"sessionAgeMinutes":   sessionAge / 60,
+		}).Info("Pending session has expired, proceeding with new submission")
+		return false, nil
+	}
+
+	log.WithFields(logrus.Fields{
+		"highestPendingBlock": highestPendingBlock.Uint64(),
+		"latestBeefyBlock":    latestBeefyBlock,
+		"pendingProgress":     pendingProgress,
+		"sessionAgeMinutes":   sessionAge / 60,
+	}).Debug("Active session in progress with sufficient progress")
+
+	return true, nil
 }

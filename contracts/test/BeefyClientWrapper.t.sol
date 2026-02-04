@@ -84,6 +84,10 @@ contract MockBeefyClient {
         return (2, 100, bytes32(0));
     }
 
+    function computeCommitmentHash(IBeefyClient.Commitment calldata commitment) external pure returns (bytes32) {
+        return keccak256(_encodeCommitment(commitment));
+    }
+
     function setLatestBeefyBlock(uint64 _block) external {
         latestBeefyBlock = _block;
     }
@@ -129,7 +133,7 @@ contract BeefyClientWrapperTest is Test {
 
     uint256 constant MAX_GAS_PRICE = 100 gwei;
     uint256 constant MAX_REFUND_AMOUNT = 0.05 ether;
-    uint256 constant REFUND_TARGET = 300; // 300 blocks for 100% refund
+    uint256 constant REFUND_TARGET = 350; // ~35 min for 100% refund
     uint256 constant INITIAL_BEEFY_BLOCK = 1000;
 
     function setUp() public {
@@ -393,9 +397,9 @@ contract BeefyClientWrapperTest is Test {
         assertEq(wrapper.creditedGas(commitmentHash), 0);
     }
 
-    function test_partialRefundForLowProgress() public {
-        // 50% of refund target = 50% refund
-        uint32 progress = uint32(REFUND_TARGET / 2); // 150 blocks
+    function test_noRefundForLowProgress() public {
+        // Below refund target = no refund
+        uint32 progress = uint32(REFUND_TARGET / 2); // 150 blocks (below 300 threshold)
         uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + progress);
         IBeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
         uint256[] memory bitfield = new uint256[](1);
@@ -405,7 +409,6 @@ contract BeefyClientWrapperTest is Test {
         bytes32[] memory leafProof = new bytes32[](0);
 
         uint256 relayerBalanceBefore = relayer1.balance;
-        uint256 wrapperBalanceBefore = address(wrapper).balance;
 
         vm.startPrank(relayer1);
         vm.txGasPrice(50 gwei);
@@ -415,12 +418,8 @@ contract BeefyClientWrapperTest is Test {
         wrapper.submitFinal(commitment, bitfield, proofs, leaf, leafProof, 0);
         vm.stopPrank();
 
-        uint256 refundAmount = relayer1.balance - relayerBalanceBefore;
-        uint256 wrapperSpent = wrapperBalanceBefore - address(wrapper).balance;
-
-        // Verify refund was paid
-        assertGt(refundAmount, 0);
-        assertEq(refundAmount, wrapperSpent);
+        // Verify no refund was paid (progress below threshold)
+        assertEq(relayer1.balance, relayerBalanceBefore);
     }
 
     function test_fullRefundAt100PercentProgress() public {
@@ -534,17 +533,17 @@ contract BeefyClientWrapperTest is Test {
         uint256 gasUsed = 500000;
         uint256 gasPrice = 50 gwei;
 
-        // Test 50% progress (50% refund)
-        uint256 refund50 = wrapper.estimatePayout(gasUsed, gasPrice, REFUND_TARGET / 2);
-        assertEq(refund50, (gasUsed * gasPrice * 50) / 100);
+        // Test below threshold (no refund)
+        uint256 refundBelow = wrapper.estimatePayout(gasUsed, gasPrice, REFUND_TARGET / 2);
+        assertEq(refundBelow, 0);
 
-        // Test 100% refund progress (100% refund)
-        uint256 refund100 = wrapper.estimatePayout(gasUsed, gasPrice, REFUND_TARGET);
-        assertEq(refund100, gasUsed * gasPrice);
+        // Test at threshold (full refund)
+        uint256 refundAt = wrapper.estimatePayout(gasUsed, gasPrice, REFUND_TARGET);
+        assertEq(refundAt, gasUsed * gasPrice);
 
-        // Test > 100% progress (still capped at 100% refund)
-        uint256 refund200 = wrapper.estimatePayout(gasUsed, gasPrice, REFUND_TARGET * 2);
-        assertEq(refund200, gasUsed * gasPrice);
+        // Test above threshold (full refund)
+        uint256 refundAbove = wrapper.estimatePayout(gasUsed, gasPrice, REFUND_TARGET * 2);
+        assertEq(refundAbove, gasUsed * gasPrice);
     }
 
     /* Admin Function Tests */

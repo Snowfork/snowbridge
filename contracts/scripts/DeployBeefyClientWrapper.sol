@@ -21,7 +21,7 @@ contract DeployBeefyClientWrapper is Script {
             owner: vm.envAddress("REFUND_PROXY_OWNER"),
             maxGasPrice: vm.envOr("MAX_GAS_PRICE", uint256(100 gwei)),
             maxRefundAmount: vm.envOr("MAX_REFUND_AMOUNT", uint256(0.05 ether)),
-            refundTarget: vm.envOr("REFUND_TARGET", uint256(300)) // ~30 min for 100% refund
+            refundTarget: vm.envOr("REFUND_TARGET", uint256(350)) // ~35 min for 100% refund
         });
     }
 

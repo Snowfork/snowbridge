@@ -66,6 +66,8 @@ interface IBeefyClient {
         pure
         returns (uint256[] memory);
 
+    function computeCommitmentHash(Commitment calldata commitment) external pure returns (bytes32);
+
     function randaoCommitDelay() external view returns (uint256);
 
     function currentValidatorSet()

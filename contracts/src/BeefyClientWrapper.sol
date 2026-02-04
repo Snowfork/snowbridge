@@ -3,7 +3,6 @@
 pragma solidity 0.8.33;
 
 import {IBeefyClient} from "./interfaces/IBeefyClient.sol";
-import {ScaleCodec} from "./utils/ScaleCodec.sol";
 
 /**
  * @title BeefyClientWrapper
@@ -34,7 +33,11 @@ contract BeefyClientWrapper {
     uint256 public maxRefundAmount;
 
     // Progress-based refund target
-    uint256 public refundTarget; // Blocks of progress for 100% gas refund (e.g., 300 = ~30 min)
+    uint256 public refundTarget; // Blocks of progress for 100% gas refund (e.g., 350 = ~35 min)
+
+    // Highest commitment block number currently in progress (helps relayers avoid duplicate work)
+    uint256 public highestPendingBlock;
+    uint256 public highestPendingBlockTimestamp;
 
     constructor(
         address _beefyClient,
@@ -65,8 +68,14 @@ contract BeefyClientWrapper {
 
         beefyClient.submitInitial(commitment, bitfield, proof);
 
-        bytes32 commitmentHash = keccak256(_encodeCommitment(commitment));
+        bytes32 commitmentHash = beefyClient.computeCommitmentHash(commitment);
         ticketOwner[commitmentHash] = msg.sender;
+
+        // Track highest pending block so other relayers can check before starting
+        if (commitment.blockNumber > highestPendingBlock) {
+            highestPendingBlock = commitment.blockNumber;
+            highestPendingBlockTimestamp = block.timestamp;
+        }
 
         _creditGas(startGas, commitmentHash);
     }
@@ -96,7 +105,7 @@ contract BeefyClientWrapper {
         // Capture previous state for progress calculation
         uint64 previousBeefyBlock = beefyClient.latestBeefyBlock();
 
-        bytes32 commitmentHash = keccak256(_encodeCommitment(commitment));
+        bytes32 commitmentHash = beefyClient.computeCommitmentHash(commitment);
         if (ticketOwner[commitmentHash] != msg.sender) {
             revert NotTicketOwner();
         }
@@ -105,6 +114,12 @@ contract BeefyClientWrapper {
 
         // Calculate progress
         uint256 progress = commitment.blockNumber - previousBeefyBlock;
+
+        // Clear highest pending block if light client has caught up
+        if (beefyClient.latestBeefyBlock() >= highestPendingBlock) {
+            highestPendingBlock = 0;
+            highestPendingBlockTimestamp = 0;
+        }
 
         uint256 previousGas = creditedGas[commitmentHash];
         delete creditedGas[commitmentHash];
@@ -173,29 +188,23 @@ contract BeefyClientWrapper {
     }
 
     /**
-     * @dev Calculate and send refund based on progress made.
+     * @dev Calculate and send refund if progress meets threshold.
      *
-     * Refund: Scales from 0% to 100% as progress goes from 0 to refundTarget.
-     *
-     * Example with refundTarget=300:
-     * - 150 blocks progress: 50% gas refund
-     * - 300 blocks progress: 100% gas refund
-     * - 600 blocks progress: 100% gas refund (capped)
+     * Refund if progress >= refundTarget.
      */
     function _refundWithProgress(uint256 startGas, uint256 previousGas, uint256 progress) internal {
+        if (progress < refundTarget) {
+            return;
+        }
+
         uint256 currentGas = startGas - gasleft() + 21000;
         uint256 totalGasUsed = currentGas + previousGas;
         uint256 effectiveGasPrice = tx.gasprice < maxGasPrice ? tx.gasprice : maxGasPrice;
-        uint256 baseRefund = totalGasUsed * effectiveGasPrice;
+        uint256 refundAmount = totalGasUsed * effectiveGasPrice;
 
-        // Cap base refund
-        if (baseRefund > maxRefundAmount) {
-            baseRefund = maxRefundAmount;
+        if (refundAmount > maxRefundAmount) {
+            refundAmount = maxRefundAmount;
         }
-
-        // Calculate refund ratio (0-100%)
-        uint256 refundRatio = progress >= refundTarget ? 100 : (progress * 100) / refundTarget;
-        uint256 refundAmount = (baseRefund * refundRatio) / 100;
 
         if (refundAmount > 0 && address(this).balance >= refundAmount) {
             (bool success,) = payable(msg.sender).call{value: refundAmount}("");
@@ -203,24 +212,6 @@ contract BeefyClientWrapper {
                 emit SubmissionRefunded(msg.sender, progress, refundAmount, totalGasUsed);
             }
         }
-    }
-
-    function _encodeCommitment(IBeefyClient.Commitment calldata commitment) internal pure returns (bytes memory) {
-        return bytes.concat(
-            _encodeCommitmentPayload(commitment.payload),
-            ScaleCodec.encodeU32(commitment.blockNumber),
-            ScaleCodec.encodeU64(commitment.validatorSetID)
-        );
-    }
-
-    function _encodeCommitmentPayload(IBeefyClient.PayloadItem[] calldata items) internal pure returns (bytes memory) {
-        bytes memory payload = ScaleCodec.checkedEncodeCompactU32(items.length);
-        for (uint256 i = 0; i < items.length; i++) {
-            payload = bytes.concat(
-                payload, items[i].payloadID, ScaleCodec.checkedEncodeCompactU32(items[i].data.length), items[i].data
-            );
-        }
-        return payload;
     }
 
     /* Admin Functions */
@@ -273,15 +264,16 @@ contract BeefyClientWrapper {
         view
         returns (uint256 refundAmount)
     {
-        uint256 effectiveGasPrice = gasPrice < maxGasPrice ? gasPrice : maxGasPrice;
-        uint256 baseRefund = gasUsed * effectiveGasPrice;
-
-        if (baseRefund > maxRefundAmount) {
-            baseRefund = maxRefundAmount;
+        if (progress < refundTarget) {
+            return 0;
         }
 
-        uint256 refundRatio = progress >= refundTarget ? 100 : (progress * 100) / refundTarget;
-        refundAmount = (baseRefund * refundRatio) / 100;
+        uint256 effectiveGasPrice = gasPrice < maxGasPrice ? gasPrice : maxGasPrice;
+        refundAmount = gasUsed * effectiveGasPrice;
+
+        if (refundAmount > maxRefundAmount) {
+            refundAmount = maxRefundAmount;
+        }
     }
 
     receive() external payable {
