@@ -1,22 +1,52 @@
-use sp1_sdk::{utils, ProverClient, SP1Stdin};
+use sp1_sdk::{utils, HashableKey, ProverClient, SP1Stdin};
 use std::fs;
 
 use serde::{Deserialize, Serialize};
 
-// Import the types from the program
-pub use sp1_beefy_client::Commitment;
-pub use sp1_beefy_client::MMRLeaf;
-pub use sp1_beefy_client::PayloadItem;
-pub use sp1_beefy_client::ValidatorProof;
+// Types matching the program inputs
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Commitment {
+    pub block_number: u32,
+    pub validator_set_id: u64,
+    pub payload: Vec<PayloadItem>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PayloadItem {
+    pub payload_id: [u8; 2],
+    pub data: Vec<u8>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ValidatorProof {
+    pub v: u8,
+    pub r: [u8; 32],
+    pub s: [u8; 32],
+    pub index: u32,
+    pub account: [u8; 20],
+    pub proof: Vec<[u8; 32]>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MMRLeaf {
+    pub version: u8,
+    pub parent_number: u32,
+    pub parent_hash: [u8; 32],
+    pub next_authority_set_id: u64,
+    pub next_authority_set_len: u32,
+    pub next_authority_set_root: [u8; 32],
+    pub parachain_heads_root: [u8; 32],
+}
 
 /// The ELF of the program.
-pub const BEEFY_CLIENT_ELF: &[u8] =
-    include_bytes!("../../program/target/riscv32im-succinct-zkvm-elf/release/sp1-beefy-client");
+pub const BEEFY_CLIENT_ELF: &[u8] = include_bytes!(
+    "../../program/target/elf-compilation/riscv32im-succinct-zkvm-elf/release/sp1-beefy-client"
+);
 
 fn main() -> anyhow::Result<()> {
     utils::setup_logger();
-    let client = ProverClient::new();
-    let (_, vk) = client.setup(BEEFY_CLIENT_ELF);
+    let client = ProverClient::from_env();
+    let (pk, vk) = client.setup(BEEFY_CLIENT_ELF);
     println!("Generated verification key: {}", vk.bytes32());
 
     // Create the stdin for the program
@@ -73,21 +103,19 @@ fn main() -> anyhow::Result<()> {
     }
 
     // Execute the program
-    let (proof, public_values) = client.execute(BEEFY_CLIENT_ELF, &stdin).run()?;
+    let proof = client.prove(&pk, &stdin).run()?;
 
     // Verify the proof
-    client
-        .verify(BEEFY_CLIENT_ELF, &proof, &public_values)
-        .run()?;
+    client.verify(&proof, &vk)?;
 
     println!("Proof verified successfully!");
-    println!("Public values: {:?}", public_values);
+    println!("Public values: {:?}", proof.public_values);
 
     // Save proof and public values for on-chain verification
     fs::write("proof.bin", hex::encode(proof.bytes()))?;
     fs::write(
         "public_values.json",
-        serde_json::to_string_pretty(&public_values)?,
+        serde_json::to_string_pretty(&proof.public_values)?,
     )?;
 
     Ok(())

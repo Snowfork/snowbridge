@@ -4,19 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-sp1-sdk = { git = "https://github.com/succinctlabs/sp1.git" }
 sp1-zkvm = { git = "https://github.com/succinctlabs/sp1.git" }
 serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-hex = "0.4"
 sha3 = "0.10"
 sha2 = "0.10"
 k256 = { version = "0.13", features = ["ecdsa"] }
-rlp = "0.5"
-tiny-keccak = { version = "2.0", features = ["keccak"] }
-anyhow = "1.0"
-log = "0.4"
-env_logger = "0.10"
 
 [build-dependencies]
 sp1-build = { git = "https://github.com/succinctlabs/sp1.git" }

@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 use sha3::{Digest, Keccak256};
 use sp1_zkvm::io::{commit, read};
+use std::sync::{LazyLock, Mutex};
 
 // Types representing the core data structures
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -51,18 +52,31 @@ const MMR_ROOT_ID: [u8; 2] = *b"mh";
 const FIAT_SHAMIR_DOMAIN_ID: &[u8] = b"SNOWBRIDGE-FIAT-SHAMIR-v1";
 
 // Global state variables (in a real implementation, these would be stored in the contract)
-static mut LATEST_MMR_ROOT: [u8; 32] = [0u8; 32];
-static mut LATEST_BEEFY_BLOCK: u64 = 0;
-static mut CURRENT_VALIDATOR_SET: ValidatorSet = ValidatorSet {
-    id: 0,
-    length: 0,
-    root: [0u8; 32],
-};
-static mut NEXT_VALIDATOR_SET: ValidatorSet = ValidatorSet {
-    id: 0,
-    length: 0,
-    root: [0u8; 32],
-};
+#[derive(Debug, Clone)]
+struct State {
+    latest_mmr_root: [u8; 32],
+    latest_beefy_block: u64,
+    current_validator_set: ValidatorSet,
+    next_validator_set: ValidatorSet,
+}
+
+static STATE: LazyLock<Mutex<State>> = LazyLock::new(|| {
+    Mutex::new(State {
+        latest_mmr_root: [0u8; 32],
+        latest_beefy_block: 0,
+        current_validator_set: ValidatorSet {
+            id: 0,
+            length: 0,
+            root: [0u8; 32],
+        },
+        next_validator_set: ValidatorSet {
+            id: 0,
+            length: 0,
+            root: [0u8; 32],
+        },
+    })
+});
+
 fn main() {
     submit_fiat_shamir();
 }
@@ -78,38 +92,36 @@ fn submit_fiat_shamir() {
 
     // Verify all validator proofs
     let commitment_hash = hash_commitment(&commitment);
-    let validator_set = unsafe {
-        if (commitment.validator_set_id as u128) == CURRENT_VALIDATOR_SET.id {
-            &CURRENT_VALIDATOR_SET
-        } else if (commitment.validator_set_id as u128) == NEXT_VALIDATOR_SET.id {
-            &NEXT_VALIDATOR_SET
-        } else {
-            panic!("Invalid commitment");
-        }
+    let mut state = STATE.lock().unwrap();
+    let validator_set = if (commitment.validator_set_id as u128) == state.current_validator_set.id {
+        state.current_validator_set.clone()
+    } else if (commitment.validator_set_id as u128) == state.next_validator_set.id {
+        state.next_validator_set.clone()
+    } else {
+        panic!("Invalid commitment");
     };
-    verify_fiat_shamir_commitment(validator_set, &bitfield, &proofs, &commitment_hash);
+
+    verify_fiat_shamir_commitment(&validator_set, &bitfield, &proofs, &commitment_hash);
 
     // Verify MMR proof
     verify_mmr_proof(&commitment, &leaf, &leaf_proof, &leaf_proof_order);
 
     // Update state
-    unsafe {
-        LATEST_MMR_ROOT = extract_mmr_root(&commitment);
-        LATEST_BEEFY_BLOCK = commitment.block_number as u64;
+    state.latest_mmr_root = extract_mmr_root(&commitment);
+    state.latest_beefy_block = commitment.block_number as u64;
 
-        if (commitment.validator_set_id as u128) == NEXT_VALIDATOR_SET.id {
-            CURRENT_VALIDATOR_SET = NEXT_VALIDATOR_SET.clone();
-            NEXT_VALIDATOR_SET = ValidatorSet {
-                id: (commitment.validator_set_id as u128) + 1,
-                length: leaf.next_authority_set_len as u128,
-                root: leaf.next_authority_set_root,
-            };
-        }
+    if (commitment.validator_set_id as u128) == state.next_validator_set.id {
+        state.current_validator_set = state.next_validator_set.clone();
+        state.next_validator_set = ValidatorSet {
+            id: (commitment.validator_set_id as u128) + 1,
+            length: leaf.next_authority_set_len as u128,
+            root: leaf.next_authority_set_root,
+        };
     }
 
     // Commit the results
-    commit(&unsafe { LATEST_MMR_ROOT });
-    commit(&unsafe { LATEST_BEEFY_BLOCK }.to_le_bytes());
+    commit(&state.latest_mmr_root);
+    commit(&state.latest_beefy_block.to_le_bytes());
 }
 
 // Helper functions
