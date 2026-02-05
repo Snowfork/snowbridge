@@ -148,10 +148,11 @@ export async function createTransferEvm(
     const xcTokenAddress = ethChain.xcTokenMap[tokenAddress]
     const contract = new Contract(ethChain.precompile, PALLET_XCM_PRECOMPILE)
 
-    const messageId = await buildMessageId(
-        parachain,
+    const accountNonce = await sourceParachainImpl.accountNonce(sourceAccountHex)
+    const messageId = buildMessageId(
         sourceParachainImpl.parachainId,
         sourceAccountHex,
+        accountNonce,
         tokenAddress,
         beneficiaryAccount,
         amount,
