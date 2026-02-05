@@ -109,6 +109,7 @@ jobs:
       - name: Publish Base Types
         working-directory: web/packages/base-types
         run: |
+          echo 'Here' $NODE_AUTH_TOKEN $NPM_TOKEN
           pnpm publish --no-git-checks --access public
 
       - name: Publish Contracts
