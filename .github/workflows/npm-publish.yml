@@ -39,7 +39,6 @@ jobs:
           cache-dependency-path: web
           cache: "pnpm"
           registry-url: "https://registry.npmjs.org"
-        run: unset NODE_AUTH_TOKEN
 
       - name: Install dependencies
         working-directory: contracts
@@ -109,6 +108,8 @@ jobs:
 
       - name: Publish Base Types
         working-directory: web/packages/base-types
+        env:
+          NODE_AUTH_TOKEN: ''
         run: |
           echo 'Here' $NODE_AUTH_TOKEN $NPM_TOKEN
           cat $NPM_CONFIG_USERCONFIG
@@ -116,21 +117,29 @@ jobs:
 
       - name: Publish Contracts
         working-directory: web/packages/contracts
+        env:
+          NODE_AUTH_TOKEN: ''
         run: |
           pnpm publish --no-git-checks --access public
 
       - name: Publish Contract Types
         working-directory: web/packages/contract-types
+        env:
+          NODE_AUTH_TOKEN: ''
         run: |
           pnpm publish --no-git-checks --access public
 
       - name: Publish API
         working-directory: web/packages/api
+        env:
+          NODE_AUTH_TOKEN: ''
         run: |
           pnpm publish --no-git-checks --access public
 
       - name: Publish Registry
         working-directory: web/packages/registry
+        env:
+          NODE_AUTH_TOKEN: ''
         run: |
           pnpm publish --no-git-checks --access public
 
