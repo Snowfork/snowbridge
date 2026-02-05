@@ -749,21 +749,62 @@ contract RejectingRecipient {
     }
 }
 
+/**
+ * @dev Contract relayer that rejects ETH refunds for testing failed refund transfers
+ */
+contract RejectingRelayer {
+    BeefyClientWrapper public wrapper;
+
+    constructor(BeefyClientWrapper _wrapper) {
+        wrapper = _wrapper;
+    }
+
+    function submitInitial(
+        IBeefyClient.Commitment calldata commitment,
+        uint256[] calldata bitfield,
+        IBeefyClient.ValidatorProof calldata proof
+    ) external {
+        wrapper.submitInitial(commitment, bitfield, proof);
+    }
+
+    function commitPrevRandao(bytes32 commitmentHash) external {
+        wrapper.commitPrevRandao(commitmentHash);
+    }
+
+    function submitFinal(
+        IBeefyClient.Commitment calldata commitment,
+        uint256[] calldata bitfield,
+        IBeefyClient.ValidatorProof[] calldata proofs,
+        IBeefyClient.MMRLeaf calldata leaf,
+        bytes32[] calldata leafProof,
+        uint256 leafProofOrder
+    ) external {
+        wrapper.submitFinal(commitment, bitfield, proofs, leaf, leafProof, leafProofOrder);
+    }
+
+    // Reject ETH transfers
+    receive() external payable {
+        revert("No refunds accepted");
+    }
+}
+
 contract BeefyClientWrapperTransferFailedTest is Test {
     BeefyClientWrapper wrapper;
     MockBeefyClient mockBeefyClient;
     RejectingRecipient rejectingRecipient;
 
     address owner = address(0x1);
+    uint256 constant INITIAL_BEEFY_BLOCK = 1000;
+    uint256 constant REFUND_TARGET = 350;
 
     function setUp() public {
-        mockBeefyClient = new MockBeefyClient(1000);
+        mockBeefyClient = new MockBeefyClient(uint64(INITIAL_BEEFY_BLOCK));
         wrapper = new BeefyClientWrapper(
             address(mockBeefyClient),
             owner,
             100 gwei,
             0.05 ether,
-            350
+            REFUND_TARGET
         );
         vm.deal(address(wrapper), 100 ether);
         rejectingRecipient = new RejectingRecipient();
@@ -773,5 +814,43 @@ contract BeefyClientWrapperTransferFailedTest is Test {
         vm.prank(owner);
         vm.expectRevert(BeefyClientWrapper.TransferFailed.selector);
         wrapper.withdrawFunds(payable(address(rejectingRecipient)), 1 ether);
+    }
+
+    function test_refundFailsWhenRelayerRejectsETH() public {
+        // Create a relayer contract that rejects ETH
+        RejectingRelayer rejectingRelayer = new RejectingRelayer(wrapper);
+
+        // Create commitment with enough progress for refund
+        uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + REFUND_TARGET);
+        IBeefyClient.PayloadItem[] memory payload = new IBeefyClient.PayloadItem[](1);
+        payload[0] = IBeefyClient.PayloadItem(bytes2("mh"), abi.encodePacked(bytes32(0)));
+        IBeefyClient.Commitment memory commitment = IBeefyClient.Commitment(newBlockNumber, 1, payload);
+
+        uint256[] memory bitfield = new uint256[](1);
+        bytes32[] memory proof = new bytes32[](0);
+        IBeefyClient.ValidatorProof memory validatorProof = IBeefyClient.ValidatorProof(27, bytes32(0), bytes32(0), 0, address(0), proof);
+        IBeefyClient.ValidatorProof[] memory proofs = new IBeefyClient.ValidatorProof[](1);
+        proofs[0] = validatorProof;
+        IBeefyClient.MMRLeaf memory leaf = IBeefyClient.MMRLeaf(1, 0, bytes32(0), 1, 100, bytes32(0), bytes32(0));
+        bytes32[] memory leafProof = new bytes32[](0);
+
+        uint256 wrapperBalanceBefore = address(wrapper).balance;
+
+        // Submit through the rejecting relayer
+        vm.txGasPrice(50 gwei);
+        rejectingRelayer.submitInitial(commitment, bitfield, validatorProof);
+
+        bytes32 commitmentHash = mockBeefyClient.computeCommitmentHash(commitment);
+        rejectingRelayer.commitPrevRandao(commitmentHash);
+
+        // submitFinal should succeed even though refund transfer fails
+        rejectingRelayer.submitFinal(commitment, bitfield, proofs, leaf, leafProof, 0);
+
+        // Verify submission succeeded
+        assertEq(mockBeefyClient.submitFinalCount(), 1);
+        assertEq(mockBeefyClient.latestBeefyBlock(), newBlockNumber);
+
+        // Verify no refund was sent (wrapper balance unchanged)
+        assertEq(address(wrapper).balance, wrapperBalanceBefore);
     }
 }

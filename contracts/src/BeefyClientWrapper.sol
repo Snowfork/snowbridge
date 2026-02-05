@@ -7,8 +7,8 @@ import {IBeefyClient} from "./interfaces/IBeefyClient.sol";
 /**
  * @title BeefyClientWrapper
  * @dev Forwards BeefyClient submissions and refunds gas costs to relayers.
- * Anyone can relay. Uses progress-based refunds: the more blocks a relayer
- * advances the light client, the higher percentage of gas refund they receive.
+ * Anyone can relay. Refunds are only paid when the relayer advances the light
+ * client by at least `refundTarget` blocks, ensuring meaningful progress.
  */
 contract BeefyClientWrapper {
     event GasCredited(address indexed relayer, bytes32 indexed commitmentHash, uint256 gasUsed);
