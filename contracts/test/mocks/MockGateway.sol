@@ -100,7 +100,7 @@ contract MockGateway is Gateway {
             revert IGatewayV2.InsufficientGasLimit();
         }
 
-        try this.v2_dispatchCommand{gas: requiredGas}(command, origin) {
+        try this.v2_dispatchCommand{gas: command.gas}(command, origin) {
             return true;
         } catch {
             return false;
