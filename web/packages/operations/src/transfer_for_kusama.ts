@@ -1,8 +1,8 @@
 import "dotenv/config"
 import { Keyring } from "@polkadot/keyring"
 import { Context, forKusama } from "@snowbridge/api"
-import { assetRegistryFor, environmentFor } from "@snowbridge/registry"
 import { Direction } from "@snowbridge/api/dist/forKusama"
+import { bridgeInfoFor } from "@snowbridge/registry"
 
 export const transferForKusama = async (
     transferName: string,
@@ -14,7 +14,7 @@ export const transferForKusama = async (
     if (process.env.NODE_ENV !== undefined) {
         env = process.env.NODE_ENV
     }
-    const snowbridgeEnv = environmentFor(env)
+    const { registry, environment: snowbridgeEnv } = bridgeInfoFor(env)
     if (snowbridgeEnv === undefined) {
         throw Error(`Unknown environment '${env}'`)
     }
@@ -39,8 +39,6 @@ export const transferForKusama = async (
         ? polkadot_keyring.addFromUri(process.env["DEST_SUBSTRATE_KEY"])
         : polkadot_keyring.addFromUri("//Ferdie")
 
-    const registry = assetRegistryFor(env)
-
     const SOURCE_ACCOUNT_PUBLIC = SOURCE_ACCOUNT.address
     const DEST_ACCOUNT_PUBLIC = DEST_ACCOUNT.address
 
@@ -59,7 +57,7 @@ export const transferForKusama = async (
         tokenAddress = "0x0000000000000000000000000000000000000000"
     } else {
         // look for Ethereum assets
-        const assets = registry.ethereumChains[registry.ethChainId].assets
+        const assets = registry.ethereumChains[`ethereum_${registry.ethChainId}`].assets
         for (const [token, asset] of Object.entries(assets)) {
             if (asset.symbol === tokenName) {
                 tokenAddress = token
@@ -69,7 +67,7 @@ export const transferForKusama = async (
 
     if (!tokenAddress) {
         // look for Parachain assets
-        const assets = registry.parachains[registry.assetHubParaId].assets
+        const assets = registry.parachains[`polkadot_${registry.assetHubParaId}`].assets
         for (const [token, asset] of Object.entries(assets)) {
             if (asset.symbol === tokenName) {
                 tokenAddress = token

@@ -1,6 +1,6 @@
 {
   "name": "@snowbridge/registry",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Snowbridge Asset Registry",
   "license": "Apache-2.0",
   "repository": {
@@ -12,7 +12,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc --build --force && tsc -p tsconfig.scripts.json",
-    "build-registry": "npx ts-node scripts/buildRegistry.ts",
+    "build-registry": "npx ts-node scripts/buildRegistry.ts && pnpm format",
     "lint": "eslint .",
     "format": "prettier src --write && prettier scripts --write"
   },

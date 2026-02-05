@@ -16,14 +16,398 @@ import {
     PrecompileMap,
     XC20TokenMap,
     XcmVersion,
+    BridgeInfo,
+    TransferRoute,
+    ChainId,
+    ChainKey,
+    ParachainKind,
 } from "@snowbridge/base-types"
 import { ApiPromise, HttpProvider, WsProvider } from "@polkadot/api"
 import { isFunction } from "@polkadot/util"
 import { writeFile } from "fs/promises"
-import { environmentFor } from "../src"
 import { AbstractProvider, Contract, ethers } from "ethers"
 import { IGatewayV1__factory as IGateway__factory } from "@snowbridge/contract-types"
 import { parachains as ParaImpl, xcmBuilder, assetsV2 } from "@snowbridge/api"
+
+export type Path = {
+    source: ChainId
+    destination: ChainId
+    asset: string
+}
+
+const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
+    local_e2e: {
+        name: "local_e2e",
+        ethChainId: 11155111,
+        beaconApiUrl: "http://127.0.0.1:9596",
+        ethereumChains: {
+            "11155111": "ws://127.0.0.1:8546",
+        },
+        relaychainUrl: "ws://127.0.0.1:9944",
+        parachains: {
+            "1000": "ws://127.0.0.1:12144",
+            "1002": "ws://127.0.0.1:11144",
+            "2000": "ws://127.0.0.1:13144",
+        },
+        gatewayContract: "0xb1185ede04202fe62d38f5db72f71e38ff3e8305",
+        beefyContract: "0x83428c7db9815f482a39a1715684dcf755021997",
+        assetHubParaId: 1000,
+        bridgeHubParaId: 1002,
+        v2_parachains: [1000],
+        indexerGraphQlUrl: "http://127.0.0.1/does/not/exist",
+    },
+    paseo_sepolia: {
+        name: "paseo_sepolia",
+        ethChainId: 11155111,
+        beaconApiUrl: "https://lodestar-sepolia.chainsafe.io",
+        ethereumChains: {
+            "11155111": "https://ethereum-sepolia-rpc.publicnode.com",
+        },
+        relaychainUrl: "wss://paseo-rpc.n.dwellir.com",
+        parachains: {
+            "1000": "wss://asset-hub-paseo-rpc.n.dwellir.com",
+            "1002": "wss://bridge-hub-paseo.dotters.network",
+            "3369": "wss://paseo-muse-rpc.polkadot.io",
+            "2043": `wss://parachain-testnet-rpc.origin-trail.network`,
+        },
+        gatewayContract: "0x1607C1368bc943130258318c91bBd8cFf3D063E6",
+        beefyContract: "0x2c780945beb1241fE9c645800110cb9C4bBbb639",
+        assetHubParaId: 1000,
+        bridgeHubParaId: 1002,
+        v2_parachains: [1000],
+        indexerGraphQlUrl:
+            "https://snowbridge.squids.live/snowbridge-subsquid-paseo@v1/api/graphql",
+        metadataOverrides: {
+            // Change the name of TRAC
+            "0xef32abea56beff54f61da319a7311098d6fbcea9": {
+                name: "OriginTrail TRAC",
+                symbol: "TRAC",
+            },
+        },
+    },
+    polkadot_mainnet: {
+        name: "polkadot_mainnet",
+        ethChainId: 1,
+        beaconApiUrl: "https://lodestar-mainnet.chainsafe.io",
+        ethereumChains: {
+            "1": "https://ethereum-rpc.publicnode.com",
+            "1284": "https://rpc.api.moonbeam.network",
+            "8453": "https://base-rpc.publicnode.com",
+        },
+        relaychainUrl: "https://polkadot-rpc.n.dwellir.com",
+        parachains: {
+            "1000": "wss://asset-hub-polkadot-rpc.n.dwellir.com",
+            "1002": "https://bridge-hub-polkadot-rpc.n.dwellir.com",
+            "3369": "wss://polkadot-mythos-rpc.polkadot.io",
+            "2034": "wss://hydration-rpc.n.dwellir.com",
+            "2030": "wss://bifrost-polkadot.ibp.network",
+            "2004": "wss://moonbeam.ibp.network",
+            "2000": "wss://acala-rpc-0.aca-api.network",
+            "2043": "wss://parachain-rpc.origin-trail.network",
+            // TODO: Add back in jampton once we have an indexer in place.
+            //"3397": "wss://rpc.jamton.network",
+        },
+        gatewayContract: "0x27ca963c279c93801941e1eb8799c23f407d68e7",
+        beefyContract: "0x1817874feAb3ce053d0F40AbC23870DB35C2AFfc",
+        assetHubParaId: 1000,
+        bridgeHubParaId: 1002,
+        v2_parachains: [1000],
+        indexerGraphQlUrl:
+            "https://snowbridge.squids.live/snowbridge-subsquid-polkadot@v2/api/graphql",
+        kusama: {
+            assetHubParaId: 1000,
+            bridgeHubParaId: 1002,
+            parachains: {
+                "1000": "wss://asset-hub-kusama-rpc.n.dwellir.com",
+                "1002": "https://bridge-hub-kusama-rpc.n.dwellir.com",
+            },
+        },
+        precompiles: {
+            // Add override for mythos token and add precompile for moonbeam
+            "2004": "0x000000000000000000000000000000000000081a",
+        },
+        metadataOverrides: {
+            // Change the name of TRAC
+            "0xaa7a9ca87d3694b5755f213b5d04094b8d0f0a6f": {
+                name: "OriginTrail TRAC",
+            },
+        },
+        l2Bridge: {
+            acrossAPIUrl: "https://app.across.to/api",
+            l1AdapterAddress: "0x313E8c9Fb47613f2B1A436bE978c2BB75727fcC5",
+            l1HandlerAddress: "0x924a9f036260DdD5808007E1AA95f08eD08aA569",
+            l1FeeTokenAddress: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+            l1SwapQuoterAddress: "0x61fFE014bA17989E743c5F6cB21bF9697530B21e",
+            l1SwapRouterAddress: "0xE592427A0AEce92De3Edee1F18E0157C05861564",
+            l2Chains: {
+                "8453": {
+                    adapterAddress: "0xCd5d2c665E3AC84bF5c67FE7a0C48748dA40db2F",
+                    feeTokenAddress: "0x4200000000000000000000000000000000000006",
+                    swapRoutes: [
+                        // WETH
+                        {
+                            inputToken: "0x4200000000000000000000000000000000000006",
+                            outputToken: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                            swapFee: 0,
+                        },
+                        // USDC
+                        {
+                            inputToken: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+                            outputToken: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+                            swapFee: 500,
+                        },
+                    ],
+                },
+            },
+        },
+    },
+    westend_sepolia: {
+        name: "westend_sepolia",
+        ethChainId: 11155111,
+        beaconApiUrl: "https://lodestar-sepolia.chainsafe.io",
+        ethereumChains: {
+            "11155111": "https://ethereum-sepolia-rpc.publicnode.com",
+            "84532": "https://base-sepolia-rpc.publicnode.com",
+        },
+        relaychainUrl: "wss://westend-rpc.n.dwellir.com",
+        parachains: {
+            "1000": "wss://asset-hub-westend-rpc.n.dwellir.com",
+            "1002": "wss://bridge-hub-westend-rpc.n.dwellir.com",
+        },
+        gatewayContract: "0x9ed8b47bc3417e3bd0507adc06e56e2fa360a4e9",
+        beefyContract: "0xA04460B1D8bBef33F54edB2C3115e3E4D41237A6",
+        assetHubParaId: 1000,
+        bridgeHubParaId: 1002,
+        v2_parachains: [1000],
+        indexerGraphQlUrl:
+            "https://snowbridge.squids.live/snowbridge-subsquid-westend@v1/api/graphql",
+        l2Bridge: {
+            acrossAPIUrl: "https://testnet.across.to/api",
+            l1AdapterAddress: "0xA5B8589bD534701be49916c4d2e634aB1c765Cbf",
+            l1HandlerAddress: "0x924a9f036260DdD5808007E1AA95f08eD08aA569",
+            l1FeeTokenAddress: "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14",
+            l1SwapRouterAddress: "0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E",
+            l1SwapQuoterAddress: "0xEd1f6473345F45b75F8179591dd5bA1888cf2FB3",
+            l2Chains: {
+                "84532": {
+                    adapterAddress: "0xf06939613A3838Af11104c898758220dB9093679",
+                    feeTokenAddress: "0x4200000000000000000000000000000000000006",
+                    swapRoutes: [
+                        // WETH
+                        {
+                            inputToken: "0x4200000000000000000000000000000000000006",
+                            outputToken: "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+                            swapFee: 0,
+                        },
+                        // USDC
+                        {
+                            inputToken: "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
+                            outputToken: "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
+                            swapFee: 500,
+                        },
+                    ],
+                },
+            },
+        },
+    },
+}
+
+export function defaultPathFilter(envName: string): (_: Path) => boolean {
+    switch (envName) {
+        case "westend_sepolia": {
+            return (path: Path) => {
+                // Frequency
+                if (path.asset === "0x72c610e05eaafcdf1fa7a2da15374ee90edb1620") {
+                    return false
+                }
+                // Disable para to para transfers
+                if (path.source.kind === "polkadot" && path.destination.kind === "polkadot") {
+                    return false
+                }
+                return true
+            }
+        }
+        case "paseo_sepolia":
+            return (path: Path) => {
+                // Disallow MUSE to any location but 3369
+                if (
+                    path.asset === "0xb34a6924a02100ba6ef12af1c798285e8f7a16ee" &&
+                    ((path.destination.id !== 3369 && path.source.kind === "ethereum") ||
+                        (path.source.id !== 3369 && path.source.kind === "polkadot"))
+                ) {
+                    return false
+                }
+                // Disable para to para transfers
+                if (path.source.kind === "polkadot" && path.destination.kind === "polkadot") {
+                    return false
+                }
+                return true
+            }
+        case "polkadot_mainnet":
+            return (path: Path) => {
+                // Disallow MYTH to any location but 3369
+                if (
+                    path.asset === "0xba41ddf06b7ffd89d1267b5a93bfef2424eb2003" &&
+                    ((path.destination.id !== 3369 && path.source.kind === "ethereum") ||
+                        (path.source.id !== 3369 && path.source.kind === "polkadot"))
+                ) {
+                    return false
+                }
+
+                // Allow TRAC to go to Hydration (2034) and Neuroweb (2043) only
+                if (
+                    path.asset === "0xaa7a9ca87d3694b5755f213b5d04094b8d0f0a6f" &&
+                    ((path.destination.id !== 2034 &&
+                        path.destination.id !== 2043 &&
+                        path.source.kind === "ethereum") ||
+                        (path.source.id !== 2034 &&
+                            path.source.id !== 2043 &&
+                            path.source.kind === "polkadot"))
+                ) {
+                    return false
+                }
+
+                // Disable stable coins in the UI from Ethereum to Polkadot
+                if (
+                    (path.asset === "0x9d39a5de30e57443bff2a8307a4256c8797a3497" || // Staked USDe
+                        path.asset === "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd" || // Savings USD
+                        path.asset === "0x6b175474e89094c44da98b954eedeac495271d0f") && // DAI
+                    path.destination.id === 2034 // Hydration
+                ) {
+                    return false
+                }
+                // Disable para to para transfers except for hydration
+                if (
+                    path.source.kind === "polkadot" &&
+                    path.destination.kind === "polkadot" &&
+                    !(
+                        (path.source.id === 2034 && path.destination.id == 1000) ||
+                        (path.source.id === 1000 && path.destination.id === 2034)
+                    )
+                ) {
+                    return false
+                }
+                return true
+            }
+
+        default:
+            return (_: Path) => true
+    }
+}
+
+function buildTransferLocations(
+    registry: AssetRegistry,
+    filter?: (path: Path) => boolean,
+): TransferRoute[] {
+    const ethChain = registry.ethereumChains[`ethereum_${registry.ethChainId}`]
+    const parachains = Object.values(registry.parachains).filter(
+        (p) => !(p.kind === "polkadot" && p.id === registry.bridgeHubParaId),
+    )
+
+    const pathFilter = filter ?? defaultPathFilter(registry.environment)
+
+    const locations: Path[] = []
+
+    const ethAssets = Object.keys(ethChain.assets)
+    // Bridged paths
+    for (const parachain of parachains) {
+        const destinationAssets = Object.keys(parachain.assets)
+        const commonAssets = new Set(
+            ethAssets.filter((sa) => destinationAssets.find((da) => da === sa)),
+        )
+        for (const asset of commonAssets) {
+            const p1: Path = {
+                source: { kind: ethChain.kind, id: ethChain.id },
+                destination: { kind: parachain.kind, id: parachain.id },
+                asset,
+            }
+            if (pathFilter(p1)) {
+                locations.push(p1)
+            }
+            const p2: Path = {
+                source: p1.destination,
+                destination: p1.source,
+                asset,
+            }
+            if (pathFilter(p2)) {
+                locations.push(p2)
+            }
+            if (
+                parachain.info.evmChainId &&
+                registry.ethereumChains[`ethereum_${parachain.info.evmChainId}`]
+            ) {
+                const p3: Path = {
+                    source: {
+                        kind: "ethereum",
+                        id: parachain.info.evmChainId,
+                    },
+                    destination: p1.source, // Ethereum
+                    asset,
+                }
+                if (pathFilter(p3)) {
+                    locations.push(p3)
+                }
+            }
+        }
+    }
+
+    // Local paths
+    const assetHub = registry.parachains[`polkadot_${registry.assetHubParaId}`]
+    for (const parachain of parachains) {
+        if (parachain.kind === assetHub.kind && parachain.id === assetHub.id) continue
+        const assetHubAssets = Object.keys(assetHub.assets)
+        const destinationAssets = Object.keys(parachain.assets)
+
+        // The asset exists on ethereum, parachain and asset hub
+        const commonAssets = new Set(
+            ethAssets.filter(
+                (sa) =>
+                    assetHubAssets.find((da) => da === sa) &&
+                    destinationAssets.find((da) => da === sa),
+            ),
+        )
+        for (const asset of commonAssets) {
+            const p1: Path = {
+                source: { kind: assetHub.kind, id: assetHub.id },
+                destination: { kind: parachain.kind, id: parachain.id },
+                asset,
+            }
+            if (pathFilter(p1)) {
+                locations.push(p1)
+            }
+            const p2: Path = {
+                source: p1.destination, // Parachain
+                destination: p1.source, // Asset Hub
+                asset,
+            }
+            if (pathFilter(p2)) {
+                locations.push(p2)
+            }
+        }
+    }
+
+    const results: TransferRoute[] = []
+    for (const location of locations) {
+        let source = results.find(
+            (s) =>
+                s.from.kind === location.source.kind &&
+                s.from.id === location.source.id &&
+                s.to.kind === location.destination.kind &&
+                s.to.id === location.destination.id,
+        )
+
+        if (!source) {
+            source = {
+                from: location.source,
+                to: location.destination,
+                assets: [],
+            }
+            results.push(source)
+        }
+        source.assets = source.assets.concat(location.asset)
+    }
+    return results
+}
 
 async function buildRegistry(environment: Environment): Promise<AssetRegistry> {
     const {
@@ -139,6 +523,7 @@ async function buildRegistry(environment: Environment): Promise<AssetRegistry> {
                 const para = await indexParachain(
                     accessor,
                     providers[assetHubParaId.toString()].accessor,
+                    "polkadot",
                     ethChainId,
                     parachainId,
                     assetHubParaId,
@@ -149,7 +534,7 @@ async function buildRegistry(environment: Environment): Promise<AssetRegistry> {
                 return { parachainId, para }
             }),
     )) {
-        paras[parachainId.toString()] = para
+        paras[`polkadot_${parachainId}`] = para
     }
 
     // Index Ethereum chain
@@ -170,7 +555,7 @@ async function buildRegistry(environment: Environment): Promise<AssetRegistry> {
             )
         }),
     )) {
-        ethChains[ethChainInfo.chainId.toString()] = ethChainInfo
+        ethChains[ethChainInfo.key] = ethChainInfo
     }
 
     let kusamaConfig: KusamaConfig | undefined
@@ -187,6 +572,7 @@ async function buildRegistry(environment: Environment): Promise<AssetRegistry> {
         const para = await indexParachain(
             accessor,
             providers[assetHubParaId].accessor,
+            "kusama",
             ethChainId,
             accessor.parachainId,
             assetHubParaId,
@@ -195,7 +581,7 @@ async function buildRegistry(environment: Environment): Promise<AssetRegistry> {
         )
 
         const kusamaParas: ParachainMap = {}
-        kusamaParas[para.parachainId] = para
+        kusamaParas[para.key] = para
 
         kusamaConfig = {
             parachains: kusamaParas,
@@ -304,12 +690,13 @@ async function checkSnowbridgeV2Support(
 async function indexParachain(
     parachain: ParaImpl.ParachainBase,
     assetHub: ParaImpl.ParachainBase,
+    kind: ParachainKind,
     ethChainId: number,
     parachainId: number,
     assetHubParaId: number,
     pnaAssets: PNAMap,
     assetOverrides: AssetOverrideMap,
-    v2_parachains?: number[],
+    v2_parachains?: readonly number[],
 ): Promise<Parachain> {
     const info = await parachain.chainProperties()
 
@@ -386,7 +773,9 @@ async function indexParachain(
         )
     }
     return {
-        parachainId,
+        id: parachainId,
+        kind,
+        key: `${kind}_${parachainId}`,
         features: {
             hasPalletXcm,
             hasDryRunApi,
@@ -422,7 +811,7 @@ async function indexEthChain(
     const id = networkName !== "unknown" ? networkName : undefined
     if (networkChainId == ethChainId) {
         // Asset Hub and get meta data
-        const assetHub = parachains[assetHubParaId.toString()]
+        const assetHub = parachains[`polkadot_${assetHubParaId}`]
         const gateway = IGateway__factory.connect(gatewayAddress, provider)
 
         const assets: ERC20MetadataMap = {}
@@ -475,9 +864,10 @@ async function indexEthChain(
             )
         }
         return {
-            chainId: networkChainId,
+            kind: "ethereum",
+            id: networkChainId,
             assets,
-            id: id ?? `chain_${networkChainId}`,
+            key: `ethereum_${networkChainId}`,
             baseDeliveryGas: 120_000n,
         }
     } else if (networkChainId in l2Chains) {
@@ -499,14 +889,15 @@ async function indexEthChain(
             swapFee: 0,
         }
         return {
-            chainId: networkChainId,
+            kind: "ethereum_l2",
+            id: networkChainId,
             assets,
-            id: id ?? `l2_${networkChainId}`,
+            key: `ethereum_l2_${networkChainId}`,
         }
     } else {
         let evmParachainChain: Parachain | undefined
         for (const paraId in parachains) {
-            const parachain = parachains[paraId]
+            const parachain = parachains[paraId as ChainKey<"polkadot">]
             if (parachain.info.evmChainId === networkChainId) {
                 evmParachainChain = parachain
                 break
@@ -526,7 +917,7 @@ async function indexEthChain(
             xcTokenMap[token] = xc20
             assets[xc20] = asset
         }
-        const paraId = evmParachainChain.parachainId.toString()
+        const paraId = evmParachainChain.id.toString()
         if (!(paraId in precompiles)) {
             throw Error(
                 `No precompile configured for parachain ${paraId} (ethereum chain ${networkChainId}).`,
@@ -548,13 +939,14 @@ async function indexEthChain(
         assets[evmParachainChain.xcDOT] = xc20DOTAsset
 
         return {
-            chainId: networkChainId,
-            evmParachainId: evmParachainChain.parachainId,
+            kind: "ethereum",
+            id: networkChainId,
+            key: `ethereum_${networkChainId}`,
+            evmParachainId: evmParachainChain.id,
             assets,
             precompile,
             xcDOT: evmParachainChain.xcDOT,
             xcTokenMap,
-            id: id ?? `evm_${evmParachainChain.info.specName}`,
         }
     }
 }
@@ -652,18 +1044,63 @@ async function getRegisteredPnas(
     if (process.env.NODE_ENV !== undefined) {
         env = process.env.NODE_ENV
     }
-    const registry = await buildRegistry(environmentFor(env))
-    const json = JSON.stringify(
-        registry,
-        (key, value) => {
-            if (typeof value === "bigint") {
-                return `bigint:${value.toString()}`
-            }
-            return value
-        },
-        2,
-    )
-
-    const filepath = `src/${env}.registry.json`
-    await writeFile(filepath, json)
+    if (!(env in SNOWBRIDGE_ENV)) {
+        throw Error(`Unknown environment ${env}.`)
+    }
+    const environment = SNOWBRIDGE_ENV[env]
+    const registry = await buildRegistry(environment)
+    const routes = buildTransferLocations(registry)
+    const bridge: BridgeInfo = { environment, routes, registry }
+    const json = generateTsObject(bridge, 4)
+    const fileContents = `const registry = ${json} as const\nexport default registry\n`
+    const filepath = `src/${env}_bridge_info.g.ts`
+    await writeFile(filepath, fileContents)
 })()
+
+function generateTsObject(value: unknown, indentSize = 4): string {
+    const indentUnit = " ".repeat(indentSize)
+    const serialize = (val: unknown, depth: number): string | undefined => {
+        if (val === null) return "null"
+        if (val === undefined) return undefined
+        if (typeof val === "function" || typeof val === "symbol") return undefined
+        if (typeof val === "bigint") return `${val}n`
+        if (typeof val === "string") return JSON.stringify(val)
+        if (typeof val === "number" || typeof val === "boolean") return String(val)
+        if (Array.isArray(val)) {
+            if (val.length === 0) return "[]"
+            const indent = indentUnit.repeat(depth + 1)
+            const closingIndent = indentUnit.repeat(depth)
+            const items = val
+                .map((item) => {
+                    const serialized = serialize(item, depth + 1)
+                    return `${indent}${serialized ?? "null"}`
+                })
+                .join(",\n")
+            return `[\n${items}\n${closingIndent}]`
+        }
+        if (typeof val === "object") {
+            const obj = val as Record<string, unknown>
+            const keys = Object.keys(obj)
+            const indent = indentUnit.repeat(depth + 1)
+            const closingIndent = indentUnit.repeat(depth)
+            const items: string[] = []
+            for (const key of keys) {
+                const serialized = serialize(obj[key], depth + 1)
+                if (serialized === undefined) continue
+                const keyLiteral = /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(key)
+                    ? key
+                    : JSON.stringify(key)
+                items.push(`${indent}${keyLiteral}: ${serialized},`)
+            }
+            if (items.length === 0) return "{}"
+            return `{\n${items.join("\n")}\n${closingIndent}}`
+        }
+        throw new Error(`Unsupported type in registry output: ${typeof val}`)
+    }
+
+    const serialized = serialize(value, 0)
+    if (serialized === undefined) {
+        throw new Error("Registry output is not serializable")
+    }
+    return serialized
+}

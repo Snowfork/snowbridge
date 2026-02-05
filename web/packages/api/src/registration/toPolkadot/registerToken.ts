@@ -14,7 +14,7 @@ import { FeeInfo, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
 import { AbstractProvider, Contract } from "ethers"
 import { getOperatingStatus } from "../../status"
 import { DOT_LOCATION, erc20Location } from "../../xcmBuilder"
-import { swapAsset1ForAsset2, ETHER_TOKEN_ADDRESS } from "../../assets_v2"
+import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
 import { padFeeByPercentage } from "../../utils"
 import { paraImplementation } from "../../parachains"
 import {
@@ -69,28 +69,28 @@ export class RegisterToken implements RegistrationInterface {
             assetHubXcm,
         )
 
-        const deliveryFeeInEther = await swapAsset1ForAsset2(
-            assetHub,
+        // AssetHub Execution fee
+        const assetHubImpl = await paraImplementation(assetHub)
+
+        const deliveryFeeInEther = await assetHubImpl.swapAsset1ForAsset2(
             DOT_LOCATION,
             ether,
             deliveryFeeInDOT,
         )
 
-        // AssetHub Execution fee
-        const assetHubImpl = await paraImplementation(assetHub)
         const assetHubExecutionFeeDOT = await assetHubImpl.calculateXcmFee(
             assetHubXcm,
             DOT_LOCATION,
         )
 
         const assetHubExecutionFeeEther = padFeeByPercentage(
-            await swapAsset1ForAsset2(assetHub, DOT_LOCATION, ether, assetHubExecutionFeeDOT),
+            await assetHubImpl.swapAsset1ForAsset2(DOT_LOCATION, ether, assetHubExecutionFeeDOT),
             paddFeeByPercentage,
         )
 
         // Convert asset deposit from DOT to Ether
         const assetDepositEther = padFeeByPercentage(
-            await swapAsset1ForAsset2(assetHub, DOT_LOCATION, ether, assetDepositDOT),
+            await assetHubImpl.swapAsset1ForAsset2(DOT_LOCATION, ether, assetDepositDOT),
             10n,
         )
 
@@ -227,7 +227,7 @@ export class RegisterToken implements RegistrationInterface {
         }
 
         // Dry run on AssetHub
-        const ahParachain = registry.parachains[registry.assetHubParaId]
+        const ahParachain = registry.parachains[`polkadot_${registry.assetHubParaId}`]
         let assetHubDryRunError: string | undefined
         if (!ahParachain.features.hasDryRunApi) {
             logs.push({
