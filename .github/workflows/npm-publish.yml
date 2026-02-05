@@ -10,8 +10,9 @@ on:
         required: false
         type: "string"
 
-env:
-  NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
+permissions:
+  id-token: write
+  contents: write
 
 jobs:
   publish:
@@ -25,6 +26,19 @@ jobs:
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache-dependency-path: web
+          cache: "pnpm"
+          registry-url: "https://registry.npmjs.org"
 
       - name: Install dependencies
         working-directory: contracts
@@ -44,21 +58,10 @@ jobs:
         working-directory: contracts
         run: forge test
 
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20.x"
-          registry-url: "https://registry.npmjs.org"
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
-        with:
-          version: 8
-
       - name: Build
         working-directory: web
         run: |
-          pnpm install
+          pnpm install --frozen-lockfile
           pnpm build
 
       - name: Configure Git
@@ -105,28 +108,38 @@ jobs:
 
       - name: Publish Base Types
         working-directory: web/packages/base-types
+        env:
+          NODE_AUTH_TOKEN: ''
         run: |
-          pnpm publish --no-git-checks --access public
+          pnpm publish --no-git-checks --access public --tag latest
 
       - name: Publish Contracts
         working-directory: web/packages/contracts
+        env:
+          NODE_AUTH_TOKEN: ''
         run: |
-          pnpm publish --no-git-checks --access public
+          pnpm publish --no-git-checks --access public --tag latest
 
       - name: Publish Contract Types
         working-directory: web/packages/contract-types
+        env:
+          NODE_AUTH_TOKEN: ''
         run: |
-          pnpm publish --no-git-checks --access public
+          pnpm publish --no-git-checks --access public --tag latest
 
       - name: Publish API
         working-directory: web/packages/api
+        env:
+          NODE_AUTH_TOKEN: ''
         run: |
-          pnpm publish --no-git-checks --access public
+          pnpm publish --no-git-checks --access public --tag latest
 
       - name: Publish Registry
         working-directory: web/packages/registry
+        env:
+          NODE_AUTH_TOKEN: ''
         run: |
-          pnpm publish --no-git-checks --access public
+          pnpm publish --no-git-checks --access public --tag latest
 
       - name: Create new tag
         id: create_tag
