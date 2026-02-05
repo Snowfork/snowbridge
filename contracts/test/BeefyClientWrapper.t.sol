@@ -92,6 +92,20 @@ contract MockBeefyClient {
         latestBeefyBlock = _block;
     }
 
+    uint256 public submitFiatShamirCount;
+
+    function submitFiatShamir(
+        IBeefyClient.Commitment calldata commitment,
+        uint256[] calldata,
+        IBeefyClient.ValidatorProof[] calldata,
+        IBeefyClient.MMRLeaf calldata,
+        bytes32[] calldata,
+        uint256
+    ) external {
+        submitFiatShamirCount++;
+        latestBeefyBlock = commitment.blockNumber;
+    }
+
     function _encodeCommitment(IBeefyClient.Commitment calldata commitment)
         internal
         pure
@@ -619,5 +633,145 @@ contract BeefyClientWrapperTest is Test {
 
         assertTrue(success);
         assertEq(address(wrapper).balance, balanceBefore + 1 ether);
+    }
+
+    /* Fiat Shamir Tests */
+
+    function test_submitFiatShamir() public {
+        uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + 500);
+        IBeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
+        uint256[] memory bitfield = new uint256[](1);
+        IBeefyClient.ValidatorProof[] memory proofs = createValidatorProofs(1);
+        IBeefyClient.MMRLeaf memory leaf = createMMRLeaf();
+        bytes32[] memory leafProof = new bytes32[](0);
+
+        vm.prank(relayer1);
+        wrapper.submitFiatShamir(commitment, bitfield, proofs, leaf, leafProof, 0);
+
+        assertEq(mockBeefyClient.submitFiatShamirCount(), 1);
+    }
+
+    function test_submitFiatShamir_clearsHighestPendingBlock() public {
+        // First create a pending session
+        uint32 pendingBlockNumber = uint32(INITIAL_BEEFY_BLOCK + 100);
+        IBeefyClient.Commitment memory pendingCommitment = createCommitment(pendingBlockNumber);
+        uint256[] memory bitfield = new uint256[](1);
+        IBeefyClient.ValidatorProof memory proof = createValidatorProof();
+
+        vm.prank(relayer1);
+        wrapper.submitInitial(pendingCommitment, bitfield, proof);
+        assertEq(wrapper.highestPendingBlock(), pendingBlockNumber);
+
+        // Submit Fiat Shamir with higher block number
+        uint32 fiatShamirBlockNumber = uint32(INITIAL_BEEFY_BLOCK + 200);
+        IBeefyClient.Commitment memory fiatShamirCommitment = createCommitment(fiatShamirBlockNumber);
+        IBeefyClient.ValidatorProof[] memory proofs = createValidatorProofs(1);
+        IBeefyClient.MMRLeaf memory leaf = createMMRLeaf();
+        bytes32[] memory leafProof = new bytes32[](0);
+
+        vm.prank(relayer2);
+        wrapper.submitFiatShamir(fiatShamirCommitment, bitfield, proofs, leaf, leafProof, 0);
+
+        // highestPendingBlock should be cleared since latestBeefyBlock >= highestPendingBlock
+        assertEq(wrapper.highestPendingBlock(), 0);
+        assertEq(wrapper.highestPendingBlockTimestamp(), 0);
+    }
+
+    /* Additional Admin Function Tests */
+
+    function test_withdrawFunds_invalidRecipient() public {
+        vm.prank(owner);
+        vm.expectRevert(BeefyClientWrapper.InvalidAddress.selector);
+        wrapper.withdrawFunds(payable(address(0)), 1 ether);
+    }
+
+    function test_transferOwnership_invalidAddress() public {
+        vm.prank(owner);
+        vm.expectRevert(BeefyClientWrapper.InvalidAddress.selector);
+        wrapper.transferOwnership(address(0));
+    }
+
+    /* Highest Pending Block Tests */
+
+    function test_submitInitial_doesNotUpdateHighestPendingBlock_whenLower() public {
+        // First submission sets highestPendingBlock
+        uint32 higherBlockNumber = uint32(INITIAL_BEEFY_BLOCK + 500);
+        IBeefyClient.Commitment memory commitment1 = createCommitment(higherBlockNumber);
+        uint256[] memory bitfield = new uint256[](1);
+        IBeefyClient.ValidatorProof memory proof = createValidatorProof();
+
+        vm.prank(relayer1);
+        wrapper.submitInitial(commitment1, bitfield, proof);
+        assertEq(wrapper.highestPendingBlock(), higherBlockNumber);
+        uint256 timestamp1 = wrapper.highestPendingBlockTimestamp();
+
+        // Second submission with lower block number should NOT update
+        uint32 lowerBlockNumber = uint32(INITIAL_BEEFY_BLOCK + 200);
+        IBeefyClient.Commitment memory commitment2 = createCommitment(lowerBlockNumber);
+
+        vm.prank(relayer2);
+        wrapper.submitInitial(commitment2, bitfield, proof);
+
+        // Should still be the higher block number
+        assertEq(wrapper.highestPendingBlock(), higherBlockNumber);
+        assertEq(wrapper.highestPendingBlockTimestamp(), timestamp1);
+    }
+
+    /* Additional EstimatePayout Tests */
+
+    function test_estimatePayout_capsGasPrice() public {
+        uint256 gasUsed = 500000;
+        uint256 highGasPrice = 200 gwei; // Higher than MAX_GAS_PRICE (100 gwei)
+
+        uint256 refund = wrapper.estimatePayout(gasUsed, highGasPrice, REFUND_TARGET);
+
+        // Should use maxGasPrice (100 gwei), not the provided highGasPrice
+        assertEq(refund, gasUsed * MAX_GAS_PRICE);
+    }
+
+    function test_estimatePayout_capsRefundAmount() public {
+        uint256 gasUsed = 1000000000; // Very high gas to exceed max refund
+        uint256 gasPrice = 100 gwei;
+
+        uint256 refund = wrapper.estimatePayout(gasUsed, gasPrice, REFUND_TARGET);
+
+        // Should be capped at maxRefundAmount
+        assertEq(refund, MAX_REFUND_AMOUNT);
+    }
+}
+
+/**
+ * @dev Contract that rejects ETH transfers for testing TransferFailed
+ */
+contract RejectingRecipient {
+    receive() external payable {
+        revert("No ETH accepted");
+    }
+}
+
+contract BeefyClientWrapperTransferFailedTest is Test {
+    BeefyClientWrapper wrapper;
+    MockBeefyClient mockBeefyClient;
+    RejectingRecipient rejectingRecipient;
+
+    address owner = address(0x1);
+
+    function setUp() public {
+        mockBeefyClient = new MockBeefyClient(1000);
+        wrapper = new BeefyClientWrapper(
+            address(mockBeefyClient),
+            owner,
+            100 gwei,
+            0.05 ether,
+            350
+        );
+        vm.deal(address(wrapper), 100 ether);
+        rejectingRecipient = new RejectingRecipient();
+    }
+
+    function test_withdrawFunds_transferFailed() public {
+        vm.prank(owner);
+        vm.expectRevert(BeefyClientWrapper.TransferFailed.selector);
+        wrapper.withdrawFunds(payable(address(rejectingRecipient)), 1 ether);
     }
 }

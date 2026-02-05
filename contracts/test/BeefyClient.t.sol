@@ -879,4 +879,11 @@ contract BeefyClientTest is Test {
             commitment, bitfield, fiatShamirValidatorProofs, mmrLeaf, mmrLeafProofs, leafProofOrder
         );
     }
+
+    function testComputeCommitmentHash() public {
+        BeefyClient.Commitment memory commitment = initialize(setId);
+        bytes32 computedHash = beefyClient.computeCommitmentHash(commitment);
+        // commitHash is loaded from the test data file and should match
+        assertEq(computedHash, commitHash);
+    }
 }
