@@ -33,9 +33,9 @@ jobs:
           version: 10
 
       - name: Install Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: "20.x"
+          node-version: "24"
           cache-dependency-path: web
           cache: "pnpm"
           registry-url: "https://registry.npmjs.org"
