@@ -260,7 +260,11 @@ func (relay *OnDemandRelay) syncBeefyUpdate(ctx context.Context, task *Request) 
 	} else {
 		task.ValidatorsRoot = state.NextValidatorSetRoot
 	}
-	err = relay.ethereumWriter.submit(ctx, task)
+	if relay.ethereumWriter.config.EnableFiatShamir {
+		err = relay.ethereumWriter.submitFiatShamir(ctx, task)
+	} else {
+		err = relay.ethereumWriter.submit(ctx, task)
+	}
 	if err != nil {
 		return fmt.Errorf("fail to submit beefy update: %w", err)
 	}
