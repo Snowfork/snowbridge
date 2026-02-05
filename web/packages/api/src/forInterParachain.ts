@@ -182,10 +182,11 @@ export async function createTransfer(
         sourceParachain: sourceParachainMeta,
         destParachain,
     } = resolveInputs(registry, tokenAddress, source.parachainId, destinationParaId)
-    let messageId = await buildMessageId(
-        sourceParachain,
+    const accountNonce = await source.accountNonce(sourceAccountHex)
+    let messageId = buildMessageId(
         source.parachainId,
         sourceAccountHex,
+        accountNonce,
         tokenAddress,
         beneficiaryAccount,
         amount,

@@ -79,6 +79,11 @@ export abstract class ParachainBase {
         return acc.data.free
     }
 
+    async accountNonce(account: string): Promise<number> {
+        const accountNextId = await this.provider.rpc.system.accountNextIndex(account)
+        return accountNextId.toNumber()
+    }
+
     getNativeBalanceLocation(relativeTo: "here" | "sibling"): any {
         switch (relativeTo) {
             case "sibling":

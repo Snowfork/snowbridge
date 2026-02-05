@@ -37,7 +37,7 @@ import {
 import { Result } from "@polkadot/types"
 import { FeeData } from "ethers"
 import { paraImplementation } from "./parachains"
-import { padFeeByPercentage } from "./utils"
+import { padFeeByPercentage, u32ToLeBytes } from "./utils"
 import { Context } from "./index"
 import { ParachainBase } from "./parachains/parachainBase"
 
@@ -139,10 +139,11 @@ export async function createTransfer(
             )
         }
     } else {
-        messageId = await buildMessageId(
-            parachain,
+        const accountNonce = await sourceParachainImpl.accountNonce(sourceAccountHex)
+        messageId = buildMessageId(
             sourceParachainImpl.parachainId,
             sourceAccountHex,
+            accountNonce,
             tokenAddress,
             beneficiaryAccount,
             amount,
@@ -1146,22 +1147,19 @@ export async function dryRunAssetHub(
     }
 }
 
-export async function buildMessageId(
-    parachain: ApiPromise,
+export function buildMessageId(
     sourceParaId: number,
     sourceAccountHex: string,
+    accountNonce: number,
     tokenAddress: string,
     beneficiaryAccount: string,
     amount: bigint,
     timestamp?: number,
-): Promise<string> {
-    const [accountNextId] = await Promise.all([
-        parachain.rpc.system.accountNextIndex(sourceAccountHex),
-    ])
+): string {
     const entropy = new Uint8Array([
         ...stringToU8a(sourceParaId.toString()),
         ...hexToU8a(sourceAccountHex),
-        ...accountNextId.toU8a(),
+        ...u32ToLeBytes(accountNonce),
         ...hexToU8a(tokenAddress),
         ...stringToU8a(beneficiaryAccount),
         ...stringToU8a(amount.toString()),
