@@ -111,37 +111,35 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ''
         run: |
-          echo 'Here' $NODE_AUTH_TOKEN $NPM_TOKEN
-          cat $NPM_CONFIG_USERCONFIG
-          pnpm publish --no-git-checks --access public
+          pnpm publish --no-git-checks --access public --tag latest
 
       - name: Publish Contracts
         working-directory: web/packages/contracts
         env:
           NODE_AUTH_TOKEN: ''
         run: |
-          pnpm publish --no-git-checks --access public
+          pnpm publish --no-git-checks --access public --tag latest
 
       - name: Publish Contract Types
         working-directory: web/packages/contract-types
         env:
           NODE_AUTH_TOKEN: ''
         run: |
-          pnpm publish --no-git-checks --access public
+          pnpm publish --no-git-checks --access public --tag latest
 
       - name: Publish API
         working-directory: web/packages/api
         env:
           NODE_AUTH_TOKEN: ''
         run: |
-          pnpm publish --no-git-checks --access public
+          pnpm publish --no-git-checks --access public --tag latest
 
       - name: Publish Registry
         working-directory: web/packages/registry
         env:
           NODE_AUTH_TOKEN: ''
         run: |
-          pnpm publish --no-git-checks --access public
+          pnpm publish --no-git-checks --access public --tag latest
 
       - name: Create new tag
         id: create_tag
