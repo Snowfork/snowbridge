@@ -128,48 +128,6 @@ contract BeefyClientWrapper {
         _refundWithProgress(startGas, previousGas, progress);
     }
 
-    function createFinalBitfield(bytes32 commitmentHash, uint256[] calldata bitfield)
-        external
-        view
-        returns (uint256[] memory)
-    {
-        return beefyClient.createFinalBitfield(commitmentHash, bitfield);
-    }
-
-    function latestBeefyBlock() external view returns (uint64) {
-        return beefyClient.latestBeefyBlock();
-    }
-
-    function createInitialBitfield(uint256[] calldata bitsToSet, uint256 length)
-        external
-        view
-        returns (uint256[] memory)
-    {
-        return beefyClient.createInitialBitfield(bitsToSet, length);
-    }
-
-    function randaoCommitDelay() external view returns (uint256) {
-        return beefyClient.randaoCommitDelay();
-    }
-
-    function currentValidatorSet() external view returns (uint128 id, uint128 length, bytes32 root) {
-        return beefyClient.currentValidatorSet();
-    }
-
-    function nextValidatorSet() external view returns (uint128 id, uint128 length, bytes32 root) {
-        return beefyClient.nextValidatorSet();
-    }
-
-    /* Fiat-Shamir Proxy Functions */
-
-    function createFiatShamirFinalBitfield(IBeefyClient.Commitment calldata commitment, uint256[] calldata bitfield)
-        external
-        view
-        returns (uint256[] memory)
-    {
-        return beefyClient.createFiatShamirFinalBitfield(commitment, bitfield);
-    }
-
     function submitFiatShamir(
         IBeefyClient.Commitment calldata commitment,
         uint256[] calldata bitfield,

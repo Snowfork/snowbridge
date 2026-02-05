@@ -31,7 +31,7 @@ type EthereumWriter struct {
 	conn            *ethereum.Connection
 	useWrapper      bool
 	wrapperContract *contracts.BeefyClientWrapper
-	directContract  *contracts.BeefyClient
+	beefyClient     *contracts.BeefyClient
 	blockWaitPeriod uint64
 }
 
@@ -320,50 +320,42 @@ func (wr *EthereumWriter) initialize(ctx context.Context) error {
 		Context: ctx,
 	}
 
-	// Check if wrapper is configured
+	beefyClientAddress := common.HexToAddress(wr.config.Contracts.BeefyClient)
+	beefyClient, err := contracts.NewBeefyClient(beefyClientAddress, wr.conn.Client())
+	if err != nil {
+		return fmt.Errorf("create beefy client: %w", err)
+	}
+	wr.beefyClient = beefyClient
+
+	blockWaitPeriod, err := wr.beefyClient.RandaoCommitDelay(&callOpts)
+	if err != nil {
+		return fmt.Errorf("get randao commit delay: %w", err)
+	}
+	wr.blockWaitPeriod = blockWaitPeriod.Uint64()
+
+	// Optionally initialize wrapper for state-changing functions with gas refunds
 	if wr.config.Contracts.BeefyClientWrapper != "" {
 		wr.useWrapper = true
-		address := common.HexToAddress(wr.config.Contracts.BeefyClientWrapper)
+		wrapperAddress := common.HexToAddress(wr.config.Contracts.BeefyClientWrapper)
 
-		contract, err := contracts.NewBeefyClientWrapper(address, wr.conn.Client())
+		wrapperContract, err := contracts.NewBeefyClientWrapper(wrapperAddress, wr.conn.Client())
 		if err != nil {
 			return fmt.Errorf("create beefy client wrapper: %w", err)
 		}
-		wr.wrapperContract = contract
-
-		blockWaitPeriod, err := wr.wrapperContract.RandaoCommitDelay(&callOpts)
-		if err != nil {
-			return fmt.Errorf("get randao commit delay: %w", err)
-		}
-		wr.blockWaitPeriod = blockWaitPeriod.Uint64()
+		wr.wrapperContract = wrapperContract
 
 		log.WithFields(logrus.Fields{
-			"address":           address.Hex(),
+			"beefyClient":       beefyClientAddress.Hex(),
+			"wrapper":           wrapperAddress.Hex(),
 			"randaoCommitDelay": wr.blockWaitPeriod,
 		}).Info("Using BeefyClientWrapper for gas refunds")
 	} else {
 		wr.useWrapper = false
-		address := common.HexToAddress(wr.config.Contracts.BeefyClient)
-
-		contract, err := contracts.NewBeefyClient(address, wr.conn.Client())
-		if err != nil {
-			return fmt.Errorf("create beefy client: %w", err)
-		}
-		wr.directContract = contract
-
-		blockWaitPeriod, err := wr.directContract.RandaoCommitDelay(&callOpts)
-		if err != nil {
-			return fmt.Errorf("get randao commit delay: %w", err)
-		}
-		wr.blockWaitPeriod = blockWaitPeriod.Uint64()
-
 		log.WithFields(logrus.Fields{
-			"address":           address.Hex(),
+			"beefyClient":       beefyClientAddress.Hex(),
 			"randaoCommitDelay": wr.blockWaitPeriod,
 		}).Info("Using BeefyClient directly (no gas refunds)")
 	}
-
-	log.WithField("randaoCommitDelay", wr.blockWaitPeriod).Trace("Fetched randaoCommitDelay")
 
 	return nil
 }
@@ -463,7 +455,7 @@ func (wr *EthereumWriter) shouldSkipDueToPendingSession(ctx context.Context, tas
 		return false, nil
 	}
 
-	latestBeefyBlock, err := wr.wrapperContract.LatestBeefyBlock(&callOpts)
+	latestBeefyBlock, err := wr.beefyClient.LatestBeefyBlock(&callOpts)
 	if err != nil {
 		return false, fmt.Errorf("get latest beefy block: %w", err)
 	}
@@ -505,7 +497,9 @@ func (wr *EthereumWriter) shouldSkipDueToPendingSession(ctx context.Context, tas
 	return true, nil
 }
 
-// Contract abstraction helpers - these methods handle the contract selection and type conversions
+// Contract abstraction helpers
+// View functions always use beefyClient directly
+// State-changing functions use wrapper (if configured) or beefyClient
 
 type validatorSetResult struct {
 	Id   *big.Int
@@ -513,21 +507,11 @@ type validatorSetResult struct {
 }
 
 func (wr *EthereumWriter) getLatestBeefyBlock(callOpts *bind.CallOpts) (uint64, error) {
-	if wr.useWrapper {
-		return wr.wrapperContract.LatestBeefyBlock(callOpts)
-	}
-	return wr.directContract.LatestBeefyBlock(callOpts)
+	return wr.beefyClient.LatestBeefyBlock(callOpts)
 }
 
 func (wr *EthereumWriter) getCurrentValidatorSet(callOpts *bind.CallOpts) (*validatorSetResult, error) {
-	if wr.useWrapper {
-		result, err := wr.wrapperContract.CurrentValidatorSet(callOpts)
-		if err != nil {
-			return nil, err
-		}
-		return &validatorSetResult{Id: result.Id, Root: result.Root}, nil
-	}
-	result, err := wr.directContract.CurrentValidatorSet(callOpts)
+	result, err := wr.beefyClient.CurrentValidatorSet(callOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -535,14 +519,7 @@ func (wr *EthereumWriter) getCurrentValidatorSet(callOpts *bind.CallOpts) (*vali
 }
 
 func (wr *EthereumWriter) getNextValidatorSet(callOpts *bind.CallOpts) (*validatorSetResult, error) {
-	if wr.useWrapper {
-		result, err := wr.wrapperContract.NextValidatorSet(callOpts)
-		if err != nil {
-			return nil, err
-		}
-		return &validatorSetResult{Id: result.Id, Root: result.Root}, nil
-	}
-	result, err := wr.directContract.NextValidatorSet(callOpts)
+	result, err := wr.beefyClient.NextValidatorSet(callOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -554,10 +531,7 @@ func (wr *EthereumWriter) createInitialBitfield(signedValidators []*big.Int, val
 		Pending: true,
 		From:    wr.conn.Keypair().CommonAddress(),
 	}
-	if wr.useWrapper {
-		return wr.wrapperContract.CreateInitialBitfield(callOpts, signedValidators, validatorCount)
-	}
-	return wr.directContract.CreateInitialBitfield(callOpts, signedValidators, validatorCount)
+	return wr.beefyClient.CreateInitialBitfield(callOpts, signedValidators, validatorCount)
 }
 
 func (wr *EthereumWriter) createFinalBitfield(commitmentHash [32]byte, initialBitfield []*big.Int) ([]*big.Int, error) {
@@ -565,10 +539,7 @@ func (wr *EthereumWriter) createFinalBitfield(commitmentHash [32]byte, initialBi
 		Pending: true,
 		From:    wr.conn.Keypair().CommonAddress(),
 	}
-	if wr.useWrapper {
-		return wr.wrapperContract.CreateFinalBitfield(callOpts, commitmentHash, initialBitfield)
-	}
-	return wr.directContract.CreateFinalBitfield(callOpts, commitmentHash, initialBitfield)
+	return wr.beefyClient.CreateFinalBitfield(callOpts, commitmentHash, initialBitfield)
 }
 
 func (wr *EthereumWriter) createFiatShamirFinalBitfield(commitment *contracts.IBeefyClientCommitment, initialBitfield []*big.Int) ([]*big.Int, error) {
@@ -576,10 +547,7 @@ func (wr *EthereumWriter) createFiatShamirFinalBitfield(commitment *contracts.IB
 		Pending: true,
 		From:    wr.conn.Keypair().CommonAddress(),
 	}
-	if wr.useWrapper {
-		return wr.wrapperContract.CreateFiatShamirFinalBitfield(callOpts, *commitment, initialBitfield)
-	}
-	return wr.directContract.CreateFiatShamirFinalBitfield(callOpts, ToBeefyClientCommitment(commitment), initialBitfield)
+	return wr.beefyClient.CreateFiatShamirFinalBitfield(callOpts, ToBeefyClientCommitment(commitment), initialBitfield)
 }
 
 func (wr *EthereumWriter) submitInitial(ctx context.Context, msg *InitialRequestParams) (*types.Transaction, error) {
@@ -591,7 +559,7 @@ func (wr *EthereumWriter) submitInitial(ctx context.Context, msg *InitialRequest
 			msg.Proof,
 		)
 	}
-	return wr.directContract.SubmitInitial(
+	return wr.beefyClient.SubmitInitial(
 		wr.conn.MakeTxOpts(ctx),
 		ToBeefyClientCommitment(&msg.Commitment),
 		msg.Bitfield,
@@ -603,7 +571,7 @@ func (wr *EthereumWriter) doCommitPrevRandao(ctx context.Context, commitmentHash
 	if wr.useWrapper {
 		return wr.wrapperContract.CommitPrevRandao(wr.conn.MakeTxOpts(ctx), commitmentHash)
 	}
-	return wr.directContract.CommitPrevRandao(wr.conn.MakeTxOpts(ctx), commitmentHash)
+	return wr.beefyClient.CommitPrevRandao(wr.conn.MakeTxOpts(ctx), commitmentHash)
 }
 
 func (wr *EthereumWriter) submitFinal(ctx context.Context, params *FinalRequestParams) (*types.Transaction, error) {
@@ -618,7 +586,7 @@ func (wr *EthereumWriter) submitFinal(ctx context.Context, params *FinalRequestP
 			params.LeafProofOrder,
 		)
 	}
-	return wr.directContract.SubmitFinal(
+	return wr.beefyClient.SubmitFinal(
 		wr.conn.MakeTxOpts(ctx),
 		ToBeefyClientCommitment(&params.Commitment),
 		params.Bitfield,
@@ -641,7 +609,7 @@ func (wr *EthereumWriter) doSubmitFiatShamir(ctx context.Context, params *FinalR
 			params.LeafProofOrder,
 		)
 	}
-	return wr.directContract.SubmitFiatShamir(
+	return wr.beefyClient.SubmitFiatShamir(
 		wr.conn.MakeTxOpts(ctx),
 		ToBeefyClientCommitment(&params.Commitment),
 		params.Bitfield,

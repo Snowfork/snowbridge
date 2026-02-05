@@ -620,47 +620,4 @@ contract BeefyClientWrapperTest is Test {
         assertTrue(success);
         assertEq(address(wrapper).balance, balanceBefore + 1 ether);
     }
-
-    /* View Function Tests */
-
-    function test_latestBeefyBlock() public {
-        assertEq(wrapper.latestBeefyBlock(), INITIAL_BEEFY_BLOCK);
-    }
-
-    /* Proxy View Function Tests */
-
-    function test_createFinalBitfield() public {
-        bytes32 commitmentHash = bytes32(uint256(1));
-        uint256[] memory bitfield = new uint256[](1);
-        bitfield[0] = 123;
-
-        uint256[] memory result = wrapper.createFinalBitfield(commitmentHash, bitfield);
-        assertEq(result[0], 123);
-    }
-
-    function test_createInitialBitfield() public {
-        uint256[] memory bitsToSet = new uint256[](1);
-        bitsToSet[0] = 5;
-
-        uint256[] memory result = wrapper.createInitialBitfield(bitsToSet, 100);
-        assertEq(result.length, 1);
-    }
-
-    function test_randaoCommitDelay() public {
-        assertEq(wrapper.randaoCommitDelay(), 4);
-    }
-
-    function test_currentValidatorSet() public {
-        (uint128 id, uint128 length, bytes32 root) = wrapper.currentValidatorSet();
-        assertEq(id, 1);
-        assertEq(length, 100);
-        assertEq(root, bytes32(0));
-    }
-
-    function test_nextValidatorSet() public {
-        (uint128 id, uint128 length, bytes32 root) = wrapper.nextValidatorSet();
-        assertEq(id, 2);
-        assertEq(length, 100);
-        assertEq(root, bytes32(0));
-    }
 }
