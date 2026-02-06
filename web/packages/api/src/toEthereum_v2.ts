@@ -1,7 +1,7 @@
 import { ApiPromise } from "@polkadot/api"
 import { AddressOrPair, SignerOptions, SubmittableExtrinsic } from "@polkadot/api/types"
-import { Codec, ISubmittableResult } from "@polkadot/types/types"
-import { BN, hexToU8a, isHex, stringToU8a, u8aToHex } from "@polkadot/util"
+import { ISubmittableResult } from "@polkadot/types/types"
+import { hexToU8a, isHex, stringToU8a, u8aToHex } from "@polkadot/util"
 import { blake2AsHex, decodeAddress, xxhashAsHex } from "@polkadot/util-crypto"
 import {
     bridgeLocation,
@@ -37,7 +37,7 @@ import {
 import { Result } from "@polkadot/types"
 import { FeeData } from "ethers"
 import { paraImplementation } from "./parachains"
-import { padFeeByPercentage } from "./utils"
+import { padFeeByPercentage, u32ToLeBytes } from "./utils"
 import { Context } from "./index"
 import { ParachainBase } from "./parachains/parachainBase"
 
@@ -139,10 +139,11 @@ export async function createTransfer(
             )
         }
     } else {
-        messageId = await buildMessageId(
-            parachain,
+        const accountNonce = await sourceParachainImpl.accountNonce(sourceAccountHex)
+        messageId = buildMessageId(
             sourceParachainImpl.parachainId,
             sourceAccountHex,
+            accountNonce,
             tokenAddress,
             beneficiaryAccount,
             amount,
@@ -219,15 +220,15 @@ export async function getDeliveryFee(
     const feePadPercentage = options?.padPercentage ?? 33n
     const feeSlippagePadPercentage = options?.slippagePadPercentage ?? 20n
     const feeStorageKey = xxhashAsHex(":BridgeHubEthereumBaseFee:", 128, true)
-    const feeStorageItem = await assetHub.rpc.state.getStorage(feeStorageKey)
-    let leFee = new BN((feeStorageItem as Codec).toHex().replace("0x", ""), "hex", "le")
+    const assetHubImpl = await paraImplementation(assetHub)
+    const snowbridgeBaseFee = await assetHubImpl.getDeliveryFeeFromStorage(feeStorageKey)
 
     let snowbridgeDeliveryFeeDOT = 0n
-    if (leFee.eqn(0)) {
+    if (snowbridgeBaseFee === 0n) {
         console.warn("Asset Hub onchain BridgeHubEthereumBaseFee not set. Using default fee.")
         snowbridgeDeliveryFeeDOT = options?.defaultFee ?? 3_833_568_200_000n
     } else {
-        snowbridgeDeliveryFeeDOT = BigInt(leFee.toString())
+        snowbridgeDeliveryFeeDOT = snowbridgeBaseFee
     }
 
     const { sourceAssetMetadata, sourceParachain } = resolveInputs(
@@ -313,7 +314,6 @@ export async function getDeliveryFee(
     let assetHubExecutionFeeDOT = 0n
     let returnToSenderExecutionFeeDOT = 0n
     let returnToSenderDeliveryFeeDOT = 0n
-    const assetHubImpl = await paraImplementation(assetHub)
     const bridgeHubDeliveryFeeDOT = await assetHubImpl.calculateDeliveryFeeInDOT(
         registry.bridgeHubParaId,
         forwardedXcm,
@@ -1146,22 +1146,19 @@ export async function dryRunAssetHub(
     }
 }
 
-export async function buildMessageId(
-    parachain: ApiPromise,
+export function buildMessageId(
     sourceParaId: number,
     sourceAccountHex: string,
+    accountNonce: number,
     tokenAddress: string,
     beneficiaryAccount: string,
     amount: bigint,
     timestamp?: number,
-): Promise<string> {
-    const [accountNextId] = await Promise.all([
-        parachain.rpc.system.accountNextIndex(sourceAccountHex),
-    ])
+): string {
     const entropy = new Uint8Array([
         ...stringToU8a(sourceParaId.toString()),
         ...hexToU8a(sourceAccountHex),
-        ...accountNextId.toU8a(),
+        ...u32ToLeBytes(accountNonce),
         ...hexToU8a(tokenAddress),
         ...stringToU8a(beneficiaryAccount),
         ...stringToU8a(amount.toString()),

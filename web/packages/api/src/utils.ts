@@ -127,3 +127,12 @@ export function padFeeByPercentage(fee: bigint, padPercent: bigint) {
     }
     return (fee * (100n + padPercent)) / 100n
 }
+
+export function u32ToLeBytes(value: number): Uint8Array {
+    if (!Number.isInteger(value) || value < 0 || value > 0xffffffff) {
+        throw new Error(`Value out of u32 range: ${value}`)
+    }
+    const out = new Uint8Array(4)
+    new DataView(out.buffer).setUint32(0, value, true)
+    return out
+}

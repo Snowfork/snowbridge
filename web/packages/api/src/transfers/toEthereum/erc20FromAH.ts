@@ -113,10 +113,11 @@ export class ERC20FromAH implements TransferInterface {
         const { tokenErcMetadata, sourceParachain, ahAssetMetadata, sourceAssetMetadata } =
             resolveInputs(registry, tokenAddress, sourceParachainImpl.parachainId)
 
-        let messageId: string | undefined = await buildMessageId(
-            parachain,
+        const accountNonce = await sourceParachainImpl.accountNonce(sourceAccountHex)
+        let messageId: string | undefined = buildMessageId(
             sourceParachainImpl.parachainId,
             sourceAccountHex,
+            accountNonce,
             tokenAddress,
             beneficiaryAccount,
             amount,
