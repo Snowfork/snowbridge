@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math/big"
 	"math/rand"
-	"strings"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -24,66 +23,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// Expected error selectors that should not cause relayer restarts
-const (
-	// TicketAlreadyOwned: Another relayer already claimed this commitment (from BeefyClientWrapper)
-	ErrTicketAlreadyOwned = "0x60bbe44e"
-	// StaleCommitment: The commitment has already been synced (from BeefyClient)
-	ErrStaleCommitment = "0x3d618e50"
-	// NotTicketOwner: Caller is not the ticket owner (from BeefyClientWrapper)
-	ErrNotTicketOwner = "0xe18d39ad"
-	// InvalidCommitment: The commitment's validator set doesn't match current or next (from BeefyClient)
-	ErrInvalidCommitment = "0xc06789fa"
-)
-
 // SessionTimeout is the duration after which a pending session is considered expired
 const SessionTimeout = 40 * time.Minute
-
-// JsonError interface for extracting error data from Ethereum RPC errors
-type JsonError interface {
-	Error() string
-	ErrorCode() int
-	ErrorData() interface{}
-}
-
-// isExpectedCompetitionError checks if an error is due to normal relayer competition
-// (e.g., another relayer already claimed the commitment or it was already synced)
-func isExpectedCompetitionError(err error) bool {
-	if err == nil {
-		return false
-	}
-
-	// First check if the error string contains the hex codes (for wrapped errors)
-	errStr := err.Error()
-	if strings.Contains(errStr, ErrTicketAlreadyOwned) ||
-		strings.Contains(errStr, ErrStaleCommitment) ||
-		strings.Contains(errStr, ErrNotTicketOwner) ||
-		strings.Contains(errStr, ErrInvalidCommitment) {
-		return true
-	}
-
-	// Try to extract error data from JsonError interface
-	var currentErr error = err
-	for currentErr != nil {
-		if jsonErr, ok := currentErr.(JsonError); ok {
-			errorData := fmt.Sprintf("%v", jsonErr.ErrorData())
-			if strings.Contains(errorData, ErrTicketAlreadyOwned) ||
-				strings.Contains(errorData, ErrStaleCommitment) ||
-				strings.Contains(errorData, ErrNotTicketOwner) ||
-				strings.Contains(errorData, ErrInvalidCommitment) {
-				return true
-			}
-		}
-		// Try to unwrap
-		if unwrapper, ok := currentErr.(interface{ Unwrap() error }); ok {
-			currentErr = unwrapper.Unwrap()
-		} else {
-			break
-		}
-	}
-
-	return false
-}
 
 type EthereumWriter struct {
 	config          *SinkConfig
