@@ -24,8 +24,9 @@ type SinkConfig struct {
 }
 
 type ContractsConfig struct {
-	BeefyClient string `mapstructure:"BeefyClient"`
-	Gateway     string `mapstructure:"Gateway"`
+	BeefyClient        string `mapstructure:"BeefyClient"`
+	BeefyClientWrapper string `mapstructure:"BeefyClientWrapper"` // Optional: if set, use wrapper for gas refunds
+	Gateway            string `mapstructure:"Gateway"`
 }
 
 type OnDemandSyncConfig struct {
