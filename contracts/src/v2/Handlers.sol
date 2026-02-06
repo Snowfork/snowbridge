@@ -71,4 +71,11 @@ library HandlersV2 {
             abi.encodeCall(AgentExecutor.callContract, (params.target, params.data, params.value));
         Functions.invokeOnAgent(agent, executor, call);
     }
+
+    function callContracts(bytes32 origin, address executor, bytes calldata data) external {
+        CallContractParams[] memory params = abi.decode(data, (CallContractParams[]));
+        address agent = Functions.ensureAgent(origin);
+        bytes memory call = abi.encodeCall(AgentExecutor.callContracts, (params));
+        Functions.invokeOnAgent(agent, executor, call);
+    }
 }

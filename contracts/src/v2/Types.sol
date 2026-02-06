@@ -36,6 +36,8 @@ library CommandKind {
     uint8 constant MintForeignToken = 4;
     // Call an arbitrary solidity contract
     uint8 constant CallContract = 5;
+    // Call multiple arbitrary solidity contracts
+    uint8 constant CallContracts = 6;
 }
 
 // Payload for outbound messages destined for Polkadot
