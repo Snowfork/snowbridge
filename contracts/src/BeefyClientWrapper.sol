@@ -18,8 +18,8 @@ interface IGateway {
  * so after a Gateway upgrade this wrapper automatically points to the new BeefyClient.
  */
 contract BeefyClientWrapper {
-    event GasCredited(address indexed relayer, bytes32 indexed commitmentHash, uint256 gasUsed);
-    event SubmissionRefunded(address indexed relayer, uint256 progress, uint256 refundAmount, uint256 totalGasUsed);
+    event CostCredited(address indexed relayer, bytes32 indexed commitmentHash, uint256 cost);
+    event SubmissionRefunded(address indexed relayer, uint256 progress, uint256 refundAmount);
     event FundsDeposited(address indexed depositor, uint256 amount);
     event FundsWithdrawn(address indexed recipient, uint256 amount);
 
@@ -37,7 +37,7 @@ contract BeefyClientWrapper {
 
     // Ticket tracking (for multi-step submission)
     mapping(bytes32 => address) public ticketOwner;
-    mapping(bytes32 => uint256) public creditedGas;
+    mapping(bytes32 => uint256) public creditedCost; // Accumulated ETH cost from previous steps
 
     // Refund configuration
     uint256 public maxGasPrice;
@@ -93,7 +93,7 @@ contract BeefyClientWrapper {
             highestPendingBlockTimestamp = block.timestamp;
         }
 
-        _creditGas(startGas, commitmentHash);
+        _creditCost(startGas, commitmentHash);
     }
 
     function commitPrevRandao(bytes32 commitmentHash) external {
@@ -105,7 +105,7 @@ contract BeefyClientWrapper {
 
         _beefyClient().commitPrevRandao(commitmentHash);
 
-        _creditGas(startGas, commitmentHash);
+        _creditCost(startGas, commitmentHash);
     }
 
     function submitFinal(
@@ -137,11 +137,11 @@ contract BeefyClientWrapper {
             highestPendingBlockTimestamp = 0;
         }
 
-        uint256 previousGas = creditedGas[commitmentHash];
-        delete creditedGas[commitmentHash];
+        uint256 previousCost = creditedCost[commitmentHash];
+        delete creditedCost[commitmentHash];
         delete ticketOwner[commitmentHash];
 
-        _refundWithProgress(startGas, previousGas, progress);
+        _refundWithProgress(startGas, previousCost, progress);
     }
 
     /**
@@ -168,14 +168,14 @@ contract BeefyClientWrapper {
 
     /**
      * @dev Abandon a ticket. Useful if another relayer is competing for the same commitment.
-     * Credited gas is forfeited when clearing a ticket.
+     * Credited cost is forfeited when clearing a ticket.
      */
     function clearTicket(bytes32 commitmentHash) external {
         if (ticketOwner[commitmentHash] != msg.sender) {
             revert NotTicketOwner();
         }
 
-        delete creditedGas[commitmentHash];
+        delete creditedCost[commitmentHash];
         delete ticketOwner[commitmentHash];
     }
 
@@ -191,10 +191,15 @@ contract BeefyClientWrapper {
         }
     }
 
-    function _creditGas(uint256 startGas, bytes32 commitmentHash) internal {
+    function _effectiveGasPrice() internal view returns (uint256) {
+        return tx.gasprice < maxGasPrice ? tx.gasprice : maxGasPrice;
+    }
+
+    function _creditCost(uint256 startGas, bytes32 commitmentHash) internal {
         uint256 gasUsed = startGas - gasleft() + BASE_TX_GAS;
-        creditedGas[commitmentHash] += gasUsed;
-        emit GasCredited(msg.sender, commitmentHash, gasUsed);
+        uint256 cost = gasUsed * _effectiveGasPrice();
+        creditedCost[commitmentHash] += cost;
+        emit CostCredited(msg.sender, commitmentHash, cost);
     }
 
     /**
@@ -202,15 +207,14 @@ contract BeefyClientWrapper {
      *
      * Refund if progress >= refundTarget.
      */
-    function _refundWithProgress(uint256 startGas, uint256 previousGas, uint256 progress) internal {
+    function _refundWithProgress(uint256 startGas, uint256 previousCost, uint256 progress) internal {
         if (progress < refundTarget) {
             return;
         }
 
         uint256 currentGas = startGas - gasleft() + BASE_TX_GAS;
-        uint256 totalGasUsed = currentGas + previousGas;
-        uint256 effectiveGasPrice = tx.gasprice < maxGasPrice ? tx.gasprice : maxGasPrice;
-        uint256 refundAmount = totalGasUsed * effectiveGasPrice;
+        uint256 currentCost = currentGas * _effectiveGasPrice();
+        uint256 refundAmount = previousCost + currentCost;
 
         if (refundAmount > maxRefundAmount) {
             refundAmount = maxRefundAmount;
@@ -219,7 +223,7 @@ contract BeefyClientWrapper {
         if (refundAmount > 0 && address(this).balance >= refundAmount) {
             (bool success,) = payable(msg.sender).call{value: refundAmount}("");
             if (success) {
-                emit SubmissionRefunded(msg.sender, progress, refundAmount, totalGasUsed);
+                emit SubmissionRefunded(msg.sender, progress, refundAmount);
             }
         }
     }

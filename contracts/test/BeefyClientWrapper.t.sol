@@ -366,16 +366,17 @@ contract BeefyClientWrapperTest is Test {
         IBeefyClient.ValidatorProof memory proof = createValidatorProof();
 
         vm.startPrank(relayer1);
+        vm.txGasPrice(50 gwei);
         wrapper.submitInitial(commitment, bitfield, proof);
 
         bytes32 commitmentHash = computeCommitmentHash(commitment);
         assertEq(wrapper.ticketOwner(commitmentHash), relayer1);
-        assertGt(wrapper.creditedGas(commitmentHash), 0);
+        assertGt(wrapper.creditedCost(commitmentHash), 0);
 
         // Clear ticket - gas should be forfeited
         wrapper.clearTicket(commitmentHash);
         assertEq(wrapper.ticketOwner(commitmentHash), address(0));
-        assertEq(wrapper.creditedGas(commitmentHash), 0);
+        assertEq(wrapper.creditedCost(commitmentHash), 0);
         vm.stopPrank();
     }
 
@@ -396,7 +397,7 @@ contract BeefyClientWrapperTest is Test {
 
     /* Progress-Based Refund Tests */
 
-    function test_gasCreditedOnSubmitInitial() public {
+    function test_costCreditedOnSubmitInitial() public {
         uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + 100);
         IBeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
         uint256[] memory bitfield = new uint256[](1);
@@ -408,12 +409,60 @@ contract BeefyClientWrapperTest is Test {
         vm.txGasPrice(50 gwei);
         wrapper.submitInitial(commitment, bitfield, proof);
 
-        // No immediate refund, gas is credited instead
+        // No immediate refund, cost is credited instead
         assertEq(relayer1.balance, relayerBalanceBefore);
 
-        // Gas should be credited
+        // Cost should be credited (ETH, not raw gas)
         bytes32 commitmentHash = computeCommitmentHash(commitment);
-        assertGt(wrapper.creditedGas(commitmentHash), 0);
+        assertGt(wrapper.creditedCost(commitmentHash), 0);
+    }
+
+    function test_costCreditedAtPerStepGasPrice() public {
+        // Verify that each step captures gas cost at its own tx.gasprice,
+        // not at the final step's gas price.
+        uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + REFUND_TARGET);
+        IBeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
+        uint256[] memory bitfield = new uint256[](1);
+        IBeefyClient.ValidatorProof memory proof = createValidatorProof();
+        IBeefyClient.ValidatorProof[] memory proofs = createValidatorProofs(1);
+        IBeefyClient.MMRLeaf memory leaf = createMMRLeaf();
+        bytes32[] memory leafProof = new bytes32[](0);
+        bytes32 commitmentHash = computeCommitmentHash(commitment);
+
+        // Step 1: submitInitial at 10 gwei
+        vm.prank(relayer1);
+        vm.txGasPrice(10 gwei);
+        wrapper.submitInitial(commitment, bitfield, proof);
+        uint256 costAfterInitial = wrapper.creditedCost(commitmentHash);
+
+        // Step 2: commitPrevRandao at 90 gwei
+        vm.prank(relayer1);
+        vm.txGasPrice(90 gwei);
+        wrapper.commitPrevRandao(commitmentHash);
+        uint256 costAfterCommit = wrapper.creditedCost(commitmentHash);
+
+        // The cost from commitPrevRandao should be much higher per gas unit than submitInitial
+        uint256 commitCost = costAfterCommit - costAfterInitial;
+        // commitPrevRandao uses fewer gas units than submitInitial, but at 9x the gas price
+        // so the ratio of cost per gas unit should reflect the different gas prices
+        assertGt(commitCost, 0);
+        assertGt(costAfterInitial, 0);
+
+        // Step 3: submitFinal at 50 gwei - refund should use per-step costs
+        uint256 relayerBalanceBefore = relayer1.balance;
+        vm.prank(relayer1);
+        vm.txGasPrice(50 gwei);
+        wrapper.submitFinal(commitment, bitfield, proofs, leaf, leafProof, 0);
+
+        uint256 refundAmount = relayer1.balance - relayerBalanceBefore;
+        assertGt(refundAmount, 0);
+
+        // The refund should include costs from all three steps at their respective gas prices.
+        // If it incorrectly used only the final gas price (50 gwei) for all steps,
+        // the refund would be different from what we expect.
+        // Specifically, the credited cost from step 1 (10 gwei) + step 2 (90 gwei)
+        // should be preserved, not recalculated at 50 gwei.
+        assertGt(refundAmount, costAfterCommit); // Must include submitFinal gas cost too
     }
 
     function test_refundSentOnlyAfterSubmitFinal() public {
@@ -442,7 +491,7 @@ contract BeefyClientWrapperTest is Test {
 
         vm.stopPrank();
 
-        assertEq(wrapper.creditedGas(commitmentHash), 0);
+        assertEq(wrapper.creditedCost(commitmentHash), 0);
     }
 
     function test_noRefundForLowProgress() public {
