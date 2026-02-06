@@ -6,29 +6,33 @@ source scripts/set-env.sh
 config_relayer() {
     local electra_forked_epoch=0
     local fulu_forked_epoch=50000000
-    # Configure beefy relay 1 (uses wrapper address)
+    # Configure beefy relay 1 (uses wrapper for gas refunds)
     jq \
-        --arg k1 "$(address_for BeefyClientWrapperProxy)" \
-        --arg k2 "$(address_for GatewayProxy)" \
+        --arg beefyClient "$(address_for BeefyClient)" \
+        --arg beefyClientWrapper "$(address_for BeefyClientWrapper)" \
+        --arg gateway "$(address_for GatewayProxy)" \
         --arg eth_endpoint_ws $eth_endpoint_ws \
         --arg eth_gas_limit $eth_gas_limit \
         '
-      .sink.contracts.BeefyClient = $k1
-    | .sink.contracts.Gateway = $k2
+      .sink.contracts.BeefyClient = $beefyClient
+    | .sink.contracts.BeefyClientWrapper = $beefyClientWrapper
+    | .sink.contracts.Gateway = $gateway
     | .sink.ethereum.endpoint = $eth_endpoint_ws
     | .sink.ethereum."gas-limit" = $eth_gas_limit
     ' \
         config/beefy-relay.json >$output_dir/beefy-relay.json
 
-    # Configure beefy relay 2 (uses wrapper address)
+    # Configure beefy relay 2 (uses wrapper for gas refunds)
     jq \
-        --arg k1 "$(address_for BeefyClientWrapperProxy)" \
-        --arg k2 "$(address_for GatewayProxy)" \
+        --arg beefyClient "$(address_for BeefyClient)" \
+        --arg beefyClientWrapper "$(address_for BeefyClientWrapper)" \
+        --arg gateway "$(address_for GatewayProxy)" \
         --arg eth_endpoint_ws $eth_endpoint_ws \
         --arg eth_gas_limit $eth_gas_limit \
         '
-      .sink.contracts.BeefyClient = $k1
-    | .sink.contracts.Gateway = $k2
+      .sink.contracts.BeefyClient = $beefyClient
+    | .sink.contracts.BeefyClientWrapper = $beefyClientWrapper
+    | .sink.contracts.Gateway = $gateway
     | .sink.ethereum.endpoint = $eth_endpoint_ws
     | .sink.ethereum."gas-limit" = $eth_gas_limit
     ' \

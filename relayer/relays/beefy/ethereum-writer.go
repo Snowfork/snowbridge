@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/big"
 	"math/rand"
+	"strings"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -23,8 +24,66 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// Expected error selectors that should not cause relayer restarts
+const (
+	// TicketAlreadyOwned: Another relayer already claimed this commitment (from BeefyClientWrapper)
+	ErrTicketAlreadyOwned = "0x60bbe44e"
+	// StaleCommitment: The commitment has already been synced (from BeefyClient)
+	ErrStaleCommitment = "0x3d618e50"
+	// NotTicketOwner: Caller is not the ticket owner (from BeefyClientWrapper)
+	ErrNotTicketOwner = "0xe18d39ad"
+	// InvalidCommitment: The commitment's validator set doesn't match current or next (from BeefyClient)
+	ErrInvalidCommitment = "0xc06789fa"
+)
+
 // SessionTimeout is the duration after which a pending session is considered expired
 const SessionTimeout = 40 * time.Minute
+
+// JsonError interface for extracting error data from Ethereum RPC errors
+type JsonError interface {
+	Error() string
+	ErrorCode() int
+	ErrorData() interface{}
+}
+
+// isExpectedCompetitionError checks if an error is due to normal relayer competition
+// (e.g., another relayer already claimed the commitment or it was already synced)
+func isExpectedCompetitionError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	// First check if the error string contains the hex codes (for wrapped errors)
+	errStr := err.Error()
+	if strings.Contains(errStr, ErrTicketAlreadyOwned) ||
+		strings.Contains(errStr, ErrStaleCommitment) ||
+		strings.Contains(errStr, ErrNotTicketOwner) ||
+		strings.Contains(errStr, ErrInvalidCommitment) {
+		return true
+	}
+
+	// Try to extract error data from JsonError interface
+	var currentErr error = err
+	for currentErr != nil {
+		if jsonErr, ok := currentErr.(JsonError); ok {
+			errorData := fmt.Sprintf("%v", jsonErr.ErrorData())
+			if strings.Contains(errorData, ErrTicketAlreadyOwned) ||
+				strings.Contains(errorData, ErrStaleCommitment) ||
+				strings.Contains(errorData, ErrNotTicketOwner) ||
+				strings.Contains(errorData, ErrInvalidCommitment) {
+				return true
+			}
+		}
+		// Try to unwrap
+		if unwrapper, ok := currentErr.(interface{ Unwrap() error }); ok {
+			currentErr = unwrapper.Unwrap()
+		} else {
+			break
+		}
+	}
+
+	return false
+}
 
 type EthereumWriter struct {
 	config          *SinkConfig
@@ -149,6 +208,12 @@ func (wr *EthereumWriter) submit(ctx context.Context, task *Request) error {
 	// Wait for receipt of submitInitial
 	receipt, err := wr.conn.WatchTransaction(ctx, tx, 0)
 	if err != nil {
+		if isExpectedCompetitionError(err) {
+			log.WithFields(logrus.Fields{
+				"beefyBlock": task.SignedCommitment.Commitment.BlockNumber,
+			}).Info("Skipping commitment: another relayer won the race or commitment already synced")
+			return nil
+		}
 		return fmt.Errorf("Failed to get receipt of submitInitial: %w", err)
 	}
 	log.WithFields(logrus.Fields{
@@ -165,9 +230,9 @@ func (wr *EthereumWriter) submit(ctx context.Context, task *Request) error {
 		return fmt.Errorf("Failed to wait for RandaoCommitDelay: %w", err)
 	}
 
-	commitmentHash, err := task.CommitmentHash()
+	commitmentHash, err := wr.computeCommitmentHash(task)
 	if err != nil {
-		return fmt.Errorf("generate commitment hash: %w", err)
+		return fmt.Errorf("compute commitment hash: %w", err)
 	}
 
 	if task.Skippable {
@@ -189,13 +254,19 @@ func (wr *EthereumWriter) submit(ctx context.Context, task *Request) error {
 
 	// Commit PrevRandao which will be used as seed to randomly select subset of validators
 	// https://github.com/Snowfork/snowbridge/blob/75a475cbf8fc8e13577ad6b773ac452b2bf82fbb/contracts/contracts/BeefyClient.sol#L446-L447
-	tx, err = wr.doCommitPrevRandao(ctx, *commitmentHash)
+	tx, err = wr.doCommitPrevRandao(ctx, commitmentHash)
 	if err != nil {
 		return fmt.Errorf("Failed to call CommitPrevRandao: %w", err)
 	}
 
 	_, err = wr.conn.WatchTransaction(ctx, tx, 0)
 	if err != nil {
+		if isExpectedCompetitionError(err) {
+			log.WithFields(logrus.Fields{
+				"beefyBlock": task.SignedCommitment.Commitment.BlockNumber,
+			}).Info("Skipping commitment: another relayer won the race during CommitPrevRandao")
+			return nil
+		}
 		return fmt.Errorf("Failed to get receipt of CommitPrevRandao: %w", err)
 	}
 
@@ -217,13 +288,25 @@ func (wr *EthereumWriter) submit(ctx context.Context, task *Request) error {
 	}
 
 	// Final submission
-	tx, err = wr.doSubmitFinal(ctx, *commitmentHash, initialBitfield, task)
+	tx, err = wr.doSubmitFinal(ctx, commitmentHash, initialBitfield, task)
 	if err != nil {
+		if isExpectedCompetitionError(err) {
+			log.WithFields(logrus.Fields{
+				"beefyBlock": task.SignedCommitment.Commitment.BlockNumber,
+			}).Info("Skipping commitment: another relayer won the race during submitFinal")
+			return nil
+		}
 		return fmt.Errorf("Failed to call submitFinal: %w", err)
 	}
 
 	_, err = wr.conn.WatchTransaction(ctx, tx, 0)
 	if err != nil {
+		if isExpectedCompetitionError(err) {
+			log.WithFields(logrus.Fields{
+				"beefyBlock": task.SignedCommitment.Commitment.BlockNumber,
+			}).Info("Skipping commitment: another relayer won the race during submitFinal")
+			return nil
+		}
 		return fmt.Errorf("Failed to get receipt of submitFinal: %w", err)
 	}
 
@@ -535,9 +618,15 @@ func (wr *EthereumWriter) createInitialBitfield(signedValidators []*big.Int, val
 }
 
 func (wr *EthereumWriter) createFinalBitfield(commitmentHash [32]byte, initialBitfield []*big.Int) ([]*big.Int, error) {
+	// When using wrapper, the ticket was created with msg.sender = wrapper address,
+	// so we need to use the wrapper address as From to find the correct ticket
+	fromAddr := wr.conn.Keypair().CommonAddress()
+	if wr.useWrapper {
+		fromAddr = common.HexToAddress(wr.config.Contracts.BeefyClientWrapper)
+	}
 	callOpts := &bind.CallOpts{
 		Pending: true,
-		From:    wr.conn.Keypair().CommonAddress(),
+		From:    fromAddr,
 	}
 	return wr.beefyClient.CreateFinalBitfield(callOpts, commitmentHash, initialBitfield)
 }
@@ -618,4 +707,13 @@ func (wr *EthereumWriter) doSubmitFiatShamir(ctx context.Context, params *FinalR
 		params.LeafProof,
 		params.LeafProofOrder,
 	)
+}
+
+func (wr *EthereumWriter) computeCommitmentHash(task *Request) ([32]byte, error) {
+	callOpts := &bind.CallOpts{
+		Pending: true,
+		From:    wr.conn.Keypair().CommonAddress(),
+	}
+	commitment := toBeefyClientCommitment(&task.SignedCommitment.Commitment)
+	return wr.beefyClient.ComputeCommitmentHash(callOpts, ToBeefyClientCommitment(commitment))
 }

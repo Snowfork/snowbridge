@@ -303,6 +303,22 @@ contract BeefyClientWrapperTest is Test {
         wrapper.commitPrevRandao(commitmentHash);
     }
 
+    function test_cannotOverwriteExistingTicketOwner() public {
+        uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + 100);
+        IBeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
+        uint256[] memory bitfield = new uint256[](1);
+        IBeefyClient.ValidatorProof memory proof = createValidatorProof();
+
+        // relayer1 submits initial
+        vm.prank(relayer1);
+        wrapper.submitInitial(commitment, bitfield, proof);
+
+        // relayer2 tries to submit initial for the same commitment (should fail)
+        vm.prank(relayer2);
+        vm.expectRevert(BeefyClientWrapper.TicketAlreadyOwned.selector);
+        wrapper.submitInitial(commitment, bitfield, proof);
+    }
+
     function test_onlyTicketOwnerCanSubmitFinal() public {
         uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + 100);
         IBeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);

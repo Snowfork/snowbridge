@@ -19,6 +19,7 @@ contract BeefyClientWrapper {
     error Unauthorized();
     error InvalidAddress();
     error NotTicketOwner();
+    error TicketAlreadyOwned();
     error TransferFailed();
 
     address public owner;
@@ -66,9 +67,14 @@ contract BeefyClientWrapper {
     ) external {
         uint256 startGas = gasleft();
 
+        // Check if ticket is already owned (prevent race condition between relayers)
+        bytes32 commitmentHash = beefyClient.computeCommitmentHash(commitment);
+        if (ticketOwner[commitmentHash] != address(0)) {
+            revert TicketAlreadyOwned();
+        }
+
         beefyClient.submitInitial(commitment, bitfield, proof);
 
-        bytes32 commitmentHash = beefyClient.computeCommitmentHash(commitment);
         ticketOwner[commitmentHash] = msg.sender;
 
         // Track highest pending block so other relayers can check before starting
