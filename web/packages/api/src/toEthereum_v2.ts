@@ -1,7 +1,7 @@
 import { ApiPromise } from "@polkadot/api"
 import { AddressOrPair, SignerOptions, SubmittableExtrinsic } from "@polkadot/api/types"
-import { Codec, ISubmittableResult } from "@polkadot/types/types"
-import { BN, hexToU8a, isHex, stringToU8a, u8aToHex } from "@polkadot/util"
+import { ISubmittableResult } from "@polkadot/types/types"
+import { hexToU8a, isHex, stringToU8a, u8aToHex } from "@polkadot/util"
 import { blake2AsHex, decodeAddress, xxhashAsHex } from "@polkadot/util-crypto"
 import {
     bridgeLocation,
@@ -220,15 +220,15 @@ export async function getDeliveryFee(
     const feePadPercentage = options?.padPercentage ?? 33n
     const feeSlippagePadPercentage = options?.slippagePadPercentage ?? 20n
     const feeStorageKey = xxhashAsHex(":BridgeHubEthereumBaseFee:", 128, true)
-    const feeStorageItem = await assetHub.rpc.state.getStorage(feeStorageKey)
-    let leFee = new BN((feeStorageItem as Codec).toHex().replace("0x", ""), "hex", "le")
+    const assetHubImpl = await paraImplementation(assetHub)
+    const snowbridgeBaseFee = await assetHubImpl.getDeliveryFeeFromStorage(feeStorageKey)
 
     let snowbridgeDeliveryFeeDOT = 0n
-    if (leFee.eqn(0)) {
+    if (snowbridgeBaseFee === 0n) {
         console.warn("Asset Hub onchain BridgeHubEthereumBaseFee not set. Using default fee.")
         snowbridgeDeliveryFeeDOT = options?.defaultFee ?? 3_833_568_200_000n
     } else {
-        snowbridgeDeliveryFeeDOT = BigInt(leFee.toString())
+        snowbridgeDeliveryFeeDOT = snowbridgeBaseFee
     }
 
     const { sourceAssetMetadata, sourceParachain } = resolveInputs(
@@ -314,7 +314,6 @@ export async function getDeliveryFee(
     let assetHubExecutionFeeDOT = 0n
     let returnToSenderExecutionFeeDOT = 0n
     let returnToSenderDeliveryFeeDOT = 0n
-    const assetHubImpl = await paraImplementation(assetHub)
     const bridgeHubDeliveryFeeDOT = await assetHubImpl.calculateDeliveryFeeInDOT(
         registry.bridgeHubParaId,
         forwardedXcm,
