@@ -86,6 +86,14 @@ export abstract class ParachainBase {
         return accountNextId.toNumber()
     }
 
+    async getDeliveryFeeFromStorage(feeKeyHex: string): Promise<bigint> {
+        const feeStorageItem = await this.provider.rpc.state.getStorage(feeKeyHex)
+        if (!feeStorageItem) return 0n
+
+        const leFee = new BN((feeStorageItem as Codec).toHex().replace("0x", ""), "hex", "le")
+        return leFee.eqn(0) ? 0n : BigInt(leFee.toString())
+    }
+
     getNativeBalanceLocation(relativeTo: "here" | "sibling"): any {
         switch (relativeTo) {
             case "sibling":
