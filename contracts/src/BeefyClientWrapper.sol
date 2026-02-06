@@ -22,6 +22,9 @@ contract BeefyClientWrapper {
     error TicketAlreadyOwned();
     error TransferFailed();
 
+    // Base transaction gas cost (intrinsic gas for any Ethereum transaction)
+    uint256 private constant BASE_TX_GAS = 21000;
+
     address public owner;
     IBeefyClient public beefyClient;
 
@@ -134,6 +137,11 @@ contract BeefyClientWrapper {
         _refundWithProgress(startGas, previousGas, progress);
     }
 
+    /**
+     * @dev Submit a Fiat-Shamir proof. This is a single-step submission that doesn't require
+     * ticket tracking or gas refunds since there's no multi-step flow to protect.
+     * Gas refunds are only provided for the multi-step submitInitial -> commitPrevRandao -> submitFinal flow.
+     */
     function submitFiatShamir(
         IBeefyClient.Commitment calldata commitment,
         uint256[] calldata bitfield,
@@ -173,7 +181,7 @@ contract BeefyClientWrapper {
     }
 
     function _creditGas(uint256 startGas, bytes32 commitmentHash) internal {
-        uint256 gasUsed = startGas - gasleft() + 21000;
+        uint256 gasUsed = startGas - gasleft() + BASE_TX_GAS;
         creditedGas[commitmentHash] += gasUsed;
         emit GasCredited(msg.sender, commitmentHash, gasUsed);
     }
@@ -188,7 +196,7 @@ contract BeefyClientWrapper {
             return;
         }
 
-        uint256 currentGas = startGas - gasleft() + 21000;
+        uint256 currentGas = startGas - gasleft() + BASE_TX_GAS;
         uint256 totalGasUsed = currentGas + previousGas;
         uint256 effectiveGasPrice = tx.gasprice < maxGasPrice ? tx.gasprice : maxGasPrice;
         uint256 refundAmount = totalGasUsed * effectiveGasPrice;

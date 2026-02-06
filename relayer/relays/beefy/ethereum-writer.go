@@ -211,7 +211,7 @@ func (wr *EthereumWriter) submit(ctx context.Context, task *Request) error {
 		if isExpectedCompetitionError(err) {
 			log.WithFields(logrus.Fields{
 				"beefyBlock": task.SignedCommitment.Commitment.BlockNumber,
-			}).Info("Skipping commitment: another relayer won the race or commitment already synced")
+			}).Info("Skipping commitment: expected error (race condition, stale commitment, or validator set mismatch)")
 			return nil
 		}
 		return fmt.Errorf("Failed to get receipt of submitInitial: %w", err)
@@ -264,7 +264,7 @@ func (wr *EthereumWriter) submit(ctx context.Context, task *Request) error {
 		if isExpectedCompetitionError(err) {
 			log.WithFields(logrus.Fields{
 				"beefyBlock": task.SignedCommitment.Commitment.BlockNumber,
-			}).Info("Skipping commitment: another relayer won the race during CommitPrevRandao")
+			}).Info("Skipping commitment: expected error during CommitPrevRandao")
 			return nil
 		}
 		return fmt.Errorf("Failed to get receipt of CommitPrevRandao: %w", err)
@@ -293,7 +293,7 @@ func (wr *EthereumWriter) submit(ctx context.Context, task *Request) error {
 		if isExpectedCompetitionError(err) {
 			log.WithFields(logrus.Fields{
 				"beefyBlock": task.SignedCommitment.Commitment.BlockNumber,
-			}).Info("Skipping commitment: another relayer won the race during submitFinal")
+			}).Info("Skipping commitment: expected error during submitFinal")
 			return nil
 		}
 		return fmt.Errorf("Failed to call submitFinal: %w", err)
@@ -304,7 +304,7 @@ func (wr *EthereumWriter) submit(ctx context.Context, task *Request) error {
 		if isExpectedCompetitionError(err) {
 			log.WithFields(logrus.Fields{
 				"beefyBlock": task.SignedCommitment.Commitment.BlockNumber,
-			}).Info("Skipping commitment: another relayer won the race during submitFinal")
+			}).Info("Skipping commitment: expected error during submitFinal receipt")
 			return nil
 		}
 		return fmt.Errorf("Failed to get receipt of submitFinal: %w", err)
