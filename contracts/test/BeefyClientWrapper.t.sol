@@ -9,6 +9,22 @@ import {IBeefyClient} from "../src/interfaces/IBeefyClient.sol";
 import {ScaleCodec} from "../src/utils/ScaleCodec.sol";
 
 /**
+ * @title MockGateway
+ * @dev Returns the BeefyClient address, simulating the GatewayProxy → Gateway pattern
+ */
+contract MockGateway {
+    address public BEEFY_CLIENT;
+
+    constructor(address _beefyClient) {
+        BEEFY_CLIENT = _beefyClient;
+    }
+
+    function setBeefyClient(address _beefyClient) external {
+        BEEFY_CLIENT = _beefyClient;
+    }
+}
+
+/**
  * @title MockBeefyClient
  * @dev A simplified mock of BeefyClient for testing the wrapper
  */
@@ -139,6 +155,7 @@ contract MockBeefyClient {
 contract BeefyClientWrapperTest is Test {
     BeefyClientWrapper wrapper;
     MockBeefyClient mockBeefyClient;
+    MockGateway mockGateway;
 
     address owner = address(0x1);
     address relayer1 = address(0x2);
@@ -151,12 +168,13 @@ contract BeefyClientWrapperTest is Test {
     uint256 constant INITIAL_BEEFY_BLOCK = 1000;
 
     function setUp() public {
-        // Deploy mock BeefyClient
+        // Deploy mock BeefyClient and Gateway
         mockBeefyClient = new MockBeefyClient(uint64(INITIAL_BEEFY_BLOCK));
+        mockGateway = new MockGateway(address(mockBeefyClient));
 
-        // Deploy wrapper directly (no proxy)
+        // Deploy wrapper with gateway address
         wrapper = new BeefyClientWrapper(
-            address(mockBeefyClient),
+            address(mockGateway),
             owner,
             MAX_GAS_PRICE,
             MAX_REFUND_AMOUNT,
@@ -216,13 +234,13 @@ contract BeefyClientWrapperTest is Test {
 
     function test_initialization() public {
         assertEq(wrapper.owner(), owner);
-        assertEq(address(wrapper.beefyClient()), address(mockBeefyClient));
+        assertEq(wrapper.gateway(), address(mockGateway));
         assertEq(wrapper.maxGasPrice(), MAX_GAS_PRICE);
         assertEq(wrapper.maxRefundAmount(), MAX_REFUND_AMOUNT);
         assertEq(wrapper.refundTarget(), REFUND_TARGET);
     }
 
-    function test_invalidBeefyClientAddress() public {
+    function test_invalidGatewayAddress() public {
         vm.expectRevert(BeefyClientWrapper.InvalidAddress.selector);
         new BeefyClientWrapper(
             address(0),
@@ -236,7 +254,7 @@ contract BeefyClientWrapperTest is Test {
     function test_invalidOwnerAddress() public {
         vm.expectRevert(BeefyClientWrapper.InvalidAddress.selector);
         new BeefyClientWrapper(
-            address(mockBeefyClient),
+            address(mockGateway),
             address(0),
             MAX_GAS_PRICE,
             MAX_REFUND_AMOUNT,
@@ -807,6 +825,7 @@ contract RejectingRelayer {
 contract BeefyClientWrapperTransferFailedTest is Test {
     BeefyClientWrapper wrapper;
     MockBeefyClient mockBeefyClient;
+    MockGateway mockGateway;
     RejectingRecipient rejectingRecipient;
 
     address owner = address(0x1);
@@ -815,8 +834,9 @@ contract BeefyClientWrapperTransferFailedTest is Test {
 
     function setUp() public {
         mockBeefyClient = new MockBeefyClient(uint64(INITIAL_BEEFY_BLOCK));
+        mockGateway = new MockGateway(address(mockBeefyClient));
         wrapper = new BeefyClientWrapper(
-            address(mockBeefyClient),
+            address(mockGateway),
             owner,
             100 gwei,
             0.05 ether,

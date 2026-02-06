@@ -8,7 +8,7 @@ import {BeefyClientWrapper} from "../src/BeefyClientWrapper.sol";
 
 contract DeployBeefyClientWrapper is Script {
     struct Config {
-        address beefyClient;
+        address gateway;
         address owner;
         uint256 maxGasPrice;
         uint256 maxRefundAmount;
@@ -17,7 +17,7 @@ contract DeployBeefyClientWrapper is Script {
 
     function readConfig() internal returns (Config memory config) {
         config = Config({
-            beefyClient: vm.envAddress("BEEFY_CLIENT_ADDRESS"),
+            gateway: vm.envAddress("GATEWAY_PROXY_ADDRESS"),
             owner: vm.envAddress("WRAPPER_OWNER"),
             maxGasPrice: vm.envOr("MAX_GAS_PRICE", uint256(100 gwei)),
             maxRefundAmount: vm.envOr("MAX_REFUND_AMOUNT", uint256(0.05 ether)),
@@ -31,7 +31,7 @@ contract DeployBeefyClientWrapper is Script {
         Config memory config = readConfig();
 
         BeefyClientWrapper wrapper = new BeefyClientWrapper(
-            config.beefyClient,
+            config.gateway,
             config.owner,
             config.maxGasPrice,
             config.maxRefundAmount,

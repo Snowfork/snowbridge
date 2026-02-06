@@ -4,11 +4,18 @@ pragma solidity 0.8.33;
 
 import {IBeefyClient} from "./interfaces/IBeefyClient.sol";
 
+interface IGateway {
+    function BEEFY_CLIENT() external view returns (address);
+}
+
 /**
  * @title BeefyClientWrapper
  * @dev Forwards BeefyClient submissions and refunds gas costs to relayers.
  * Anyone can relay. Refunds are only paid when the relayer advances the light
  * client by at least `refundTarget` blocks, ensuring meaningful progress.
+ *
+ * The BeefyClient address is resolved dynamically from the Gateway (via GatewayProxy),
+ * so after a Gateway upgrade this wrapper automatically points to the new BeefyClient.
  */
 contract BeefyClientWrapper {
     event GasCredited(address indexed relayer, bytes32 indexed commitmentHash, uint256 gasUsed);
@@ -26,7 +33,7 @@ contract BeefyClientWrapper {
     uint256 private constant BASE_TX_GAS = 21000;
 
     address public owner;
-    IBeefyClient public beefyClient;
+    address public immutable gateway;
 
     // Ticket tracking (for multi-step submission)
     mapping(bytes32 => address) public ticketOwner;
@@ -44,17 +51,17 @@ contract BeefyClientWrapper {
     uint256 public highestPendingBlockTimestamp;
 
     constructor(
-        address _beefyClient,
+        address _gateway,
         address _owner,
         uint256 _maxGasPrice,
         uint256 _maxRefundAmount,
         uint256 _refundTarget
     ) {
-        if (_beefyClient == address(0) || _owner == address(0)) {
+        if (_gateway == address(0) || _owner == address(0)) {
             revert InvalidAddress();
         }
 
-        beefyClient = IBeefyClient(_beefyClient);
+        gateway = _gateway;
         owner = _owner;
         maxGasPrice = _maxGasPrice;
         maxRefundAmount = _maxRefundAmount;
@@ -71,12 +78,12 @@ contract BeefyClientWrapper {
         uint256 startGas = gasleft();
 
         // Check if ticket is already owned (prevent race condition between relayers)
-        bytes32 commitmentHash = beefyClient.computeCommitmentHash(commitment);
+        bytes32 commitmentHash = _beefyClient().computeCommitmentHash(commitment);
         if (ticketOwner[commitmentHash] != address(0)) {
             revert TicketAlreadyOwned();
         }
 
-        beefyClient.submitInitial(commitment, bitfield, proof);
+        _beefyClient().submitInitial(commitment, bitfield, proof);
 
         ticketOwner[commitmentHash] = msg.sender;
 
@@ -96,7 +103,7 @@ contract BeefyClientWrapper {
             revert NotTicketOwner();
         }
 
-        beefyClient.commitPrevRandao(commitmentHash);
+        _beefyClient().commitPrevRandao(commitmentHash);
 
         _creditGas(startGas, commitmentHash);
     }
@@ -112,20 +119,20 @@ contract BeefyClientWrapper {
         uint256 startGas = gasleft();
 
         // Capture previous state for progress calculation
-        uint64 previousBeefyBlock = beefyClient.latestBeefyBlock();
+        uint64 previousBeefyBlock = _beefyClient().latestBeefyBlock();
 
-        bytes32 commitmentHash = beefyClient.computeCommitmentHash(commitment);
+        bytes32 commitmentHash = _beefyClient().computeCommitmentHash(commitment);
         if (ticketOwner[commitmentHash] != msg.sender) {
             revert NotTicketOwner();
         }
 
-        beefyClient.submitFinal(commitment, bitfield, proofs, leaf, leafProof, leafProofOrder);
+        _beefyClient().submitFinal(commitment, bitfield, proofs, leaf, leafProof, leafProofOrder);
 
         // Calculate progress
         uint256 progress = commitment.blockNumber - previousBeefyBlock;
 
         // Clear highest pending block if light client has caught up
-        if (beefyClient.latestBeefyBlock() >= highestPendingBlock) {
+        if (_beefyClient().latestBeefyBlock() >= highestPendingBlock) {
             highestPendingBlock = 0;
             highestPendingBlockTimestamp = 0;
         }
@@ -150,10 +157,10 @@ contract BeefyClientWrapper {
         bytes32[] calldata leafProof,
         uint256 leafProofOrder
     ) external {
-        beefyClient.submitFiatShamir(commitment, bitfield, proofs, leaf, leafProof, leafProofOrder);
+        _beefyClient().submitFiatShamir(commitment, bitfield, proofs, leaf, leafProof, leafProofOrder);
 
         // Clear highest pending block if light client has caught up
-        if (beefyClient.latestBeefyBlock() >= highestPendingBlock) {
+        if (_beefyClient().latestBeefyBlock() >= highestPendingBlock) {
             highestPendingBlock = 0;
             highestPendingBlockTimestamp = 0;
         }
@@ -173,6 +180,10 @@ contract BeefyClientWrapper {
     }
 
     /* Internal Functions */
+
+    function _beefyClient() internal view returns (IBeefyClient) {
+        return IBeefyClient(IGateway(gateway).BEEFY_CLIENT());
+    }
 
     function _checkOwner() internal view {
         if (msg.sender != owner) {
