@@ -13,7 +13,7 @@ const registry = {
             "1002": "wss://bridge-hub-westend-rpc.n.dwellir.com",
         },
         gatewayContract: "0x9ed8b47bc3417e3bd0507adc06e56e2fa360a4e9",
-        beefyContract: "0xA04460B1D8bBef33F54edB2C3115e3E4D41237A6",
+        beefyContract: "0xa04460b1d8bbef33f54edb2c3115e3e4d41237a6",
         assetHubParaId: 1000,
         bridgeHubParaId: 1002,
         v2_parachains: [1000],
@@ -21,14 +21,14 @@ const registry = {
             "https://snowbridge.squids.live/snowbridge-subsquid-westend@v1/api/graphql",
         l2Bridge: {
             acrossAPIUrl: "https://testnet.across.to/api",
-            l1AdapterAddress: "0xA5B8589bD534701be49916c4d2e634aB1c765Cbf",
-            l1HandlerAddress: "0x924a9f036260DdD5808007E1AA95f08eD08aA569",
-            l1FeeTokenAddress: "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14",
-            l1SwapRouterAddress: "0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E",
-            l1SwapQuoterAddress: "0xEd1f6473345F45b75F8179591dd5bA1888cf2FB3",
+            l1AdapterAddress: "0xa5b8589bd534701be49916c4d2e634ab1c765cbf",
+            l1HandlerAddress: "0x924a9f036260ddd5808007e1aa95f08ed08aa569",
+            l1FeeTokenAddress: "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+            l1SwapRouterAddress: "0x3bfa4769fb09eefc5a80d6e87c3b9c650f7ae48e",
+            l1SwapQuoterAddress: "0xed1f6473345f45b75f8179591dd5ba1888cf2fb3",
             l2Chains: {
                 "84532": {
-                    adapterAddress: "0xf06939613A3838Af11104c898758220dB9093679",
+                    adapterAddress: "0xf06939613a3838af11104c898758220db9093679",
                     feeTokenAddress: "0x4200000000000000000000000000000000000006",
                     swapRoutes: [
                         {
@@ -83,9 +83,39 @@ const registry = {
                 "0xf50fb50d65c8c1f6c72e4d8397c984933afc8f7e",
             ],
         },
+        {
+            from: {
+                kind: "polkadot",
+                id: 1000,
+            },
+            to: {
+                kind: "ethereum_l2",
+                id: 84532,
+            },
+            assets: [
+                "0x0000000000000000000000000000000000000000",
+                "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
+                "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+            ],
+        },
+        {
+            from: {
+                kind: "ethereum_l2",
+                id: 84532,
+            },
+            to: {
+                kind: "polkadot",
+                id: 1000,
+            },
+            assets: [
+                "0x0000000000000000000000000000000000000000",
+                "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
+                "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+            ],
+        },
     ],
     registry: {
-        timestamp: "2026-01-28T21:33:34.219Z",
+        timestamp: "2026-02-06T22:28:17.482Z",
         environment: "westend_sepolia",
         ethChainId: 11155111,
         gatewayAddress: "0x9ed8b47bc3417e3bd0507adc06e56e2fa360a4e9",
@@ -109,7 +139,7 @@ const registry = {
             accountType: "AccountId32",
             name: "Westend BridgeHub",
             specName: "bridge-hub-westend",
-            specVersion: 1021000,
+            specVersion: 1021001,
         },
         ethereumChains: {
             ethereum_l2_84532: {
@@ -231,7 +261,7 @@ const registry = {
                     accountType: "AccountId32",
                     name: "Westend Asset Hub",
                     specName: "westmint",
-                    specVersion: 1021000,
+                    specVersion: 1021002,
                 },
                 assets: {
                     "0x0000000000000000000000000000000000000000": {

@@ -20,7 +20,7 @@ const registry = {
             "3369": "wss://polkadot-mythos-rpc.polkadot.io",
         },
         gatewayContract: "0x27ca963c279c93801941e1eb8799c23f407d68e7",
-        beefyContract: "0x1817874feAb3ce053d0F40AbC23870DB35C2AFfc",
+        beefyContract: "0x1817874feab3ce053d0f40abc23870db35c2affc",
         assetHubParaId: 1000,
         bridgeHubParaId: 1002,
         v2_parachains: [1000],
@@ -44,14 +44,14 @@ const registry = {
         },
         l2Bridge: {
             acrossAPIUrl: "https://app.across.to/api",
-            l1AdapterAddress: "0x313E8c9Fb47613f2B1A436bE978c2BB75727fcC5",
-            l1HandlerAddress: "0x924a9f036260DdD5808007E1AA95f08eD08aA569",
+            l1AdapterAddress: "0x313e8c9fb47613f2b1a436be978c2bb75727fcc5",
+            l1HandlerAddress: "0x924a9f036260ddd5808007e1aa95f08ed08aa569",
             l1FeeTokenAddress: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
-            l1SwapQuoterAddress: "0x61fFE014bA17989E743c5F6cB21bF9697530B21e",
-            l1SwapRouterAddress: "0xE592427A0AEce92De3Edee1F18E0157C05861564",
+            l1SwapQuoterAddress: "0x61ffe014ba17989e743c5f6cb21bf9697530b21e",
+            l1SwapRouterAddress: "0xe592427a0aece92de3edee1f18e0157c05861564",
             l2Chains: {
                 "8453": {
-                    adapterAddress: "0xCd5d2c665E3AC84bF5c67FE7a0C48748dA40db2F",
+                    adapterAddress: "0xcd5d2c665e3ac84bf5c67fe7a0c48748da40db2f",
                     feeTokenAddress: "0x4200000000000000000000000000000000000006",
                     swapRoutes: [
                         {
@@ -60,8 +60,8 @@ const registry = {
                             swapFee: 0,
                         },
                         {
-                            inputToken: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-                            outputToken: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+                            inputToken: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+                            outputToken: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
                             swapFee: 500,
                         },
                     ],
@@ -434,9 +434,39 @@ const registry = {
                 "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
             ],
         },
+        {
+            from: {
+                kind: "polkadot",
+                id: 1000,
+            },
+            to: {
+                kind: "ethereum_l2",
+                id: 8453,
+            },
+            assets: [
+                "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                "0x0000000000000000000000000000000000000000",
+            ],
+        },
+        {
+            from: {
+                kind: "ethereum_l2",
+                id: 8453,
+            },
+            to: {
+                kind: "polkadot",
+                id: 1000,
+            },
+            assets: [
+                "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                "0x0000000000000000000000000000000000000000",
+            ],
+        },
     ],
     registry: {
-        timestamp: "2026-02-03T21:35:14.732Z",
+        timestamp: "2026-02-06T22:27:18.188Z",
         environment: "polkadot_mainnet",
         ethChainId: 1,
         gatewayAddress: "0x27ca963c279c93801941e1eb8799c23f407d68e7",
@@ -829,12 +859,12 @@ const registry = {
                         swapTokenAddress: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
                         swapFee: 0,
                     },
-                    "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913": {
-                        token: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+                    "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913": {
+                        token: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
                         name: "USD Coin",
                         symbol: "USDC",
                         decimals: 6,
-                        swapTokenAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+                        swapTokenAddress: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
                         swapFee: 500,
                     },
                     "0x0000000000000000000000000000000000000000": {
@@ -1654,7 +1684,7 @@ const registry = {
                         isSufficient: false,
                     },
                 },
-                estimatedExecutionFeeDOT: 82505857n,
+                estimatedExecutionFeeDOT: 83149305n,
                 estimatedDeliveryFeeDOT: 307100000n,
             },
             polkadot_2034: {
@@ -1838,7 +1868,7 @@ const registry = {
                         isSufficient: true,
                     },
                 },
-                estimatedExecutionFeeDOT: 1478898n,
+                estimatedExecutionFeeDOT: 1561833n,
                 estimatedDeliveryFeeDOT: 307100000n,
             },
             polkadot_2043: {
