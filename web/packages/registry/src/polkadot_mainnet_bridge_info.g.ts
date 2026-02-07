@@ -461,12 +461,11 @@ const registry = {
             assets: [
                 "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
                 "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-                "0x0000000000000000000000000000000000000000",
             ],
         },
     ],
     registry: {
-        timestamp: "2026-02-06T22:27:18.188Z",
+        timestamp: "2026-02-07T00:48:57.082Z",
         environment: "polkadot_mainnet",
         ethChainId: 1,
         gatewayAddress: "0x27ca963c279c93801941e1eb8799c23f407d68e7",
@@ -496,6 +495,7 @@ const registry = {
             ethereum_1: {
                 kind: "ethereum",
                 id: 1,
+                name: "mainnet",
                 assets: {
                     "0x9d39a5de30e57443bff2a8307a4256c8797a3497": {
                         token: "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
@@ -850,6 +850,7 @@ const registry = {
             ethereum_l2_8453: {
                 kind: "ethereum_l2",
                 id: 8453,
+                name: "base",
                 assets: {
                     "0x4200000000000000000000000000000000000006": {
                         token: "0x4200000000000000000000000000000000000006",
@@ -1684,7 +1685,7 @@ const registry = {
                         isSufficient: false,
                     },
                 },
-                estimatedExecutionFeeDOT: 83149305n,
+                estimatedExecutionFeeDOT: 84118975n,
                 estimatedDeliveryFeeDOT: 307100000n,
             },
             polkadot_2034: {
@@ -1868,7 +1869,7 @@ const registry = {
                         isSufficient: true,
                     },
                 },
-                estimatedExecutionFeeDOT: 1561833n,
+                estimatedExecutionFeeDOT: 1565904n,
                 estimatedDeliveryFeeDOT: 307100000n,
             },
             polkadot_2043: {

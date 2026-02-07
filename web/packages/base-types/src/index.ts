@@ -33,6 +33,7 @@ export type ERC20MetadataMap = Record<string, ERC20Metadata>;
 export type EthereumChain = ChainId & {
   kind: EthereumKind;
   key: `${EthereumKind}_${number}`;
+  name?: string;
   evmParachainId?: number;
   assets: ERC20MetadataMap;
   precompile?: `0x${string}`;
@@ -179,14 +180,12 @@ export type Source = ChainId & {
 export type TransferLocation = ParachainLocation | EthereumLocation;
 
 export type ParachainLocation = ChainId & {
-  name: string;
   kind: ParachainKind;
   key: ChainKey<ParachainKind>;
   parachain: Parachain;
 };
 
 export type EthereumLocation = ChainId & {
-  name: string;
   kind: EthereumKind;
   key: ChainKey<EthereumKind>;
   ethChain: EthereumChain;

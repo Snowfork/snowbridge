@@ -426,6 +426,8 @@ function buildTransferLocations(
                 if (pathFilter(p1)) {
                     locations.push(p1)
                 }
+                // L2 does not natively support Ether, only WETH
+                if (asset === assetsV2.ETHER_TOKEN_ADDRESS) continue
                 const p2: Path = {
                     source: p1.destination, // L2 Chain
                     destination: p1.source, // Asset Hub
@@ -829,7 +831,7 @@ async function indexParachain(
         const destinationXcm = xcmBuilder.buildParachainERC20ReceivedXcmOnDestination(
             parachain.provider.registry,
             ethChainId,
-            "0x0000000000000000000000000000000000000000",
+            assetsV2.ETHER_TOKEN_ADDRESS,
             340282366920938463463374607431768211455n,
             340282366920938463463374607431768211455n,
             info.accountType === "AccountId32"
@@ -882,7 +884,7 @@ async function indexEthChain(
     metadataOverrides: ERC20MetadataOverrideMap,
     l2Chains: { [l2ChainId: number]: L2ForwardMetadata },
 ): Promise<EthereumChain> {
-    const id = networkName !== "unknown" ? networkName : undefined
+    const name = networkName !== "unknown" ? networkName : undefined
     if (networkChainId == ethChainId) {
         // Asset Hub and get meta data
         const assetHub = parachains[`polkadot_${assetHubParaId}`]
@@ -940,6 +942,7 @@ async function indexEthChain(
         return {
             kind: "ethereum",
             id: networkChainId,
+            name,
             assets,
             key: `ethereum_${networkChainId}`,
             baseDeliveryGas: 120_000n,
@@ -954,17 +957,18 @@ async function indexEthChain(
                 swapFee: route.swapFee,
             }
         }
-        assets["0x0000000000000000000000000000000000000000"] = {
-            token: "0x0000000000000000000000000000000000000000",
+        assets[assetsV2.ETHER_TOKEN_ADDRESS] = {
+            token: assetsV2.ETHER_TOKEN_ADDRESS,
             name: "Ether",
             symbol: "Ether",
             decimals: 18,
-            swapTokenAddress: "0x0000000000000000000000000000000000000000",
+            swapTokenAddress: assetsV2.ETHER_TOKEN_ADDRESS,
             swapFee: 0,
         }
         return {
             kind: "ethereum_l2",
             id: networkChainId,
+            name,
             assets,
             key: `ethereum_l2_${networkChainId}`,
         }
@@ -1016,6 +1020,7 @@ async function indexEthChain(
             kind: "ethereum",
             id: networkChainId,
             key: `ethereum_${networkChainId}`,
+            name,
             evmParachainId: evmParachainChain.id,
             assets,
             precompile,

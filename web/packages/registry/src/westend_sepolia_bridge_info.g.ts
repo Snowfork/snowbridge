@@ -108,14 +108,13 @@ const registry = {
                 id: 1000,
             },
             assets: [
-                "0x0000000000000000000000000000000000000000",
                 "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
                 "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
             ],
         },
     ],
     registry: {
-        timestamp: "2026-02-06T22:28:17.482Z",
+        timestamp: "2026-02-07T00:46:49.479Z",
         environment: "westend_sepolia",
         ethChainId: 11155111,
         gatewayAddress: "0x9ed8b47bc3417e3bd0507adc06e56e2fa360a4e9",
@@ -145,6 +144,7 @@ const registry = {
             ethereum_l2_84532: {
                 kind: "ethereum_l2",
                 id: 84532,
+                name: "base-sepolia",
                 assets: {
                     "0x4200000000000000000000000000000000000006": {
                         token: "0x4200000000000000000000000000000000000006",
@@ -176,6 +176,7 @@ const registry = {
             ethereum_11155111: {
                 kind: "ethereum",
                 id: 11155111,
+                name: "sepolia",
                 assets: {
                     "0x0000000000000000000000000000000000000000": {
                         token: "0x0000000000000000000000000000000000000000",

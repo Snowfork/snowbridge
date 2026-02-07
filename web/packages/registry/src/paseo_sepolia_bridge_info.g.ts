@@ -108,7 +108,7 @@ const registry = {
         },
     ],
     registry: {
-        timestamp: "2026-02-06T22:29:51.594Z",
+        timestamp: "2026-02-06T23:28:31.515Z",
         environment: "paseo_sepolia",
         ethChainId: 11155111,
         gatewayAddress: "0x1607c1368bc943130258318c91bbd8cff3d063e6",
@@ -138,6 +138,7 @@ const registry = {
             ethereum_11155111: {
                 kind: "ethereum",
                 id: 11155111,
+                name: "sepolia",
                 assets: {
                     "0x0000000000000000000000000000000000000000": {
                         token: "0x0000000000000000000000000000000000000000",
@@ -287,7 +288,7 @@ const registry = {
                     ss58Format: 101,
                     isEthereum: false,
                     accountType: "AccountId32",
-                    name: "NeuroWeb Testnet",
+                    name: "Neuro Testnet",
                     specName: "origintrail-parachain",
                     specVersion: 151,
                 },
