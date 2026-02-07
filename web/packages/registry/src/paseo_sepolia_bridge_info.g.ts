@@ -288,7 +288,7 @@ const registry = {
                     ss58Format: 101,
                     isEthereum: false,
                     accountType: "AccountId32",
-                    name: "NeuroWeb Testnet",
+                    name: "Neuro Testnet",
                     specName: "origintrail-parachain",
                     specVersion: 151,
                 },
