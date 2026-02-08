@@ -50,6 +50,7 @@ pub struct ValidatorSet {
 // Constants
 const MMR_ROOT_ID: [u8; 2] = *b"mh";
 const FIAT_SHAMIR_DOMAIN_ID: &[u8] = b"SNOWBRIDGE-FIAT-SHAMIR-v1";
+const FIAT_SHAMIR_REQUIRED_SIGNATURES: u32 = 111;
 
 // Global state variables (in a real implementation, these would be stored in the contract)
 #[derive(Debug, Clone)]
@@ -93,6 +94,12 @@ fn submit_fiat_shamir() {
     // Verify all validator proofs
     let commitment_hash = hash_commitment(&commitment);
     let mut state = STATE.lock().unwrap();
+
+    // Check for stale commitment
+    if commitment.block_number as u64 <= state.latest_beefy_block {
+        panic!("Stale commitment");
+    }
+
     let validator_set = if (commitment.validator_set_id as u128) == state.current_validator_set.id {
         state.current_validator_set.clone()
     } else if (commitment.validator_set_id as u128) == state.next_validator_set.id {
@@ -100,6 +107,10 @@ fn submit_fiat_shamir() {
     } else {
         panic!("Invalid commitment");
     };
+
+    // Validate bitfield with quorum check (2/3 + 1)
+    let quorum = compute_quorum(validator_set.length as usize);
+    validate_bitfield(&bitfield, validator_set.length as usize, quorum);
 
     verify_fiat_shamir_commitment(&validator_set, &bitfield, &proofs, &commitment_hash);
 
@@ -259,6 +270,12 @@ fn hash_bitfield(bitfield: &[u64]) -> [u8; 32] {
     hash
 }
 
+/// 2/3 + 1 of validators (quorum) - bitfield must have at least this many set bits.
+fn compute_quorum(length: usize) -> u32 {
+    (length - (length - 1) / 3) as u32
+}
+
+/// 1/3 + 1 - sufficient to ensure at least one honest validator when verifying signatures.
 fn compute_max_required_signatures(length: usize) -> u32 {
     (length / 3 + 1) as u32
 }
@@ -303,7 +320,8 @@ fn verify_fiat_shamir_commitment(
     proofs: &[ValidatorProof],
     commitment_hash: &[u8; 32],
 ) {
-    let required = compute_max_required_signatures(validator_set.length as usize) as usize;
+    let max_required = compute_max_required_signatures(validator_set.length as usize) as usize;
+    let required = std::cmp::min(FIAT_SHAMIR_REQUIRED_SIGNATURES as usize, max_required);
     if proofs.len() != required {
         panic!("Invalid validator proof length");
     }
@@ -319,19 +337,33 @@ fn verify_mmr_proof(
 ) {
     let mmr_root = extract_mmr_root(commitment);
     let leaf_hash = keccak256(&encode_mmr_leaf(leaf));
+
+    // Check proof size
     if leaf_proof.len() > 256 {
         panic!("Proof size exceeded");
     }
 
-    let mut acc = leaf_hash;
+    // Verify MMR leaf proof - matching Solidity MMRProof.verifyLeafProof
+    let leaf_is_valid = mmr_verify_leaf_proof(&mmr_root, &leaf_hash, leaf_proof, leaf_proof_order);
+
+    if !leaf_is_valid {
+        panic!("Invalid MMR leaf proof");
+    }
+}
+
+// Helper function matching MMRProof.verifyLeafProof from Solidity
+fn mmr_verify_leaf_proof(
+    root: &[u8; 32],
+    leaf: &[u8; 32],
+    leaf_proof: &[[u8; 32]],
+    leaf_proof_order: &[u8],
+) -> bool {
+    let mut acc = *leaf;
     for (i, item) in leaf_proof.iter().enumerate() {
         let order = proof_order_bit(leaf_proof_order, i);
         acc = hash_pairs(acc, *item, order);
     }
-
-    if acc != mmr_root {
-        panic!("Invalid MMR leaf proof");
-    }
+    acc == *root
 }
 
 fn extract_mmr_root(commitment: &Commitment) -> [u8; 32] {
@@ -360,7 +392,9 @@ fn fiat_shamir_final_bitfield(
 ) -> Vec<u64> {
     let bitfield_hash = hash_bitfield(bitfield);
     let fiat_hash = create_fiat_shamir_hash(commitment_hash, &bitfield_hash, validator_set);
-    let required = compute_max_required_signatures(validator_set.length as usize) as usize;
+    
+    let max_required = compute_max_required_signatures(validator_set.length as usize) as usize;
+    let required = std::cmp::min(FIAT_SHAMIR_REQUIRED_SIGNATURES as usize, max_required);
     subsample_bitfield(
         u64::from_be_bytes(fiat_hash[24..32].try_into().unwrap()),
         bitfield,
@@ -484,6 +518,44 @@ fn make_index(seed: u64, iteration: u64, length: usize) -> usize {
 
 fn container_length(bitfield_size: usize) -> usize {
     (bitfield_size + 63) / 64
+}
+
+fn validate_bitfield_padding(bitfield: &[u64], length: usize) {
+    let container_len = container_length(length);
+    if container_len == 0 || bitfield.is_empty() {
+        return;
+    }
+
+    // Check if there are padding bits in the last element
+    let valid_bits_in_last_element = length % 64;
+    if valid_bits_in_last_element == 0 {
+        // All bits in last element are valid, no padding
+        return;
+    }
+
+    // Create a mask for padding bits: all bits from validBitsInLastElement to 63
+    let padding_mask = u64::MAX << valid_bits_in_last_element;
+    let last_element = bitfield[container_len - 1];
+    if (last_element & padding_mask) != 0 {
+        panic!("Invalid bitfield padding");
+    }
+}
+
+fn validate_bitfield(bitfield: &[u64], length: usize, required_min_bits: u32) {
+    // Check bitfield length matches container length
+    let expected_container_len = container_length(length);
+    if bitfield.len() != expected_container_len {
+        panic!("Invalid bitfield length");
+    }
+
+    // Check that bitfield has minimum set bits (quorum)
+    let set_bits = count_set_bits(bitfield, length);
+    if set_bits < required_min_bits as usize {
+        panic!("Insufficient set bits in bitfield");
+    }
+
+    // Validate padding bits are zero
+    validate_bitfield_padding(bitfield, length);
 }
 
 fn set_bit(bitfield: &mut [u64], index: usize) {
