@@ -187,11 +187,11 @@ struct CallContractParams {
     uint256 value;
 }
 
-// Payload for CallContracts command. Best-effort execution + optional sweep.
+// Payload for CallContracts command. Reverts on first call failure; optional sweep when calls fail.
 struct CallContractsParams {
-    // Sub-calls to execute (best-effort: continues on failure)
+    // Sub-calls to execute (reverts on first failure)
     CallContractParams[] calls;
-    // Recipient for optional sweep after all calls succeed; address(0) = no sweep
+    // Recipient for sweep when calls fail; address(0) = no sweep
     address sweepRecipient;
     // Tokens to sweep full balance to sweepRecipient; address(0) = sweep ETH
     address[] tokensToSweep;

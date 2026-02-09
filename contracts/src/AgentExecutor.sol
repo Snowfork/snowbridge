@@ -42,6 +42,7 @@ contract AgentExecutor {
         }
     }
 
+    // Sweep remaining assets when specified
     function sweep(address recipient, address[] calldata tokens) external {
         for (uint256 i; i < tokens.length; ++i) {
             address token = tokens[i];

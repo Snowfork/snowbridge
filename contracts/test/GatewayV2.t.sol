@@ -353,6 +353,23 @@ contract GatewayV2Test is Test {
         return commands;
     }
 
+    function makeCallContractsCommandWithSweep(
+        CallContractParams[] memory params,
+        address sweepRecipient,
+        address[] memory tokensToSweep
+    ) public pure returns (CommandV2[] memory) {
+        CallContractsParams memory p = CallContractsParams({
+            calls: params,
+            sweepRecipient: sweepRecipient,
+            tokensToSweep: tokensToSweep
+        });
+        bytes memory payload = abi.encode(p);
+        CommandV2[] memory commands = new CommandV2[](1);
+        commands[0] =
+            CommandV2({kind: CommandKind.CallContracts, gas: 500_000, payload: payload});
+        return commands;
+    }
+
     /**
      * Message Verification
      */
@@ -783,6 +800,49 @@ contract GatewayV2Test is Test {
                 makeMockProof(),
                 relayerRewardAddress
             );
+    }
+
+    function testAgentCallContractsSweepRunsOnFailure() public {
+        bytes32 topic = keccak256("topic");
+
+        // First call reverts; sweep is configured to recover agent's ETH
+        CallContractParams[] memory params = new CallContractParams[](1);
+        params[0] = CallContractParams({
+            target: address(helloWorld),
+            data: abi.encodeWithSignature("revertUnauthorized()"),
+            value: 0
+        });
+
+        address sweepRecipient = address(new PayableRecipient());
+        address[] memory tokensToSweep = new address[](1);
+        tokensToSweep[0] = address(0); // sweep ETH
+
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.CommandFailed(1, 0);
+        emit IGatewayV2.InboundMessageDispatched(1, topic, false, relayerRewardAddress);
+
+        vm.deal(assetHubAgent, 0.5 ether);
+        uint256 recipientBalanceBefore = sweepRecipient.balance;
+
+        hoax(relayer, 1 ether);
+        IGatewayV2(address(gateway))
+            .v2_submit(
+                InboundMessageV2({
+                    origin: Constants.ASSET_HUB_AGENT_ID,
+                    nonce: 1,
+                    topic: topic,
+                    commands: makeCallContractsCommandWithSweep(
+                        params,
+                        sweepRecipient,
+                        tokensToSweep
+                    )
+                }),
+                proof,
+                makeMockProof(),
+                relayerRewardAddress
+            );
+
+        assertEq(sweepRecipient.balance, recipientBalanceBefore + 0.5 ether, "sweep should have transferred ETH");
     }
 
     function testCreateAgent() public {
