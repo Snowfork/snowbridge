@@ -65,11 +65,39 @@ export class Context {
     #kusamaParachains: Parachains
     #relaychain?: ApiPromise
 
+    static #rpcInitTimeoutMs = 40_000
+    static #wsRequestTimeoutMs = 30_000
+
     constructor(environment: Environment) {
         this.environment = environment
         this.#polkadotParachains = {}
         this.#kusamaParachains = {}
         this.#ethChains = {}
+    }
+
+    async #createApi(options: {
+        provider: HttpProvider | WsProvider
+        noInitWarn?: boolean
+        types?: any
+    }) {
+        let timer: NodeJS.Timeout | undefined
+        try {
+            const timeoutPromise = new Promise<never>((_, reject) => {
+                timer = setTimeout(() => {
+                    reject(new Error(`Api init timed out after ${Context.#rpcInitTimeoutMs}ms`))
+                }, Context.#rpcInitTimeoutMs)
+            })
+            return await Promise.race([ApiPromise.create(options), timeoutPromise])
+        } finally {
+            if (timer) clearTimeout(timer)
+        }
+    }
+
+    #buildProvider(url: string) {
+        if (url.startsWith("http")) {
+            return new HttpProvider(url)
+        }
+        return new WsProvider(url, undefined, {}, Context.#wsRequestTimeoutMs)
     }
 
     async relaychain(): Promise<ApiPromise> {
@@ -78,9 +106,9 @@ export class Context {
         }
         const url = this.environment.relaychainUrl
         console.log("Connecting to the relaychain.")
-        this.#relaychain = await ApiPromise.create({
+        this.#relaychain = await this.#createApi({
             noInitWarn: true,
-            provider: url.startsWith("http") ? new HttpProvider(url) : new WsProvider(url),
+            provider: this.#buildProvider(url),
         })
         console.log("Connected to the relaychain.")
         return this.#relaychain
@@ -129,7 +157,7 @@ export class Context {
                 const url = parachains[paraIdKey]
                 let options: any = {
                     noInitWarn: true,
-                    provider: url.startsWith("http") ? new HttpProvider(url) : new WsProvider(url),
+                    provider: this.#buildProvider(url),
                 }
                 if (paraId === this.environment.bridgeHubParaId) {
                     options.types = {
@@ -142,12 +170,15 @@ export class Context {
                     }
                 }
                 console.log("Connecting to parachain", paraIdKey, url)
-                ApiPromise.create(options)
+                this.#createApi(options)
                     .then((a) => {
                         console.log("Connected to parachain", paraIdKey)
                         resolve(a)
                     })
-                    .catch(reject)
+                    .catch((error) => {
+                        delete this.#polkadotParachains[paraIdKey]
+                        reject(error)
+                    })
             } else {
                 reject(Error(`Parachain id ${paraId} not in the list of parachain urls.`))
             }
@@ -170,15 +201,18 @@ export class Context {
                 const url = parachains[paraIdKey]
                 const options = {
                     noInitWarn: true,
-                    provider: url.startsWith("http") ? new HttpProvider(url) : new WsProvider(url),
+                    provider: this.#buildProvider(url),
                 }
                 console.log("Connecting to Kusama parachain", paraIdKey, url)
-                ApiPromise.create(options)
+                this.#createApi(options)
                     .then((a) => {
                         console.log("Connected to Kusama parachain", paraIdKey)
                         resolve(a)
                     })
-                    .catch(reject)
+                    .catch((error) => {
+                        delete this.#kusamaParachains[paraIdKey]
+                        reject(error)
+                    })
             } else {
                 reject(Error(`Parachain id ${paraId} not in the list of parachain urls.`))
             }

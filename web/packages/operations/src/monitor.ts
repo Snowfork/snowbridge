@@ -420,18 +420,22 @@ export const fetchIndexerStatus = async (context: Context, env: Environment) => 
         parseMonitorParachainsOverride() ?? monitorParams[env.name].TO_MONITOR_PARACHAINS
     if (monitorChains && monitorChains.length) {
         for (const paraid of monitorChains) {
-            let chain = await context.parachain(paraid)
-            let latestBlock = (await chain.query.system.number()).toPrimitive() as number
-            let status = await subsquidV2.fetchSyncStatusOfParachain(
-                context.graphqlApiUrl(),
-                paraid,
-            )
-            let info: status.IndexerServiceStatusInfo = {
-                chain: status.name,
-                paraid: status.paraid,
-                latency: latestBlock - status.height,
+            try {
+                let chain = await context.parachain(paraid)
+                let latestBlock = (await chain.query.system.number()).toPrimitive() as number
+                let status = await subsquidV2.fetchSyncStatusOfParachain(
+                    context.graphqlApiUrl(),
+                    paraid,
+                )
+                let info: status.IndexerServiceStatusInfo = {
+                    chain: status.name,
+                    paraid: status.paraid,
+                    latency: latestBlock - status.height,
+                }
+                indexerInfos.push(info)
+            } catch (e) {
+                console.error(`Failed to fetch indexer status for parachain ${paraid}:`, e)
             }
-            indexerInfos.push(info)
         }
     }
     return indexerInfos
