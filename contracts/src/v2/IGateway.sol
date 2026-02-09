@@ -38,6 +38,9 @@ interface IGatewayV2 {
     /// Emitted when a command at `index` within an inbound message identified by `nonce` fails to execute
     event CommandFailed(uint64 indexed nonce, uint256 index);
 
+    /// Emitted when sweep-after-CallContracts fails (e.g. malformed payload or sweep revert)
+    event SweepAfterCallContractsFailed(uint64 indexed nonce, uint256 index);
+
     /// Emitted when an outbound message has been accepted for delivery to a Polkadot parachain
     event OutboundMessageAccepted(uint64 nonce, Payload payload);
 

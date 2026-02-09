@@ -501,8 +501,10 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
                 success = false;
                 emit IGatewayV2.CommandFailed(nonce, i);
                 if (command.kind == CommandKind.CallContracts) {
-                    try this.sweepAfterCallContractsIfConfigured(origin, command.payload) {}
-                    catch {}
+                    try this.trySweepOnFailure(origin, command.payload) {}
+                    catch {
+                        emit IGatewayV2.SweepAfterCallContractsFailed(nonce, i);
+                    }
                 }
             }
         }
@@ -534,16 +536,15 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         }
     }
 
-    /// @dev Decode CallContractsParams and run sweep when configured; used in catch block.
-    ///      Wrapped in try-catch so malformed payloads or sweep failures don't revert dispatch.
-    function sweepAfterCallContractsIfConfigured(bytes32 origin, bytes calldata payload)
+    /// @dev Decode CallContractsParams and run sweep when configured; used in CallContracts catch block.
+    ///      Caller wraps in try-catch so malformed payloads or sweep failures don't revert dispatch.
+    function trySweepOnFailure(bytes32 origin, bytes calldata payload)
         external
         onlySelf
     {
         CallContractsParams memory params = abi.decode(payload, (CallContractsParams));
         if (params.sweepRecipient != address(0) && params.tokensToSweep.length > 0) {
-            try HandlersV2.sweepAfterCallContracts(origin, AGENT_EXECUTOR, payload) {}
-            catch {}
+            HandlersV2.sweepAfterCallContracts(origin, AGENT_EXECUTOR, payload);
         }
     }
 
