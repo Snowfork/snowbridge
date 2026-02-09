@@ -188,6 +188,18 @@ export const monitorParams: {
     },
 }
 
+const parseMonitorParachainsOverride = (): number[] | undefined => {
+    const raw = process.env["MONITOR_PARACHAINS"]
+    if (!raw) {
+        return undefined
+    }
+    const parsed = raw
+        .split(/[\s,]+/)
+        .map((value) => Number.parseInt(value, 10))
+        .filter((value) => Number.isFinite(value))
+    return parsed.length ? parsed : undefined
+}
+
 function contextConfigOverrides(input: Environment): Environment {
     let config = { ...input }
     let injectedEthChains: { [ethChainId: string]: string } = {}
@@ -403,7 +415,9 @@ export const fetchIndexerStatus = async (context: Context, env: Environment) => 
         }
         indexerInfos.push(info)
     }
-    let monitorChains = monitorParams[env.name].TO_MONITOR_PARACHAINS
+    // Allow runtime override of monitored parachains without changing defaults.
+    let monitorChains =
+        parseMonitorParachainsOverride() ?? monitorParams[env.name].TO_MONITOR_PARACHAINS
     if (monitorChains && monitorChains.length) {
         for (const paraid of monitorChains) {
             let chain = await context.parachain(paraid)
