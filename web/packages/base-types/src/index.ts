@@ -258,3 +258,18 @@ export type L2ForwardMetadata = {
   feeTokenAddress: string;
   swapRoutes: readonly AssetSwapRoute[];
 };
+
+export type FeeEstimateErrorDetails = {
+  type: string;
+  code: string;
+  status: number;
+  message: string;
+  id: string;
+};
+export class FeeEstimateError extends Error {
+  readonly details: FeeEstimateErrorDetails;
+  constructor(details: FeeEstimateErrorDetails) {
+    super(details.message);
+    this.details = details;
+  }
+}
