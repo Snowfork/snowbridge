@@ -280,7 +280,6 @@ export class PNAToAH implements TransferInterface {
                 message: "The amount transferred is greater than the users token balance.",
             })
         }
-
         if (tokenBalance.balance < amount) {
             logs.push({
                 kind: ValidationKind.Error,
