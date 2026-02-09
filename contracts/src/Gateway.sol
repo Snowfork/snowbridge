@@ -25,7 +25,7 @@ import {
     IGatewayV1,
     IGatewayV2
 } from "./Types.sol";
-import {Network} from "./v2/Types.sol";
+import {Network, CallContractsParams} from "./v2/Types.sol";
 import {Upgrade} from "./Upgrade.sol";
 import {IInitializable} from "./interfaces/IInitializable.sol";
 import {IUpgradable} from "./interfaces/IUpgradable.sol";
@@ -500,6 +500,13 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
             catch {
                 success = false;
                 emit IGatewayV2.CommandFailed(nonce, i);
+                if (command.kind == CommandKind.CallContracts) {
+                    CallContractsParams memory params =
+                        abi.decode(command.payload, (CallContractsParams));
+                    if (params.sweepRecipient != address(0) && params.tokensToSweep.length > 0) {
+                        HandlersV2.sweepAfterCallContracts(origin, AGENT_EXECUTOR, command.payload);
+                    }
+                }
             }
         }
         return (false, success);

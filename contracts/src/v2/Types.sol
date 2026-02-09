@@ -187,6 +187,16 @@ struct CallContractParams {
     uint256 value;
 }
 
+// Payload for CallContracts command. Best-effort execution + optional sweep.
+struct CallContractsParams {
+    // Sub-calls to execute (best-effort: continues on failure)
+    CallContractParams[] calls;
+    // Recipient for optional sweep after all calls succeed; address(0) = no sweep
+    address sweepRecipient;
+    // Tokens to sweep full balance to sweepRecipient; address(0) = sweep ETH
+    address[] tokensToSweep;
+}
+
 enum Network {
     Polkadot
 }

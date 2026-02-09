@@ -41,4 +41,21 @@ contract AgentExecutor {
             }
         }
     }
+
+    function sweep(address recipient, address[] calldata tokens) external {
+        for (uint256 i; i < tokens.length; ++i) {
+            address token = tokens[i];
+            if (token == address(0)) {
+                uint256 balance = address(this).balance;
+                if (balance > 0) {
+                    payable(recipient).safeNativeTransfer(balance);
+                }
+            } else {
+                uint256 balance = IERC20(token).balanceOf(address(this));
+                if (balance > 0) {
+                    IERC20(token).safeTransfer(recipient, balance);
+                }
+            }
+        }
+    }
 }

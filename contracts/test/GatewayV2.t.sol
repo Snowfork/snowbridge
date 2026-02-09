@@ -39,6 +39,7 @@ import {
     RegisterForeignTokenParams,
     MintForeignTokenParams,
     CallContractParams,
+    CallContractsParams,
     Payload,
     Asset,
     makeNativeAsset,
@@ -324,7 +325,12 @@ contract GatewayV2Test is Test {
         pure
         returns (CommandV2[] memory)
     {
-        bytes memory payload = abi.encode(params);
+        CallContractsParams memory p = CallContractsParams({
+            calls: params,
+            sweepRecipient: address(0),
+            tokensToSweep: new address[](0)
+        });
+        bytes memory payload = abi.encode(p);
         CommandV2[] memory commands = new CommandV2[](1);
         commands[0] =
             CommandV2({kind: CommandKind.CallContracts, gas: 500_000, payload: payload});
@@ -336,7 +342,12 @@ contract GatewayV2Test is Test {
         pure
         returns (CommandV2[] memory)
     {
-        bytes memory payload = abi.encode(params);
+        CallContractsParams memory p = CallContractsParams({
+            calls: params,
+            sweepRecipient: address(0),
+            tokensToSweep: new address[](0)
+        });
+        bytes memory payload = abi.encode(p);
         CommandV2[] memory commands = new CommandV2[](1);
         commands[0] = CommandV2({kind: CommandKind.CallContracts, gas: 1, payload: payload});
         return commands;
