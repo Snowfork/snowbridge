@@ -381,7 +381,7 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
     // This includes:
     // * Cost paid for every transaction: 21000 gas
     // * Cost of calldata: Zero byte = 4 gas, Non-zero byte = 16 gas
-    // * Cost of code inside submitInitial that is not metered: 14_698
+    // * Cost of code inside submitV1 that is not metered: 14_698
     //
     // The major cost of calldata are the merkle proofs, which should dominate anything else
     // (including the message payload) Since the merkle proofs are hashes, they are much more
