@@ -79,7 +79,7 @@ export class Context {
         provider: HttpProvider | WsProvider
         noInitWarn?: boolean
         types?: any
-    }) {
+    }): Promise<ApiPromise> {
         let timer: NodeJS.Timeout | undefined
         try {
             const timeoutPromise = new Promise<never>((_, reject) => {
