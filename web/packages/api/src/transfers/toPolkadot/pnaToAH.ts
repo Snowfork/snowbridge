@@ -273,6 +273,14 @@ export class PNAToAH implements TransferInterface {
             }
         }
 
+        if (tokenBalance.gatewayAllowance < amount) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.GatewaySpenderLimitReached,
+                message: "The amount transferred is greater than the users token balance.",
+            })
+        }
+
         if (tokenBalance.balance < amount) {
             logs.push({
                 kind: ValidationKind.Error,
