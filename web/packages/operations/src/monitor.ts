@@ -421,13 +421,13 @@ export const fetchIndexerStatus = async (context: Context, env: Environment) => 
     if (monitorChains && monitorChains.length) {
         for (const paraid of monitorChains) {
             try {
-                let chain = await context.parachain(paraid)
-                let latestBlock = (await chain.query.system.number()).toPrimitive() as number
-                let status = await subsquidV2.fetchSyncStatusOfParachain(
+                const chain = await context.parachain(paraid)
+                const latestBlock = (await chain.query.system.number()).toPrimitive() as number
+                const status = await subsquidV2.fetchSyncStatusOfParachain(
                     context.graphqlApiUrl(),
                     paraid,
                 )
-                let info: status.IndexerServiceStatusInfo = {
+                const info: status.IndexerServiceStatusInfo = {
                     chain: status.name,
                     paraid: status.paraid,
                     latency: latestBlock - status.height,
