@@ -144,11 +144,6 @@ contract BeefyClientWrapper {
         _refundWithProgress(startGas, previousCost, progress);
     }
 
-    /**
-     * @dev Submit a Fiat-Shamir proof. This is a single-step submission that doesn't require
-     * ticket tracking or gas refunds since there's no multi-step flow to protect.
-     * Gas refunds are only provided for the multi-step submitInitial -> commitPrevRandao -> submitFinal flow.
-     */
     function submitFiatShamir(
         IBeefyClient.Commitment calldata commitment,
         uint256[] calldata bitfield,
@@ -157,13 +152,23 @@ contract BeefyClientWrapper {
         bytes32[] calldata leafProof,
         uint256 leafProofOrder
     ) external {
+        uint256 startGas = gasleft();
+
+        // Capture previous state for progress calculation
+        uint64 previousBeefyBlock = _beefyClient().latestBeefyBlock();
+
         _beefyClient().submitFiatShamir(commitment, bitfield, proofs, leaf, leafProof, leafProofOrder);
+
+        // Calculate progress
+        uint256 progress = commitment.blockNumber - previousBeefyBlock;
 
         // Clear highest pending block if light client has caught up
         if (_beefyClient().latestBeefyBlock() >= highestPendingBlock) {
             highestPendingBlock = 0;
             highestPendingBlockTimestamp = 0;
         }
+
+        _refundWithProgress(startGas, 0, progress);
     }
 
     /**
