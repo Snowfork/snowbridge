@@ -9,7 +9,6 @@ import {BeefyClientWrapper} from "../src/BeefyClientWrapper.sol";
 contract DeployBeefyClientWrapper is Script {
     struct Config {
         address gateway;
-        address owner;
         uint256 maxGasPrice;
         uint256 maxRefundAmount;
         uint256 refundTarget;
@@ -18,7 +17,6 @@ contract DeployBeefyClientWrapper is Script {
     function readConfig() internal returns (Config memory config) {
         config = Config({
             gateway: vm.envAddress("GATEWAY_PROXY_ADDRESS"),
-            owner: vm.envAddress("WRAPPER_OWNER"),
             maxGasPrice: vm.envOr("MAX_GAS_PRICE", uint256(100 gwei)),
             maxRefundAmount: vm.envOr("MAX_REFUND_AMOUNT", uint256(0.05 ether)),
             refundTarget: vm.envOr("REFUND_TARGET", uint256(350)) // ~35 min for 100% refund
@@ -32,7 +30,6 @@ contract DeployBeefyClientWrapper is Script {
 
         BeefyClientWrapper wrapper = new BeefyClientWrapper(
             config.gateway,
-            config.owner,
             config.maxGasPrice,
             config.maxRefundAmount,
             config.refundTarget

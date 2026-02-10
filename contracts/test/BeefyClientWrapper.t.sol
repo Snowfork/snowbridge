@@ -157,7 +157,6 @@ contract BeefyClientWrapperTest is Test {
     MockBeefyClient mockBeefyClient;
     MockGateway mockGateway;
 
-    address owner = address(0x1);
     address relayer1 = address(0x2);
     address relayer2 = address(0x3);
     address anyone = address(0x5);
@@ -175,7 +174,6 @@ contract BeefyClientWrapperTest is Test {
         // Deploy wrapper with gateway address
         wrapper = new BeefyClientWrapper(
             address(mockGateway),
-            owner,
             MAX_GAS_PRICE,
             MAX_REFUND_AMOUNT,
             REFUND_TARGET
@@ -233,7 +231,6 @@ contract BeefyClientWrapperTest is Test {
     /* Initialization Tests */
 
     function test_initialization() public {
-        assertEq(wrapper.owner(), owner);
         assertEq(wrapper.gateway(), address(mockGateway));
         assertEq(wrapper.maxGasPrice(), MAX_GAS_PRICE);
         assertEq(wrapper.maxRefundAmount(), MAX_REFUND_AMOUNT);
@@ -243,18 +240,6 @@ contract BeefyClientWrapperTest is Test {
     function test_invalidGatewayAddress() public {
         vm.expectRevert(BeefyClientWrapper.InvalidAddress.selector);
         new BeefyClientWrapper(
-            address(0),
-            owner,
-            MAX_GAS_PRICE,
-            MAX_REFUND_AMOUNT,
-            REFUND_TARGET
-        );
-    }
-
-    function test_invalidOwnerAddress() public {
-        vm.expectRevert(BeefyClientWrapper.InvalidAddress.selector);
-        new BeefyClientWrapper(
-            address(mockGateway),
             address(0),
             MAX_GAS_PRICE,
             MAX_REFUND_AMOUNT,
@@ -572,9 +557,14 @@ contract BeefyClientWrapperTest is Test {
     }
 
     function test_refundCappedAtMaxRefundAmount() public {
-        // Set a very low maxRefundAmount to test capping
-        vm.prank(owner);
-        wrapper.setMaxRefundAmount(0.0001 ether);
+        // Deploy a wrapper with a very low maxRefundAmount to test capping
+        BeefyClientWrapper lowMaxWrapper = new BeefyClientWrapper(
+            address(mockGateway),
+            MAX_GAS_PRICE,
+            0.0001 ether,
+            REFUND_TARGET
+        );
+        vm.deal(address(lowMaxWrapper), 100 ether);
 
         uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + REFUND_TARGET);
         IBeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
@@ -588,10 +578,10 @@ contract BeefyClientWrapperTest is Test {
 
         vm.startPrank(relayer1);
         vm.txGasPrice(100 gwei);
-        wrapper.submitInitial(commitment, bitfield, proof);
+        lowMaxWrapper.submitInitial(commitment, bitfield, proof);
         bytes32 commitmentHash = computeCommitmentHash(commitment);
-        wrapper.commitPrevRandao(commitmentHash);
-        wrapper.submitFinal(commitment, bitfield, proofs, leaf, leafProof, 0);
+        lowMaxWrapper.commitPrevRandao(commitmentHash);
+        lowMaxWrapper.submitFinal(commitment, bitfield, proofs, leaf, leafProof, 0);
         vm.stopPrank();
 
         uint256 refundAmount = relayer1.balance - relayerBalanceBefore;
@@ -601,9 +591,13 @@ contract BeefyClientWrapperTest is Test {
     }
 
     function test_noRefundWhenInsufficientBalance() public {
-        // Drain wrapper balance
-        vm.prank(owner);
-        wrapper.withdrawFunds(payable(owner), address(wrapper).balance);
+        // Deploy a wrapper with no ETH balance
+        BeefyClientWrapper emptyWrapper = new BeefyClientWrapper(
+            address(mockGateway),
+            MAX_GAS_PRICE,
+            MAX_REFUND_AMOUNT,
+            REFUND_TARGET
+        );
 
         uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + REFUND_TARGET);
         IBeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
@@ -616,77 +610,14 @@ contract BeefyClientWrapperTest is Test {
         uint256 relayerBalanceBefore = relayer1.balance;
 
         vm.startPrank(relayer1);
-        wrapper.submitInitial(commitment, bitfield, proof);
+        emptyWrapper.submitInitial(commitment, bitfield, proof);
         bytes32 commitmentHash = computeCommitmentHash(commitment);
-        wrapper.commitPrevRandao(commitmentHash);
-        wrapper.submitFinal(commitment, bitfield, proofs, leaf, leafProof, 0);
+        emptyWrapper.commitPrevRandao(commitmentHash);
+        emptyWrapper.submitFinal(commitment, bitfield, proofs, leaf, leafProof, 0);
         vm.stopPrank();
 
         assertEq(relayer1.balance, relayerBalanceBefore); // No refund
         assertEq(mockBeefyClient.submitFinalCount(), 1); // Submission succeeded
-    }
-
-    /* Admin Function Tests */
-
-    function test_setMaxGasPrice() public {
-        vm.prank(owner);
-        wrapper.setMaxGasPrice(200 gwei);
-
-        assertEq(wrapper.maxGasPrice(), 200 gwei);
-    }
-
-    function test_setMaxRefundAmount() public {
-        vm.prank(owner);
-        wrapper.setMaxRefundAmount(2 ether);
-
-        assertEq(wrapper.maxRefundAmount(), 2 ether);
-    }
-
-    function test_setRefundTarget() public {
-        vm.prank(owner);
-        wrapper.setRefundTarget(600);
-
-        assertEq(wrapper.refundTarget(), 600);
-    }
-
-    function test_withdrawFunds() public {
-        uint256 ownerBalanceBefore = owner.balance;
-        uint256 withdrawAmount = 10 ether;
-
-        vm.prank(owner);
-        wrapper.withdrawFunds(payable(owner), withdrawAmount);
-
-        assertEq(owner.balance, ownerBalanceBefore + withdrawAmount);
-    }
-
-    function test_transferOwnership() public {
-        address newOwner = address(0x999);
-
-        vm.prank(owner);
-        wrapper.transferOwnership(newOwner);
-
-        assertEq(wrapper.owner(), newOwner);
-    }
-
-    function test_adminFunctions_onlyOwner() public {
-        vm.startPrank(anyone);
-
-        vm.expectRevert(BeefyClientWrapper.Unauthorized.selector);
-        wrapper.setMaxGasPrice(1);
-
-        vm.expectRevert(BeefyClientWrapper.Unauthorized.selector);
-        wrapper.setMaxRefundAmount(1);
-
-        vm.expectRevert(BeefyClientWrapper.Unauthorized.selector);
-        wrapper.setRefundTarget(1);
-
-        vm.expectRevert(BeefyClientWrapper.Unauthorized.selector);
-        wrapper.withdrawFunds(payable(anyone), 1);
-
-        vm.expectRevert(BeefyClientWrapper.Unauthorized.selector);
-        wrapper.transferOwnership(anyone);
-
-        vm.stopPrank();
     }
 
     /* Deposit Tests */
@@ -743,20 +674,6 @@ contract BeefyClientWrapperTest is Test {
         assertEq(wrapper.highestPendingBlockTimestamp(), 0);
     }
 
-    /* Additional Admin Function Tests */
-
-    function test_withdrawFunds_invalidRecipient() public {
-        vm.prank(owner);
-        vm.expectRevert(BeefyClientWrapper.InvalidAddress.selector);
-        wrapper.withdrawFunds(payable(address(0)), 1 ether);
-    }
-
-    function test_transferOwnership_invalidAddress() public {
-        vm.prank(owner);
-        vm.expectRevert(BeefyClientWrapper.InvalidAddress.selector);
-        wrapper.transferOwnership(address(0));
-    }
-
     /* Highest Pending Block Tests */
 
     function test_submitInitial_doesNotUpdateHighestPendingBlock_whenLower() public {
@@ -783,15 +700,6 @@ contract BeefyClientWrapperTest is Test {
         assertEq(wrapper.highestPendingBlockTimestamp(), timestamp1);
     }
 
-}
-
-/**
- * @dev Contract that rejects ETH transfers for testing TransferFailed
- */
-contract RejectingRecipient {
-    receive() external payable {
-        revert("No ETH accepted");
-    }
 }
 
 /**
@@ -837,9 +745,7 @@ contract BeefyClientWrapperTransferFailedTest is Test {
     BeefyClientWrapper wrapper;
     MockBeefyClient mockBeefyClient;
     MockGateway mockGateway;
-    RejectingRecipient rejectingRecipient;
 
-    address owner = address(0x1);
     uint256 constant INITIAL_BEEFY_BLOCK = 1000;
     uint256 constant REFUND_TARGET = 350;
 
@@ -848,19 +754,11 @@ contract BeefyClientWrapperTransferFailedTest is Test {
         mockGateway = new MockGateway(address(mockBeefyClient));
         wrapper = new BeefyClientWrapper(
             address(mockGateway),
-            owner,
             100 gwei,
             0.05 ether,
             REFUND_TARGET
         );
         vm.deal(address(wrapper), 100 ether);
-        rejectingRecipient = new RejectingRecipient();
-    }
-
-    function test_withdrawFunds_transferFailed() public {
-        vm.prank(owner);
-        vm.expectRevert(BeefyClientWrapper.TransferFailed.selector);
-        wrapper.withdrawFunds(payable(address(rejectingRecipient)), 1 ether);
     }
 
     function test_refundFailsWhenRelayerRejectsETH() public {

@@ -16,33 +16,31 @@ interface IGateway {
  *
  * The BeefyClient address is resolved dynamically from the Gateway (via GatewayProxy),
  * so after a Gateway upgrade this wrapper automatically points to the new BeefyClient.
+ *
+ * This contract is permissionless and stateless (aside from in-flight ticket tracking).
+ * Configuration is immutable. To change parameters, deploy a new instance.
  */
 contract BeefyClientWrapper {
     event CostCredited(address indexed relayer, bytes32 indexed commitmentHash, uint256 cost);
     event SubmissionRefunded(address indexed relayer, uint256 progress, uint256 refundAmount);
 
-    error Unauthorized();
     error InvalidAddress();
     error NotTicketOwner();
     error TicketAlreadyOwned();
-    error TransferFailed();
 
     // Base transaction gas cost (intrinsic gas for any Ethereum transaction)
     uint256 private constant BASE_TX_GAS = 21000;
 
-    address public owner;
     address public immutable gateway;
 
     // Ticket tracking (for multi-step submission)
     mapping(bytes32 => address) public ticketOwner;
     mapping(bytes32 => uint256) public creditedCost; // Accumulated ETH cost from previous steps
 
-    // Refund configuration
-    uint256 public maxGasPrice;
-    uint256 public maxRefundAmount;
-
-    // Progress-based refund target
-    uint256 public refundTarget; // Blocks of progress for 100% gas refund (e.g., 350 = ~35 min)
+    // Refund configuration (immutable)
+    uint256 public immutable maxGasPrice;
+    uint256 public immutable maxRefundAmount;
+    uint256 public immutable refundTarget; // Blocks of progress for 100% gas refund (e.g., 350 = ~35 min)
 
     // Highest commitment block number currently in progress (helps relayers avoid duplicate work)
     uint256 public highestPendingBlock;
@@ -50,17 +48,15 @@ contract BeefyClientWrapper {
 
     constructor(
         address _gateway,
-        address _owner,
         uint256 _maxGasPrice,
         uint256 _maxRefundAmount,
         uint256 _refundTarget
     ) {
-        if (_gateway == address(0) || _owner == address(0)) {
+        if (_gateway == address(0)) {
             revert InvalidAddress();
         }
 
         gateway = _gateway;
-        owner = _owner;
         maxGasPrice = _maxGasPrice;
         maxRefundAmount = _maxRefundAmount;
         refundTarget = _refundTarget;
@@ -188,12 +184,6 @@ contract BeefyClientWrapper {
         return IBeefyClient(IGateway(gateway).BEEFY_CLIENT());
     }
 
-    function _checkOwner() internal view {
-        if (msg.sender != owner) {
-            revert Unauthorized();
-        }
-    }
-
     function _effectiveGasPrice() internal view returns (uint256) {
         return tx.gasprice < maxGasPrice ? tx.gasprice : maxGasPrice;
     }
@@ -229,44 +219,6 @@ contract BeefyClientWrapper {
                 emit SubmissionRefunded(msg.sender, progress, refundAmount);
             }
         }
-    }
-
-    /* Admin Functions */
-
-    function setMaxGasPrice(uint256 _maxGasPrice) external {
-        _checkOwner();
-        maxGasPrice = _maxGasPrice;
-    }
-
-    function setMaxRefundAmount(uint256 _maxRefundAmount) external {
-        _checkOwner();
-        maxRefundAmount = _maxRefundAmount;
-    }
-
-    function setRefundTarget(uint256 _refundTarget) external {
-        _checkOwner();
-        refundTarget = _refundTarget;
-    }
-
-    function withdrawFunds(address payable recipient, uint256 amount) external {
-        _checkOwner();
-        if (recipient == address(0)) {
-            revert InvalidAddress();
-        }
-
-        (bool success,) = recipient.call{value: amount}("");
-        if (!success) {
-            revert TransferFailed();
-        }
-
-    }
-
-    function transferOwnership(address newOwner) external {
-        _checkOwner();
-        if (newOwner == address(0)) {
-            revert InvalidAddress();
-        }
-        owner = newOwner;
     }
 
     receive() external payable {}

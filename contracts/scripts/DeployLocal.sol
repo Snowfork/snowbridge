@@ -62,18 +62,6 @@ contract DeployLocal is Script {
             next
         );
 
-        // Deploy BeefyClientWrapper
-        BeefyClientWrapper beefyClientWrapper = new BeefyClientWrapper(
-            address(beefyClient),
-            deployer,
-            vm.envUint("BEEFY_WRAPPER_MAX_GAS_PRICE"),
-            vm.envUint("BEEFY_WRAPPER_MAX_REFUND_AMOUNT"),
-            vm.envUint("BEEFY_WRAPPER_REFUND_TARGET")
-        );
-
-        // Fund wrapper for refunds
-        payable(address(beefyClientWrapper)).call{value: vm.envUint("BEEFY_WRAPPER_INITIAL_DEPOSIT")}("");
-
         uint8 foreignTokenDecimals = uint8(vm.envUint("FOREIGN_TOKEN_DECIMALS"));
         uint128 maxDestinationFee = uint128(vm.envUint("RESERVE_TRANSFER_MAX_DESTINATION_FEE"));
 
@@ -93,6 +81,17 @@ contract DeployLocal is Script {
         });
 
         GatewayProxy gateway = new GatewayProxy(address(gatewayLogic), abi.encode(config));
+
+        // Deploy BeefyClientWrapper (after GatewayProxy so we can pass its address)
+        BeefyClientWrapper beefyClientWrapper = new BeefyClientWrapper(
+            address(gateway),
+            vm.envUint("BEEFY_WRAPPER_MAX_GAS_PRICE"),
+            vm.envUint("BEEFY_WRAPPER_MAX_REFUND_AMOUNT"),
+            vm.envUint("BEEFY_WRAPPER_REFUND_TARGET")
+        );
+
+        // Fund wrapper for refunds
+        payable(address(beefyClientWrapper)).call{value: vm.envUint("BEEFY_WRAPPER_INITIAL_DEPOSIT")}("");
 
         // Deploy WETH for testing
         WETH9 weth = new WETH9();
