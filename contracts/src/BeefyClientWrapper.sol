@@ -20,8 +20,6 @@ interface IGateway {
 contract BeefyClientWrapper {
     event CostCredited(address indexed relayer, bytes32 indexed commitmentHash, uint256 cost);
     event SubmissionRefunded(address indexed relayer, uint256 progress, uint256 refundAmount);
-    event FundsDeposited(address indexed depositor, uint256 amount);
-    event FundsWithdrawn(address indexed recipient, uint256 amount);
 
     error Unauthorized();
     error InvalidAddress();
@@ -261,7 +259,6 @@ contract BeefyClientWrapper {
             revert TransferFailed();
         }
 
-        emit FundsWithdrawn(recipient, amount);
     }
 
     function transferOwnership(address newOwner) external {
@@ -272,7 +269,5 @@ contract BeefyClientWrapper {
         owner = newOwner;
     }
 
-    receive() external payable {
-        emit FundsDeposited(msg.sender, msg.value);
-    }
+    receive() external payable {}
 }
