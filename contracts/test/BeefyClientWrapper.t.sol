@@ -626,23 +626,6 @@ contract BeefyClientWrapperTest is Test {
         assertEq(mockBeefyClient.submitFinalCount(), 1); // Submission succeeded
     }
 
-    function test_estimatePayout() public {
-        uint256 gasUsed = 500000;
-        uint256 gasPrice = 50 gwei;
-
-        // Test below threshold (no refund)
-        uint256 refundBelow = wrapper.estimatePayout(gasUsed, gasPrice, REFUND_TARGET / 2);
-        assertEq(refundBelow, 0);
-
-        // Test at threshold (full refund)
-        uint256 refundAt = wrapper.estimatePayout(gasUsed, gasPrice, REFUND_TARGET);
-        assertEq(refundAt, gasUsed * gasPrice);
-
-        // Test above threshold (full refund)
-        uint256 refundAbove = wrapper.estimatePayout(gasUsed, gasPrice, REFUND_TARGET * 2);
-        assertEq(refundAbove, gasUsed * gasPrice);
-    }
-
     /* Admin Function Tests */
 
     function test_setMaxGasPrice() public {
@@ -800,27 +783,6 @@ contract BeefyClientWrapperTest is Test {
         assertEq(wrapper.highestPendingBlockTimestamp(), timestamp1);
     }
 
-    /* Additional EstimatePayout Tests */
-
-    function test_estimatePayout_capsGasPrice() public {
-        uint256 gasUsed = 500000;
-        uint256 highGasPrice = 200 gwei; // Higher than MAX_GAS_PRICE (100 gwei)
-
-        uint256 refund = wrapper.estimatePayout(gasUsed, highGasPrice, REFUND_TARGET);
-
-        // Should use maxGasPrice (100 gwei), not the provided highGasPrice
-        assertEq(refund, gasUsed * MAX_GAS_PRICE);
-    }
-
-    function test_estimatePayout_capsRefundAmount() public {
-        uint256 gasUsed = 1000000000; // Very high gas to exceed max refund
-        uint256 gasPrice = 100 gwei;
-
-        uint256 refund = wrapper.estimatePayout(gasUsed, gasPrice, REFUND_TARGET);
-
-        // Should be capped at maxRefundAmount
-        assertEq(refund, MAX_REFUND_AMOUNT);
-    }
 }
 
 /**

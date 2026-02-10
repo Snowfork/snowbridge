@@ -267,29 +267,6 @@ contract BeefyClientWrapper {
         owner = newOwner;
     }
 
-    /* View Functions */
-
-    /**
-     * @dev Calculate expected refund for a given progress.
-     * Useful for relayers to estimate payouts before submitting.
-     */
-    function estimatePayout(uint256 gasUsed, uint256 gasPrice, uint256 progress)
-        external
-        view
-        returns (uint256 refundAmount)
-    {
-        if (progress < refundTarget) {
-            return 0;
-        }
-
-        uint256 effectiveGasPrice = gasPrice < maxGasPrice ? gasPrice : maxGasPrice;
-        refundAmount = gasUsed * effectiveGasPrice;
-
-        if (refundAmount > maxRefundAmount) {
-            refundAmount = maxRefundAmount;
-        }
-    }
-
     receive() external payable {
         emit FundsDeposited(msg.sender, msg.value);
     }
