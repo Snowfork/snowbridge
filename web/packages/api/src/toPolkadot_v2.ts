@@ -333,6 +333,7 @@ export async function validateTransfer(
                 "The Snowbridge gateway contract needs to approved as a spender for this token and amount.",
         })
     }
+
     if (tokenBalance.balance < amount) {
         logs.push({
             kind: ValidationKind.Error,
