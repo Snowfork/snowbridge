@@ -766,14 +766,16 @@ contract BeefyClient {
         pure
         returns (bytes32)
     {
-        if (commitment.payload.length != 1) {
-            revert CommitmentNotRelevant();
+        for (uint256 i = 0; i < commitment.payload.length; i++) {
+            if (commitment.payload[i].payloadID == MMR_ROOT_ID) {
+                if (commitment.payload[i].data.length != 32) {
+                    revert InvalidMMRRootLength();
+                } else {
+                    return bytes32(commitment.payload[i].data);
+                }
+            }
         }
-        PayloadItem memory payload = commitment.payload[0];
-        if (payload.payloadID != MMR_ROOT_ID || payload.data.length != 32) {
-            revert CommitmentNotRelevant();
-        }
-        return bytes32(payload.data);
+        revert CommitmentNotRelevant();
     }
 
     function encodeCommitment(Commitment calldata commitment)
