@@ -768,11 +768,7 @@ contract BeefyClient {
     {
         for (uint256 i = 0; i < commitment.payload.length; i++) {
             if (commitment.payload[i].payloadID == MMR_ROOT_ID) {
-                if (commitment.payload[i].data.length != 32) {
-                    revert InvalidMMRRootLength();
-                } else {
-                    return bytes32(commitment.payload[i].data);
-                }
+                return bytes32(commitment.payload[i].data);
             }
         }
         revert CommitmentNotRelevant();
