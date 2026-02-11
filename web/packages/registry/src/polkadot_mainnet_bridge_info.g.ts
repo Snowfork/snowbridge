@@ -461,11 +461,12 @@ const registry = {
             assets: [
                 "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
                 "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                "0x0000000000000000000000000000000000000000",
             ],
         },
     ],
     registry: {
-        timestamp: "2026-02-07T00:48:57.082Z",
+        timestamp: "2026-02-11T12:56:51.342Z",
         environment: "polkadot_mainnet",
         ethChainId: 1,
         gatewayAddress: "0x27ca963c279c93801941e1eb8799c23f407d68e7",
@@ -479,7 +480,7 @@ const registry = {
             accountType: "AccountId32",
             name: "Polkadot",
             specName: "polkadot",
-            specVersion: 2000005,
+            specVersion: 2000006,
         },
         bridgeHub: {
             tokenSymbols: "DOT",
@@ -489,7 +490,7 @@ const registry = {
             accountType: "AccountId32",
             name: "Polkadot BridgeHub",
             specName: "bridge-hub-polkadot",
-            specVersion: 2000005,
+            specVersion: 2000006,
         },
         ethereumChains: {
             ethereum_1: {
@@ -905,7 +906,7 @@ const registry = {
                     accountType: "AccountId32",
                     name: "Polkadot Asset Hub",
                     specName: "statemint",
-                    specVersion: 2000005,
+                    specVersion: 2000006,
                 },
                 assets: {
                     "0x9d39a5de30e57443bff2a8307a4256c8797a3497": {
@@ -1685,7 +1686,7 @@ const registry = {
                         isSufficient: false,
                     },
                 },
-                estimatedExecutionFeeDOT: 84118975n,
+                estimatedExecutionFeeDOT: 90047579n,
                 estimatedDeliveryFeeDOT: 307100000n,
             },
             polkadot_2034: {
@@ -1869,7 +1870,7 @@ const registry = {
                         isSufficient: true,
                     },
                 },
-                estimatedExecutionFeeDOT: 1565904n,
+                estimatedExecutionFeeDOT: 1724590n,
                 estimatedDeliveryFeeDOT: 307100000n,
             },
             polkadot_2043: {
@@ -1977,7 +1978,7 @@ const registry = {
                         accountType: "AccountId32",
                         name: "Kusama Asset Hub",
                         specName: "statemine",
-                        specVersion: 2000004,
+                        specVersion: 2000006,
                     },
                     assets: {
                         "0x9d39a5de30e57443bff2a8307a4256c8797a3497": {

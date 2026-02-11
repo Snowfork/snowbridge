@@ -108,13 +108,14 @@ const registry = {
                 id: 1000,
             },
             assets: [
+                "0x0000000000000000000000000000000000000000",
                 "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
                 "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
             ],
         },
     ],
     registry: {
-        timestamp: "2026-02-07T00:46:49.479Z",
+        timestamp: "2026-02-11T12:57:54.796Z",
         environment: "westend_sepolia",
         ethChainId: 11155111,
         gatewayAddress: "0x9ed8b47bc3417e3bd0507adc06e56e2fa360a4e9",
@@ -128,7 +129,7 @@ const registry = {
             accountType: "AccountId32",
             name: "Westend",
             specName: "westend",
-            specVersion: 1021001,
+            specVersion: 1021002,
         },
         bridgeHub: {
             tokenSymbols: "WND",
@@ -262,7 +263,7 @@ const registry = {
                     accountType: "AccountId32",
                     name: "Westend Asset Hub",
                     specName: "westmint",
-                    specVersion: 1021002,
+                    specVersion: 1021003,
                 },
                 assets: {
                     "0x0000000000000000000000000000000000000000": {
