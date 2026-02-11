@@ -483,8 +483,6 @@ function buildTransferLocations(
                 if (pathFilter(p1)) {
                     locations.push(p1)
                 }
-                // L2 does not natively support Ether, only WETH
-                if (asset === assetsV2.ETHER_TOKEN_ADDRESS) continue
                 const p2: Path = {
                     source: p1.destination, // L2 Chain
                     destination: p1.source, // Asset Hub
