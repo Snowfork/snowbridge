@@ -20,7 +20,10 @@ import {
     BASE_WETH9 as SEPOLIA_BASE_WETH9,
     MULTI_CALL_HANDLER as SEPOLIA_MULTI_CALL_HANDLER,
     TIME_BUFFER as SEPOLIA_TIME_BUFFER,
-    UNISWAP_ROUTER as SEPOLIA_UNISWAP_ROUTER
+    UNISWAP_ROUTER as SEPOLIA_UNISWAP_ROUTER,
+    ARBITRUM_USDC as SEPOLIA_ARBITRUM_USDC,
+    ARBITRUM_CHAIN_ID as SEPOLIA_ARBITRUM_CHAIN_ID,
+    ARBITRUM_WETH9 as SEPOLIA_ARBITRUM_WETH9
 } from "../constants/Sepolia.sol";
 
 import {
@@ -39,8 +42,7 @@ contract TestSnowbridgeL2Adaptor is Script {
     function run() public {
         vm.startBroadcast();
 
-        address payable l2SnowbridgeAdaptor =
-            payable(vm.envAddress("L2_SNOWBRIDGE_ADAPTOR_ADDRESS"));
+        address payable l2SnowbridgeAdaptor;
         address recipient = vm.envAddress("RECIPIENT_ADDRESS");
 
         DepositParams memory params;
@@ -48,7 +50,11 @@ contract TestSnowbridgeL2Adaptor is Script {
         SwapParams memory swapParams;
         // Send 0.1 USDC to Polkadot
         bytes[] memory assets = new bytes[](1);
-        if (keccak256(bytes(vm.envString("L1_NETWORK"))) == keccak256(bytes("mainnet"))) {
+        if (
+            keccak256(bytes(vm.envString("L1_NETWORK"))) == keccak256(bytes("mainnet"))
+                && keccak256(bytes(vm.envString("L2_NETWORK"))) == keccak256(bytes("base-mainnet"))
+        ) {
+            l2SnowbridgeAdaptor = payable(vm.envAddress("L2_BASE_SNOWBRIDGE_ADAPTOR_ADDRESS"));
             uint256 inputAmount = 1_000_000; // 1.0 USDC
             uint256 outputAmount = 200_000; // 0.2 USDC
             uint256 swapAmount = 500_000; // 0.5 USDC for fees
@@ -87,7 +93,11 @@ contract TestSnowbridgeL2Adaptor is Script {
                         }))
                 )
             });
-        } else if (keccak256(bytes(vm.envString("L1_NETWORK"))) == keccak256(bytes("sepolia"))) {
+        } else if (
+            keccak256(bytes(vm.envString("L1_NETWORK"))) == keccak256(bytes("sepolia"))
+                && keccak256(bytes(vm.envString("L2_NETWORK"))) == keccak256(bytes("base-sepolia"))
+        ) {
+            l2SnowbridgeAdaptor = payable(vm.envAddress("L2_BASE_SNOWBRIDGE_ADAPTOR_ADDRESS"));
             uint256 inputAmount = 25_000_000; // 25.0 USDC
             uint256 outputAmount = 4_000_000; // 4 USDC
             uint256 swapAmount = 18_000_000; // 18 USDC for fees
@@ -125,8 +135,51 @@ contract TestSnowbridgeL2Adaptor is Script {
                         }))
                 )
             });
+        } else if (
+            keccak256(bytes(vm.envString("L1_NETWORK"))) == keccak256(bytes("sepolia"))
+                && keccak256(bytes(vm.envString("L2_NETWORK")))
+                    == keccak256(bytes("arbitrum-sepolia"))
+        ) {
+            l2SnowbridgeAdaptor = payable(vm.envAddress("L2_ARBITRUM_SNOWBRIDGE_ADAPTOR_ADDRESS"));
+            uint256 inputAmount = 25_000_000; // 25.0 USDC
+            uint256 outputAmount = 4_000_000; // 4 USDC
+            uint256 swapAmount = 18_000_000; // 18 USDC for fees
+            params = DepositParams({
+                inputToken: SEPOLIA_ARBITRUM_USDC,
+                outputToken: SEPOLIA_USDC,
+                inputAmount: inputAmount,
+                outputAmount: outputAmount,
+                destinationChainId: SEPOLIA_CHAIN_ID,
+                fillDeadlineBuffer: SEPOLIA_TIME_BUFFER
+            });
+            // tx from https://sepolia.etherscan.io/tx/0x7068be9a9fecd2d3fbdca0e28bf1a84d4c05789dacd34cc46eef0d2a4fdd43fb
+            assets[0] =
+                hex"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000001c7d4b196cb0c7b01d743fbc6116a902379c723800000000000000000000000000000000000000000000000000000000000186a0";
+            sendParams = SendParams({
+                xcm: hex"050c140d010208000101005827013ddc4082f8252f8729bd2f06e77e7863dea9202a6f0e7a2c34e356e85a2cfdbcb5bc4870d25ce6b36b2d6d927b00a1373ebe803d5fd20fcbe8c5c3c866bb",
+                assets: assets,
+                claimer: hex"000101005827013ddc4082f8252f8729bd2f06e77e7863dea9202a6f0e7a2c34e356e85a",
+                executionFee: 33_329_707_255_987,
+                relayerFee: 559_885_563_730_065
+            });
+            swapParams = SwapParams({
+                inputAmount: swapAmount,
+                router: SEPOLIA_UNISWAP_ROUTER,
+                callData: abi.encodeCall(
+                    ISwapLegacyRouter.exactOutputSingle,
+                    (ISwapLegacyRouter.ExactOutputSingleParams({
+                            tokenIn: params.outputToken,
+                            tokenOut: address(SEPOLIA_WETH9),
+                            fee: 500,
+                            recipient: address(SEPOLIA_MULTI_CALL_HANDLER),
+                            amountInMaximum: swapAmount,
+                            amountOut: sendParams.relayerFee + sendParams.executionFee,
+                            sqrtPriceLimitX96: 0
+                        }))
+                )
+            });
         } else {
-            revert("Unsupported L1 network");
+            revert("Unsupported L2 network");
         }
 
         IERC20(params.inputToken).approve(l2SnowbridgeAdaptor, params.inputAmount);

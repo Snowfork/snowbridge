@@ -13,7 +13,8 @@ import {
     BASE_CHAIN_ID as SEPOLIA_BASE_CHAIN_ID,
     WETH9 as SEPOLIA_WETH9,
     BASE_WETH9 as SEPOLIA_BASE_WETH9,
-    TIME_BUFFER as SEPOLIA_TIME_BUFFER
+    TIME_BUFFER as SEPOLIA_TIME_BUFFER,
+    ARBITRUM_WETH9 as SEPOLIA_ARBITRUM_WETH9
 } from "../constants/Sepolia.sol";
 import {
     CHAIN_ID as MAINNET_CHAIN_ID,
@@ -27,21 +28,23 @@ contract TestSnowbridgeL2AdaptorWeth is Script {
     function run() public {
         vm.startBroadcast();
 
-        address payable l2SnowbridgeAdaptor =
-            payable(vm.envAddress("L2_SNOWBRIDGE_ADAPTOR_ADDRESS"));
+        address payable l2SnowbridgeAdaptor;
         address recipient = vm.envAddress("RECIPIENT_ADDRESS");
 
         DepositParams memory params;
         SendParams memory sendParams;
         bytes[] memory assets = new bytes[](0);
 
-        if (keccak256(bytes(vm.envString("L1_NETWORK"))) == keccak256(bytes("mainnet"))) {
+        if (
+            keccak256(bytes(vm.envString("L1_NETWORK"))) == keccak256(bytes("mainnet"))
+                && keccak256(bytes(vm.envString("L2_NETWORK"))) == keccak256(bytes("base-mainnet"))
+        ) {
             // Mainnet configuration
             params = DepositParams({
                 inputToken: MAINNET_BASE_WETH9,
                 outputToken: MAINNET_WETH9,
-                inputAmount: 1_200_000_000_000_000, // 0.0012 ETH
-                outputAmount: 1_000_000_000_000_000, // 0.001 ETH
+                inputAmount: 1_200_000_000_000_000, // 0.0012 WETH
+                outputAmount: 1_000_000_000_000_000, // 0.001 WETH
                 destinationChainId: MAINNET_CHAIN_ID,
                 fillDeadlineBuffer: MAINNET_TIME_BUFFER
             });
@@ -54,13 +57,41 @@ contract TestSnowbridgeL2AdaptorWeth is Script {
                 executionFee: 5_688_771_233_667,
                 relayerFee: 50_035_501_219_494
             });
-        } else if (keccak256(bytes(vm.envString("L1_NETWORK"))) == keccak256(bytes("sepolia"))) {
+        } else if (
+            keccak256(bytes(vm.envString("L1_NETWORK"))) == keccak256(bytes("sepolia"))
+                && keccak256(bytes(vm.envString("L2_NETWORK"))) == keccak256(bytes("base-sepolia"))
+        ) {
+            l2SnowbridgeAdaptor = payable(vm.envAddress("L2_BASE_SNOWBRIDGE_ADAPTOR_ADDRESS"));
             // Sepolia configuration
             params = DepositParams({
                 inputToken: SEPOLIA_BASE_WETH9,
                 outputToken: SEPOLIA_WETH9,
-                inputAmount: 12_000_000_000_000_000, // 0.012 ETH
-                outputAmount: 10_000_000_000_000_000, // 0.01 ETH
+                inputAmount: 12_000_000_000_000_000, // 0.012 WETH
+                outputAmount: 10_000_000_000_000_000, // 0.01 WETH
+                destinationChainId: SEPOLIA_CHAIN_ID,
+                fillDeadlineBuffer: SEPOLIA_TIME_BUFFER
+            });
+
+            // tx from https://sepolia.etherscan.io/tx/0x7e1668a805d24e0e51a04a51f6d6dc0a4b87dfe85f04eb76328c206700567d2b
+            sendParams = SendParams({
+                xcm: hex"050c140d010208000101005827013ddc4082f8252f8729bd2f06e77e7863dea9202a6f0e7a2c34e356e85a2c964edfa9919080fefce42be38a07df8d7586c641f9f88a75b27c1e0d6001fa34",
+                assets: assets,
+                claimer: hex"000101005827013ddc4082f8252f8729bd2f06e77e7863dea9202a6f0e7a2c34e356e85a",
+                executionFee: 33_346_219_347_761,
+                relayerFee: 553_808_951_460_256
+            });
+        } else if (
+            keccak256(bytes(vm.envString("L1_NETWORK"))) == keccak256(bytes("sepolia"))
+                && keccak256(bytes(vm.envString("L2_NETWORK")))
+                    == keccak256(bytes("arbitrum-sepolia"))
+        ) {
+            l2SnowbridgeAdaptor = payable(vm.envAddress("L2_ARBITRUM_SNOWBRIDGE_ADAPTOR_ADDRESS"));
+            // Sepolia configuration
+            params = DepositParams({
+                inputToken: SEPOLIA_ARBITRUM_WETH9,
+                outputToken: SEPOLIA_WETH9,
+                inputAmount: 12_000_000_000_000_000, // 0.012 WETH
+                outputAmount: 10_000_000_000_000_000, // 0.01 WETH
                 destinationChainId: SEPOLIA_CHAIN_ID,
                 fillDeadlineBuffer: SEPOLIA_TIME_BUFFER
             });
@@ -74,7 +105,7 @@ contract TestSnowbridgeL2AdaptorWeth is Script {
                 relayerFee: 553_808_951_460_256
             });
         } else {
-            revert("Unsupported L1 network");
+            revert("Unsupported L2 network");
         }
 
         WETH9(payable(params.inputToken)).deposit{value: params.inputAmount}();

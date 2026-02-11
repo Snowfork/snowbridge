@@ -26,16 +26,18 @@ import {
 contract TestSnowbridgeL2AdaptorNativeEther is Script {
     function run() public {
         vm.startBroadcast();
-
-        address payable l2SnowbridgeAdaptor =
-            payable(vm.envAddress("L2_SNOWBRIDGE_ADAPTOR_ADDRESS"));
         address recipient = vm.envAddress("RECIPIENT_ADDRESS");
+        address payable l2SnowbridgeAdaptor;
 
         DepositParams memory params;
         SendParams memory sendParams;
         bytes[] memory assets = new bytes[](0);
 
-        if (keccak256(bytes(vm.envString("L1_NETWORK"))) == keccak256(bytes("mainnet"))) {
+        if (
+            keccak256(bytes(vm.envString("L1_NETWORK"))) == keccak256(bytes("mainnet"))
+                && keccak256(bytes(vm.envString("L2_NETWORK"))) == keccak256(bytes("base-mainnet"))
+        ) {
+            l2SnowbridgeAdaptor = payable(vm.envAddress("L2_BASE_SNOWBRIDGE_ADAPTOR_ADDRESS"));
             // Mainnet configuration
             params = DepositParams({
                 inputToken: address(0),
@@ -54,8 +56,36 @@ contract TestSnowbridgeL2AdaptorNativeEther is Script {
                 executionFee: 5_688_771_233_667,
                 relayerFee: 50_035_501_219_494
             });
-        } else if (keccak256(bytes(vm.envString("L1_NETWORK"))) == keccak256(bytes("sepolia"))) {
+        } else if (
+            keccak256(bytes(vm.envString("L1_NETWORK"))) == keccak256(bytes("sepolia"))
+                && keccak256(bytes(vm.envString("L2_NETWORK"))) == keccak256(bytes("base-sepolia"))
+        ) {
             // Sepolia configuration
+            l2SnowbridgeAdaptor = payable(vm.envAddress("L2_BASE_SNOWBRIDGE_ADAPTOR_ADDRESS"));
+            params = DepositParams({
+                inputToken: address(0),
+                outputToken: address(0),
+                inputAmount: 12_000_000_000_000_000, // 0.012 ETH
+                outputAmount: 10_000_000_000_000_000, // 0.01 ETH
+                destinationChainId: SEPOLIA_CHAIN_ID,
+                fillDeadlineBuffer: SEPOLIA_TIME_BUFFER
+            });
+
+            // tx from https://sepolia.etherscan.io/tx/0x7e1668a805d24e0e51a04a51f6d6dc0a4b87dfe85f04eb76328c206700567d2b
+            sendParams = SendParams({
+                xcm: hex"050c140d010208000101005827013ddc4082f8252f8729bd2f06e77e7863dea9202a6f0e7a2c34e356e85a2c964edfa9919080fefce42be38a07df8d7586c641f9f88a75b27c1e0d6001fa34",
+                assets: assets,
+                claimer: hex"000101005827013ddc4082f8252f8729bd2f06e77e7863dea9202a6f0e7a2c34e356e85a",
+                executionFee: 33_346_219_347_761,
+                relayerFee: 553_808_951_460_256
+            });
+        } else if (
+            keccak256(bytes(vm.envString("L1_NETWORK"))) == keccak256(bytes("sepolia"))
+                && keccak256(bytes(vm.envString("L2_NETWORK")))
+                    == keccak256(bytes("arbitrum-sepolia"))
+        ) {
+            // Sepolia configuration
+            l2SnowbridgeAdaptor = payable(vm.envAddress("L2_ARBITRUM_SNOWBRIDGE_ADAPTOR_ADDRESS"));
             params = DepositParams({
                 inputToken: address(0),
                 outputToken: address(0),
@@ -74,7 +104,7 @@ contract TestSnowbridgeL2AdaptorNativeEther is Script {
                 relayerFee: 553_808_951_460_256
             });
         } else {
-            revert("Unsupported L1 network");
+            revert("Unsupported L2 network");
         }
 
         SnowbridgeL2Adaptor(l2SnowbridgeAdaptor)
