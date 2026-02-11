@@ -35,10 +35,18 @@ import { paraImplementation } from "./parachains"
 import { Context } from "./index"
 import { ETHER_TOKEN_ADDRESS, findL2TokenAddress } from "./assets_v2"
 import { getOperatingStatus } from "./status"
-import { AbstractProvider, ethers, Wallet, TransactionReceipt } from "ethers"
+import {
+    AbstractProvider,
+    ethers,
+    Wallet,
+    TransactionReceipt,
+    AbiCoder,
+    ContractTransaction,
+} from "ethers"
 import { CreateAgent } from "./registration/agent/createAgent"
 import { estimateFees } from "./across/api"
 import { AgentCreation } from "./registration/agent/agentInterface"
+import { CommandStruct } from "@snowbridge/contract-types/dist/Gateway"
 
 export { ValidationKind, signAndSend } from "./toEthereum_v2"
 
@@ -659,6 +667,8 @@ export const validateTransferFromAssetHub = async (
     let sourceDryRunError
     let assetHubDryRunError
     let bridgeHubDryRunError
+    let ethereumDryRunError
+    let estimatedDryRunGas: bigint
     // do the dry run, get the forwarded xcm and dry run that
     const dryRunResultAssetHub = await dryRunOnSourceParachain(
         sourceParachain,
@@ -673,7 +683,24 @@ export const validateTransferFromAssetHub = async (
             registry.assetHubParaId,
             dryRunResultAssetHub.bridgeHubForwarded[1][0],
         )
-        if (!dryRunResultBridgeHub.success) {
+        if (dryRunResultBridgeHub.success) {
+            try {
+                const ethereumTx = await buildEthereumDryRunCall(
+                    context,
+                    registry.assetHubParaId,
+                    sourceAccountHex,
+                    transfer,
+                )
+                estimatedDryRunGas = await context.ethereum().estimateGas(ethereumTx)
+            } catch (e) {
+                ethereumDryRunError = "Could not estimate gas on Ethereum." + (e as Error).message
+                logs.push({
+                    kind: ValidationKind.Error,
+                    reason: ValidationReason.FeeEstimationError,
+                    message: ethereumDryRunError,
+                })
+            }
+        } else {
             logs.push({
                 kind: ValidationKind.Error,
                 reason: ValidationReason.DryRunFailed,
@@ -733,6 +760,7 @@ export const validateTransferFromAssetHub = async (
             sourceDryRunError,
             assetHubDryRunError,
             bridgeHubDryRunError,
+            ethereumDryRunError,
         },
         transfer,
     }
@@ -1107,4 +1135,71 @@ export async function sourceAgentAddress(
     let agentID = await sourceAgentId(context, parachainId, sourceAccountHex)
     let agentAddress = await gateway.agentOf(agentID)
     return agentAddress
+}
+
+export async function buildEthereumDryRunCall(
+    context: Context,
+    parachainId: number,
+    sourceAccountHex: string,
+    transfer: Transfer,
+): Promise<any> {
+    let commands: CommandStruct[] = []
+    const agentID = await sourceAgentId(context, parachainId, sourceAccountHex)
+    if (transfer.computed.sourceAssetMetadata.foreignId) {
+        // PNA
+        const mintForeignParams = AbiCoder.defaultAbiCoder().encode(
+            ["bytes32", "address", "uint128"],
+            [
+                transfer.computed.sourceAssetMetadata.foreignId,
+                transfer.input.beneficiaryAccount,
+                transfer.input.amount,
+            ],
+        )
+        const mintCommand: CommandStruct = {
+            kind: 2,
+            gas: transfer.computed.tokenErcMetadata.deliveryGas || 200_000n,
+            payload: mintForeignParams,
+        }
+        commands.push(mintCommand)
+    } else {
+        // ENA
+        const unlockNativeParams = AbiCoder.defaultAbiCoder().encode(
+            ["bytes32", "address", "address", "uint128"],
+            [
+                agentID,
+                transfer.input.tokenAddress,
+                transfer.input.beneficiaryAccount,
+                transfer.input.amount,
+            ],
+        )
+        const unlockCommand: CommandStruct = {
+            kind: 2,
+            gas: transfer.computed.tokenErcMetadata.deliveryGas || 200_000n,
+            payload: unlockNativeParams,
+        }
+        commands.push(unlockCommand)
+    }
+
+    if (transfer.input.contractCall) {
+        let callInfo = transfer.input.contractCall
+        // 2. Transact
+        const transactParams = AbiCoder.defaultAbiCoder().encode(
+            ["address", "bytes", "uint256"],
+            [callInfo.target, callInfo.calldata, callInfo.value || 0n],
+        )
+        const transactCommand: CommandStruct = {
+            kind: 5,
+            gas: callInfo.gas,
+            payload: transactParams,
+        }
+        commands.push(transactCommand)
+    }
+    let ethereumTx: ContractTransaction = await context
+        .gatewayProxy()
+        .getFunction("v2_dispatch")
+        // nonce is irrelevant in the dry run, can be set to 0
+        .populateTransaction(commands, agentID, 0n, {
+            from: context.environment.gatewayContract,
+        })
+    return ethereumTx
 }
