@@ -79,7 +79,7 @@
     "transferWethFromL2ToAH-mainnet": "npx ts-node src/transfer_from_l2_to_polkadot_wrapper.ts 8453 1000 WETH 1000000000000000",
     "transferWethFromAHToL2-mainnet": "npx ts-node src/transfer_from_polkadot_to_l2_wrapper.ts 1000 8453 WETH 1000000000000000",
     "transferEtherFromArbitrumToAH-sepolia": "npx ts-node src/transfer_from_l2_to_polkadot_wrapper.ts 421614 1000 Eth 10000000000000000",
-    "transferEtherFromAHToArbitrum-sepolia": "npx ts-node src/transfer_from_polkadot_to_l2_wrapper.ts 1000 421614 Eth 10000000000000000",
+    "transferEtherFromAHToArbitrum-sepolia": "npx ts-node src/transfer_from_polkadot_to_l2_wrapper.ts 1000 421614 Eth 3000000000000000",
     "transferUSDCFromArbitrumToAH-sepolia": "npx ts-node src/transfer_from_l2_to_polkadot_wrapper.ts 421614 1000 USDC 1300000",
     "transferUSDCFromAHToArbitrum-sepolia": "npx ts-node src/transfer_from_polkadot_to_l2_wrapper.ts 1000 421614 USDC 1300000"
   },
