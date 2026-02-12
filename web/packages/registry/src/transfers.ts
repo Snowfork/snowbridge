@@ -12,7 +12,9 @@ export function getTransferLocation(registry: AssetRegistry, chain: ChainId): Tr
     switch (chain.kind) {
         case "kusama": {
             if (!registry.kusama) throw Error(`Kusama not configured.`)
-            const parachain = registry.kusama.parachains[`${chain.kind}_${chain.id}`]
+            const key = `${chain.kind}_${chain.id}` as const
+            const parachain = registry.kusama.parachains[key]
+            if (!parachain) throw Error(`Cannot find chain ${key}`)
             return {
                 id: parachain.id,
                 kind: parachain.kind,
@@ -21,7 +23,9 @@ export function getTransferLocation(registry: AssetRegistry, chain: ChainId): Tr
             }
         }
         case "polkadot": {
-            const parachain = registry.parachains[`${chain.kind}_${chain.id}`]
+            const key = `${chain.kind}_${chain.id}` as const
+            const parachain = registry.parachains[key]
+            if (!parachain) throw Error(`Cannot find chain ${key}`)
             return {
                 id: parachain.id,
                 kind: parachain.kind,
@@ -30,7 +34,9 @@ export function getTransferLocation(registry: AssetRegistry, chain: ChainId): Tr
             }
         }
         case "ethereum": {
-            const ethChain = registry.ethereumChains[`${chain.kind}_${chain.id}`]
+            const key = `${chain.kind}_${chain.id}` as const
+            const ethChain = registry.ethereumChains[key]
+            if (!ethChain) throw Error(`Cannot find chain ${key}`)
             if (!ethChain.evmParachainId) {
                 return {
                     kind: ethChain.kind,
@@ -50,7 +56,9 @@ export function getTransferLocation(registry: AssetRegistry, chain: ChainId): Tr
             }
         }
         case "ethereum_l2": {
-            const ethChain = registry.ethereumChains[`${chain.kind}_${chain.id}`]
+            const key = `${chain.kind}_${chain.id}` as const
+            const ethChain = registry.ethereumChains[key]
+            if (!ethChain) throw Error(`Cannot find chain ${key}`)
             return {
                 kind: ethChain.kind,
                 id: ethChain.id,

@@ -141,9 +141,9 @@ export const fetchToEthereumTransfers = async (graphqlApiUrl: string, graphqlQue
             nonce
             senderAddress
             sourceParaId
-            l2ChainId
             sourceNetwork
             destinationNetwork
+            l2ChainId
             timestamp
             tokenAddress
             txHash
@@ -172,6 +172,11 @@ export const fetchToEthereumTransfers = async (graphqlApiUrl: string, graphqlQue
                 messageId
                 nonce
                 channelId
+            }
+            toEthereumL2 {
+                blockNumber
+                depositId
+                txHash
             }
         }
     }`
@@ -347,6 +352,11 @@ export const fetchToEthereumTransferById = async (graphqlApiUrl: string, id: str
                 nonce
                 channelId
             }
+            toEthereumL2 {
+                blockNumber
+                depositId
+                txHash
+            }
         }
     }`
     let result = await queryByGraphQL(graphqlApiUrl, query)
@@ -463,10 +473,10 @@ export const fetchToEthereumPendingTransfers = async (
             messageId
             nonce
             senderAddress
+            sourceParaId
             sourceNetwork
             destinationNetwork
             l2ChainId
-            sourceParaId
             timestamp
             tokenAddress
             txHash
@@ -495,6 +505,11 @@ export const fetchToEthereumPendingTransfers = async (
                 messageId
                 nonce
                 channelId
+            }
+            toEthereumL2 {
+                blockNumber
+                depositId
+                txHash
             }
         }
     }`
@@ -572,10 +587,10 @@ export const fetchToEthereumTransfersBySenders = async (
             messageId
             nonce
             senderAddress
+            sourceParaId
             sourceNetwork
             destinationNetwork
             l2ChainId
-            sourceParaId
             timestamp
             tokenAddress
             txHash
@@ -604,6 +619,11 @@ export const fetchToEthereumTransfersBySenders = async (
                 messageId
                 nonce
                 channelId
+            }
+            toEthereumL2 {
+                blockNumber
+                depositId
+                txHash
             }
         }
     }`
