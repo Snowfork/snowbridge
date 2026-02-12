@@ -93,6 +93,7 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
             "1": "https://ethereum-rpc.publicnode.com",
             "1284": "https://rpc.api.moonbeam.network",
             "8453": "https://base-rpc.publicnode.com",
+            "42161": "https://arbitrum-one-rpc.publicnode.com",
         },
         relaychainUrl: "https://polkadot-rpc.n.dwellir.com",
         parachains: {
@@ -134,7 +135,7 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
         },
         l2Bridge: {
             acrossAPIUrl: "https://app.across.to/api",
-            l1AdapterAddress: "0x313e8c9fb47613f2b1a436be978c2bb75727fcc5",
+            l1AdapterAddress: "0xd3b11c36404b092645522b682832fcdee07d2668",
             l1HandlerAddress: "0x924a9f036260ddd5808007e1aa95f08ed08aa569",
             l1FeeTokenAddress: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
             l1SwapQuoterAddress: "0x61ffe014ba17989e743c5f6cb21bf9697530b21e",
@@ -153,6 +154,24 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
                         // USDC
                         {
                             inputToken: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+                            outputToken: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                            swapFee: 500,
+                        },
+                    ],
+                },
+                "42161": {
+                    adapterAddress: "0xcd5d2c665e3ac84bf5c67fe7a0c48748da40db2f",
+                    feeTokenAddress: "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1".toLowerCase(),
+                    swapRoutes: [
+                        // WETH
+                        {
+                            inputToken: "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1".toLowerCase(),
+                            outputToken: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                            swapFee: 0,
+                        },
+                        // USDC
+                        {
+                            inputToken: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831".toLowerCase(),
                             outputToken: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
                             swapFee: 500,
                         },
