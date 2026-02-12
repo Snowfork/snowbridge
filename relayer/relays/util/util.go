@@ -186,3 +186,4 @@ func ByteArrayToPublicKeyArray(pubkeys [][]byte) ([][48]byte, error) {
 	}
 	return result, nil
 }
+

@@ -8,7 +8,7 @@
     },
     "beacon": {
       "endpoint": "http://127.0.0.1:9596",
-      "stateEndpoint": "http://127.0.0.1:9596",
+      "stateServiceEndpoint": "http://127.0.0.1:8080",
       "spec": {
         "syncCommitteeSize": 512,
         "slotsInEpoch": 32,
@@ -34,11 +34,6 @@
     "ss58Prefix": 1
   },
   "instantVerification": true,
-  "schedule": {
-    "id": null,
-    "totalRelayerCount": 1,
-    "sleepInterval": 20
-  },
   "ofac": {
     "enabled": false,
     "apiKey": ""
