@@ -668,7 +668,7 @@ export const validateTransferFromAssetHub = async (
     let assetHubDryRunError
     let bridgeHubDryRunError
     let ethereumDryRunError
-    let estimatedDryRunGas: bigint
+    let estimatedDryRunGas: bigint | undefined
     // do the dry run, get the forwarded xcm and dry run that
     const dryRunResultAssetHub = await dryRunOnSourceParachain(
         sourceParachain,
@@ -691,7 +691,47 @@ export const validateTransferFromAssetHub = async (
                     sourceAccountHex,
                     transfer,
                 )
-                estimatedDryRunGas = await context.ethereum().estimateGas(ethereumTx)
+                estimatedDryRunGas = await ethereum.estimateGas(ethereumTx)
+                const forkedProvider = new ethers.JsonRpcProvider(
+                    process.env.FORKED_PROVIDER_URL ||
+                        process.env.NEXT_PUBLIC_FORKED_PROVIDER_URL ||
+                        "https://virtual.mainnet.eu.rpc.tenderly.co/1d4ab8c5-01fe-45a7-8583-8b4925e5a435",
+                )
+                const txHash = await forkedProvider.send("eth_sendTransaction", [
+                    {
+                        from: ethereumTx.from,
+                        to: ethereumTx.to,
+                        data: ethereumTx.data,
+                        value: ethereumTx.value,
+                        gas: "0x" + (estimatedDryRunGas! * 2n).toString(16), // multiply by 2 to be safe
+                    },
+                ])
+
+                console.log("Tx hash:", txHash)
+
+                const receipt = await forkedProvider.waitForTransaction(txHash)
+                console.log("Logs:", receipt?.logs)
+                const parsedLogs = receipt?.logs
+                    .map((log) => {
+                        try {
+                            return context.gatewayProxy().interface.parseLog(log)
+                        } catch (e) {
+                            return null
+                        }
+                    })
+                    .filter((log) => log !== null)
+                const errorLogs = parsedLogs?.filter((log) => {
+                    return log.name === "CommandFailed"
+                })
+                if (errorLogs && errorLogs.length > 0) {
+                    ethereumDryRunError =
+                        "Dry run failed on Ethereum at command index: " + errorLogs[0].args.index
+                    logs.push({
+                        kind: ValidationKind.Error,
+                        reason: ValidationReason.DryRunFailed,
+                        message: ethereumDryRunError,
+                    })
+                }
             } catch (e) {
                 ethereumDryRunError = "Could not estimate gas on Ethereum." + (e as Error).message
                 logs.push({
@@ -1142,7 +1182,7 @@ export async function buildEthereumDryRunCall(
     parachainId: number,
     sourceAccountHex: string,
     transfer: Transfer,
-): Promise<any> {
+): Promise<ContractTransaction> {
     let commands: CommandStruct[] = []
     const agentID = await sourceAgentId(context, parachainId, sourceAccountHex)
     if (transfer.computed.sourceAssetMetadata.foreignId) {
