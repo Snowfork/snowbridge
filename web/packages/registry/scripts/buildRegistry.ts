@@ -168,6 +168,7 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
         ethereumChains: {
             "11155111": "https://ethereum-sepolia-rpc.publicnode.com",
             "84532": "https://base-sepolia-rpc.publicnode.com",
+            "421614": "https://arbitrum-sepolia-rpc.publicnode.com",
         },
         relaychainUrl: "wss://westend-rpc.n.dwellir.com",
         parachains: {
@@ -183,7 +184,7 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
             "https://snowbridge.squids.live/snowbridge-subsquid-westend@v1/api/graphql",
         l2Bridge: {
             acrossAPIUrl: "https://testnet.across.to/api",
-            l1AdapterAddress: "0xa5b8589bd534701be49916c4d2e634ab1c765cbf",
+            l1AdapterAddress: "0xCDa9bFf39cdF39E95F4B699422E422195091126d".toLowerCase(),
             l1HandlerAddress: "0x924a9f036260ddd5808007e1aa95f08ed08aa569",
             l1FeeTokenAddress: "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
             l1SwapRouterAddress: "0x3bfa4769fb09eefc5a80d6e87c3b9c650f7ae48e",
@@ -203,6 +204,24 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
                         {
                             inputToken: "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
                             outputToken: "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
+                            swapFee: 500,
+                        },
+                    ],
+                },
+                "421614": {
+                    adapterAddress: "0xcB3d8043bDbfB0D9b30de279A09132073d1dE561".toLowerCase(),
+                    feeTokenAddress: "0x980B62Da83eFf3D4576C647993b0c1D7faf17c73".toLowerCase(),
+                    swapRoutes: [
+                        // WETH
+                        {
+                            inputToken: "0x980B62Da83eFf3D4576C647993b0c1D7faf17c73".toLowerCase(),
+                            outputToken: "0xfff9976782d46cc05630d1f6ebab18b2324d6b14".toLowerCase(),
+                            swapFee: 0,
+                        },
+                        // USDC
+                        {
+                            inputToken: "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d".toLowerCase(),
+                            outputToken: "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238".toLowerCase(),
                             swapFee: 500,
                         },
                     ],
