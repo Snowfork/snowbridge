@@ -466,6 +466,14 @@ contract BeefyClient {
     }
 
     /**
+     * @dev Compute the hash of a commitment
+     * @param commitment the commitment to hash
+     */
+    function computeCommitmentHash(Commitment calldata commitment) external pure returns (bytes32) {
+        return keccak256(encodeCommitment(commitment));
+    }
+
+    /**
      * @dev Helper to create a final bitfield, with subsampled validator selections
      * @param commitmentHash contains the commitmentHash signed by the validators
      * @param bitfield claiming which validators have signed the commitment
