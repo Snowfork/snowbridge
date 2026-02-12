@@ -23,7 +23,6 @@ contract DeploySnowbridgeL1Adaptor is Script {
         } else if (keccak256(bytes(vm.envString("L1_NETWORK"))) == keccak256(bytes("sepolia"))) {
             SPOKE_POOL_ADDRESS = SEPOLIA_SPOKE_POOL;
             WETH9_ADDRESS = SEPOLIA_WETH9;
-            WETH9_ADDRESS = SEPOLIA_WETH9;
         } else {
             revert("Unsupported L1 network");
         }

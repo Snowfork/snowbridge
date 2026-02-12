@@ -17,7 +17,9 @@ import {
 import {
     BASE_CHAIN_ID as MAINNET_BASE_CHAIN_ID,
     TIME_BUFFER as MAINNET_TIME_BUFFER,
-    BASE_WETH9 as MAINNET_BASE_WETH9
+    BASE_WETH9 as MAINNET_BASE_WETH9,
+    ARBITRUM_CHAIN_ID as MAINNET_ARBITRUM_CHAIN_ID,
+    ARBITRUM_WETH9 as MAINNET_ARBITRUM_WETH9
 } from "../constants/Mainnet.sol";
 
 contract TestSnowbridgeL1AdaptorNativeEther is Script {
@@ -35,7 +37,7 @@ contract TestSnowbridgeL1AdaptorNativeEther is Script {
         DepositParams memory params;
         if (
             keccak256(bytes(vm.envString("L1_NETWORK"))) == keccak256(bytes("mainnet"))
-                && keccak256(bytes(vm.envString("L2_NETWORK"))) == keccak256(bytes("base-mainnet"))
+                && keccak256(bytes(vm.envString("L2_NETWORK"))) == keccak256(bytes("base"))
         ) {
             L2_CHAIN_ID = MAINNET_BASE_CHAIN_ID;
             TIME_BUFFER = MAINNET_TIME_BUFFER;
@@ -44,6 +46,21 @@ contract TestSnowbridgeL1AdaptorNativeEther is Script {
                 inputToken: address(0),
                 outputToken: L2_WETH9,
                 inputAmount: 1_100_000_000_000_000, // 0.0011 ETH
+                outputAmount: 1_000_000_000_000_000, // 0.001 ETH
+                destinationChainId: L2_CHAIN_ID,
+                fillDeadlineBuffer: TIME_BUFFER
+            });
+        } else if (
+            keccak256(bytes(vm.envString("L1_NETWORK"))) == keccak256(bytes("mainnet"))
+                && keccak256(bytes(vm.envString("L2_NETWORK"))) == keccak256(bytes("arbitrum"))
+        ) {
+            L2_CHAIN_ID = MAINNET_ARBITRUM_CHAIN_ID;
+            TIME_BUFFER = MAINNET_TIME_BUFFER;
+            L2_WETH9 = MAINNET_ARBITRUM_WETH9;
+            params = DepositParams({
+                inputToken: address(0),
+                outputToken: L2_WETH9,
+                inputAmount: 1_200_000_000_000_000, // 0.0012 ETH
                 outputAmount: 1_000_000_000_000_000, // 0.001 ETH
                 destinationChainId: L2_CHAIN_ID,
                 fillDeadlineBuffer: TIME_BUFFER

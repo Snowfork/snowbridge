@@ -6,20 +6,22 @@ import {Script, console} from "forge-std/Script.sol";
 import {
     SPOKE_POOL as SEPOLIA_SPOKE_POOL,
     MULTI_CALL_HANDLER as SEPOLIA_MULTI_CALL_HANDLER,
-    BASE_SPOKE_POOL as SEPOLIA_BASE_SPOKE_POOL,
     WETH9 as SEPOLIA_WETH9,
-    BASE_WETH9 as SEPOLIA_BASE_WETH9,
     GATEWAY as SEPOLIA_GATEWAY,
+    BASE_SPOKE_POOL as SEPOLIA_BASE_SPOKE_POOL,
+    BASE_WETH9 as SEPOLIA_BASE_WETH9,
     ARBITRUM_SPOKE_POOL as SEPOLIA_ARBITRUM_SPOKE_POOL,
     ARBITRUM_WETH9 as SEPOLIA_ARBITRUM_WETH9
 } from "../constants/Sepolia.sol";
 import {
     SPOKE_POOL as MAINNET_SPOKE_POOL,
     MULTI_CALL_HANDLER as MAINNET_MULTI_CALL_HANDLER,
-    BASE_SPOKE_POOL as MAINNET_BASE_SPOKE_POOL,
     WETH9 as MAINNET_WETH9,
+    GATEWAY as MAINNET_GATEWAY,
+    BASE_SPOKE_POOL as MAINNET_BASE_SPOKE_POOL,
     BASE_WETH9 as MAINNET_BASE_WETH9,
-    GATEWAY as MAINNET_GATEWAY
+    ARBITRUM_SPOKE_POOL as MAINNET_ARBITRUM_SPOKE_POOL,
+    ARBITRUM_WETH9 as MAINNET_ARBITRUM_WETH9
 } from "../constants/Mainnet.sol";
 import {SnowbridgeL2Adaptor} from "../../../../src/l2-integration/SnowbridgeL2Adaptor.sol";
 
@@ -38,12 +40,24 @@ contract DeploySnowbridgeL2Adaptor is Script {
         address L2_WETH9_ADDRESS;
         address UNISWAP_ROUTER_ADDRESS;
 
-        if (keccak256(bytes(vm.envString("L1_NETWORK"))) == keccak256(bytes("mainnet"))) {
+        if (
+            keccak256(bytes(vm.envString("L1_NETWORK"))) == keccak256(bytes("mainnet"))
+                && keccak256(bytes(vm.envString("L2_NETWORK"))) == keccak256(bytes("base"))
+        ) {
             L2_SPOKE_POOL_ADDRESS = MAINNET_BASE_SPOKE_POOL;
             MULTI_CALL_HANDLER_ADDRESS = MAINNET_MULTI_CALL_HANDLER;
             GATEWAY_V2_ADDRESS = MAINNET_GATEWAY;
             WETH9_ADDRESS = MAINNET_WETH9;
             L2_WETH9_ADDRESS = MAINNET_BASE_WETH9;
+        } else if (
+            keccak256(bytes(vm.envString("L1_NETWORK"))) == keccak256(bytes("mainnet"))
+                && keccak256(bytes(vm.envString("L2_NETWORK"))) == keccak256(bytes("arbitrum"))
+        ) {
+            L2_SPOKE_POOL_ADDRESS = MAINNET_ARBITRUM_SPOKE_POOL;
+            MULTI_CALL_HANDLER_ADDRESS = MAINNET_MULTI_CALL_HANDLER;
+            GATEWAY_V2_ADDRESS = MAINNET_GATEWAY;
+            WETH9_ADDRESS = MAINNET_WETH9;
+            L2_WETH9_ADDRESS = MAINNET_ARBITRUM_WETH9;
         } else if (
             keccak256(bytes(vm.envString("L1_NETWORK"))) == keccak256(bytes("sepolia"))
                 && keccak256(bytes(vm.envString("L2_NETWORK"))) == keccak256(bytes("base-sepolia"))
@@ -64,7 +78,7 @@ contract DeploySnowbridgeL2Adaptor is Script {
             WETH9_ADDRESS = SEPOLIA_WETH9;
             L2_WETH9_ADDRESS = SEPOLIA_ARBITRUM_WETH9;
         } else {
-            revert("Unsupported L1 network");
+            revert("Unsupported L2 network");
         }
 
         snowbridgeL2Adaptor = new SnowbridgeL2Adaptor(

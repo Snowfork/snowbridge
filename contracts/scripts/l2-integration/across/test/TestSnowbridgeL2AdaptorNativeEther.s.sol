@@ -20,7 +20,9 @@ import {
     BASE_CHAIN_ID as MAINNET_BASE_CHAIN_ID,
     WETH9 as MAINNET_WETH9,
     BASE_WETH9 as MAINNET_BASE_WETH9,
-    TIME_BUFFER as MAINNET_TIME_BUFFER
+    TIME_BUFFER as MAINNET_TIME_BUFFER,
+    ARBITRUM_CHAIN_ID as MAINNET_ARBITRUM_CHAIN_ID,
+    ARBITRUM_WETH9 as MAINNET_ARBITRUM_WETH9
 } from "../constants/Mainnet.sol";
 
 contract TestSnowbridgeL2AdaptorNativeEther is Script {
@@ -35,9 +37,32 @@ contract TestSnowbridgeL2AdaptorNativeEther is Script {
 
         if (
             keccak256(bytes(vm.envString("L1_NETWORK"))) == keccak256(bytes("mainnet"))
-                && keccak256(bytes(vm.envString("L2_NETWORK"))) == keccak256(bytes("base-mainnet"))
+                && keccak256(bytes(vm.envString("L2_NETWORK"))) == keccak256(bytes("base"))
         ) {
             l2SnowbridgeAdaptor = payable(vm.envAddress("L2_BASE_SNOWBRIDGE_ADAPTOR_ADDRESS"));
+            // Mainnet configuration
+            params = DepositParams({
+                inputToken: address(0),
+                outputToken: address(0),
+                inputAmount: 1_200_000_000_000_000, // 0.0012 ETH
+                outputAmount: 1_000_000_000_000_000, // 0.001 ETH
+                destinationChainId: MAINNET_CHAIN_ID,
+                fillDeadlineBuffer: MAINNET_TIME_BUFFER
+            });
+
+            // tx from https://etherscan.io/tx/0x57d799b6e564c8db30fa91e5d311528814a6a29a22eee3c279e15d73778b1892
+            sendParams = SendParams({
+                xcm: hex"050c140d0102080001010054d82b42bcd22b175d71d62ef2114defcf14344c4b88acf0eb4356737d7fdb4a2c881a4e2c885398241abf54c551d4308c60bb0e9f2f860c26d1ec9528fb30a5fd",
+                assets: assets,
+                claimer: hex"0001010054d82b42bcd22b175d71d62ef2114defcf14344c4b88acf0eb4356737d7fdb4a",
+                executionFee: 5_688_771_233_667,
+                relayerFee: 50_035_501_219_494
+            });
+        } else if (
+            keccak256(bytes(vm.envString("L1_NETWORK"))) == keccak256(bytes("mainnet"))
+                && keccak256(bytes(vm.envString("L2_NETWORK"))) == keccak256(bytes("arbitrum"))
+        ) {
+            l2SnowbridgeAdaptor = payable(vm.envAddress("L2_ARBITRUM_SNOWBRIDGE_ADAPTOR_ADDRESS"));
             // Mainnet configuration
             params = DepositParams({
                 inputToken: address(0),
