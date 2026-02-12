@@ -160,7 +160,7 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
                     ],
                 },
                 "42161": {
-                    adapterAddress: "0xcd5d2c665e3ac84bf5c67fe7a0c48748da40db2f",
+                    adapterAddress: "0x836895Ad176235Dfe9C59b3df56C7579d90ea338".toLowerCase(),
                     feeTokenAddress: "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1".toLowerCase(),
                     swapRoutes: [
                         // WETH
