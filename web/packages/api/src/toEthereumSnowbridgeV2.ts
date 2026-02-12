@@ -1156,7 +1156,7 @@ export async function buildEthereumDryRunCall(
             ],
         )
         const mintCommand: CommandStruct = {
-            kind: 2,
+            kind: 4,
             gas: transfer.computed.tokenErcMetadata.deliveryGas || 200_000n,
             payload: mintForeignParams,
         }
