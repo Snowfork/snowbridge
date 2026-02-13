@@ -5,6 +5,7 @@ const registry = {
         beaconApiUrl: "https://lodestar-mainnet.chainsafe.io",
         ethereumChains: {
             "1": "https://ethereum-rpc.publicnode.com",
+            "10": "https://optimism-rpc.publicnode.com",
             "1284": "https://rpc.api.moonbeam.network",
             "8453": "https://base-rpc.publicnode.com",
             "42161": "https://arbitrum-one-rpc.publicnode.com",
@@ -51,6 +52,22 @@ const registry = {
             l1SwapQuoterAddress: "0x61ffe014ba17989e743c5f6cb21bf9697530b21e",
             l1SwapRouterAddress: "0xe592427a0aece92de3edee1f18e0157c05861564",
             l2Chains: {
+                "10": {
+                    adapterAddress: "0x836895ad176235dfe9c59b3df56c7579d90ea338",
+                    feeTokenAddress: "0x4200000000000000000000000000000000000006",
+                    swapRoutes: [
+                        {
+                            inputToken: "0x4200000000000000000000000000000000000006",
+                            outputToken: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                            swapFee: 0,
+                        },
+                        {
+                            inputToken: "0x0b2c639c533813f4aa9d7837caf62653d097ff85",
+                            outputToken: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                            swapFee: 500,
+                        },
+                    ],
+                },
                 "8453": {
                     adapterAddress: "0xcd5d2c665e3ac84bf5c67fe7a0c48748da40db2f",
                     feeTokenAddress: "0x4200000000000000000000000000000000000006",
@@ -68,7 +85,7 @@ const registry = {
                     ],
                 },
                 "42161": {
-                    adapterAddress: "0x836895Ad176235Dfe9C59b3df56C7579d90ea338".toLowerCase(),
+                    adapterAddress: "0x836895ad176235dfe9c59b3df56c7579d90ea338",
                     feeTokenAddress: "0x82af49447d8a07e3bd95bd0d56f35241523fbab1",
                     swapRoutes: [
                         {
@@ -458,6 +475,35 @@ const registry = {
             },
             to: {
                 kind: "ethereum_l2",
+                id: 10,
+            },
+            assets: [
+                "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                "0x0000000000000000000000000000000000000000",
+            ],
+        },
+        {
+            from: {
+                kind: "ethereum_l2",
+                id: 10,
+            },
+            to: {
+                kind: "polkadot",
+                id: 1000,
+            },
+            assets: [
+                "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+            ],
+        },
+        {
+            from: {
+                kind: "polkadot",
+                id: 1000,
+            },
+            to: {
+                kind: "ethereum_l2",
                 id: 8453,
             },
             assets: [
@@ -511,7 +557,7 @@ const registry = {
         },
     ],
     registry: {
-        timestamp: "2026-02-12T16:37:18.927Z",
+        timestamp: "2026-02-13T02:45:52.753Z",
         environment: "polkadot_mainnet",
         ethChainId: 1,
         gatewayAddress: "0x27ca963c279c93801941e1eb8799c23f407d68e7",
@@ -818,6 +864,38 @@ const registry = {
                 },
                 key: "ethereum_1",
                 baseDeliveryGas: 120000n,
+            },
+            ethereum_l2_10: {
+                kind: "ethereum_l2",
+                id: 10,
+                name: "optimism",
+                assets: {
+                    "0x4200000000000000000000000000000000000006": {
+                        token: "0x4200000000000000000000000000000000000006",
+                        name: "Wrapped Ether",
+                        symbol: "WETH",
+                        decimals: 18,
+                        swapTokenAddress: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                        swapFee: 0,
+                    },
+                    "0x0b2c639c533813f4aa9d7837caf62653d097ff85": {
+                        token: "0x0b2c639c533813f4aa9d7837caf62653d097ff85",
+                        name: "USD Coin",
+                        symbol: "USDC",
+                        decimals: 6,
+                        swapTokenAddress: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                        swapFee: 500,
+                    },
+                    "0x0000000000000000000000000000000000000000": {
+                        token: "0x0000000000000000000000000000000000000000",
+                        name: "Ether",
+                        symbol: "Ether",
+                        decimals: 18,
+                        swapTokenAddress: "0x0000000000000000000000000000000000000000",
+                        swapFee: 0,
+                    },
+                },
+                key: "ethereum_l2_10",
             },
             ethereum_1284: {
                 kind: "ethereum",
@@ -1763,7 +1841,7 @@ const registry = {
                         isSufficient: false,
                     },
                 },
-                estimatedExecutionFeeDOT: 87387122n,
+                estimatedExecutionFeeDOT: 87105967n,
                 estimatedDeliveryFeeDOT: 307100000n,
             },
             polkadot_2034: {
@@ -1947,7 +2025,7 @@ const registry = {
                         isSufficient: true,
                     },
                 },
-                estimatedExecutionFeeDOT: 1686189n,
+                estimatedExecutionFeeDOT: 1668340n,
                 estimatedDeliveryFeeDOT: 307100000n,
             },
             polkadot_2043: {

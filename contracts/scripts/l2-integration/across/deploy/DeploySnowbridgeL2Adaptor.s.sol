@@ -21,7 +21,9 @@ import {
     BASE_SPOKE_POOL as MAINNET_BASE_SPOKE_POOL,
     BASE_WETH9 as MAINNET_BASE_WETH9,
     ARBITRUM_SPOKE_POOL as MAINNET_ARBITRUM_SPOKE_POOL,
-    ARBITRUM_WETH9 as MAINNET_ARBITRUM_WETH9
+    ARBITRUM_WETH9 as MAINNET_ARBITRUM_WETH9,
+    OPTIMISM_SPOKE_POOL as MAINNET_OPTIMISM_SPOKE_POOL,
+    OPTIMISM_WETH9 as MAINNET_OPTIMISM_WETH9
 } from "../constants/Mainnet.sol";
 import {SnowbridgeL2Adaptor} from "../../../../src/l2-integration/SnowbridgeL2Adaptor.sol";
 
@@ -58,6 +60,15 @@ contract DeploySnowbridgeL2Adaptor is Script {
             GATEWAY_V2_ADDRESS = MAINNET_GATEWAY;
             WETH9_ADDRESS = MAINNET_WETH9;
             L2_WETH9_ADDRESS = MAINNET_ARBITRUM_WETH9;
+        } else if (
+            keccak256(bytes(vm.envString("L1_NETWORK"))) == keccak256(bytes("mainnet"))
+                && keccak256(bytes(vm.envString("L2_NETWORK"))) == keccak256(bytes("optimism"))
+        ) {
+            L2_SPOKE_POOL_ADDRESS = MAINNET_OPTIMISM_SPOKE_POOL;
+            MULTI_CALL_HANDLER_ADDRESS = MAINNET_MULTI_CALL_HANDLER;
+            GATEWAY_V2_ADDRESS = MAINNET_GATEWAY;
+            WETH9_ADDRESS = MAINNET_WETH9;
+            L2_WETH9_ADDRESS = MAINNET_OPTIMISM_WETH9;
         } else if (
             keccak256(bytes(vm.envString("L1_NETWORK"))) == keccak256(bytes("sepolia"))
                 && keccak256(bytes(vm.envString("L2_NETWORK"))) == keccak256(bytes("base-sepolia"))

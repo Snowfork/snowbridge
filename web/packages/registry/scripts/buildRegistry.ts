@@ -94,6 +94,7 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
             "1284": "https://rpc.api.moonbeam.network",
             "8453": "https://base-rpc.publicnode.com",
             "42161": "https://arbitrum-one-rpc.publicnode.com",
+            "10": "https://optimism-rpc.publicnode.com",
         },
         relaychainUrl: "https://polkadot-rpc.n.dwellir.com",
         parachains: {
@@ -172,6 +173,24 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
                         // USDC
                         {
                             inputToken: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831".toLowerCase(),
+                            outputToken: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                            swapFee: 500,
+                        },
+                    ],
+                },
+                "10": {
+                    adapterAddress: "0x836895Ad176235Dfe9C59b3df56C7579d90ea338".toLowerCase(),
+                    feeTokenAddress: "0x4200000000000000000000000000000000000006".toLowerCase(),
+                    swapRoutes: [
+                        // WETH
+                        {
+                            inputToken: "0x4200000000000000000000000000000000000006".toLowerCase(),
+                            outputToken: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                            swapFee: 0,
+                        },
+                        // USDC
+                        {
+                            inputToken: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85".toLowerCase(),
                             outputToken: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
                             swapFee: 500,
                         },
