@@ -62,6 +62,7 @@ export const fetchToPolkadotTransfers = async (graphqlApiUrl: string, graphqlQue
             fee
             sourceNetwork
             destinationNetwork
+            l2ChainId
             sourceParaId
             toBridgeHubInboundQueue {
                 id
@@ -140,6 +141,9 @@ export const fetchToEthereumTransfers = async (graphqlApiUrl: string, graphqlQue
             nonce
             senderAddress
             sourceParaId
+            l2ChainId
+            sourceNetwork
+            destinationNetwork
             timestamp
             tokenAddress
             txHash
@@ -221,6 +225,10 @@ export const fetchToPolkadotTransferById = async (graphqlApiUrl: string, id: str
             channelId
             destinationAddress
             destinationParaId
+            sourceNetwork
+            sourceParaId
+            destinationNetwork
+            l2ChainId
             messageId
             nonce
             senderAddress
@@ -307,6 +315,9 @@ export const fetchToEthereumTransferById = async (graphqlApiUrl: string, id: str
             nonce
             senderAddress
             sourceParaId
+            sourceNetwork
+            destinationNetwork
+            l2ChainId
             timestamp
             tokenAddress
             txHash
@@ -408,6 +419,7 @@ export const fetchToPolkadotPendingTransfers = async (
             fee
             sourceNetwork
             destinationNetwork
+            l2ChainId
             sourceParaId
             toBridgeHubInboundQueue {
                 id
@@ -451,6 +463,9 @@ export const fetchToEthereumPendingTransfers = async (
             messageId
             nonce
             senderAddress
+            sourceNetwork
+            destinationNetwork
+            l2ChainId
             sourceParaId
             timestamp
             tokenAddress
@@ -511,6 +526,7 @@ export const fetchToPolkadotTransfersBySenders = async (
             fee
             sourceNetwork
             destinationNetwork
+            l2ChainId
             sourceParaId
             toBridgeHubInboundQueue {
                 id
@@ -556,6 +572,9 @@ export const fetchToEthereumTransfersBySenders = async (
             messageId
             nonce
             senderAddress
+            sourceNetwork
+            destinationNetwork
+            l2ChainId
             sourceParaId
             timestamp
             tokenAddress

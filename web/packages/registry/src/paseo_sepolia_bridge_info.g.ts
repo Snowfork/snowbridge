@@ -108,7 +108,7 @@ const registry = {
         },
     ],
     registry: {
-        timestamp: "2026-02-06T23:28:31.515Z",
+        timestamp: "2026-02-11T12:58:48.602Z",
         environment: "paseo_sepolia",
         ethChainId: 11155111,
         gatewayAddress: "0x1607c1368bc943130258318c91bbd8cff3d063e6",
@@ -122,7 +122,7 @@ const registry = {
             accountType: "AccountId32",
             name: "Paseo Testnet",
             specName: "paseo",
-            specVersion: 2000005,
+            specVersion: 2000006,
         },
         bridgeHub: {
             tokenSymbols: "PAS",
@@ -132,7 +132,7 @@ const registry = {
             accountType: "AccountId32",
             name: "Paseo Bridge Hub",
             specName: "bridge-hub-paseo",
-            specVersion: 2000005,
+            specVersion: 2000006,
         },
         ethereumChains: {
             ethereum_11155111: {
@@ -211,7 +211,7 @@ const registry = {
                     accountType: "AccountId32",
                     name: "Paseo Asset Hub",
                     specName: "asset-hub-paseo",
-                    specVersion: 2000005,
+                    specVersion: 2000006,
                 },
                 assets: {
                     "0x0000000000000000000000000000000000000000": {
@@ -288,7 +288,7 @@ const registry = {
                     ss58Format: 101,
                     isEthereum: false,
                     accountType: "AccountId32",
-                    name: "Neuro Testnet",
+                    name: "NeuroWeb Testnet",
                     specName: "origintrail-parachain",
                     specVersion: 151,
                 },
