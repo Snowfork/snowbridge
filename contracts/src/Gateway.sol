@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.28;
+pragma solidity 0.8.33;
 
 import {MerkleProof} from "openzeppelin/utils/cryptography/MerkleProof.sol";
 import {Verification} from "./Verification.sol";
@@ -209,9 +209,9 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
                 success = false;
             }
         } else if (message.command == CommandV1.MintForeignToken) {
-            try Gateway(this).v1_handleMintForeignToken{gas: maxDispatchGas}(
-                message.channelID, message.params
-            ) {} catch {
+            try Gateway(this)
+            .v1_handleMintForeignToken{gas: maxDispatchGas}(message.channelID, message.params) {}
+            catch {
                 success = false;
             }
         } else {
@@ -431,11 +431,14 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
             revert IGatewayBase.InvalidProof();
         }
 
-        // Dispatch the message payload. The boolean returned indicates whether all commands succeeded.
-        bool success = v2_dispatch(message);
-
-        // Emit the event with a success value "true" if all commands successfully executed, otherwise "false"
-        // if all or some of the commands failed.
+        // Dispatch all commands in the message
+        (bool insufficientGasLimit, bool success) =
+            Gateway(this).v2_dispatch(message.commands, message.origin, message.nonce);
+        // Revert if the gas limit provided was insufficient for any command
+        if (insufficientGasLimit) {
+            revert IGatewayV2.InsufficientGasLimit();
+        }
+        // Emit event for the overall message dispatch result
         emit IGatewayV2.InboundMessageDispatched(
             message.nonce, message.topic, success, rewardAddress
         );
@@ -476,104 +479,53 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         CallsV2.createAgent(id);
     }
 
-    /**
-     * APIv2 Message Handlers
-     */
-
-    //  Perform an upgrade of the gateway
-    function v2_handleUpgrade(bytes calldata data) external onlySelf {
-        HandlersV2.upgrade(data);
-    }
-
-    // Set the operating mode of the gateway
-    function v2_handleSetOperatingMode(bytes calldata data) external onlySelf {
-        HandlersV2.setOperatingMode(data);
-    }
-
-    // Unlock Native token
-    function v2_handleUnlockNativeToken(bytes calldata data) external onlySelf {
-        HandlersV2.unlockNativeToken(AGENT_EXECUTOR, data);
-    }
-
-    // Register a new fungible Polkadot token for an agent
-    function v2_handleRegisterForeignToken(bytes calldata data) external onlySelf {
-        HandlersV2.registerForeignToken(data);
-    }
-
-    // Mint foreign token from polkadot
-    function v2_handleMintForeignToken(bytes calldata data) external onlySelf {
-        HandlersV2.mintForeignToken(data);
-    }
-
-    // Call an arbitrary contract function
-    function v2_handleCallContract(bytes32 origin, bytes calldata data) external onlySelf {
-        HandlersV2.callContract(origin, AGENT_EXECUTOR, data);
-    }
-
-    /**
-     * APIv2 Internal functions
-     */
-
-    // Internal helper to dispatch a single command
-    function _dispatchCommand(CommandV2 calldata command, bytes32 origin)
-        internal
-        returns (bool)
-    {
-        // check that there is enough gas available to forward to the command handler
-        if (gasleft() * 63 / 64 < command.gas + DISPATCH_OVERHEAD_GAS_V2) {
-            revert IGatewayV2.InsufficientGasLimit();
-        }
-
-        if (command.kind == CommandKind.Upgrade) {
-            try Gateway(this).v2_handleUpgrade{gas: command.gas}(command.payload) {}
-            catch {
-                return false;
-            }
-        } else if (command.kind == CommandKind.SetOperatingMode) {
-            try Gateway(this).v2_handleSetOperatingMode{gas: command.gas}(command.payload) {}
-            catch {
-                return false;
-            }
-        } else if (command.kind == CommandKind.UnlockNativeToken) {
-            try Gateway(this).v2_handleUnlockNativeToken{gas: command.gas}(command.payload) {}
-            catch {
-                return false;
-            }
-        } else if (command.kind == CommandKind.RegisterForeignToken) {
-            try Gateway(this).v2_handleRegisterForeignToken{gas: command.gas}(command.payload) {}
-            catch {
-                return false;
-            }
-        } else if (command.kind == CommandKind.MintForeignToken) {
-            try Gateway(this).v2_handleMintForeignToken{gas: command.gas}(command.payload) {}
-            catch {
-                return false;
-            }
-        } else if (command.kind == CommandKind.CallContract) {
-            try Gateway(this).v2_handleCallContract{gas: command.gas}(origin, command.payload) {}
-            catch {
-                return false;
-            }
-        } else {
-            // Unknown command
-            return false;
-        }
-        return true;
-    }
-
     // Dispatch all the commands within the batch of commands in the message payload. Each command is processed
-    // independently, such that failures emit a `CommandFailed` event without stopping execution of subsequent commands.
-    function v2_dispatch(InboundMessageV2 calldata message) internal returns (bool) {
-        bool allCommandsSucceeded = true;
-
-        for (uint256 i = 0; i < message.commands.length; i++) {
-            if (!_dispatchCommand(message.commands[i], message.origin)) {
-                emit IGatewayV2.CommandFailed(message.nonce, i);
-                allCommandsSucceeded = false;
+    // independently, returns:
+    // 1. insufficientGasLimit: true if the gas limit provided was insufficient for any command
+    // 2. success: true if all commands executed successfully, false if any command failed.
+    function v2_dispatch(CommandV2[] calldata commands, bytes32 origin, uint64 nonce)
+        external
+        onlySelf
+        returns (bool, bool)
+    {
+        bool success = true;
+        for (uint256 i = 0; i < commands.length; i++) {
+            CommandV2 calldata command = commands[i];
+            // check that there is enough gas available to forward to the command handler
+            uint256 requiredGas = command.gas + DISPATCH_OVERHEAD_GAS_V2;
+            if (gasleft() * 63 / 64 < requiredGas) {
+                return (true, false);
+            }
+            try Gateway(this).v2_dispatchCommand{gas: command.gas}(command, origin) {}
+            catch {
+                success = false;
+                emit IGatewayV2.CommandFailed(nonce, i);
             }
         }
+        return (false, success);
+    }
 
-        return allCommandsSucceeded;
+    // Dispatch a single command to its handler
+    function v2_dispatchCommand(CommandV2 calldata command, bytes32 origin)
+        external
+        virtual
+        onlySelf
+    {
+        if (command.kind == CommandKind.Upgrade) {
+            HandlersV2.upgrade(command.payload);
+        } else if (command.kind == CommandKind.SetOperatingMode) {
+            HandlersV2.setOperatingMode(command.payload);
+        } else if (command.kind == CommandKind.UnlockNativeToken) {
+            HandlersV2.unlockNativeToken(AGENT_EXECUTOR, command.payload);
+        } else if (command.kind == CommandKind.RegisterForeignToken) {
+            HandlersV2.registerForeignToken(command.payload);
+        } else if (command.kind == CommandKind.MintForeignToken) {
+            HandlersV2.mintForeignToken(command.payload);
+        } else if (command.kind == CommandKind.CallContract) {
+            HandlersV2.callContract(origin, AGENT_EXECUTOR, command.payload);
+        } else {
+            revert IGatewayV2.InvalidCommand();
+        }
     }
 
     /**

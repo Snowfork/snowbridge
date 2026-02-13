@@ -1,9 +1,9 @@
 import { u8aToHex } from "@polkadot/util"
 import { blake2AsU8a } from "@polkadot/util-crypto"
-import { Context, status, utils, subsquid } from "@snowbridge/api"
+import { Context, status, utils, subsquidV2 } from "@snowbridge/api"
 import { sendMetrics } from "./alarm"
-import { environmentFor } from "@snowbridge/registry"
 import { Environment } from "../../base-types/dist"
+import { bridgeInfoFor } from "@snowbridge/registry"
 
 export const monitorParams: {
     [id: string]: {
@@ -188,6 +188,18 @@ export const monitorParams: {
     },
 }
 
+const parseMonitorParachainsOverride = (): number[] | undefined => {
+    const raw = process.env["MONITOR_PARACHAINS"]
+    if (!raw) {
+        return undefined
+    }
+    const parsed = raw
+        .split(/[\s,]+/)
+        .map((value) => Number.parseInt(value, 10))
+        .filter((value) => Number.isFinite(value))
+    return parsed.length ? parsed : undefined
+}
+
 function contextConfigOverrides(input: Environment): Environment {
     let config = { ...input }
     let injectedEthChains: { [ethChainId: string]: string } = {}
@@ -235,7 +247,7 @@ export const monitor = async (): Promise<status.AllMetrics> => {
     if (process.env.NODE_ENV !== undefined) {
         env = process.env.NODE_ENV
     }
-    const snowbridgeEnv = environmentFor(env)
+    const { environment: snowbridgeEnv } = bridgeInfoFor(env)
     if (snowbridgeEnv === undefined) {
         throw Error(`Unknown environment '${env}'`)
     }
@@ -255,8 +267,6 @@ export const monitor = async (): Promise<status.AllMetrics> => {
 
     let indexerStatus = await fetchIndexerStatus(context, snowbridgeEnv)
 
-    let v2Status = await status.v2Status(context)
-
     const allMetrics: status.AllMetrics = {
         name,
         bridgeStatus,
@@ -264,7 +274,6 @@ export const monitor = async (): Promise<status.AllMetrics> => {
         relayers,
         sovereigns,
         indexerStatus,
-        v2Status,
     }
     console.log(
         "All metrics:",
@@ -388,7 +397,7 @@ export const fetchIndexerStatus = async (context: Context, env: Environment) => 
     const latestBlockOfBH = (await bridgeHub.query.system.number()).toPrimitive() as number
     const latestBlockOfEth = await ethereum.getBlockNumber()
 
-    const chains = await subsquid.fetchLatestBlocksSynced(
+    const chains = await subsquidV2.fetchLatestBlocksSynced(
         context.graphqlApiUrl(),
         env.name == "polkadot_mainnet",
     )
@@ -406,18 +415,27 @@ export const fetchIndexerStatus = async (context: Context, env: Environment) => 
         }
         indexerInfos.push(info)
     }
-    let monitorChains = monitorParams[env.name].TO_MONITOR_PARACHAINS
+    // Allow runtime override of monitored parachains without changing defaults.
+    let monitorChains =
+        parseMonitorParachainsOverride() ?? monitorParams[env.name].TO_MONITOR_PARACHAINS
     if (monitorChains && monitorChains.length) {
         for (const paraid of monitorChains) {
-            let chain = await context.parachain(paraid)
-            let latestBlock = (await chain.query.system.number()).toPrimitive() as number
-            let status = await subsquid.fetchSyncStatusOfParachain(context.graphqlApiUrl(), paraid)
-            let info: status.IndexerServiceStatusInfo = {
-                chain: status.name,
-                paraid: status.paraid,
-                latency: latestBlock - status.height,
+            try {
+                const chain = await context.parachain(paraid)
+                const latestBlock = (await chain.query.system.number()).toPrimitive() as number
+                const status = await subsquidV2.fetchSyncStatusOfParachain(
+                    context.graphqlApiUrl(),
+                    paraid,
+                )
+                const info: status.IndexerServiceStatusInfo = {
+                    chain: status.name,
+                    paraid: status.paraid,
+                    latency: latestBlock - status.height,
+                }
+                indexerInfos.push(info)
+            } catch (e) {
+                console.error(`Failed to fetch indexer status for parachain ${paraid}:`, e)
             }
-            indexerInfos.push(info)
         }
     }
     return indexerInfos

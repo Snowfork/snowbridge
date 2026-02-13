@@ -1,4 +1,4 @@
-pragma solidity 0.8.28;
+pragma solidity 0.8.33;
 
 import "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
@@ -19,7 +19,7 @@ contract BeefyClientAdvancedTest is Test {
     uint256 constant RANDAO_DELAY = 128;
     uint256 constant RANDAO_EXPIRY = 24;
     uint256 constant MIN_REQ_SIGS = 17; // keep N small to show N < quorum
-    uint256 constant FIAT_SHAMIR_REQUIRED_SIGNATURES = 101;
+    uint256 constant FIAT_SHAMIR_REQUIRED_SIGNATURES = 111;
 
     uint256[VSET_LEN] privkeys;
     address[VSET_LEN] validators;

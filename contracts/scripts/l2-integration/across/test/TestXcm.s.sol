@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.28;
+pragma solidity 0.8.33;
 
 import {Script} from "forge-std/Script.sol";
 import {XCM_PRECOMPILE} from "../constants/Sepolia.sol";
-import {IXcm} from "../../../../src/l2-integration/interfaces/IXcm.sol";
+import {IXcm} from "../interfaces/IXcm.sol";
 
 contract TestXcm is Script {
     function run() public {

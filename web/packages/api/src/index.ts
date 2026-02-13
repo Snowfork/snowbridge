@@ -8,8 +8,12 @@ import {
     IGatewayV1__factory,
     IGatewayV2,
     IGatewayV2__factory,
+    ISwapLegacyRouter,
+    ISwapLegacyRouter__factory,
     ISwapQuoter,
     ISwapQuoter__factory,
+    ISwapRouter,
+    ISwapRouter__factory,
     SnowbridgeL1Adaptor,
     SnowbridgeL1Adaptor__factory,
     SnowbridgeL2Adaptor,
@@ -23,7 +27,6 @@ export * as utils from "./utils"
 export * as status from "./status"
 export * as assetsV2 from "./assets_v2"
 export * as history from "./history"
-export * as subsquid from "./subsquid"
 export * as historyV2 from "./history_v2"
 export * as subsquidV2 from "./subsquid_v2"
 export * as forKusama from "./forKusama"
@@ -37,7 +40,7 @@ export * as toPolkadotSnowbridgeV2 from "./toPolkadotSnowbridgeV2"
 export * as addTip from "./addTip"
 
 interface Parachains {
-    [paraId: string]: ApiPromise
+    [paraId: string]: Promise<ApiPromise>
 }
 interface EthereumChains {
     [ethChainId: string]: AbstractProvider
@@ -53,12 +56,17 @@ export class Context {
     #beefyClient?: BeefyClient
     #l1Adapter?: SnowbridgeL1Adaptor
     #l1SwapQuoter?: ISwapQuoter
+    #l1SwapRouter?: ISwapRouter
+    #l1LegacySwapRouter?: ISwapLegacyRouter
     #l2Adapters: { [l2ChainId: number]: SnowbridgeL2Adaptor } = {}
 
     // Substrate
     #polkadotParachains: Parachains
     #kusamaParachains: Parachains
     #relaychain?: ApiPromise
+
+    static #rpcInitTimeoutMs = 40_000
+    static #wsRequestTimeoutMs = 30_000
 
     constructor(environment: Environment) {
         this.environment = environment
@@ -67,15 +75,40 @@ export class Context {
         this.#ethChains = {}
     }
 
+    async #createApi(options: {
+        provider: HttpProvider | WsProvider
+        noInitWarn?: boolean
+        types?: any
+    }): Promise<ApiPromise> {
+        let timer: NodeJS.Timeout | undefined
+        try {
+            const timeoutPromise = new Promise<never>((_, reject) => {
+                timer = setTimeout(() => {
+                    reject(new Error(`Api init timed out after ${Context.#rpcInitTimeoutMs}ms`))
+                }, Context.#rpcInitTimeoutMs)
+            })
+            return await Promise.race([ApiPromise.create(options), timeoutPromise])
+        } finally {
+            if (timer) clearTimeout(timer)
+        }
+    }
+
+    #buildProvider(url: string) {
+        if (url.startsWith("http")) {
+            return new HttpProvider(url)
+        }
+        return new WsProvider(url, undefined, {}, Context.#wsRequestTimeoutMs)
+    }
+
     async relaychain(): Promise<ApiPromise> {
         if (this.#relaychain) {
             return this.#relaychain
         }
         const url = this.environment.relaychainUrl
         console.log("Connecting to the relaychain.")
-        this.#relaychain = await ApiPromise.create({
+        this.#relaychain = await this.#createApi({
             noInitWarn: true,
-            provider: url.startsWith("http") ? new HttpProvider(url) : new WsProvider(url),
+            provider: this.#buildProvider(url),
         })
         console.log("Connected to the relaychain.")
         return this.#relaychain
@@ -116,73 +149,75 @@ export class Context {
     async parachain(paraId: number): Promise<ApiPromise> {
         const paraIdKey = paraId.toString()
         if (paraIdKey in this.#polkadotParachains) {
-            return this.#polkadotParachains[paraIdKey]
+            return await this.#polkadotParachains[paraIdKey]
         }
-        const { parachains } = this.environment
-        if (paraIdKey in parachains) {
-            const url = parachains[paraIdKey]
-            console.log("Connecting to parachain ", paraIdKey, url)
-            let options: any = {
-                noInitWarn: true,
-                provider: url.startsWith("http") ? new HttpProvider(url) : new WsProvider(url),
-            }
-            if (paraId === this.environment.bridgeHubParaId) {
-                options.types = {
-                    ContractCall: {
-                        target: "[u8; 20]",
-                        calldata: "Vec<u8>",
-                        value: "u128",
-                        gas: "u64",
-                    },
+        this.#polkadotParachains[paraIdKey] = new Promise((resolve, reject) => {
+            const { parachains } = this.environment
+            if (paraIdKey in parachains) {
+                const url = parachains[paraIdKey]
+                let options: any = {
+                    noInitWarn: true,
+                    provider: this.#buildProvider(url),
                 }
+                if (paraId === this.environment.bridgeHubParaId) {
+                    options.types = {
+                        ContractCall: {
+                            target: "[u8; 20]",
+                            calldata: "Vec<u8>",
+                            value: "u128",
+                            gas: "u64",
+                        },
+                    }
+                }
+                console.log("Connecting to parachain", paraIdKey, url)
+                this.#createApi(options)
+                    .then((a) => {
+                        console.log("Connected to parachain", paraIdKey)
+                        resolve(a)
+                    })
+                    .catch((error) => {
+                        delete this.#polkadotParachains[paraIdKey]
+                        reject(error)
+                    })
+            } else {
+                reject(Error(`Parachain id ${paraId} not in the list of parachain urls.`))
             }
-            const api = await ApiPromise.create(options)
-            const onChainParaId = (
-                await api.query.parachainInfo.parachainId()
-            ).toPrimitive() as number
-            if (onChainParaId !== paraId) {
-                console.warn(
-                    `Parachain id configured does not match onchain value. Configured = ${paraId}, OnChain=${onChainParaId}, url=${url}`,
-                )
-            }
-            this.#polkadotParachains[onChainParaId] = api
-            console.log("Connected to parachain ", paraIdKey)
-            return this.#polkadotParachains[onChainParaId]
-        } else {
-            throw Error(`Parachain id ${paraId} not in the list of parachain urls.`)
-        }
+        })
+        return await this.#polkadotParachains[paraIdKey]
     }
 
     async kusamaParachain(paraId: number): Promise<ApiPromise> {
         const paraIdKey = paraId.toString()
         if (paraIdKey in this.#kusamaParachains) {
-            return this.#kusamaParachains[paraIdKey]
+            return await this.#kusamaParachains[paraIdKey]
         }
-        if (!this.environment.kusama) {
-            throw Error(`Kusama config is not set.`)
-        }
-        const { parachains } = this.environment.kusama
-        if (paraIdKey in parachains) {
-            const url = parachains[paraIdKey]
-            console.log("Connecting to Kusama parachain ", paraIdKey, url)
-            const api = await ApiPromise.create({
-                noInitWarn: true,
-                provider: url.startsWith("http") ? new HttpProvider(url) : new WsProvider(url),
-            })
-            const onChainParaId = (
-                await api.query.parachainInfo.parachainId()
-            ).toPrimitive() as number
-            if (onChainParaId !== paraId) {
-                console.warn(
-                    `Parachain id configured does not match onchain value. Configured = ${paraId}, OnChain=${onChainParaId}, url=${url}`,
-                )
+        this.#kusamaParachains[paraIdKey] = new Promise((resolve, reject) => {
+            if (!this.environment.kusama) {
+                reject(Error(`Kusama config is not set.`))
+                return
             }
-            this.#kusamaParachains[onChainParaId] = api
-            console.log("Connected to Kusama parachain ", paraIdKey)
-            return this.#kusamaParachains[onChainParaId]
-        } else {
-            throw Error(`Parachain id ${paraId} not in the list of parachain urls.`)
-        }
+            const { parachains } = this.environment.kusama
+            if (paraIdKey in parachains) {
+                const url = parachains[paraIdKey]
+                const options = {
+                    noInitWarn: true,
+                    provider: this.#buildProvider(url),
+                }
+                console.log("Connecting to Kusama parachain", paraIdKey, url)
+                this.#createApi(options)
+                    .then((a) => {
+                        console.log("Connected to Kusama parachain", paraIdKey)
+                        resolve(a)
+                    })
+                    .catch((error) => {
+                        delete this.#kusamaParachains[paraIdKey]
+                        reject(error)
+                    })
+            } else {
+                reject(Error(`Parachain id ${paraId} not in the list of parachain urls.`))
+            }
+        })
+        return await this.#kusamaParachains[paraIdKey]
     }
 
     setEthProvider(ethChainId: number, provider: AbstractProvider) {
@@ -281,10 +316,10 @@ export class Context {
         }
 
         for (const paraId of Object.keys(this.#polkadotParachains)) {
-            await this.#polkadotParachains[Number(paraId)].disconnect()
+            await (await this.#polkadotParachains[Number(paraId)]).disconnect()
         }
         for (const paraId of Object.keys(this.#kusamaParachains)) {
-            await this.#kusamaParachains[Number(paraId)].disconnect()
+            await (await this.#kusamaParachains[Number(paraId)]).disconnect()
         }
     }
 
@@ -314,6 +349,48 @@ export class Context {
             this.ethereum(),
         )
         return this.#l1SwapQuoter
+    }
+
+    l1SwapRouterAddress(): string {
+        if (!this.environment.l2Bridge) {
+            throw new Error("L2 bridge configuration is missing.")
+        }
+        return this.environment.l2Bridge.l1SwapRouterAddress as string
+    }
+
+    l1SwapRouter(): ISwapRouter {
+        if (!this.environment.l2Bridge) {
+            throw new Error("L2 bridge configuration is missing.")
+        }
+        if (this.#l1SwapRouter) {
+            return this.#l1SwapRouter
+        }
+        this.#l1SwapRouter = ISwapRouter__factory.connect(
+            this.l1SwapRouterAddress(),
+            this.ethereum(),
+        )
+        return this.#l1SwapRouter
+    }
+
+    l1LegacySwapRouter(): ISwapLegacyRouter {
+        if (!this.environment.l2Bridge) {
+            throw new Error("L2 bridge configuration is missing.")
+        }
+        if (this.#l1LegacySwapRouter) {
+            return this.#l1LegacySwapRouter
+        }
+        this.#l1LegacySwapRouter = ISwapLegacyRouter__factory.connect(
+            this.environment.l2Bridge.l1SwapRouterAddress as string,
+            this.ethereum(),
+        )
+        return this.#l1LegacySwapRouter
+    }
+
+    l1HandlerAddress(): string {
+        if (!this.environment.l2Bridge) {
+            throw new Error("L2 bridge configuration is missing.")
+        }
+        return this.environment.l2Bridge.l1HandlerAddress as string
     }
 
     l1FeeTokenAddress(): string {

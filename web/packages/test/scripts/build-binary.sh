@@ -99,19 +99,6 @@ build_web_packages() {
     fi
 }
 
-build_v1() {
-    if [ ! -d $v1_root_dir ]; then
-        git clone -b snowbridge-v1 https://github.com/snowfork/snowbridge/ $v1_root_dir
-    fi
-    pushd $v1_contract_dir
-    forge build
-    popd
-    pushd $v1_relay_dir
-    mage build
-    cp $v1_relay_dir/build/snowbridge-relay "$output_bin_dir/snowbridge-relay-v1"
-    popd
-}
-
 build_gas_estimator() {
     pushd $gas_estimator_dir
     cargo build --release --features local
@@ -126,7 +113,6 @@ install_binary() {
     build_contracts
     build_relayer
     build_web_packages
-    build_v1
     build_gas_estimator
 }
 

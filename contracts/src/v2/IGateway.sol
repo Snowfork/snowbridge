@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.28;
+pragma solidity 0.8.33;
 
 import {OperatingMode, InboundMessage, Payload} from "./Types.sol";
 import {Verification} from "../Verification.sol";
@@ -11,6 +11,7 @@ interface IGatewayV2 {
     error InvalidNetwork();
     error InvalidAsset();
     error InsufficientGasLimit();
+    error InvalidCommand();
     error InsufficientValue();
     error ExceededMaximumValue();
     error TooManyAssets();

@@ -29,15 +29,11 @@ import {
     bridgeLocation,
 } from "./xcmBuilder"
 import { xxhashAsHex } from "@polkadot/util-crypto"
-import { BN, hexToU8a } from "@polkadot/util"
+import { BN } from "@polkadot/util"
 import { padFeeByPercentage } from "./utils"
 import { paraImplementation } from "./parachains"
 import { Context } from "./index"
-import {
-    ETHER_TOKEN_ADDRESS,
-    findL2TokenAddress,
-    getAssetHubConversionPalletSwap,
-} from "./assets_v2"
+import { ETHER_TOKEN_ADDRESS, findL2TokenAddress } from "./assets_v2"
 import { getOperatingStatus } from "./status"
 import { AbstractProvider, ethers, Wallet, TransactionReceipt } from "ethers"
 import { CreateAgent } from "./registration/agent/createAgent"
@@ -249,7 +245,7 @@ export const estimateEthereumExecutionFee = async (
     const { tokenErcMetadata } = resolveInputs(registry, tokenAddress, sourceParaId)
 
     // Calculate execution cost on ethereum
-    let ethereumChain = registry.ethereumChains[registry.ethChainId.toString()]
+    let ethereumChain = registry.ethereumChains[`ethereum_${registry.ethChainId}`]
     let feeData = await ethereum.getFeeData()
     let ethereumExecutionFee =
         (feeData.gasPrice ?? 2_000_000_000n) *
@@ -351,8 +347,7 @@ export const estimateFeesFromAssetHub = async (
     if (feeLocation) {
         // If the fee asset is DOT, then one swap from DOT to Ether is required on AH
         if (isRelaychainLocation(feeLocation)) {
-            ethereumExecutionFeeInNative = await getAssetHubConversionPalletSwap(
-                assetHub,
+            ethereumExecutionFeeInNative = await assetHubImpl.getAssetHubConversionPalletSwap(
                 DOT_LOCATION,
                 bridgeLocation(registry.ethChainId),
                 padFeeByPercentage(ethereumExecutionFee, feeSlippagePadPercentage),
@@ -397,7 +392,7 @@ export const estimateFeesFromParachains = async (
         contractCall?: ContractCall
     },
 ): Promise<DeliveryFee> => {
-    const sourceParachain = registry.parachains[sourceParaId.toString()]
+    const sourceParachain = registry.parachains[`polkadot_${sourceParaId}`]
     const sourceParachainImpl = await paraImplementation(await context.parachain(sourceParaId))
 
     const assetHub = await context.parachain(registry.assetHubParaId)
@@ -495,8 +490,7 @@ export const estimateFeesFromParachains = async (
     if (feeLocation) {
         // If the fee asset is DOT, then one swap from DOT to Ether is required on AH
         if (isRelaychainLocation(feeLocation)) {
-            ethereumExecutionFeeInNative = await getAssetHubConversionPalletSwap(
-                assetHub,
+            ethereumExecutionFeeInNative = await assetHubImpl.getAssetHubConversionPalletSwap(
                 DOT_LOCATION,
                 bridgeLocation(registry.ethChainId),
                 padFeeByPercentage(ethereumExecutionFee, feeSlippagePadPercentage),
@@ -507,21 +501,18 @@ export const estimateFeesFromParachains = async (
         // On Parachains, we can use their native asset as the fee token.
         // If the fee is in native, we need to swap it to DOT first, then swap DOT to Ether to cover the ethereum execution fee.
         else if (isParachainNative(feeLocation, sourceParaId)) {
-            let ethereumExecutionFeeInDOT = await getAssetHubConversionPalletSwap(
-                assetHub,
+            let ethereumExecutionFeeInDOT = await assetHubImpl.getAssetHubConversionPalletSwap(
                 DOT_LOCATION,
                 bridgeLocation(registry.ethChainId),
                 padFeeByPercentage(ethereumExecutionFee, feeSlippagePadPercentage),
             )
-            ethereumExecutionFeeInNative = await getAssetHubConversionPalletSwap(
-                assetHub,
+            ethereumExecutionFeeInNative = await assetHubImpl.getAssetHubConversionPalletSwap(
                 feeLocation,
                 DOT_LOCATION,
                 padFeeByPercentage(ethereumExecutionFeeInDOT, feeSlippagePadPercentage),
             )
             totalFeeInDot += ethereumExecutionFeeInDOT
-            totalFeeInNative = await getAssetHubConversionPalletSwap(
-                assetHub,
+            totalFeeInNative = await assetHubImpl.getAssetHubConversionPalletSwap(
                 feeLocation,
                 DOT_LOCATION,
                 padFeeByPercentage(totalFeeInDot, feeSlippagePadPercentage),

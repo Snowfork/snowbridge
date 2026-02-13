@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.28;
+pragma solidity 0.8.33;
 
 import {Strings} from "openzeppelin/utils/Strings.sol";
 import {Test} from "forge-std/Test.sol";
@@ -49,7 +49,7 @@ contract BeefyClientTest is Test {
         randaoCommitDelay = uint8(vm.envOr("RANDAO_COMMIT_DELAY", uint256(3)));
         randaoCommitExpiration = uint8(vm.envOr("RANDAO_COMMIT_EXP", uint256(8)));
         minNumRequiredSignatures = uint8(vm.envOr("MINIMUM_REQUIRED_SIGNATURES", uint256(17)));
-        fiatShamirRequiresSignatures = vm.envOr("FIAT_SHAMIR_REQUIRED_SIGNATURES", uint256(101));
+        fiatShamirRequiresSignatures = vm.envOr("FIAT_SHAMIR_REQUIRED_SIGNATURES", uint256(111));
         signatureUsageCount = vm.envOr("SIGNATURE_USAGE_COUNT", uint256(0));
         prevRandao = uint32(vm.envOr("PREV_RANDAO", uint256(377)));
 
@@ -878,5 +878,12 @@ contract BeefyClientTest is Test {
         beefyClient.submitFiatShamir(
             commitment, bitfield, fiatShamirValidatorProofs, mmrLeaf, mmrLeafProofs, leafProofOrder
         );
+    }
+
+    function testComputeCommitmentHash() public {
+        BeefyClient.Commitment memory commitment = initialize(setId);
+        bytes32 computedHash = beefyClient.computeCommitmentHash(commitment);
+        // commitHash is loaded from the test data file and should match
+        assertEq(computedHash, commitHash);
     }
 }

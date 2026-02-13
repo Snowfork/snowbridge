@@ -4,7 +4,7 @@ import {
     PutMetricDataCommand,
     PutMetricAlarmCommand,
 } from "@aws-sdk/client-cloudwatch"
-import { environmentFor } from "@snowbridge/registry"
+import { bridgeInfoFor } from "@snowbridge/registry"
 
 const CLOUD_WATCH_NAME_SPACE = "SnowbridgeMetrics"
 const BRIDGE_STALE_SNS_TOPIC = process.env["BRIDGE_STALE_SNS_TOPIC"] || ""
@@ -26,8 +26,6 @@ export enum AlarmReason {
     SovereignAccountBalanceInsufficient = "SovereignAccountBalanceInsufficient",
     IndexServiceStale = "IndexServiceStale",
     HeartbeatLost = "HeartbeatLost",
-    ToPolkadotV2Stale = "ToPolkadotV2Stale",
-    ToEthereumV2Stale = "ToEthereumV2Stale",
     FutureBlockVoting = "FutureBlockVoting",
     ForkVoting = "ForkVoting",
 }
@@ -223,31 +221,6 @@ export const sendMetrics = async (metrics: status.AllMetrics) => {
             Value: Number(status.latency),
         })
     }
-    // V2 metrics
-    if (metrics.v2Status?.toEthereum.estimatedDeliveryTime) {
-        metricData.push({
-            MetricName: "ToEthereumV2DeliveryEstimate",
-            Value: metrics.v2Status?.toEthereum.estimatedDeliveryTime,
-        })
-    }
-    if (metrics.v2Status?.toPolkadot.estimatedDeliveryTime) {
-        metricData.push({
-            MetricName: "ToPolkadotV2DeliveryEstimate",
-            Value: metrics.v2Status?.toPolkadot.estimatedDeliveryTime,
-        })
-    }
-    if (metrics.v2Status?.toEthereum.undeliveredTimeout) {
-        metricData.push({
-            MetricName: "ToEthereumV2UndeliveredTimeout",
-            Value: metrics.v2Status?.toEthereum.undeliveredTimeout,
-        })
-    }
-    if (metrics.v2Status?.toPolkadot.undeliveredTimeout) {
-        metricData.push({
-            MetricName: "ToPolkadotV2UndeliveredTimeout",
-            Value: metrics.v2Status?.toPolkadot.undeliveredTimeout,
-        })
-    }
     const command = new PutMetricDataCommand({
         MetricData: metricData,
         Namespace: CLOUD_WATCH_NAME_SPACE + "-" + metrics.name,
@@ -260,7 +233,7 @@ export const initializeAlarms = async () => {
     if (process.env.NODE_ENV !== undefined) {
         env = process.env.NODE_ENV
     }
-    const snowbridgeEnv = environmentFor(env)
+    const { environment: snowbridgeEnv } = bridgeInfoFor(env)
     if (snowbridgeEnv === undefined) {
         throw Error(`Unknown environment '${env}'`)
     }
@@ -439,30 +412,6 @@ export const initializeAlarms = async () => {
         TreatMissingData: "breaching",
     })
     cloudWatchAlarms.push(heartbeartAlarm)
-
-    // To Ethereum V2 stale
-    cloudWatchAlarms.push(
-        new PutMetricAlarmCommand({
-            AlarmName: AlarmReason.ToEthereumV2Stale.toString() + "-" + name,
-            MetricName: "ToEthereumV2UndeliveredTimeout",
-            AlarmDescription: LatencyDashboard,
-            AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
-            ...alarmCommandSharedInput,
-            Threshold: 5400, // 1.5 hours at most
-        }),
-    )
-
-    // To Polkadot V2 stale
-    cloudWatchAlarms.push(
-        new PutMetricAlarmCommand({
-            AlarmName: AlarmReason.ToPolkadotV2Stale.toString() + "-" + name,
-            MetricName: "ToPolkadotV2UndeliveredTimeout",
-            AlarmDescription: LatencyDashboard,
-            AlarmActions: [BRIDGE_STALE_SNS_TOPIC],
-            ...alarmCommandSharedInput,
-            Threshold: 1800, // 0.5 hour
-        }),
-    )
 
     // Fisherman FutureBlockVoting equivocation alarm
     cloudWatchAlarms.push(

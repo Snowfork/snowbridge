@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.28;
+pragma solidity 0.8.33;
 
 struct Call {
     address target;
@@ -42,9 +42,9 @@ struct SendParams {
 
 struct SwapParams {
     // amount of input token to swap in order to cover the Ether fees when calling Gateway.v2_sendMessage
-    uint256 inputAmountForFee;
-    // fee tier of the Uniswap V3 pool to use for the swap
-    uint24 poolFee;
-    // sqrtPriceLimitX96 to be used in Uniswap V3 swaps
-    uint160 sqrtPriceLimitX96;
+    uint256 inputAmount;
+    // swap router
+    address router;
+    // callData of the swap call
+    bytes callData;
 }

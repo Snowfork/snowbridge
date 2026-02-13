@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.28;
+pragma solidity 0.8.33;
 
-// Mainnet addressess
+// Mainnet addresses
 address constant SPOKE_POOL = 0x5c7BCd6E7De5423a257D81B442095A1a6ced35C5;
 address constant MULTI_CALL_HANDLER = 0x924a9f036260DdD5808007E1AA95f08eD08aA569;
 address constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
@@ -9,6 +9,7 @@ uint32 constant CHAIN_ID = 1;
 address constant WETH9 = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 address constant GATEWAY = 0x27ca963C279c93801941e1eB8799c23f407d68e7;
 address constant UNISWAP_ROUTER = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
+address constant UNISWAP_QUOTER = 0x61fFE014bA17989E743c5F6cB21bF9697530B21e;
 
 // Base Mainnet addresses
 address constant BASE_SPOKE_POOL = 0x09aea4b2242abC8bb4BB78D537A67a245A7bEC64;

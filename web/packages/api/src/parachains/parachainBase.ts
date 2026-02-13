@@ -249,8 +249,42 @@ export abstract class ParachainBase {
         }
     }
 
+    async validateAccount(
+        beneficiaryAddress: string,
+        ethChainId: number,
+        tokenAddress: string,
+        assetMetadata?: Asset,
+        maxConsumers?: bigint,
+    ) {
+        // Check if the account is created
+        const [beneficiaryAccount, beneficiaryTokenBalance] = await Promise.all([
+            this.getNativeAccount(beneficiaryAddress),
+            this.getTokenBalance(beneficiaryAddress, ethChainId, tokenAddress, assetMetadata),
+        ])
+        return {
+            accountExists: !(
+                beneficiaryAccount.consumers === 0n &&
+                beneficiaryAccount.providers === 0n &&
+                beneficiaryAccount.sufficients === 0n
+            ),
+            accountMaxConsumers:
+                beneficiaryAccount.consumers >= (maxConsumers ?? 63n) &&
+                beneficiaryTokenBalance === 0n,
+        }
+    }
+
     abstract getLocationBalance(location: any, account: string, pnaAssetId?: any): Promise<bigint>
     abstract getDotBalance(account: string): Promise<bigint>
     abstract getAssets(ethChainId: number, pnas: PNAMap): Promise<AssetMap>
     abstract getXC20DOT(): string | undefined
+    abstract swapAsset1ForAsset2(
+        asset1: any,
+        asset2: any,
+        exactAsset1Balance: bigint,
+    ): Promise<bigint>
+    abstract getAssetHubConversionPalletSwap(
+        asset1: any,
+        asset2: any,
+        exactAsset2Balance: bigint,
+    ): Promise<bigint>
 }

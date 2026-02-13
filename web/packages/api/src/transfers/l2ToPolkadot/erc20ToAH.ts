@@ -2,6 +2,7 @@ import { AssetRegistry } from "@snowbridge/base-types"
 import { TransferInterface } from "./transferInterface"
 import { Context } from "../../index"
 import {
+    buildSwapCallData,
     calculateRelayerFee,
     claimerFromBeneficiary,
     claimerLocationToBytes,
@@ -15,12 +16,7 @@ import {
 } from "../../xcmbuilders/toPolkadot/erc20ToAH"
 import { accountId32Location, DOT_LOCATION, erc20Location } from "../../xcmBuilder"
 import { paraImplementation } from "../../parachains"
-import {
-    erc20Balance,
-    ETHER_TOKEN_ADDRESS,
-    swapAsset1ForAsset2,
-    validateAccount,
-} from "../../assets_v2"
+import { erc20Balance, ETHER_TOKEN_ADDRESS } from "../../assets_v2"
 import { beneficiaryMultiAddress, padFeeByPercentage } from "../../utils"
 import { FeeInfo, resolveInputs, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
 import { buildMessageId, Transfer, ValidationResult } from "../../toPolkadotSnowbridgeV2"
@@ -56,16 +52,20 @@ export class ERC20ToAH implements TransferInterface {
             assetHub: await context.assetHub(),
             bridgeHub: await context.bridgeHub(),
         }
-        if (registry.ethereumChains?.[l2ChainId] == undefined) {
+        if (registry.ethereumChains?.[`ethereum_l2_${l2ChainId}`] == undefined) {
             throw new Error(`L2 Chain ID ${l2ChainId} is not supported in the provided registry`)
         }
-        if (registry.ethereumChains?.[l2ChainId]?.assets[l2TokenAddress] == undefined) {
+        if (
+            registry.ethereumChains?.[`ethereum_l2_${l2ChainId}`]?.assets[l2TokenAddress] ==
+            undefined
+        ) {
             throw new Error(
                 `L2 Token Address ${l2TokenAddress} is not supported in the provided registry for L2 Chain ID ${l2ChainId}`,
             )
         }
         let tokenAddress =
-            registry.ethereumChains?.[l2ChainId]?.assets[l2TokenAddress]?.swapTokenAddress
+            registry.ethereumChains?.[`ethereum_l2_${l2ChainId}`]?.assets[l2TokenAddress]
+                ?.swapTokenAddress
         if (!tokenAddress) {
             throw new Error("Token is not registered on Ethereum")
         }
@@ -99,8 +99,7 @@ export class ERC20ToAH implements TransferInterface {
         )
 
         const assetHubImpl = await paraImplementation(assetHub)
-        const deliveryFeeInEther = await swapAsset1ForAsset2(
-            assetHub,
+        const deliveryFeeInEther = await assetHubImpl.swapAsset1ForAsset2(
             DOT_LOCATION,
             ether,
             deliveryFeeInDOT,
@@ -109,12 +108,12 @@ export class ERC20ToAH implements TransferInterface {
         let assetHubExecutionFeeDOT = await assetHubImpl.calculateXcmFee(assetHubXcm, DOT_LOCATION)
 
         let assetHubExecutionFeeEther = padFeeByPercentage(
-            await swapAsset1ForAsset2(assetHub, DOT_LOCATION, ether, assetHubExecutionFeeDOT),
+            await assetHubImpl.swapAsset1ForAsset2(DOT_LOCATION, ether, assetHubExecutionFeeDOT),
             paddFeeByPercentage ?? 33n,
         )
 
         const { relayerFee, extrinsicFeeDot, extrinsicFeeEther } = await calculateRelayerFee(
-            assetHub,
+            assetHubImpl,
             registry.ethChainId,
             options?.overrideRelayerFee,
             deliveryFeeInEther,
@@ -127,7 +126,8 @@ export class ERC20ToAH implements TransferInterface {
         let l2FeeTokenAddress = context.l2FeeTokenAddress(l2ChainId)
         if (l2TokenAddress == ETHER_TOKEN_ADDRESS || l2TokenAddress == l2FeeTokenAddress) {
             const l1FeeTokenAddress =
-                registry.ethereumChains?.[l2ChainId]?.assets[l2FeeTokenAddress]?.swapTokenAddress
+                registry.ethereumChains?.[`ethereum_l2_${l2ChainId}`]?.assets[l2FeeTokenAddress]
+                    ?.swapTokenAddress
             if (!l1FeeTokenAddress) {
                 throw new Error("Fee token is not registered on Ethereum")
             }
@@ -149,7 +149,9 @@ export class ERC20ToAH implements TransferInterface {
             )
             totalFeeInWei += bridgeFeeInL2Token
         } else {
-            let swapFee = registry.ethereumChains?.[l2ChainId]?.assets[l2TokenAddress]?.swapFee
+            let swapFee =
+                registry.ethereumChains?.[`ethereum_l2_${l2ChainId}`]?.assets[l2TokenAddress]
+                    ?.swapFee
             let swapQuoter = context.l1SwapQuoter()
             let params: ISwapQuoter.QuoteExactOutputSingleParamsStruct = {
                 tokenIn: tokenAddress,
@@ -216,8 +218,8 @@ export class ERC20ToAH implements TransferInterface {
         const l2Chain = context.ethChain(l2ChainId)
 
         let tokenAddress =
-            registry.ethereumChains?.[l2ChainId]?.assets[l2TokenAddress]?.swapTokenAddress
-        let swapFee = registry.ethereumChains?.[l2ChainId]?.assets[l2TokenAddress]?.swapFee
+            registry.ethereumChains?.[`ethereum_l2_${l2ChainId}`]?.assets[l2TokenAddress]
+                ?.swapTokenAddress
         if (!tokenAddress) {
             throw new Error("Token is not registered on Ethereum")
         }
@@ -297,10 +299,18 @@ export class ERC20ToAH implements TransferInterface {
                 destinationChainId: BigInt(registry.ethChainId),
                 fillDeadlineBuffer: options?.fillDeadlineBuffer ?? 600n,
             }
+            let swapCalldata = await buildSwapCallData(
+                context,
+                registry,
+                l2ChainId,
+                l2TokenAddress,
+                fee.assetHubExecutionFeeEther + fee.relayerFee,
+                fee.swapFeeInL1Token!,
+            )
             let swapParams: SwapParamsStruct = {
-                inputAmountForFee: fee.swapFeeInL1Token!,
-                poolFee: swapFee ?? 500,
-                sqrtPriceLimitX96: 0n, // Setting to 0 is fine because we already protect the swap using amountInMaximum
+                inputAmount: fee.swapFeeInL1Token!,
+                router: context.l1SwapRouterAddress(),
+                callData: swapCalldata,
             }
             tx = await l2Adapter
                 .getFunction("sendTokenAndCall")
@@ -385,6 +395,13 @@ export class ERC20ToAH implements TransferInterface {
                 gatewayAllowance: 340282366920938463463374607431768211455n,
             }
         }
+        if (tokenBalance.gatewayAllowance < amount) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.GatewaySpenderLimitReached,
+                message: "The amount transferred is greater than the users token balance.",
+            })
+        }
 
         if (tokenBalance.balance < amount) {
             logs.push({
@@ -448,7 +465,7 @@ export class ERC20ToAH implements TransferInterface {
         const assetHubImpl = await paraImplementation(assetHub)
 
         // Check if asset can be received on asset hub (dry run)
-        const ahParachain = registry.parachains[registry.assetHubParaId]
+        const ahParachain = registry.parachains[`polkadot_${registry.assetHubParaId}`]
         let dryRunAhSuccess, assetHubDryRunError
         if (!ahParachain.features.hasDryRunApi) {
             logs.push({
@@ -489,8 +506,7 @@ export class ERC20ToAH implements TransferInterface {
         }
 
         if (!ahAssetMetadata.isSufficient && !dryRunAhSuccess) {
-            const { accountMaxConsumers, accountExists } = await validateAccount(
-                assetHubImpl,
+            const { accountMaxConsumers, accountExists } = await assetHubImpl.validateAccount(
                 beneficiaryAddressHex,
                 registry.ethChainId,
                 tokenAddress,
