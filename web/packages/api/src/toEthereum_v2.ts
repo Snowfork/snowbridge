@@ -453,6 +453,7 @@ export type ValidationResult = {
         sourceDryRunError: any
         assetHubDryRunError: any
         bridgeHubDryRunError?: any
+        ethereumDryRunError?: any
     }
     transfer: Transfer
 }
