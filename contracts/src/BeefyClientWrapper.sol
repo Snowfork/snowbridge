@@ -162,22 +162,6 @@ contract BeefyClientWrapper {
             highestPendingBlockTimestamp = 0;
         }
 
-        // If an interactive protocol ticket exists for this commitment, refund the
-        // ticket owner for their prior gas costs before cleaning up the stale ticket.
-        bytes32 commitmentHash = _beefyClient().computeCommitmentHash(commitment);
-        address previousOwner = ticketOwner[commitmentHash];
-        if (previousOwner != address(0)) {
-            uint256 previousCost = creditedCost[commitmentHash];
-            delete creditedCost[commitmentHash];
-            delete ticketOwner[commitmentHash];
-            if (previousCost > maxRefundAmount) {
-                previousCost = maxRefundAmount;
-            }
-            if (previousCost > 0 && address(this).balance >= previousCost) {
-                payable(previousOwner).call{value: previousCost}("");
-            }
-        }
-
         _refundWithProgress(startGas, 0, progress);
     }
 

@@ -648,63 +648,6 @@ contract BeefyClientWrapperTest is Test {
         assertEq(mockBeefyClient.submitFiatShamirCount(), 1);
     }
 
-    function test_submitFiatShamir_refundsInteractiveProtocolRelayer() public {
-        // Relayer1 starts interactive protocol path, accumulates gas credits
-        uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + 500);
-        IBeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
-        uint256[] memory bitfield = new uint256[](1);
-        IBeefyClient.ValidatorProof memory proof = createValidatorProof();
-        bytes32 commitmentHash = computeCommitmentHash(commitment);
-
-        vm.prank(relayer1);
-        vm.txGasPrice(50 gwei);
-        wrapper.submitInitial(commitment, bitfield, proof);
-
-        bytes32 ch = computeCommitmentHash(commitment);
-        vm.prank(relayer1);
-        vm.txGasPrice(50 gwei);
-        wrapper.commitPrevRandao(ch);
-
-        uint256 creditedCost = wrapper.creditedCost(commitmentHash);
-        assertGt(creditedCost, 0);
-        uint256 relayer1BalanceBefore = relayer1.balance;
-
-        // Relayer2 submits Fiat-Shamir for the same commitment
-        IBeefyClient.ValidatorProof[] memory proofs = createValidatorProofs(1);
-        IBeefyClient.MMRLeaf memory leaf = createMMRLeaf();
-        bytes32[] memory leafProof = new bytes32[](0);
-
-        vm.prank(relayer2);
-        wrapper.submitFiatShamir(commitment, bitfield, proofs, leaf, leafProof, 0);
-
-        // Interactive protocol relayer should be refunded their credited gas costs
-        assertEq(relayer1.balance, relayer1BalanceBefore + creditedCost);
-
-        // Ticket should be cleaned up
-        assertEq(wrapper.ticketOwner(commitmentHash), address(0));
-        assertEq(wrapper.creditedCost(commitmentHash), 0);
-        assertEq(mockBeefyClient.submitFiatShamirCount(), 1);
-    }
-
-    function test_submitFiatShamir_noTicket_worksForAnyone() public {
-        // No prior RANDAO ticket — anyone can use Fiat-Shamir
-        uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + 500);
-        IBeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
-        uint256[] memory bitfield = new uint256[](1);
-        IBeefyClient.ValidatorProof[] memory proofs = createValidatorProofs(1);
-        IBeefyClient.MMRLeaf memory leaf = createMMRLeaf();
-        bytes32[] memory leafProof = new bytes32[](0);
-
-        uint256 relayerBalanceBefore = relayer2.balance;
-
-        vm.prank(relayer2);
-        vm.txGasPrice(50 gwei);
-        wrapper.submitFiatShamir(commitment, bitfield, proofs, leaf, leafProof, 0);
-
-        assertEq(mockBeefyClient.submitFiatShamirCount(), 1);
-        assertGt(relayer2.balance, relayerBalanceBefore);
-    }
-
     function test_submitFiatShamir_clearsHighestPendingBlock() public {
         // First create a pending session
         uint32 pendingBlockNumber = uint32(INITIAL_BEEFY_BLOCK + 100);
