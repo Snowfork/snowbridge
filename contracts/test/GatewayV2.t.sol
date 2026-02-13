@@ -39,6 +39,7 @@ import {
     RegisterForeignTokenParams,
     MintForeignTokenParams,
     CallContractParams,
+    CallContractsParams,
     Payload,
     Asset,
     makeNativeAsset,
@@ -316,6 +317,56 @@ contract GatewayV2Test is Test {
 
         CommandV2[] memory commands = new CommandV2[](1);
         commands[0] = CommandV2({kind: CommandKind.CallContract, gas: 1, payload: payload});
+        return commands;
+    }
+
+    function makeCallContractsCommand(CallContractParams[] memory params)
+        public
+        pure
+        returns (CommandV2[] memory)
+    {
+        CallContractsParams memory p = CallContractsParams({
+            calls: params,
+            sweepRecipient: address(0),
+            tokensToSweep: new address[](0)
+        });
+        bytes memory payload = abi.encode(p);
+        CommandV2[] memory commands = new CommandV2[](1);
+        commands[0] =
+            CommandV2({kind: CommandKind.CallContracts, gas: 500_000, payload: payload});
+        return commands;
+    }
+
+    function makeCallContractsCommandWithInsufficientGas(CallContractParams[] memory params)
+        public
+        pure
+        returns (CommandV2[] memory)
+    {
+        CallContractsParams memory p = CallContractsParams({
+            calls: params,
+            sweepRecipient: address(0),
+            tokensToSweep: new address[](0)
+        });
+        bytes memory payload = abi.encode(p);
+        CommandV2[] memory commands = new CommandV2[](1);
+        commands[0] = CommandV2({kind: CommandKind.CallContracts, gas: 1, payload: payload});
+        return commands;
+    }
+
+    function makeCallContractsCommandWithSweep(
+        CallContractParams[] memory params,
+        address sweepRecipient,
+        address[] memory tokensToSweep
+    ) public pure returns (CommandV2[] memory) {
+        CallContractsParams memory p = CallContractsParams({
+            calls: params,
+            sweepRecipient: sweepRecipient,
+            tokensToSweep: tokensToSweep
+        });
+        bytes memory payload = abi.encode(p);
+        CommandV2[] memory commands = new CommandV2[](1);
+        commands[0] =
+            CommandV2({kind: CommandKind.CallContracts, gas: 500_000, payload: payload});
         return commands;
     }
 
@@ -615,6 +666,183 @@ contract GatewayV2Test is Test {
                 makeMockProof(),
                 relayerRewardAddress
             );
+    }
+
+    function testAgentCallContractsSuccess() public {
+        bytes32 topic = keccak256("topic");
+
+        CallContractParams[] memory params = new CallContractParams[](2);
+        params[0] = CallContractParams({
+            target: address(helloWorld),
+            data: abi.encodeWithSignature("sayHello(string)", "First"),
+            value: 0.05 ether
+        });
+        params[1] = CallContractParams({
+            target: address(helloWorld),
+            data: abi.encodeWithSignature("sayHello(string)", "Second"),
+            value: 0.05 ether
+        });
+
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.InboundMessageDispatched(1, topic, true, relayerRewardAddress);
+
+        vm.deal(assetHubAgent, 1 ether);
+        hoax(relayer, 1 ether);
+        IGatewayV2(address(gateway))
+            .v2_submit(
+                InboundMessageV2({
+                    origin: Constants.ASSET_HUB_AGENT_ID,
+                    nonce: 1,
+                    topic: topic,
+                    commands: makeCallContractsCommand(params)
+                }),
+                proof,
+                makeMockProof(),
+                relayerRewardAddress
+            );
+    }
+
+    function testAgentCallContractsRevertedOnFirstFailure() public {
+        bytes32 topic = keccak256("topic");
+
+        CallContractParams[] memory params = new CallContractParams[](2);
+        params[0] = CallContractParams({
+            target: address(helloWorld),
+            data: abi.encodeWithSignature("revertUnauthorized()"),
+            value: 0
+        });
+        params[1] = CallContractParams({
+            target: address(helloWorld),
+            data: abi.encodeWithSignature("sayHello(string)", "Second"),
+            value: 0
+        });
+
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.CommandFailed(1, 0);
+        emit IGatewayV2.InboundMessageDispatched(1, topic, false, relayerRewardAddress);
+
+        vm.deal(assetHubAgent, 1 ether);
+        hoax(relayer, 1 ether);
+        IGatewayV2(address(gateway))
+            .v2_submit(
+                InboundMessageV2({
+                    origin: Constants.ASSET_HUB_AGENT_ID,
+                    nonce: 1,
+                    topic: topic,
+                    commands: makeCallContractsCommand(params)
+                }),
+                proof,
+                makeMockProof(),
+                relayerRewardAddress
+            );
+    }
+
+    function testAgentCallContractsRevertedOnSecondFailure() public {
+        bytes32 topic = keccak256("topic");
+
+        CallContractParams[] memory params = new CallContractParams[](2);
+        params[0] = CallContractParams({
+            target: address(helloWorld),
+            data: abi.encodeWithSignature("sayHello(string)", "First"),
+            value: 0
+        });
+        params[1] = CallContractParams({
+            target: address(helloWorld),
+            data: abi.encodeWithSignature("revertUnauthorized()"),
+            value: 0
+        });
+
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.CommandFailed(1, 0);
+        emit IGatewayV2.InboundMessageDispatched(1, topic, false, relayerRewardAddress);
+
+        vm.deal(assetHubAgent, 1 ether);
+        hoax(relayer, 1 ether);
+        IGatewayV2(address(gateway))
+            .v2_submit(
+                InboundMessageV2({
+                    origin: Constants.ASSET_HUB_AGENT_ID,
+                    nonce: 1,
+                    topic: topic,
+                    commands: makeCallContractsCommand(params)
+                }),
+                proof,
+                makeMockProof(),
+                relayerRewardAddress
+            );
+    }
+
+    function testAgentCallContractsRevertedForInsufficientGas() public {
+        bytes32 topic = keccak256("topic");
+
+        CallContractParams[] memory params = new CallContractParams[](1);
+        params[0] = CallContractParams({
+            target: address(helloWorld),
+            data: abi.encodeWithSignature("sayHello(string)", "World"),
+            value: 0.1 ether
+        });
+
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.CommandFailed(1, 0);
+        emit IGatewayV2.InboundMessageDispatched(1, topic, false, relayerRewardAddress);
+
+        vm.deal(assetHubAgent, 1 ether);
+        hoax(relayer, 1 ether);
+        IGatewayV2(address(gateway))
+            .v2_submit(
+                InboundMessageV2({
+                    origin: Constants.ASSET_HUB_AGENT_ID,
+                    nonce: 1,
+                    topic: topic,
+                    commands: makeCallContractsCommandWithInsufficientGas(params)
+                }),
+                proof,
+                makeMockProof(),
+                relayerRewardAddress
+            );
+    }
+
+    function testAgentCallContractsSweepRunsOnFailure() public {
+        bytes32 topic = keccak256("topic");
+
+        // First call reverts; sweep is configured to recover agent's ETH
+        CallContractParams[] memory params = new CallContractParams[](1);
+        params[0] = CallContractParams({
+            target: address(helloWorld),
+            data: abi.encodeWithSignature("revertUnauthorized()"),
+            value: 0
+        });
+
+        address sweepRecipient = address(new PayableRecipient());
+        address[] memory tokensToSweep = new address[](1);
+        tokensToSweep[0] = address(0); // sweep ETH
+
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.CommandFailed(1, 0);
+        emit IGatewayV2.InboundMessageDispatched(1, topic, false, relayerRewardAddress);
+
+        vm.deal(assetHubAgent, 0.5 ether);
+        uint256 recipientBalanceBefore = sweepRecipient.balance;
+
+        hoax(relayer, 1 ether);
+        IGatewayV2(address(gateway))
+            .v2_submit(
+                InboundMessageV2({
+                    origin: Constants.ASSET_HUB_AGENT_ID,
+                    nonce: 1,
+                    topic: topic,
+                    commands: makeCallContractsCommandWithSweep(
+                        params,
+                        sweepRecipient,
+                        tokensToSweep
+                    )
+                }),
+                proof,
+                makeMockProof(),
+                relayerRewardAddress
+            );
+
+        assertEq(sweepRecipient.balance, recipientBalanceBefore + 0.5 ether, "sweep should have transferred ETH");
     }
 
     function testCreateAgent() public {
@@ -932,6 +1160,19 @@ contract GatewayV2Test is Test {
 
         bool ok = gatewayLogic.callDispatch(cmd, bytes32(uint256(0x9999)));
         assertTrue(!ok, "callContract with missing agent should return false");
+    }
+
+    function testCallContractsAgentDoesNotExistReturnsFalse() public {
+        CallContractParams[] memory params = new CallContractParams[](1);
+        params[0] =
+            CallContractParams({target: address(0xdead), data: "", value: uint256(0)});
+        bytes memory payload = abi.encode(params);
+
+        CommandV2 memory cmd =
+            CommandV2({kind: CommandKind.CallContracts, gas: uint64(200_000), payload: payload});
+
+        bool ok = gatewayLogic.callDispatch(cmd, bytes32(uint256(0x9999)));
+        assertTrue(!ok, "callContracts with missing agent should return false");
     }
 
     function testInsufficientGasReverts() public {
