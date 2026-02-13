@@ -69,7 +69,7 @@ const registry = {
                     ],
                 },
                 "8453": {
-                    adapterAddress: "0xcd5d2c665e3ac84bf5c67fe7a0c48748da40db2f",
+                    adapterAddress: "0x07fe4E7340976FC873B74bAfe3C3e5b0e01f3665".toLowerCase(),
                     feeTokenAddress: "0x4200000000000000000000000000000000000006",
                     swapRoutes: [
                         {
