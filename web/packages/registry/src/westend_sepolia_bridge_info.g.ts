@@ -5,6 +5,7 @@ const registry = {
         beaconApiUrl: "https://lodestar-sepolia.chainsafe.io",
         ethereumChains: {
             "84532": "https://base-sepolia-rpc.publicnode.com",
+            "421614": "https://arbitrum-sepolia-rpc.publicnode.com",
             "11155111": "https://ethereum-sepolia-rpc.publicnode.com",
         },
         relaychainUrl: "wss://westend-rpc.n.dwellir.com",
@@ -21,7 +22,7 @@ const registry = {
             "https://snowbridge.squids.live/snowbridge-subsquid-westend@v1/api/graphql",
         l2Bridge: {
             acrossAPIUrl: "https://testnet.across.to/api",
-            l1AdapterAddress: "0xa5b8589bd534701be49916c4d2e634ab1c765cbf",
+            l1AdapterAddress: "0xcda9bff39cdf39e95f4b699422e422195091126d",
             l1HandlerAddress: "0x924a9f036260ddd5808007e1aa95f08ed08aa569",
             l1FeeTokenAddress: "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
             l1SwapRouterAddress: "0x3bfa4769fb09eefc5a80d6e87c3b9c650f7ae48e",
@@ -38,6 +39,22 @@ const registry = {
                         },
                         {
                             inputToken: "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
+                            outputToken: "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
+                            swapFee: 500,
+                        },
+                    ],
+                },
+                "421614": {
+                    adapterAddress: "0xcb3d8043bdbfb0d9b30de279a09132073d1de561",
+                    feeTokenAddress: "0x980b62da83eff3d4576c647993b0c1d7faf17c73",
+                    swapRoutes: [
+                        {
+                            inputToken: "0x980b62da83eff3d4576c647993b0c1d7faf17c73",
+                            outputToken: "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+                            swapFee: 0,
+                        },
+                        {
+                            inputToken: "0x75faf114eafb1bdbe2f0316df893fd58ce46aa4d",
                             outputToken: "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
                             swapFee: 500,
                         },
@@ -113,9 +130,38 @@ const registry = {
                 "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
             ],
         },
+        {
+            from: {
+                kind: "polkadot",
+                id: 1000,
+            },
+            to: {
+                kind: "ethereum_l2",
+                id: 421614,
+            },
+            assets: [
+                "0x0000000000000000000000000000000000000000",
+                "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
+                "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+            ],
+        },
+        {
+            from: {
+                kind: "ethereum_l2",
+                id: 421614,
+            },
+            to: {
+                kind: "polkadot",
+                id: 1000,
+            },
+            assets: [
+                "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
+                "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+            ],
+        },
     ],
     registry: {
-        timestamp: "2026-02-11T12:57:54.796Z",
+        timestamp: "2026-02-12T08:34:32.096Z",
         environment: "westend_sepolia",
         ethChainId: 11155111,
         gatewayAddress: "0x9ed8b47bc3417e3bd0507adc06e56e2fa360a4e9",
@@ -173,6 +219,38 @@ const registry = {
                     },
                 },
                 key: "ethereum_l2_84532",
+            },
+            ethereum_l2_421614: {
+                kind: "ethereum_l2",
+                id: 421614,
+                name: "arbitrum-sepolia",
+                assets: {
+                    "0x980b62da83eff3d4576c647993b0c1d7faf17c73": {
+                        token: "0x980b62da83eff3d4576c647993b0c1d7faf17c73",
+                        name: "WETH",
+                        symbol: "WETH",
+                        decimals: 18,
+                        swapTokenAddress: "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+                        swapFee: 0,
+                    },
+                    "0x75faf114eafb1bdbe2f0316df893fd58ce46aa4d": {
+                        token: "0x75faf114eafb1bdbe2f0316df893fd58ce46aa4d",
+                        name: "USD Coin",
+                        symbol: "USDC",
+                        decimals: 6,
+                        swapTokenAddress: "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
+                        swapFee: 500,
+                    },
+                    "0x0000000000000000000000000000000000000000": {
+                        token: "0x0000000000000000000000000000000000000000",
+                        name: "Ether",
+                        symbol: "Ether",
+                        decimals: 18,
+                        swapTokenAddress: "0x0000000000000000000000000000000000000000",
+                        swapFee: 0,
+                    },
+                },
+                key: "ethereum_l2_421614",
             },
             ethereum_11155111: {
                 kind: "ethereum",

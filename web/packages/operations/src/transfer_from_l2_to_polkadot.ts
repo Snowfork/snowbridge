@@ -130,7 +130,7 @@ export const transferToPolkadot = async (
         console.log("execution cost:", formatEther(executionFee))
         console.log("total cost:", formatEther(fee.totalFeeInWei + executionFee))
         console.log("ether sent:", formatEther(totalValue - fee.totalFeeInWei))
-        console.log("dry run:", await context.ethereum().call(tx))
+        console.log("dry run:", await context.ethChain(l2ChainId).call(tx))
 
         if (process.env["DRY_RUN"] != "true") {
             console.log("sending tx")

@@ -11,7 +11,6 @@ contract SnowbridgeL1Adaptor {
     using SafeERC20 for IERC20;
     ISpokePool public immutable SPOKE_POOL;
     WETH9 public immutable L1_WETH9;
-    WETH9 public immutable L2_WETH9;
 
     /**************************************
      *              EVENTS                *
@@ -20,10 +19,9 @@ contract SnowbridgeL1Adaptor {
     event DepositCallInvoked(bytes32 topic, uint256 depositId);
     event DepositCallFailed(bytes32 topic);
 
-    constructor(address _spokePool, address _l1weth9, address _l2weth9) {
+    constructor(address _spokePool, address _l1weth9) {
         SPOKE_POOL = ISpokePool(_spokePool);
         L1_WETH9 = WETH9(payable(_l1weth9));
-        L2_WETH9 = WETH9(payable(_l2weth9));
     }
 
     // Send ERC20 token on L1 to L2, the fee (params.inputAmount - params.outputAmount) should be calculated off-chain
@@ -125,7 +123,7 @@ contract SnowbridgeL1Adaptor {
             bytes32(uint256(uint160(recipient))),
             bytes32(uint256(uint160(address(recipient)))),
             bytes32(uint256(uint160(address(L1_WETH9)))),
-            bytes32(uint256(uint160(address(L2_WETH9)))),
+            bytes32(uint256(uint160(params.outputToken))),
             params.inputAmount,
             params.outputAmount,
             params.destinationChainId,

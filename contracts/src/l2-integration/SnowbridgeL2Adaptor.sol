@@ -83,7 +83,7 @@ contract SnowbridgeL2Adaptor {
         if (params.inputToken == address(0)) {
             // Deposit native ETH
             require(
-                msg.value >= params.inputAmount,
+                msg.value == params.inputAmount,
                 "Sent value must be greater than or equal to total amount"
             );
             L2_WETH9.deposit{value: params.inputAmount}();
@@ -99,10 +99,6 @@ contract SnowbridgeL2Adaptor {
         uint256 depositId =
             _depositEtherAndSendMessage(params, sendParams, recipient, totalOutputAmount);
 
-        // Refund any excess ETH sent
-        if (params.inputToken == address(0) && msg.value > params.inputAmount) {
-            payable(msg.sender).transfer(msg.value - params.inputAmount);
-        }
         emit DepositCallInvoked(topic, depositId);
     }
 
