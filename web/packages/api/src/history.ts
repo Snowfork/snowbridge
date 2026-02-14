@@ -1,3 +1,4 @@
+import { ChainKind, EthereumKind, ParachainKind } from "@snowbridge/base-types"
 import { getEventIndex } from "./utils"
 
 export enum TransferStatus {
@@ -11,16 +12,15 @@ export type TransferInfo = {
     sourceAddress: string
     beneficiaryAddress: string
     tokenAddress: string
-    destinationParachain?: number
     amount: string
-    sourceNetwork?: string
-    destinationNetwork?: string
-    sourceParachain?: number
     fee?: string
 }
 
 export type ToPolkadotTransferResult = {
-    kind: "ethereum" | "kusama" | "ethereum_l2"
+    sourceKind: ChainKind
+    sourceId: number
+    destinationKind: ParachainKind
+    destinationId: number
     id: string
     status: TransferStatus
     info: TransferInfo
@@ -63,7 +63,10 @@ export type ToPolkadotTransferResult = {
 }
 
 export type ToEthereumTransferResult = {
-    kind: "polkadot"
+    sourceKind: ChainKind
+    sourceId: number
+    destinationKind: EthereumKind
+    destinationId: number
     id: string
     status: TransferStatus
     info: TransferInfo
@@ -117,11 +120,19 @@ export type ToEthereumTransferResult = {
         nonce: number
         success: boolean
     }
+    toEthereumL2?: {
+        blockNumber: number
+        depositId: string
+        txHash: string
+    }
     fee?: bigint
 }
 
 export type InterParachainTransfer = {
-    kind: "polkadot"
+    sourceKind: ParachainKind
+    sourceId: number
+    destinationKind: ParachainKind
+    destinationId: number
     id: string
     status: TransferStatus
     info: TransferInfo
@@ -147,7 +158,10 @@ export type InterParachainTransfer = {
 
 export const buildToPolkadotTransferResult = (transfer: any): ToPolkadotTransferResult => {
     let result: ToPolkadotTransferResult = {
-        kind: "ethereum",
+        sourceKind: transfer.sourceNetwork,
+        sourceId: transfer.sourceParaId ?? transfer.l2ChainId,
+        destinationKind: transfer.destinationNetwork,
+        destinationId: transfer.destinationParaId,
         id: transfer.id,
         status: TransferStatus.Pending,
         info: {
@@ -155,12 +169,8 @@ export const buildToPolkadotTransferResult = (transfer: any): ToPolkadotTransfer
             sourceAddress: transfer.senderAddress,
             beneficiaryAddress: transfer.destinationAddress,
             tokenAddress: transfer.tokenAddress,
-            destinationParachain: transfer.destinationParaId,
             amount: transfer.amount,
             fee: transfer.fee,
-            sourceNetwork: transfer.sourceNetwork,
-            destinationNetwork: transfer.destinationNetwork,
-            sourceParachain: transfer.sourceParaId,
         },
         submitted: {
             blockNumber: transfer.blockNumber,
@@ -169,9 +179,6 @@ export const buildToPolkadotTransferResult = (transfer: any): ToPolkadotTransfer
             messageId: transfer.messageId,
             nonce: transfer.nonce,
         },
-    }
-    if (transfer.sourceNetwork == "kusama" || transfer.destinationNetwork == "kusama") {
-        result.kind = "kusama"
     }
     let inboundMessageReceived = transfer.toBridgeHubInboundQueue
     if (inboundMessageReceived) {
@@ -216,7 +223,10 @@ export const buildToPolkadotTransferResult = (transfer: any): ToPolkadotTransfer
 export const buildToEthereumTransferResult = (transfer: any): ToEthereumTransferResult => {
     let bridgeHubMessageId = transfer.id
     const result: ToEthereumTransferResult = {
-        kind: "polkadot",
+        sourceKind: transfer.sourceNetwork,
+        sourceId: transfer.sourceParaId,
+        destinationKind: transfer.destinationNetwork,
+        destinationId: transfer.l2ChainId,
         id: transfer.id,
         status: TransferStatus.Pending,
         info: {
@@ -270,10 +280,21 @@ export const buildToEthereumTransferResult = (transfer: any): ToEthereumTransfer
             nonce: ethereumMessageDispatched.nonce,
             success: ethereumMessageDispatched.success,
         }
-        result.status = TransferStatus.Complete
         if (!ethereumMessageDispatched.success) {
             result.status = TransferStatus.Failed
+        } else if (transfer.transfer.destinationNetwork !== "ethereum_l2") {
+            // if l2 leave pending
+            result.status = TransferStatus.Complete
         }
+    }
+    let toEthereumL2Delivered = transfer.toEthereumL2
+    if (toEthereumL2Delivered) {
+        result.toEthereumL2 = {
+            blockNumber: toEthereumL2Delivered.blockNumber,
+            depositId: toEthereumL2Delivered.depositId,
+            txHash: toEthereumL2Delivered.txHash,
+        }
+        result.status = TransferStatus.Complete
     }
     return result
 }

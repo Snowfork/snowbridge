@@ -13,8 +13,8 @@ const registry = {
             "2043": "wss://parachain-testnet-rpc.origin-trail.network",
             "3369": "wss://paseo-muse-rpc.polkadot.io",
         },
-        gatewayContract: "0x1607C1368bc943130258318c91bBd8cFf3D063E6",
-        beefyContract: "0x2c780945beb1241fE9c645800110cb9C4bBbb639",
+        gatewayContract: "0x1607c1368bc943130258318c91bbd8cff3d063e6",
+        beefyContract: "0x2c780945beb1241fe9c645800110cb9c4bbbb639",
         assetHubParaId: 1000,
         bridgeHubParaId: 1002,
         v2_parachains: [1000],
@@ -108,10 +108,10 @@ const registry = {
         },
     ],
     registry: {
-        timestamp: "2026-01-28T21:31:42.998Z",
+        timestamp: "2026-02-11T12:58:48.602Z",
         environment: "paseo_sepolia",
         ethChainId: 11155111,
-        gatewayAddress: "0x1607C1368bc943130258318c91bBd8cFf3D063E6",
+        gatewayAddress: "0x1607c1368bc943130258318c91bbd8cff3d063e6",
         assetHubParaId: 1000,
         bridgeHubParaId: 1002,
         relaychain: {
@@ -122,7 +122,7 @@ const registry = {
             accountType: "AccountId32",
             name: "Paseo Testnet",
             specName: "paseo",
-            specVersion: 2000005,
+            specVersion: 2000006,
         },
         bridgeHub: {
             tokenSymbols: "PAS",
@@ -132,12 +132,13 @@ const registry = {
             accountType: "AccountId32",
             name: "Paseo Bridge Hub",
             specName: "bridge-hub-paseo",
-            specVersion: 2000005,
+            specVersion: 2000006,
         },
         ethereumChains: {
             ethereum_11155111: {
                 kind: "ethereum",
                 id: 11155111,
+                name: "sepolia",
                 assets: {
                     "0x0000000000000000000000000000000000000000": {
                         token: "0x0000000000000000000000000000000000000000",
@@ -210,7 +211,7 @@ const registry = {
                     accountType: "AccountId32",
                     name: "Paseo Asset Hub",
                     specName: "asset-hub-paseo",
-                    specVersion: 2000005,
+                    specVersion: 2000006,
                 },
                 assets: {
                     "0x0000000000000000000000000000000000000000": {
@@ -287,7 +288,7 @@ const registry = {
                     ss58Format: 101,
                     isEthereum: false,
                     accountType: "AccountId32",
-                    name: "Neuro Testnet",
+                    name: "NeuroWeb Testnet",
                     specName: "origintrail-parachain",
                     specVersion: 151,
                 },

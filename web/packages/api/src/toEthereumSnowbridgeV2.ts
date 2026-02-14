@@ -38,6 +38,7 @@ import { getOperatingStatus } from "./status"
 import { AbstractProvider, ethers, Wallet, TransactionReceipt } from "ethers"
 import { CreateAgent } from "./registration/agent/createAgent"
 import { estimateFees } from "./across/api"
+import { AgentCreation } from "./registration/agent/agentInterface"
 
 export { ValidationKind, signAndSend } from "./toEthereum_v2"
 
@@ -981,7 +982,7 @@ export function createAgentCreationImplementation() {
 }
 
 export async function sendAgentCreation(
-    creation: any,
+    creation: AgentCreation,
     wallet: Wallet,
 ): Promise<TransactionReceipt> {
     const response = await wallet.sendTransaction(creation.tx)
@@ -1081,13 +1082,12 @@ export async function buildL2Call(
     return { l2Call, fee: l2BridgeFeeInL1Token }
 }
 
-export async function sourceAgentAddress(
+export async function sourceAgentId(
     context: Context,
     parachainId: number,
     sourceAccountHex: string,
-): Promise<string> {
+) {
     const bridgeHub = await context.bridgeHub()
-    const gateway = context.gateway()
     let sourceLocation = {
         parents: 1,
         interior: { x2: [{ parachain: parachainId }, { accountId32: { id: sourceAccountHex } }] },
@@ -1095,7 +1095,16 @@ export async function sourceAgentAddress(
     let versionedLocation = bridgeHub.registry.createType("XcmVersionedLocation", {
         v5: sourceLocation,
     })
-    let agentID = (await bridgeHub.call.controlV2Api.agentId(versionedLocation)).toHex()
+    return (await bridgeHub.call.controlV2Api.agentId(versionedLocation)).toHex()
+}
+
+export async function sourceAgentAddress(
+    context: Context,
+    parachainId: number,
+    sourceAccountHex: string,
+): Promise<string> {
+    const gateway = context.gateway()
+    let agentID = await sourceAgentId(context, parachainId, sourceAccountHex)
     let agentAddress = await gateway.agentOf(agentID)
     return agentAddress
 }
