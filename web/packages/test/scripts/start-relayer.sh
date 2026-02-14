@@ -6,19 +6,37 @@ source scripts/set-env.sh
 config_relayer() {
     local electra_forked_epoch=0
     local fulu_forked_epoch=50000000
-    # Configure beefy relay
+    # Configure beefy relay 1 (uses wrapper for gas refunds)
     jq \
-        --arg k1 "$(address_for BeefyClient)" \
-        --arg k2 "$(address_for GatewayProxy)" \
+        --arg beefyClient "$(address_for BeefyClient)" \
+        --arg beefyClientWrapper "$(address_for BeefyClientWrapper)" \
+        --arg gateway "$(address_for GatewayProxy)" \
         --arg eth_endpoint_ws $eth_endpoint_ws \
         --arg eth_gas_limit $eth_gas_limit \
         '
-      .sink.contracts.BeefyClient = $k1
-    | .sink.contracts.Gateway = $k2
+      .sink.contracts.BeefyClient = $beefyClient
+    | .sink.contracts.BeefyClientWrapper = $beefyClientWrapper
+    | .sink.contracts.Gateway = $gateway
     | .sink.ethereum.endpoint = $eth_endpoint_ws
     | .sink.ethereum."gas-limit" = $eth_gas_limit
     ' \
         config/beefy-relay.json >$output_dir/beefy-relay.json
+
+    # Configure beefy relay 2 (uses wrapper for gas refunds)
+    jq \
+        --arg beefyClient "$(address_for BeefyClient)" \
+        --arg beefyClientWrapper "$(address_for BeefyClientWrapper)" \
+        --arg gateway "$(address_for GatewayProxy)" \
+        --arg eth_endpoint_ws $eth_endpoint_ws \
+        --arg eth_gas_limit $eth_gas_limit \
+        '
+      .sink.contracts.BeefyClient = $beefyClient
+    | .sink.contracts.BeefyClientWrapper = $beefyClientWrapper
+    | .sink.contracts.Gateway = $gateway
+    | .sink.ethereum.endpoint = $eth_endpoint_ws
+    | .sink.ethereum."gas-limit" = $eth_gas_limit
+    ' \
+        config/beefy-relay.json >$output_dir/beefy-relay-2.json
 
     # Configure parachain relay v1
     jq \
@@ -170,7 +188,7 @@ config_relayer() {
 
 start_relayer() {
     echo "Starting relay services"
-    # Launch beefy relay
+    # Launch beefy relay 1
     (
         : >"$output_dir"/beefy-relay.log
         while :; do
@@ -179,6 +197,19 @@ start_relayer() {
                 --config "$output_dir/beefy-relay.json" \
                 --ethereum.private-key $beefy_relay_eth_key \
                 >>"$output_dir"/beefy-relay.log 2>&1 || true
+            sleep 20
+        done
+    ) &
+
+    # Launch beefy relay 2
+    (
+        : >"$output_dir"/beefy-relay-2.log
+        while :; do
+            echo "Starting beefy relay 2 at $(date)"
+            "${relayer}" run beefy \
+                --config "$output_dir/beefy-relay-2.json" \
+                --ethereum.private-key $beefy_relay_eth_key_2 \
+                >>"$output_dir"/beefy-relay-2.log 2>&1 || true
             sleep 20
         done
     ) &

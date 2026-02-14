@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/big"
 	"math/rand"
+	"time"
 
 	"golang.org/x/sync/errgroup"
 
@@ -22,10 +23,15 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// SessionTimeout is the duration after which a pending session is considered expired
+const SessionTimeout = 40 * time.Minute
+
 type EthereumWriter struct {
 	config          *SinkConfig
 	conn            *ethereum.Connection
-	contract        *contracts.BeefyClient
+	useWrapper      bool
+	wrapperContract *contracts.BeefyClientWrapper
+	beefyClient     *contracts.BeefyClient
 	blockWaitPeriod uint64
 }
 
@@ -96,16 +102,17 @@ func (wr *EthereumWriter) queryBeefyClientState(ctx context.Context) (*BeefyClie
 		Context: ctx,
 	}
 
-	latestBeefyBlock, err := wr.contract.LatestBeefyBlock(&callOpts)
+	latestBeefyBlock, err := wr.getLatestBeefyBlock(&callOpts)
 	if err != nil {
 		return nil, err
 	}
 
-	currentValidatorSet, err := wr.contract.CurrentValidatorSet(&callOpts)
+	currentValidatorSet, err := wr.getCurrentValidatorSet(&callOpts)
 	if err != nil {
 		return nil, err
 	}
-	nextValidatorSet, err := wr.contract.NextValidatorSet(&callOpts)
+
+	nextValidatorSet, err := wr.getNextValidatorSet(&callOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -120,6 +127,20 @@ func (wr *EthereumWriter) queryBeefyClientState(ctx context.Context) (*BeefyClie
 }
 
 func (wr *EthereumWriter) submit(ctx context.Context, task *Request) error {
+	// Check if another relayer already has a session in progress (wrapper only)
+	if wr.useWrapper {
+		shouldSkip, err := wr.shouldSkipDueToPendingSession(ctx, task)
+		if err != nil {
+			return fmt.Errorf("check pending session: %w", err)
+		}
+		if shouldSkip {
+			log.WithFields(logrus.Fields{
+				"beefyBlock": task.SignedCommitment.Commitment.BlockNumber,
+			}).Info("Skipping submission: another session already in progress with sufficient progress")
+			return nil
+		}
+	}
+
 	// Initial submission
 	tx, initialBitfield, err := wr.doSubmitInitial(ctx, task)
 	if err != nil {
@@ -128,6 +149,12 @@ func (wr *EthereumWriter) submit(ctx context.Context, task *Request) error {
 	// Wait for receipt of submitInitial
 	receipt, err := wr.conn.WatchTransaction(ctx, tx, 0)
 	if err != nil {
+		if isExpectedCompetitionError(err) {
+			log.WithFields(logrus.Fields{
+				"beefyBlock": task.SignedCommitment.Commitment.BlockNumber,
+			}).Info("Skipping commitment: expected error (race condition, stale commitment, or validator set mismatch)")
+			return nil
+		}
 		return fmt.Errorf("Failed to get receipt of submitInitial: %w", err)
 	}
 	log.WithFields(logrus.Fields{
@@ -144,9 +171,9 @@ func (wr *EthereumWriter) submit(ctx context.Context, task *Request) error {
 		return fmt.Errorf("Failed to wait for RandaoCommitDelay: %w", err)
 	}
 
-	commitmentHash, err := task.CommitmentHash()
+	commitmentHash, err := wr.computeCommitmentHash(task)
 	if err != nil {
-		return fmt.Errorf("generate commitment hash: %w", err)
+		return fmt.Errorf("compute commitment hash: %w", err)
 	}
 
 	if task.Skippable {
@@ -165,18 +192,22 @@ func (wr *EthereumWriter) submit(ctx context.Context, task *Request) error {
 		}).Info("Commitment already synced")
 		return nil
 	}
+
 	// Commit PrevRandao which will be used as seed to randomly select subset of validators
 	// https://github.com/Snowfork/snowbridge/blob/75a475cbf8fc8e13577ad6b773ac452b2bf82fbb/contracts/contracts/BeefyClient.sol#L446-L447
-	tx, err = wr.contract.CommitPrevRandao(
-		wr.conn.MakeTxOpts(ctx),
-		*commitmentHash,
-	)
+	tx, err = wr.doCommitPrevRandao(ctx, commitmentHash)
 	if err != nil {
 		return fmt.Errorf("Failed to call CommitPrevRandao: %w", err)
 	}
 
 	_, err = wr.conn.WatchTransaction(ctx, tx, 0)
 	if err != nil {
+		if isExpectedCompetitionError(err) {
+			log.WithFields(logrus.Fields{
+				"beefyBlock": task.SignedCommitment.Commitment.BlockNumber,
+			}).Info("Skipping commitment: expected error during CommitPrevRandao")
+			return nil
+		}
 		return fmt.Errorf("Failed to get receipt of CommitPrevRandao: %w", err)
 	}
 
@@ -196,14 +227,27 @@ func (wr *EthereumWriter) submit(ctx context.Context, task *Request) error {
 		}).Info("Commitment already synced")
 		return nil
 	}
+
 	// Final submission
-	tx, err = wr.doSubmitFinal(ctx, *commitmentHash, initialBitfield, task)
+	tx, err = wr.doSubmitFinal(ctx, commitmentHash, initialBitfield, task)
 	if err != nil {
+		if isExpectedCompetitionError(err) {
+			log.WithFields(logrus.Fields{
+				"beefyBlock": task.SignedCommitment.Commitment.BlockNumber,
+			}).Info("Skipping commitment: expected error during submitFinal")
+			return nil
+		}
 		return fmt.Errorf("Failed to call submitFinal: %w", err)
 	}
 
 	_, err = wr.conn.WatchTransaction(ctx, tx, 0)
 	if err != nil {
+		if isExpectedCompetitionError(err) {
+			log.WithFields(logrus.Fields{
+				"beefyBlock": task.SignedCommitment.Commitment.BlockNumber,
+			}).Info("Skipping commitment: expected error during submitFinal receipt")
+			return nil
+		}
 		return fmt.Errorf("Failed to get receipt of submitFinal: %w", err)
 	}
 
@@ -213,7 +257,6 @@ func (wr *EthereumWriter) submit(ctx context.Context, task *Request) error {
 	}).Debug("Transaction SubmitFinal succeeded")
 
 	return nil
-
 }
 
 func (wr *EthereumWriter) doSubmitInitial(ctx context.Context, task *Request) (*types.Transaction, []*big.Int, error) {
@@ -235,13 +278,7 @@ func (wr *EthereumWriter) doSubmitInitial(ctx context.Context, task *Request) (*
 		"chosenValidator":      chosenValidator,
 	}).Info("Creating initial bitfield")
 
-	initialBitfield, err := wr.contract.CreateInitialBitfield(
-		&bind.CallOpts{
-			Pending: true,
-			From:    wr.conn.Keypair().CommonAddress(),
-		},
-		signedValidators, validatorCount,
-	)
+	initialBitfield, err := wr.createInitialBitfield(signedValidators, validatorCount)
 	if err != nil {
 		return nil, nil, fmt.Errorf("create initial bitfield: %w", err)
 	}
@@ -251,13 +288,7 @@ func (wr *EthereumWriter) doSubmitInitial(ctx context.Context, task *Request) (*
 		return nil, nil, err
 	}
 
-	var tx *types.Transaction
-	tx, err = wr.contract.SubmitInitial(
-		wr.conn.MakeTxOpts(ctx),
-		msg.Commitment,
-		msg.Bitfield,
-		msg.Proof,
-	)
+	tx, err := wr.submitInitial(ctx, msg)
 	if err != nil {
 		return nil, nil, fmt.Errorf("initial submit: %w", err)
 	}
@@ -279,15 +310,7 @@ func (wr *EthereumWriter) doSubmitInitial(ctx context.Context, task *Request) (*
 
 // doSubmitFinal sends a SubmitFinal tx to the BeefyClient contract
 func (wr *EthereumWriter) doSubmitFinal(ctx context.Context, commitmentHash [32]byte, initialBitfield []*big.Int, task *Request) (*types.Transaction, error) {
-	finalBitfield, err := wr.contract.CreateFinalBitfield(
-		&bind.CallOpts{
-			Pending: true,
-			From:    wr.conn.Keypair().CommonAddress(),
-		},
-		commitmentHash,
-		initialBitfield,
-	)
-
+	finalBitfield, err := wr.createFinalBitfield(commitmentHash, initialBitfield)
 	if err != nil {
 		return nil, fmt.Errorf("create validator bitfield: %w", err)
 	}
@@ -304,15 +327,7 @@ func (wr *EthereumWriter) doSubmitFinal(ctx context.Context, commitmentHash [32]
 		return nil, fmt.Errorf("logging params: %w", err)
 	}
 
-	tx, err := wr.contract.SubmitFinal(
-		wr.conn.MakeTxOpts(ctx),
-		params.Commitment,
-		params.Bitfield,
-		params.Proofs,
-		params.Leaf,
-		params.LeafProof,
-		params.LeafProofOrder,
-	)
+	tx, err := wr.submitFinal(ctx, params)
 	if err != nil {
 		return nil, fmt.Errorf("final submission: %w", err)
 	}
@@ -325,24 +340,60 @@ func (wr *EthereumWriter) doSubmitFinal(ctx context.Context, commitmentHash [32]
 }
 
 func (wr *EthereumWriter) initialize(ctx context.Context) error {
-	address := common.HexToAddress(wr.config.Contracts.BeefyClient)
-	contract, err := contracts.NewBeefyClient(address, wr.conn.Client())
-	if err != nil {
-		return fmt.Errorf("create beefy client: %w", err)
-	}
-	wr.contract = contract
-
 	callOpts := bind.CallOpts{
 		Context: ctx,
 	}
-	blockWaitPeriod, err := wr.contract.RandaoCommitDelay(&callOpts)
+
+	beefyClientAddress := common.HexToAddress(wr.config.Contracts.BeefyClient)
+	beefyClient, err := contracts.NewBeefyClient(beefyClientAddress, wr.conn.Client())
 	if err != nil {
-		return fmt.Errorf("create randao commit delay: %w", err)
+		return fmt.Errorf("create beefy client: %w", err)
+	}
+	wr.beefyClient = beefyClient
+
+	blockWaitPeriod, err := wr.beefyClient.RandaoCommitDelay(&callOpts)
+	if err != nil {
+		return fmt.Errorf("get randao commit delay: %w", err)
 	}
 	wr.blockWaitPeriod = blockWaitPeriod.Uint64()
-	log.WithField("randaoCommitDelay", wr.blockWaitPeriod).Trace("Fetched randaoCommitDelay")
+
+	// Optionally initialize wrapper for state-changing functions with gas refunds
+	if wr.config.Contracts.BeefyClientWrapper != "" {
+		wr.useWrapper = true
+		wrapperAddress := common.HexToAddress(wr.config.Contracts.BeefyClientWrapper)
+
+		wrapperContract, err := contracts.NewBeefyClientWrapper(wrapperAddress, wr.conn.Client())
+		if err != nil {
+			return fmt.Errorf("create beefy client wrapper: %w", err)
+		}
+		wr.wrapperContract = wrapperContract
+
+		log.WithFields(logrus.Fields{
+			"beefyClient":       beefyClientAddress.Hex(),
+			"wrapper":           wrapperAddress.Hex(),
+			"randaoCommitDelay": wr.blockWaitPeriod,
+		}).Info("Using BeefyClientWrapper for gas refunds")
+	} else {
+		wr.useWrapper = false
+		log.WithFields(logrus.Fields{
+			"beefyClient":       beefyClientAddress.Hex(),
+			"randaoCommitDelay": wr.blockWaitPeriod,
+		}).Info("Using BeefyClient directly (no gas refunds)")
+	}
 
 	return nil
+}
+
+func (wr *EthereumWriter) isTaskOutdated(ctx context.Context, task *Request) (bool, error) {
+	state, err := wr.queryBeefyClientState(ctx)
+	if err != nil {
+		return false, fmt.Errorf("query beefy client state: %w", err)
+	}
+
+	if task.SignedCommitment.Commitment.BlockNumber <= uint32(state.LatestBeefyBlock) {
+		return true, nil
+	}
+	return false, nil
 }
 
 func (wr *EthereumWriter) submitFiatShamir(ctx context.Context, task *Request) error {
@@ -364,28 +415,14 @@ func (wr *EthereumWriter) submitFiatShamir(ctx context.Context, task *Request) e
 		"chosenValidator":      chosenValidator,
 	}).Info("Creating initial bitfield")
 
-	initialBitfield, err := wr.contract.CreateInitialBitfield(
-		&bind.CallOpts{
-			Pending: true,
-			From:    wr.conn.Keypair().CommonAddress(),
-		},
-		signedValidators, validatorCount,
-	)
+	initialBitfield, err := wr.createInitialBitfield(signedValidators, validatorCount)
 	if err != nil {
 		return fmt.Errorf("create initial bitfield: %w", err)
 	}
 
 	commitment := toBeefyClientCommitment(&task.SignedCommitment.Commitment)
 
-	finalBitfield, err := wr.contract.CreateFiatShamirFinalBitfield(
-		&bind.CallOpts{
-			Pending: true,
-			From:    wr.conn.Keypair().CommonAddress(),
-		},
-		*commitment,
-		initialBitfield,
-	)
-
+	finalBitfield, err := wr.createFiatShamirFinalBitfield(commitment, initialBitfield)
 	if err != nil {
 		return fmt.Errorf("create validator final bitfield: %w", err)
 	}
@@ -402,15 +439,7 @@ func (wr *EthereumWriter) submitFiatShamir(ctx context.Context, task *Request) e
 		return fmt.Errorf("logging params: %w", err)
 	}
 
-	tx, err := wr.contract.SubmitFiatShamir(
-		wr.conn.MakeTxOpts(ctx),
-		params.Commitment,
-		params.Bitfield,
-		params.Proofs,
-		params.Leaf,
-		params.LeafProof,
-		params.LeafProofOrder,
-	)
+	tx, err := wr.doSubmitFiatShamir(ctx, params)
 	if err != nil {
 		return fmt.Errorf("SubmitFiatShamir: %w", err)
 	}
@@ -432,14 +461,200 @@ func (wr *EthereumWriter) submitFiatShamir(ctx context.Context, task *Request) e
 	return nil
 }
 
-func (wr *EthereumWriter) isTaskOutdated(ctx context.Context, task *Request) (bool, error) {
-	state, err := wr.queryBeefyClientState(ctx)
-	if err != nil {
-		return false, fmt.Errorf("query beefy client state: %w", err)
+// shouldSkipDueToPendingSession checks if another relayer already has a session in progress
+// that would advance the light client sufficiently. Returns true if we should skip.
+// Note: This is only available when using the wrapper contract.
+func (wr *EthereumWriter) shouldSkipDueToPendingSession(ctx context.Context, task *Request) (bool, error) {
+	callOpts := bind.CallOpts{
+		Context: ctx,
 	}
 
-	if task.SignedCommitment.Commitment.BlockNumber <= uint32(state.LatestBeefyBlock) {
-		return true, nil
+	highestPendingBlock, err := wr.wrapperContract.HighestPendingBlock(&callOpts)
+	if err != nil {
+		return false, fmt.Errorf("get highest pending block: %w", err)
 	}
-	return false, nil
+
+	// No pending session
+	if highestPendingBlock.Uint64() == 0 {
+		return false, nil
+	}
+
+	latestBeefyBlock, err := wr.beefyClient.LatestBeefyBlock(&callOpts)
+	if err != nil {
+		return false, fmt.Errorf("get latest beefy block: %w", err)
+	}
+
+	refundTarget, err := wr.wrapperContract.RefundTarget(&callOpts)
+	if err != nil {
+		return false, fmt.Errorf("get refund target: %w", err)
+	}
+
+	// Check if the pending session would give sufficient progress
+	pendingProgress := highestPendingBlock.Uint64() - latestBeefyBlock
+	if pendingProgress < refundTarget.Uint64() {
+		// Pending session wouldn't give good progress, ok to proceed
+		return false, nil
+	}
+
+	// Check if the session has expired (> 40 minutes old)
+	pendingTimestamp, err := wr.wrapperContract.HighestPendingBlockTimestamp(&callOpts)
+	if err != nil {
+		return false, fmt.Errorf("get highest pending block timestamp: %w", err)
+	}
+
+	sessionAge := time.Now().Unix() - pendingTimestamp.Int64()
+	if sessionAge > int64(SessionTimeout.Seconds()) {
+		log.WithFields(logrus.Fields{
+			"highestPendingBlock": highestPendingBlock.Uint64(),
+			"sessionAgeMinutes":   sessionAge / 60,
+		}).Info("Pending session has expired, proceeding with new submission")
+		return false, nil
+	}
+
+	log.WithFields(logrus.Fields{
+		"highestPendingBlock": highestPendingBlock.Uint64(),
+		"latestBeefyBlock":    latestBeefyBlock,
+		"pendingProgress":     pendingProgress,
+		"sessionAgeMinutes":   sessionAge / 60,
+	}).Debug("Active session in progress with sufficient progress")
+
+	return true, nil
+}
+
+// Contract abstraction helpers
+// View functions always use beefyClient directly
+// State-changing functions use wrapper (if configured) or beefyClient
+
+type validatorSetResult struct {
+	Id   *big.Int
+	Root [32]byte
+}
+
+func (wr *EthereumWriter) getLatestBeefyBlock(callOpts *bind.CallOpts) (uint64, error) {
+	return wr.beefyClient.LatestBeefyBlock(callOpts)
+}
+
+func (wr *EthereumWriter) getCurrentValidatorSet(callOpts *bind.CallOpts) (*validatorSetResult, error) {
+	result, err := wr.beefyClient.CurrentValidatorSet(callOpts)
+	if err != nil {
+		return nil, err
+	}
+	return &validatorSetResult{Id: result.Id, Root: result.Root}, nil
+}
+
+func (wr *EthereumWriter) getNextValidatorSet(callOpts *bind.CallOpts) (*validatorSetResult, error) {
+	result, err := wr.beefyClient.NextValidatorSet(callOpts)
+	if err != nil {
+		return nil, err
+	}
+	return &validatorSetResult{Id: result.Id, Root: result.Root}, nil
+}
+
+func (wr *EthereumWriter) createInitialBitfield(signedValidators []*big.Int, validatorCount *big.Int) ([]*big.Int, error) {
+	callOpts := &bind.CallOpts{
+		Pending: true,
+		From:    wr.conn.Keypair().CommonAddress(),
+	}
+	return wr.beefyClient.CreateInitialBitfield(callOpts, signedValidators, validatorCount)
+}
+
+func (wr *EthereumWriter) createFinalBitfield(commitmentHash [32]byte, initialBitfield []*big.Int) ([]*big.Int, error) {
+	// When using wrapper, the ticket was created with msg.sender = wrapper address,
+	// so we need to use the wrapper address as From to find the correct ticket
+	fromAddr := wr.conn.Keypair().CommonAddress()
+	if wr.useWrapper {
+		fromAddr = common.HexToAddress(wr.config.Contracts.BeefyClientWrapper)
+	}
+	callOpts := &bind.CallOpts{
+		Pending: true,
+		From:    fromAddr,
+	}
+	return wr.beefyClient.CreateFinalBitfield(callOpts, commitmentHash, initialBitfield)
+}
+
+func (wr *EthereumWriter) createFiatShamirFinalBitfield(commitment *contracts.IBeefyClientCommitment, initialBitfield []*big.Int) ([]*big.Int, error) {
+	callOpts := &bind.CallOpts{
+		Pending: true,
+		From:    wr.conn.Keypair().CommonAddress(),
+	}
+	return wr.beefyClient.CreateFiatShamirFinalBitfield(callOpts, ToBeefyClientCommitment(commitment), initialBitfield)
+}
+
+func (wr *EthereumWriter) submitInitial(ctx context.Context, msg *InitialRequestParams) (*types.Transaction, error) {
+	if wr.useWrapper {
+		return wr.wrapperContract.SubmitInitial(
+			wr.conn.MakeTxOpts(ctx),
+			msg.Commitment,
+			msg.Bitfield,
+			msg.Proof,
+		)
+	}
+	return wr.beefyClient.SubmitInitial(
+		wr.conn.MakeTxOpts(ctx),
+		ToBeefyClientCommitment(&msg.Commitment),
+		msg.Bitfield,
+		ToBeefyClientValidatorProof(&msg.Proof),
+	)
+}
+
+func (wr *EthereumWriter) doCommitPrevRandao(ctx context.Context, commitmentHash [32]byte) (*types.Transaction, error) {
+	if wr.useWrapper {
+		return wr.wrapperContract.CommitPrevRandao(wr.conn.MakeTxOpts(ctx), commitmentHash)
+	}
+	return wr.beefyClient.CommitPrevRandao(wr.conn.MakeTxOpts(ctx), commitmentHash)
+}
+
+func (wr *EthereumWriter) submitFinal(ctx context.Context, params *FinalRequestParams) (*types.Transaction, error) {
+	if wr.useWrapper {
+		return wr.wrapperContract.SubmitFinal(
+			wr.conn.MakeTxOpts(ctx),
+			params.Commitment,
+			params.Bitfield,
+			params.Proofs,
+			params.Leaf,
+			params.LeafProof,
+			params.LeafProofOrder,
+		)
+	}
+	return wr.beefyClient.SubmitFinal(
+		wr.conn.MakeTxOpts(ctx),
+		ToBeefyClientCommitment(&params.Commitment),
+		params.Bitfield,
+		ToBeefyClientValidatorProofs(params.Proofs),
+		ToBeefyClientMMRLeaf(&params.Leaf),
+		params.LeafProof,
+		params.LeafProofOrder,
+	)
+}
+
+func (wr *EthereumWriter) doSubmitFiatShamir(ctx context.Context, params *FinalRequestParams) (*types.Transaction, error) {
+	if wr.useWrapper {
+		return wr.wrapperContract.SubmitFiatShamir(
+			wr.conn.MakeTxOpts(ctx),
+			params.Commitment,
+			params.Bitfield,
+			params.Proofs,
+			params.Leaf,
+			params.LeafProof,
+			params.LeafProofOrder,
+		)
+	}
+	return wr.beefyClient.SubmitFiatShamir(
+		wr.conn.MakeTxOpts(ctx),
+		ToBeefyClientCommitment(&params.Commitment),
+		params.Bitfield,
+		ToBeefyClientValidatorProofs(params.Proofs),
+		ToBeefyClientMMRLeaf(&params.Leaf),
+		params.LeafProof,
+		params.LeafProofOrder,
+	)
+}
+
+func (wr *EthereumWriter) computeCommitmentHash(task *Request) ([32]byte, error) {
+	callOpts := &bind.CallOpts{
+		Pending: true,
+		From:    wr.conn.Keypair().CommonAddress(),
+	}
+	commitment := toBeefyClientCommitment(&task.SignedCommitment.Commitment)
+	return wr.beefyClient.ComputeCommitmentHash(callOpts, ToBeefyClientCommitment(commitment))
 }
