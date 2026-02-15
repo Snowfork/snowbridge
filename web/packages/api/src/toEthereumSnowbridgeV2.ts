@@ -405,14 +405,11 @@ export const estimateFeesFromParachains = async (
     let localExecutionFeeDOT = 0n
     let localDeliveryFeeDOT = 0n
     let assetHubExecutionFeeDOT = 0n
-    let returnToSenderExecutionFeeDOT = 0n
-    let returnToSenderDeliveryFeeDOT = 0n
     let bridgeHubDeliveryFeeDOT = 0n
     let snowbridgeDeliveryFeeDOT = 0n
 
     let localExecutionFeeInNative: bigint | undefined = undefined
     let localDeliveryFeeInNative: bigint | undefined = undefined
-    let returnToSenderExecutionFeeNative: bigint | undefined = undefined
     if (sourceParachain.features.hasDotBalance) {
         localExecutionFeeDOT = padFeeByPercentage(
             await sourceParachainImpl.calculateXcmFee(deliveryXcm.localXcm, DOT_LOCATION),
@@ -423,10 +420,6 @@ export const estimateFeesFromParachains = async (
                 registry.assetHubParaId,
                 deliveryXcm.forwardXcmToAH,
             ),
-            feePadPercentage,
-        )
-        returnToSenderExecutionFeeDOT = padFeeByPercentage(
-            await sourceParachainImpl.calculateXcmFee(deliveryXcm.returnToSenderXcm, DOT_LOCATION),
             feePadPercentage,
         )
     } else {
@@ -441,16 +434,8 @@ export const estimateFeesFromParachains = async (
             ),
             feePadPercentage,
         )
-        returnToSenderExecutionFeeNative = padFeeByPercentage(
-            await sourceParachainImpl.calculateXcmFee(deliveryXcm.returnToSenderXcm, HERE_LOCATION),
-            feePadPercentage,
-        )
     }
 
-    returnToSenderDeliveryFeeDOT = await assetHubImpl.calculateDeliveryFeeInDOT(
-        sourceParaId,
-        deliveryXcm.returnToSenderXcm,
-    )
     assetHubExecutionFeeDOT = padFeeByPercentage(
         await assetHubImpl.calculateXcmFee(deliveryXcm.forwardXcmToAH, DOT_LOCATION),
         feePadPercentage,
@@ -471,8 +456,6 @@ export const estimateFeesFromParachains = async (
         localDeliveryFeeDOT +
         snowbridgeDeliveryFeeDOT +
         assetHubExecutionFeeDOT +
-        returnToSenderExecutionFeeDOT +
-        returnToSenderDeliveryFeeDOT +
         bridgeHubDeliveryFeeDOT
 
     let ethereumExecutionFee = await estimateEthereumExecutionFee(
@@ -524,9 +507,6 @@ export const estimateFeesFromParachains = async (
             if (localDeliveryFeeInNative) {
                 totalFeeInNative += localDeliveryFeeInNative
             }
-            if (returnToSenderExecutionFeeNative) {
-                totalFeeInNative += returnToSenderExecutionFeeNative
-            }
         } else {
             throw new Error("Unsupported fee token location")
         }
@@ -538,13 +518,13 @@ export const estimateFeesFromParachains = async (
         snowbridgeDeliveryFeeDOT,
         assetHubExecutionFeeDOT,
         bridgeHubDeliveryFeeDOT,
-        returnToSenderDeliveryFeeDOT,
-        returnToSenderExecutionFeeDOT,
+        returnToSenderDeliveryFeeDOT: 0n,
+        returnToSenderExecutionFeeDOT: 0n,
         totalFeeInDot,
         ethereumExecutionFee,
         feeLocation,
         assetHubExecutionFeeNative,
-        returnToSenderExecutionFeeNative,
+        returnToSenderExecutionFeeNative: 0n,
         ethereumExecutionFeeInNative,
         localExecutionFeeInNative,
         localDeliveryFeeInNative,
@@ -943,11 +923,12 @@ export async function buildContractCallHex(context: Context, contractCall: Contr
 
 export const mockDeliveryFee: DeliveryFee = {
     localExecutionFeeDOT: 1n,
+    localDeliveryFeeDOT: 1n,
     snowbridgeDeliveryFeeDOT: 1n,
     assetHubExecutionFeeDOT: 1n,
     bridgeHubDeliveryFeeDOT: 1n,
-    returnToSenderDeliveryFeeDOT: 1n,
-    returnToSenderExecutionFeeDOT: 1n,
+    returnToSenderDeliveryFeeDOT: 0n,
+    returnToSenderExecutionFeeDOT: 0n,
     totalFeeInDot: 10n,
     ethereumExecutionFee: 1n,
 }
