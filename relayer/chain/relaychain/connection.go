@@ -335,6 +335,8 @@ func (co *Connection) FetchParasHeads(blockHash types.Hash) ([]ParaHead, error) 
 	return heads, nil
 }
 
+var BEEFY_WHITELISTED_PARATHREADS = []uint32{3367}
+
 // Filters para heads to parachains only.
 func (conn *Connection) FilterParachainHeads(paraHeads []ParaHead, relayChainBlockHash types.Hash) ([]ParaHead, error) {
 
@@ -349,6 +351,8 @@ func (conn *Connection) FilterParachainHeads(paraHeads []ParaHead, relayChainBlo
 	if err != nil {
 		return nil, err
 	}
+
+	parachainIDs = append(parachainIDs, BEEFY_WHITELISTED_PARATHREADS...)
 
 	// create a set of parachains
 	parachains := make(map[uint32]struct{}, len(paraHeads))
