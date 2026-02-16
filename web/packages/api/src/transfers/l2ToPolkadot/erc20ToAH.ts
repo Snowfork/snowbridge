@@ -131,18 +131,14 @@ export class ERC20ToAH implements TransferInterface {
             if (!l1FeeTokenAddress) {
                 throw new Error("Fee token is not registered on Ethereum")
             }
-            try {
-                bridgeFeeInL2Token = await estimateFees(
-                    context.acrossApiUrl(),
-                    l2FeeTokenAddress,
-                    l1FeeTokenAddress,
-                    l2ChainId,
-                    registry.ethChainId,
-                    assetHubExecutionFeeEther + relayerFee + amount,
-                )
-            } catch (e) {
-                throw new Error("Failed to estimate Across bridge fees: " + (e as Error).message)
-            }
+            bridgeFeeInL2Token = await estimateFees(
+                context.acrossApiUrl(),
+                l2FeeTokenAddress,
+                l1FeeTokenAddress,
+                l2ChainId,
+                registry.ethChainId,
+                assetHubExecutionFeeEther + relayerFee + amount,
+            )
             bridgeFeeInL2Token = padFeeByPercentage(
                 bridgeFeeInL2Token,
                 options?.l2PadFeeByPercentage ?? 33n,
@@ -166,18 +162,14 @@ export class ERC20ToAH implements TransferInterface {
                 swapFeeInL1Token,
                 options?.l2PadFeeByPercentage ?? 33n,
             )
-            try {
-                bridgeFeeInL2Token = await estimateFees(
-                    context.acrossApiUrl(),
-                    l2TokenAddress,
-                    tokenAddress,
-                    l2ChainId,
-                    registry.ethChainId,
-                    amount + swapFeeInL1Token,
-                )
-            } catch (e) {
-                throw new Error("Failed to estimate Across bridge fees: " + (e as Error).message)
-            }
+            bridgeFeeInL2Token = await estimateFees(
+                context.acrossApiUrl(),
+                l2TokenAddress,
+                tokenAddress,
+                l2ChainId,
+                registry.ethChainId,
+                amount + swapFeeInL1Token,
+            )
             bridgeFeeInL2Token = padFeeByPercentage(
                 bridgeFeeInL2Token,
                 options?.l2PadFeeByPercentage ?? 33n,
