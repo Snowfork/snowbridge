@@ -352,12 +352,15 @@ func (conn *Connection) FilterParachainHeads(paraHeads []ParaHead, relayChainBlo
 		return nil, err
 	}
 
-	parachainIDs = append(parachainIDs, BEEFY_WHITELISTED_PARATHREADS...)
-
 	// create a set of parachains
-	parachains := make(map[uint32]struct{}, len(paraHeads))
+	parachains := make(map[uint32]struct{}, len(parachainIDs))
 	for _, parachain := range parachainIDs {
 		parachains[parachain] = struct{}{}
+	}
+
+	// add whitelisted parathreads (deduplicating automatically via map)
+	for _, whitelistedID := range BEEFY_WHITELISTED_PARATHREADS {
+		parachains[whitelistedID] = struct{}{}
 	}
 
 	// filter to return parachains
