@@ -5,8 +5,10 @@ const registry = {
         beaconApiUrl: "https://lodestar-mainnet.chainsafe.io",
         ethereumChains: {
             "1": "https://ethereum-rpc.publicnode.com",
+            "10": "https://optimism-rpc.publicnode.com",
             "1284": "https://rpc.api.moonbeam.network",
             "8453": "https://base-rpc.publicnode.com",
+            "42161": "https://arbitrum-one-rpc.publicnode.com",
         },
         relaychainUrl: "https://polkadot-rpc.n.dwellir.com",
         parachains: {
@@ -44,14 +46,30 @@ const registry = {
         },
         l2Bridge: {
             acrossAPIUrl: "https://app.across.to/api",
-            l1AdapterAddress: "0x313e8c9fb47613f2b1a436be978c2bb75727fcc5",
+            l1AdapterAddress: "0xd3b11c36404b092645522b682832fcdee07d2668",
             l1HandlerAddress: "0x924a9f036260ddd5808007e1aa95f08ed08aa569",
             l1FeeTokenAddress: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
             l1SwapQuoterAddress: "0x61ffe014ba17989e743c5f6cb21bf9697530b21e",
             l1SwapRouterAddress: "0xe592427a0aece92de3edee1f18e0157c05861564",
             l2Chains: {
+                "10": {
+                    adapterAddress: "0x836895ad176235dfe9c59b3df56c7579d90ea338",
+                    feeTokenAddress: "0x4200000000000000000000000000000000000006",
+                    swapRoutes: [
+                        {
+                            inputToken: "0x4200000000000000000000000000000000000006",
+                            outputToken: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                            swapFee: 0,
+                        },
+                        {
+                            inputToken: "0x0b2c639c533813f4aa9d7837caf62653d097ff85",
+                            outputToken: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                            swapFee: 500,
+                        },
+                    ],
+                },
                 "8453": {
-                    adapterAddress: "0xcd5d2c665e3ac84bf5c67fe7a0c48748da40db2f",
+                    adapterAddress: "0x07fe4E7340976FC873B74bAfe3C3e5b0e01f3665".toLowerCase(),
                     feeTokenAddress: "0x4200000000000000000000000000000000000006",
                     swapRoutes: [
                         {
@@ -61,6 +79,22 @@ const registry = {
                         },
                         {
                             inputToken: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+                            outputToken: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                            swapFee: 500,
+                        },
+                    ],
+                },
+                "42161": {
+                    adapterAddress: "0x836895ad176235dfe9c59b3df56c7579d90ea338",
+                    feeTokenAddress: "0x82af49447d8a07e3bd95bd0d56f35241523fbab1",
+                    swapRoutes: [
+                        {
+                            inputToken: "0x82af49447d8a07e3bd95bd0d56f35241523fbab1",
+                            outputToken: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                            swapFee: 0,
+                        },
+                        {
+                            inputToken: "0xaf88d065e77c8cc2239327c5edb3a432268e5831",
                             outputToken: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
                             swapFee: 500,
                         },
@@ -441,6 +475,35 @@ const registry = {
             },
             to: {
                 kind: "ethereum_l2",
+                id: 10,
+            },
+            assets: [
+                "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                "0x0000000000000000000000000000000000000000",
+            ],
+        },
+        {
+            from: {
+                kind: "ethereum_l2",
+                id: 10,
+            },
+            to: {
+                kind: "polkadot",
+                id: 1000,
+            },
+            assets: [
+                "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+            ],
+        },
+        {
+            from: {
+                kind: "polkadot",
+                id: 1000,
+            },
+            to: {
+                kind: "ethereum_l2",
                 id: 8453,
             },
             assets: [
@@ -461,11 +524,41 @@ const registry = {
             assets: [
                 "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
                 "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                "0x0000000000000000000000000000000000000000",
+            ],
+        },
+        {
+            from: {
+                kind: "polkadot",
+                id: 1000,
+            },
+            to: {
+                kind: "ethereum_l2",
+                id: 42161,
+            },
+            assets: [
+                "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                "0x0000000000000000000000000000000000000000",
+            ],
+        },
+        {
+            from: {
+                kind: "ethereum_l2",
+                id: 42161,
+            },
+            to: {
+                kind: "polkadot",
+                id: 1000,
+            },
+            assets: [
+                "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
             ],
         },
     ],
     registry: {
-        timestamp: "2026-02-07T00:48:57.082Z",
+        timestamp: "2026-02-13T02:45:52.753Z",
         environment: "polkadot_mainnet",
         ethChainId: 1,
         gatewayAddress: "0x27ca963c279c93801941e1eb8799c23f407d68e7",
@@ -479,7 +572,7 @@ const registry = {
             accountType: "AccountId32",
             name: "Polkadot",
             specName: "polkadot",
-            specVersion: 2000005,
+            specVersion: 2000006,
         },
         bridgeHub: {
             tokenSymbols: "DOT",
@@ -489,7 +582,7 @@ const registry = {
             accountType: "AccountId32",
             name: "Polkadot BridgeHub",
             specName: "bridge-hub-polkadot",
-            specVersion: 2000005,
+            specVersion: 2000006,
         },
         ethereumChains: {
             ethereum_1: {
@@ -773,6 +866,38 @@ const registry = {
                 key: "ethereum_1",
                 baseDeliveryGas: 120000n,
             },
+            ethereum_l2_10: {
+                kind: "ethereum_l2",
+                id: 10,
+                name: "optimism",
+                assets: {
+                    "0x4200000000000000000000000000000000000006": {
+                        token: "0x4200000000000000000000000000000000000006",
+                        name: "Wrapped Ether",
+                        symbol: "WETH",
+                        decimals: 18,
+                        swapTokenAddress: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                        swapFee: 0,
+                    },
+                    "0x0b2c639c533813f4aa9d7837caf62653d097ff85": {
+                        token: "0x0b2c639c533813f4aa9d7837caf62653d097ff85",
+                        name: "USD Coin",
+                        symbol: "USDC",
+                        decimals: 6,
+                        swapTokenAddress: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                        swapFee: 500,
+                    },
+                    "0x0000000000000000000000000000000000000000": {
+                        token: "0x0000000000000000000000000000000000000000",
+                        name: "Ether",
+                        symbol: "Ether",
+                        decimals: 18,
+                        swapTokenAddress: "0x0000000000000000000000000000000000000000",
+                        swapFee: 0,
+                    },
+                },
+                key: "ethereum_l2_10",
+            },
             ethereum_1284: {
                 kind: "ethereum",
                 id: 1284,
@@ -879,6 +1004,38 @@ const registry = {
                 },
                 key: "ethereum_l2_8453",
             },
+            ethereum_l2_42161: {
+                kind: "ethereum_l2",
+                id: 42161,
+                name: "arbitrum",
+                assets: {
+                    "0x82af49447d8a07e3bd95bd0d56f35241523fbab1": {
+                        token: "0x82af49447d8a07e3bd95bd0d56f35241523fbab1",
+                        name: "Wrapped Ether",
+                        symbol: "WETH",
+                        decimals: 18,
+                        swapTokenAddress: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                        swapFee: 0,
+                    },
+                    "0xaf88d065e77c8cc2239327c5edb3a432268e5831": {
+                        token: "0xaf88d065e77c8cc2239327c5edb3a432268e5831",
+                        name: "USD Coin",
+                        symbol: "USDC",
+                        decimals: 6,
+                        swapTokenAddress: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                        swapFee: 500,
+                    },
+                    "0x0000000000000000000000000000000000000000": {
+                        token: "0x0000000000000000000000000000000000000000",
+                        name: "Ether",
+                        symbol: "Ether",
+                        decimals: 18,
+                        swapTokenAddress: "0x0000000000000000000000000000000000000000",
+                        swapFee: 0,
+                    },
+                },
+                key: "ethereum_l2_42161",
+            },
         },
         parachains: {
             polkadot_1000: {
@@ -905,7 +1062,7 @@ const registry = {
                     accountType: "AccountId32",
                     name: "Polkadot Asset Hub",
                     specName: "statemint",
-                    specVersion: 2000005,
+                    specVersion: 2000006,
                 },
                 assets: {
                     "0x9d39a5de30e57443bff2a8307a4256c8797a3497": {
@@ -1685,7 +1842,7 @@ const registry = {
                         isSufficient: false,
                     },
                 },
-                estimatedExecutionFeeDOT: 84118975n,
+                estimatedExecutionFeeDOT: 87105967n,
                 estimatedDeliveryFeeDOT: 307100000n,
             },
             polkadot_2034: {
@@ -1869,7 +2026,7 @@ const registry = {
                         isSufficient: true,
                     },
                 },
-                estimatedExecutionFeeDOT: 1565904n,
+                estimatedExecutionFeeDOT: 1668340n,
                 estimatedDeliveryFeeDOT: 307100000n,
             },
             polkadot_2043: {
@@ -1977,7 +2134,7 @@ const registry = {
                         accountType: "AccountId32",
                         name: "Kusama Asset Hub",
                         specName: "statemine",
-                        specVersion: 2000004,
+                        specVersion: 2000006,
                     },
                     assets: {
                         "0x9d39a5de30e57443bff2a8307a4256c8797a3497": {

@@ -62,6 +62,7 @@ export const fetchToPolkadotTransfers = async (graphqlApiUrl: string, graphqlQue
             fee
             sourceNetwork
             destinationNetwork
+            l2ChainId
             sourceParaId
             toBridgeHubInboundQueue {
                 id
@@ -140,6 +141,9 @@ export const fetchToEthereumTransfers = async (graphqlApiUrl: string, graphqlQue
             nonce
             senderAddress
             sourceParaId
+            sourceNetwork
+            destinationNetwork
+            l2ChainId
             timestamp
             tokenAddress
             txHash
@@ -168,6 +172,11 @@ export const fetchToEthereumTransfers = async (graphqlApiUrl: string, graphqlQue
                 messageId
                 nonce
                 channelId
+            }
+            toEthereumL2 {
+                blockNumber
+                depositId
+                txHash
             }
         }
     }`
@@ -221,6 +230,10 @@ export const fetchToPolkadotTransferById = async (graphqlApiUrl: string, id: str
             channelId
             destinationAddress
             destinationParaId
+            sourceNetwork
+            sourceParaId
+            destinationNetwork
+            l2ChainId
             messageId
             nonce
             senderAddress
@@ -307,6 +320,9 @@ export const fetchToEthereumTransferById = async (graphqlApiUrl: string, id: str
             nonce
             senderAddress
             sourceParaId
+            sourceNetwork
+            destinationNetwork
+            l2ChainId
             timestamp
             tokenAddress
             txHash
@@ -335,6 +351,11 @@ export const fetchToEthereumTransferById = async (graphqlApiUrl: string, id: str
                 messageId
                 nonce
                 channelId
+            }
+            toEthereumL2 {
+                blockNumber
+                depositId
+                txHash
             }
         }
     }`
@@ -408,6 +429,7 @@ export const fetchToPolkadotPendingTransfers = async (
             fee
             sourceNetwork
             destinationNetwork
+            l2ChainId
             sourceParaId
             toBridgeHubInboundQueue {
                 id
@@ -451,7 +473,13 @@ export const fetchToEthereumPendingTransfers = async (
             messageId
             nonce
             senderAddress
+            sourceNetwork
+            destinationNetwork
+            l2ChainId
             sourceParaId
+            sourceNetwork
+            destinationNetwork
+            l2ChainId
             timestamp
             tokenAddress
             txHash
@@ -480,6 +508,11 @@ export const fetchToEthereumPendingTransfers = async (
                 messageId
                 nonce
                 channelId
+            }
+            toEthereumL2 {
+                blockNumber
+                depositId
+                txHash
             }
         }
     }`
@@ -511,6 +544,7 @@ export const fetchToPolkadotTransfersBySenders = async (
             fee
             sourceNetwork
             destinationNetwork
+            l2ChainId
             sourceParaId
             toBridgeHubInboundQueue {
                 id
@@ -556,7 +590,13 @@ export const fetchToEthereumTransfersBySenders = async (
             messageId
             nonce
             senderAddress
+            sourceNetwork
+            destinationNetwork
+            l2ChainId
             sourceParaId
+            sourceNetwork
+            destinationNetwork
+            l2ChainId
             timestamp
             tokenAddress
             txHash
@@ -585,6 +625,11 @@ export const fetchToEthereumTransfersBySenders = async (
                 messageId
                 nonce
                 channelId
+            }
+            toEthereumL2 {
+                blockNumber
+                depositId
+                txHash
             }
         }
     }`

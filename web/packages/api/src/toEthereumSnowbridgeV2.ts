@@ -1101,7 +1101,7 @@ export async function buildL2Call(
         let calldata = l1Adapter.interface.encodeFunctionData("depositNativeEther", [
             {
                 inputToken: tokenAddress,
-                outputToken: l2TokenAddress,
+                outputToken: l2FeeTokenAddress,
                 inputAmount: tokenAmount,
                 outputAmount: tokenAmount - l2BridgeFeeInL1Token,
                 destinationChainId: l2ChainId,

@@ -93,6 +93,8 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
             "1": "https://ethereum-rpc.publicnode.com",
             "1284": "https://rpc.api.moonbeam.network",
             "8453": "https://base-rpc.publicnode.com",
+            "42161": "https://arbitrum-one-rpc.publicnode.com",
+            "10": "https://optimism-rpc.publicnode.com",
         },
         relaychainUrl: "https://polkadot-rpc.n.dwellir.com",
         parachains: {
@@ -134,14 +136,14 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
         },
         l2Bridge: {
             acrossAPIUrl: "https://app.across.to/api",
-            l1AdapterAddress: "0x313e8c9fb47613f2b1a436be978c2bb75727fcc5",
+            l1AdapterAddress: "0xd3b11c36404b092645522b682832fcdee07d2668",
             l1HandlerAddress: "0x924a9f036260ddd5808007e1aa95f08ed08aa569",
             l1FeeTokenAddress: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
             l1SwapQuoterAddress: "0x61ffe014ba17989e743c5f6cb21bf9697530b21e",
             l1SwapRouterAddress: "0xe592427a0aece92de3edee1f18e0157c05861564",
             l2Chains: {
                 "8453": {
-                    adapterAddress: "0xcd5d2c665e3ac84bf5c67fe7a0c48748da40db2f",
+                    adapterAddress: "0x07fe4E7340976FC873B74bAfe3C3e5b0e01f3665".toLowerCase(),
                     feeTokenAddress: "0x4200000000000000000000000000000000000006",
                     swapRoutes: [
                         // WETH
@@ -158,6 +160,42 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
                         },
                     ],
                 },
+                "42161": {
+                    adapterAddress: "0x836895Ad176235Dfe9C59b3df56C7579d90ea338".toLowerCase(),
+                    feeTokenAddress: "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1".toLowerCase(),
+                    swapRoutes: [
+                        // WETH
+                        {
+                            inputToken: "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1".toLowerCase(),
+                            outputToken: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                            swapFee: 0,
+                        },
+                        // USDC
+                        {
+                            inputToken: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831".toLowerCase(),
+                            outputToken: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                            swapFee: 500,
+                        },
+                    ],
+                },
+                "10": {
+                    adapterAddress: "0x836895Ad176235Dfe9C59b3df56C7579d90ea338".toLowerCase(),
+                    feeTokenAddress: "0x4200000000000000000000000000000000000006".toLowerCase(),
+                    swapRoutes: [
+                        // WETH
+                        {
+                            inputToken: "0x4200000000000000000000000000000000000006".toLowerCase(),
+                            outputToken: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                            swapFee: 0,
+                        },
+                        // USDC
+                        {
+                            inputToken: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85".toLowerCase(),
+                            outputToken: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                            swapFee: 500,
+                        },
+                    ],
+                },
             },
         },
     },
@@ -168,6 +206,7 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
         ethereumChains: {
             "11155111": "https://ethereum-sepolia-rpc.publicnode.com",
             "84532": "https://base-sepolia-rpc.publicnode.com",
+            "421614": "https://arbitrum-sepolia-rpc.publicnode.com",
         },
         relaychainUrl: "wss://westend-rpc.n.dwellir.com",
         parachains: {
@@ -183,7 +222,7 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
             "https://snowbridge.squids.live/snowbridge-subsquid-westend@v1/api/graphql",
         l2Bridge: {
             acrossAPIUrl: "https://testnet.across.to/api",
-            l1AdapterAddress: "0xa5b8589bd534701be49916c4d2e634ab1c765cbf",
+            l1AdapterAddress: "0xCDa9bFf39cdF39E95F4B699422E422195091126d".toLowerCase(),
             l1HandlerAddress: "0x924a9f036260ddd5808007e1aa95f08ed08aa569",
             l1FeeTokenAddress: "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
             l1SwapRouterAddress: "0x3bfa4769fb09eefc5a80d6e87c3b9c650f7ae48e",
@@ -203,6 +242,24 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
                         {
                             inputToken: "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
                             outputToken: "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
+                            swapFee: 500,
+                        },
+                    ],
+                },
+                "421614": {
+                    adapterAddress: "0xcB3d8043bDbfB0D9b30de279A09132073d1dE561".toLowerCase(),
+                    feeTokenAddress: "0x980B62Da83eFf3D4576C647993b0c1D7faf17c73".toLowerCase(),
+                    swapRoutes: [
+                        // WETH
+                        {
+                            inputToken: "0x980B62Da83eFf3D4576C647993b0c1D7faf17c73".toLowerCase(),
+                            outputToken: "0xfff9976782d46cc05630d1f6ebab18b2324d6b14".toLowerCase(),
+                            swapFee: 0,
+                        },
+                        // USDC
+                        {
+                            inputToken: "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d".toLowerCase(),
+                            outputToken: "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238".toLowerCase(),
                             swapFee: 500,
                         },
                     ],
@@ -426,8 +483,6 @@ function buildTransferLocations(
                 if (pathFilter(p1)) {
                     locations.push(p1)
                 }
-                // L2 does not natively support Ether, only WETH
-                if (asset === assetsV2.ETHER_TOKEN_ADDRESS) continue
                 const p2: Path = {
                     source: p1.destination, // L2 Chain
                     destination: p1.source, // Asset Hub
