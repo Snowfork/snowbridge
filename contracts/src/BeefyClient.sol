@@ -187,7 +187,7 @@ contract BeefyClient {
     /**
      * @dev Fiat-Shamir domain separator ID
      */
-    bytes public constant FIAT_SHAMIR_DOMAIN_ID = bytes("SNOWBRIDGE-FIAT-SHAMIR-v1");
+    bytes public constant FIAT_SHAMIR_DOMAIN_ID = bytes("SNOWBRIDGE-FIAT-SHAMIR-V1");
 
     /**
      * @dev Beefy payload id for MMR Root payload items:
