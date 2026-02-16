@@ -78,7 +78,7 @@ export const transferToPolkadot = async (destParaId: number, symbol: string, amo
             registry,
             destParaId,
             ETHEREUM_ACCOUNT_PUBLIC,
-            "0x460411e07f93dc4bc2b3a6cb67dad89ca26e8a54054d13916f74c982595c2e0e",
+            POLKADOT_ACCOUNT_PUBLIC,
             TOKEN_CONTRACT,
             amount,
             fee,
