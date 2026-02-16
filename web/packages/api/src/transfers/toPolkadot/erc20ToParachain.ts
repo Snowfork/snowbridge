@@ -144,11 +144,6 @@ export class ERC20ToParachain implements TransferInterface {
             destinationParaId,
             destinationXcm,
         )
-        // Destination execution fee
-        let destinationExecutionFeeDOT = await destinationImpl.calculateXcmFee(
-            destinationXcm,
-            DOT_LOCATION,
-        )
 
         // Swap to ether
         const destinationDeliveryFeeEther = await assetHubImpl.swapAsset1ForAsset2(
@@ -158,18 +153,28 @@ export class ERC20ToParachain implements TransferInterface {
         )
 
         let destinationExecutionFeeEther
+        let destinationExecutionFeeDOT
         if (isDOT(feeAsset)) {
             // Calculate ether fee on AssetHub, because that is where Ether will be swapped for DOT.
+            // Destination execution fee
+            destinationExecutionFeeDOT = await destinationImpl.calculateXcmFee(
+                destinationXcm,
+                DOT_LOCATION,
+            )
             destinationExecutionFeeEther = padFeeByPercentage(
                 await assetHubImpl.swapAsset1ForAsset2(DOT_LOCATION, ether, destinationExecutionFeeDOT),
                 paddFeeByPercentage ?? 33n,
             )
-        } else {
-            // Calculate ether fee on dest parachain, because that is where Ether will be swapped for DOT.
+        } else if (feeAsset == ether) {
             destinationExecutionFeeEther = padFeeByPercentage(
-                await destinationImpl.swapAsset1ForAsset2(DOT_LOCATION, ether, destinationExecutionFeeDOT),
+                await destinationImpl.calculateXcmFee(
+                    destinationXcm,
+                    ether,
+                ),
                 paddFeeByPercentage ?? 33n,
             )
+        } else {
+            throw Error(`Unsupported fee asset`)
         }
 
         const { relayerFee, extrinsicFeeDot, extrinsicFeeEther } = await calculateRelayerFee(
