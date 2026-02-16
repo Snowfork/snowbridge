@@ -506,7 +506,7 @@ export function buildParachainERC20ReceivedXcmOnDestWithDOTFee(
                             {
                                 id: ether,
                                 fun: {
-                                    Fungible: remoteDotFeeAmount,
+                                    Fungible: remoteEtherFeeAmount,
                                 },
                             },
                         ],
