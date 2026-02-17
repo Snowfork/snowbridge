@@ -183,12 +183,10 @@ export class PNAToParachain implements TransferInterface {
             deliveryFeeInEther,
         )
 
-        // PayFees on AssetHub covers: execution + delivery to destination
-        const assetHubPayFeeEther = assetHubExecutionFeeEther + destinationDeliveryFeeEther
-        const totalFeeInWei = assetHubPayFeeEther + destinationExecutionFeeEther + relayerFee
+        const totalFeeInWei = assetHubExecutionFeeEther + destinationDeliveryFeeEther + destinationExecutionFeeEther + relayerFee
         return {
             assetHubDeliveryFeeEther: deliveryFeeInEther,
-            assetHubExecutionFeeEther: assetHubPayFeeEther,
+            assetHubExecutionFeeEther: assetHubExecutionFeeEther,
             destinationDeliveryFeeEther: destinationDeliveryFeeEther,
             destinationExecutionFeeEther: destinationExecutionFeeEther,
             destinationExecutionFeeDOT: destinationExecutionFeeDOT,
@@ -296,7 +294,7 @@ export class PNAToParachain implements TransferInterface {
                 xcm,
                 assets,
                 claimerLocationToBytes(claimer),
-                fee.assetHubExecutionFeeEther,
+                fee.assetHubExecutionFeeEther + fee.destinationDeliveryFeeEther,
                 fee.relayerFee,
                 {
                     value,
@@ -458,7 +456,7 @@ export class PNAToParachain implements TransferInterface {
                     "Asset Hub does not support dry running of XCM. Transaction success cannot be confirmed.",
             })
         } else {
-            const assetHubFee = transfer.input.fee.assetHubExecutionFeeEther
+            const assetHubFee = transfer.input.fee.assetHubExecutionFeeEther + transfer.input.fee.destinationDeliveryFeeEther
 
             let xcm
             if (isDOT(transfer.input.fee.feeAsset)) {
