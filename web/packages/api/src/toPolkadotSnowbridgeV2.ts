@@ -29,7 +29,8 @@ export type DeliveryFee = {
     assetHubDeliveryFeeEther: bigint
     assetHubExecutionFeeEther: bigint
     destinationDeliveryFeeEther: bigint
-    destinationExecutionFeeEther: bigint
+    destinationExecutionFeeEther?: bigint
+    destinationExecutionFeeDOT?: bigint
     relayerFee: bigint
     extrinsicFeeDot: bigint // Fee for submitting to BridgeHub in DOT (part of relayerFee)
     extrinsicFeeEther: bigint // Fee for submitting to BridgeHub in Ether (part of relayerFee)

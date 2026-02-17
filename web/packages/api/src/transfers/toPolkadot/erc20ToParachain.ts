@@ -144,11 +144,6 @@ export class ERC20ToParachain implements TransferInterface {
             destinationParaId,
             destinationXcm,
         )
-        // Destination execution fee
-        let destinationExecutionFeeDOT = await destinationImpl.calculateXcmFee(
-            destinationXcm,
-            DOT_LOCATION,
-        )
 
         // Swap to ether
         const destinationDeliveryFeeEther = await assetHubImpl.swapAsset1ForAsset2(
@@ -156,10 +151,32 @@ export class ERC20ToParachain implements TransferInterface {
             ether,
             destinationDeliveryFeeDOT,
         )
-        let destinationExecutionFeeEther = padFeeByPercentage(
-            await assetHubImpl.swapAsset1ForAsset2(DOT_LOCATION, ether, destinationExecutionFeeDOT),
-            paddFeeByPercentage ?? 33n,
-        )
+
+        let destinationExecutionFeeEther
+        let destinationExecutionFeeDOT
+        if (isDOT(feeAsset)) {
+            // Calculate ether fee on AssetHub, because that is where Ether will be swapped for DOT.
+            // Destination execution fee
+            destinationExecutionFeeDOT = await destinationImpl.calculateXcmFee(
+                destinationXcm,
+                DOT_LOCATION,
+            )
+            destinationExecutionFeeEther = padFeeByPercentage(
+                await assetHubImpl.swapAsset1ForAsset2(
+                    DOT_LOCATION,
+                    ether,
+                    destinationExecutionFeeDOT,
+                ),
+                paddFeeByPercentage ?? 33n,
+            )
+        } else if (feeAsset == ether) {
+            destinationExecutionFeeEther = padFeeByPercentage(
+                await destinationImpl.calculateXcmFee(destinationXcm, ether),
+                paddFeeByPercentage ?? 33n,
+            )
+        } else {
+            throw Error(`Unsupported fee asset`)
+        }
 
         const { relayerFee, extrinsicFeeDot, extrinsicFeeEther } = await calculateRelayerFee(
             assetHubImpl,
@@ -168,12 +185,17 @@ export class ERC20ToParachain implements TransferInterface {
             deliveryFeeInEther,
         )
 
-        const totalFeeInWei = assetHubExecutionFeeEther + relayerFee
+        const totalFeeInWei =
+            assetHubExecutionFeeEther +
+            destinationDeliveryFeeEther +
+            destinationExecutionFeeEther +
+            relayerFee
         return {
             assetHubDeliveryFeeEther: deliveryFeeInEther,
             assetHubExecutionFeeEther: assetHubExecutionFeeEther,
             destinationDeliveryFeeEther: destinationDeliveryFeeEther,
             destinationExecutionFeeEther: destinationExecutionFeeEther,
+            destinationExecutionFeeDOT: destinationExecutionFeeDOT,
             relayerFee: relayerFee,
             extrinsicFeeDot: extrinsicFeeDot,
             extrinsicFeeEther: extrinsicFeeEther,
@@ -242,15 +264,8 @@ export class ERC20ToParachain implements TransferInterface {
             accountNonce,
         )
 
-        const assetHubImpl = await paraImplementation(assetHub)
-
         let xcm
         if (isDOT(fee.feeAsset)) {
-            const dotFeeAmount = await assetHubImpl.swapAsset1ForAsset2(
-                erc20Location(registry.ethChainId, ETHER_TOKEN_ADDRESS),
-                DOT_LOCATION,
-                fee.destinationExecutionFeeEther,
-            )
             xcm = hexToU8a(
                 sendMessageXCMWithDOTDestFee(
                     destination.registry,
@@ -259,8 +274,8 @@ export class ERC20ToParachain implements TransferInterface {
                     tokenAddress,
                     beneficiaryAddressHex,
                     amount,
-                    fee.destinationExecutionFeeEther,
-                    dotFeeAmount,
+                    fee.destinationExecutionFeeEther ?? 0n,
+                    fee.destinationExecutionFeeDOT ?? 0n,
                     topic,
                 ).toHex(),
             )
@@ -273,7 +288,7 @@ export class ERC20ToParachain implements TransferInterface {
                     tokenAddress,
                     beneficiaryAddressHex,
                     amount,
-                    fee.destinationExecutionFeeEther,
+                    fee.destinationExecutionFeeEther ?? 0n,
                     topic,
                     customXcm,
                 ).toHex(),
@@ -287,7 +302,7 @@ export class ERC20ToParachain implements TransferInterface {
                 xcm,
                 assets,
                 claimerLocationToBytes(claimer),
-                fee.assetHubExecutionFeeEther,
+                fee.assetHubExecutionFeeEther + fee.destinationDeliveryFeeEther,
                 fee.relayerFee,
                 {
                     value,
@@ -451,16 +466,11 @@ export class ERC20ToParachain implements TransferInterface {
         } else {
             // build asset hub packet and dryRun
             const assetHubFee =
-                transfer.input.fee.assetHubDeliveryFeeEther +
-                transfer.input.fee.assetHubExecutionFeeEther
+                transfer.input.fee.assetHubExecutionFeeEther +
+                transfer.input.fee.destinationDeliveryFeeEther
 
             let xcm
             if (isDOT(transfer.input.fee.feeAsset)) {
-                const dotFeeAmount = await assetHubImpl.swapAsset1ForAsset2(
-                    erc20Location(registry.ethChainId, ETHER_TOKEN_ADDRESS),
-                    DOT_LOCATION,
-                    transfer.input.fee.destinationExecutionFeeEther,
-                )
                 xcm = buildParachainERC20ReceivedXcmOnDestWithDOTFee(
                     assetHub.registry,
                     registry.ethChainId,
@@ -472,8 +482,8 @@ export class ERC20ToParachain implements TransferInterface {
                     transfer.input.sourceAccount,
                     transfer.computed.beneficiaryAddressHex,
                     destinationParaId,
-                    transfer.input.fee.destinationExecutionFeeEther,
-                    dotFeeAmount,
+                    transfer.input.fee.destinationExecutionFeeEther ?? 0n,
+                    transfer.input.fee.destinationExecutionFeeDOT ?? 0n,
                     "0x0000000000000000000000000000000000000000000000000000000000000000",
                     transfer.input.customXcm,
                 )
@@ -489,7 +499,7 @@ export class ERC20ToParachain implements TransferInterface {
                     transfer.input.sourceAccount,
                     transfer.computed.beneficiaryAddressHex,
                     destinationParaId,
-                    transfer.input.fee.destinationExecutionFeeEther,
+                    transfer.input.fee.destinationExecutionFeeEther ?? 0n,
                     "0x0000000000000000000000000000000000000000000000000000000000000000",
                     transfer.input.customXcm,
                 )
