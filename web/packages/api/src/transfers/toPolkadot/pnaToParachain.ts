@@ -161,15 +161,16 @@ export class PNAToParachain implements TransferInterface {
                 DOT_LOCATION,
             )
             destinationExecutionFeeEther = padFeeByPercentage(
-                await assetHubImpl.swapAsset1ForAsset2(DOT_LOCATION, ether, destinationExecutionFeeDOT),
+                await assetHubImpl.swapAsset1ForAsset2(
+                    DOT_LOCATION,
+                    ether,
+                    destinationExecutionFeeDOT,
+                ),
                 paddFeeByPercentage ?? 33n,
             )
         } else if (feeAsset == ether) {
             destinationExecutionFeeEther = padFeeByPercentage(
-                await destinationImpl.calculateXcmFee(
-                    destinationXcm,
-                    ether,
-                ),
+                await destinationImpl.calculateXcmFee(destinationXcm, ether),
                 paddFeeByPercentage ?? 33n,
             )
         } else {
@@ -183,7 +184,11 @@ export class PNAToParachain implements TransferInterface {
             deliveryFeeInEther,
         )
 
-        const totalFeeInWei = assetHubExecutionFeeEther + destinationDeliveryFeeEther + destinationExecutionFeeEther + relayerFee
+        const totalFeeInWei =
+            assetHubExecutionFeeEther +
+            destinationDeliveryFeeEther +
+            destinationExecutionFeeEther +
+            relayerFee
         return {
             assetHubDeliveryFeeEther: deliveryFeeInEther,
             assetHubExecutionFeeEther: assetHubExecutionFeeEther,
@@ -456,7 +461,9 @@ export class PNAToParachain implements TransferInterface {
                     "Asset Hub does not support dry running of XCM. Transaction success cannot be confirmed.",
             })
         } else {
-            const assetHubFee = transfer.input.fee.assetHubExecutionFeeEther + transfer.input.fee.destinationDeliveryFeeEther
+            const assetHubFee =
+                transfer.input.fee.assetHubExecutionFeeEther +
+                transfer.input.fee.destinationDeliveryFeeEther
 
             let xcm
             if (isDOT(transfer.input.fee.feeAsset)) {
