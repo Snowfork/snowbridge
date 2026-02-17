@@ -223,6 +223,7 @@ export class PNAToAH implements TransferInterface {
                 destParachain,
                 claimer,
                 topic,
+                totalInputAmount: amount,
             },
             tx,
         }

@@ -276,6 +276,7 @@ export class PNAToParachain implements TransferInterface {
                 destParachain,
                 claimer,
                 topic,
+                totalInputAmount: amount,
             },
             tx,
         }

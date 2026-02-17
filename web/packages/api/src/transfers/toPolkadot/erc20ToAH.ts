@@ -155,9 +155,11 @@ export class ERC20ToAH implements TransferInterface {
         let { address: beneficiary, hexAddress: beneficiaryAddressHex } =
             beneficiaryMultiAddress(beneficiaryAccount)
         let value = fee.totalFeeInWei
+        let inputAmount = amount
         let assets: any = []
         if (tokenAddress === ETHER_TOKEN_ADDRESS) {
             value += amount
+            inputAmount += fee.totalFeeInWei
         } else {
             assets = [encodeNativeAsset(tokenAddress, amount)]
         }
@@ -216,6 +218,7 @@ export class ERC20ToAH implements TransferInterface {
                 destParachain,
                 claimer,
                 topic,
+                totalInputAmount: inputAmount,
             },
             tx,
         }

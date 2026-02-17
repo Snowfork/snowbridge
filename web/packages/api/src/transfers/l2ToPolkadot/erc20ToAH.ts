@@ -227,7 +227,8 @@ export class ERC20ToAH implements TransferInterface {
             beneficiaryMultiAddress(beneficiaryAccount)
 
         let assets: any = []
-        let value: bigint, inputAmount: bigint
+        let value: bigint
+        let inputAmount: bigint = amount
 
         const l2Adapter = context.l2Adapter(l2ChainId)
         const accountNonce = await l2Chain.getTransactionCount(sourceAccount, "pending")
@@ -337,6 +338,7 @@ export class ERC20ToAH implements TransferInterface {
                 claimer,
                 topic,
                 l2AdapterAddress: l2Adapter.target.toString(),
+                totalInputAmount: inputAmount,
             },
             tx,
         }
@@ -346,6 +348,7 @@ export class ERC20ToAH implements TransferInterface {
         const { tx } = transfer
         const { amount, sourceAccount, tokenAddress, registry, l2TokenAddress, sourceChainId } =
             transfer.input
+        const { totalInputAmount } = transfer.computed
         const { gateway, bridgeHub, assetHub, l2Chain } = {
             gateway: context.gateway(),
             bridgeHub: await context.bridgeHub(),
@@ -387,7 +390,7 @@ export class ERC20ToAH implements TransferInterface {
                 gatewayAllowance: 340282366920938463463374607431768211455n,
             }
         }
-        if (tokenBalance.gatewayAllowance < amount) {
+        if (tokenBalance.gatewayAllowance < totalInputAmount) {
             logs.push({
                 kind: ValidationKind.Error,
                 reason: ValidationReason.GatewaySpenderLimitReached,
@@ -396,7 +399,7 @@ export class ERC20ToAH implements TransferInterface {
             })
         }
 
-        if (tokenBalance.balance < amount) {
+        if (tokenBalance.balance < totalInputAmount) {
             logs.push({
                 kind: ValidationKind.Error,
                 reason: ValidationReason.InsufficientTokenBalance,
@@ -528,6 +531,7 @@ export class ERC20ToAH implements TransferInterface {
             logs,
             success,
             data: {
+                totalInputAmount,
                 etherBalance,
                 tokenBalance,
                 feeInfo,
