@@ -108,7 +108,7 @@ const registry = {
         },
     ],
     registry: {
-        timestamp: "2026-02-11T12:58:48.602Z",
+        timestamp: "2026-02-16T10:23:33.158Z",
         environment: "paseo_sepolia",
         ethChainId: 11155111,
         gatewayAddress: "0x1607c1368bc943130258318c91bbd8cff3d063e6",
@@ -288,7 +288,7 @@ const registry = {
                     ss58Format: 101,
                     isEthereum: false,
                     accountType: "AccountId32",
-                    name: "NeuroWeb Testnet",
+                    name: "Neuro Testnet",
                     specName: "origintrail-parachain",
                     specVersion: 151,
                 },

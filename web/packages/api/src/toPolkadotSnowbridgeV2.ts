@@ -64,6 +64,7 @@ export type Transfer = {
         claimer: any
         topic: string
         l2AdapterAddress?: string
+        totalInputAmount: bigint
     }
     tx: ContractTransaction
 }
@@ -73,6 +74,7 @@ export type ValidationResult = {
     success: boolean
     data: {
         etherBalance: bigint
+        totalInputAmount?: bigint
         tokenBalance: {
             balance: bigint
             gatewayAllowance: bigint

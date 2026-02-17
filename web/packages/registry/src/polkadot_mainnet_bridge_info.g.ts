@@ -69,7 +69,7 @@ const registry = {
                     ],
                 },
                 "8453": {
-                    adapterAddress: "0x07fe4E7340976FC873B74bAfe3C3e5b0e01f3665".toLowerCase(),
+                    adapterAddress: "0x07fe4e7340976fc873b74bafe3c3e5b0e01f3665",
                     feeTokenAddress: "0x4200000000000000000000000000000000000006",
                     swapRoutes: [
                         {
@@ -495,6 +495,7 @@ const registry = {
             assets: [
                 "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
                 "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                "0x0000000000000000000000000000000000000000",
             ],
         },
         {
@@ -554,11 +555,12 @@ const registry = {
             assets: [
                 "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
                 "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                "0x0000000000000000000000000000000000000000",
             ],
         },
     ],
     registry: {
-        timestamp: "2026-02-13T02:45:52.753Z",
+        timestamp: "2026-02-16T10:21:57.286Z",
         environment: "polkadot_mainnet",
         ethChainId: 1,
         gatewayAddress: "0x27ca963c279c93801941e1eb8799c23f407d68e7",
@@ -1842,7 +1844,7 @@ const registry = {
                         isSufficient: false,
                     },
                 },
-                estimatedExecutionFeeDOT: 87105967n,
+                estimatedExecutionFeeDOT: 85078513n,
                 estimatedDeliveryFeeDOT: 307100000n,
             },
             polkadot_2034: {
@@ -2026,7 +2028,7 @@ const registry = {
                         isSufficient: true,
                     },
                 },
-                estimatedExecutionFeeDOT: 1668340n,
+                estimatedExecutionFeeDOT: 1616331n,
                 estimatedDeliveryFeeDOT: 307100000n,
             },
             polkadot_2043: {

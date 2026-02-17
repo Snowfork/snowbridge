@@ -473,9 +473,6 @@ export const fetchToEthereumPendingTransfers = async (
             messageId
             nonce
             senderAddress
-            sourceNetwork
-            destinationNetwork
-            l2ChainId
             sourceParaId
             sourceNetwork
             destinationNetwork
@@ -590,9 +587,6 @@ export const fetchToEthereumTransfersBySenders = async (
             messageId
             nonce
             senderAddress
-            sourceNetwork
-            destinationNetwork
-            l2ChainId
             sourceParaId
             sourceNetwork
             destinationNetwork

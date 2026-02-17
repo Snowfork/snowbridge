@@ -155,13 +155,14 @@ const registry = {
                 id: 1000,
             },
             assets: [
+                "0x0000000000000000000000000000000000000000",
                 "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
                 "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
             ],
         },
     ],
     registry: {
-        timestamp: "2026-02-12T08:34:32.096Z",
+        timestamp: "2026-02-16T10:24:33.190Z",
         environment: "westend_sepolia",
         ethChainId: 11155111,
         gatewayAddress: "0x9ed8b47bc3417e3bd0507adc06e56e2fa360a4e9",
