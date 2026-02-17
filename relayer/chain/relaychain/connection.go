@@ -335,7 +335,8 @@ func (co *Connection) FetchParasHeads(blockHash types.Hash) ([]ParaHead, error) 
 	return heads, nil
 }
 
-var BEEFY_WHITELISTED_PARATHREADS = []uint32{3367}
+// BeefyWhitelistedParathreads are parathreads that are not parachains but are whitelisted by BEEFY to be included in the MMR.
+var BeefyWhitelistedParathreads = []uint32{3367}
 
 // Filters para heads to parachains only.
 func (conn *Connection) FilterParachainHeads(paraHeads []ParaHead, relayChainBlockHash types.Hash) ([]ParaHead, error) {
@@ -359,11 +360,14 @@ func (conn *Connection) FilterParachainHeads(paraHeads []ParaHead, relayChainBlo
 	}
 
 	// add whitelisted parathreads (deduplicating automatically via map)
-	for _, whitelistedID := range BEEFY_WHITELISTED_PARATHREADS {
+	for _, whitelistedID := range BeefyWhitelistedParathreads {
 		parachains[whitelistedID] = struct{}{}
 	}
 
-	// filter to return parachains
+	// paraHeads is a superset that includes both parachains and parathreads. Filtering paraHeads will
+	// include only parachains and the whitelisted parathreads. This is necessary to mirror the logic in https://github.com/polkadot-fellows/runtimes/pull/1073
+	// Meanwhile, whitelisted parathreads that are not present in Paras.Heads will be filtered out.
+	// As a result, the hard-coded whitelisted parathreads intended for mainnet will be effectively filtered out on testnet.
 	heads := make([]ParaHead, 0, len(paraHeads))
 	for _, head := range paraHeads {
 		if _, ok := parachains[head.ParaID]; ok {
