@@ -23,7 +23,7 @@ const registry = {
         beefyContract: "0x1817874feAb3ce053d0F40AbC23870DB35C2AFfc",
         assetHubParaId: 1000,
         bridgeHubParaId: 1002,
-        v2_parachains: [1000, 2030, 2034],
+        v2_parachains: [1000],
         indexerGraphQlUrl:
             "https://snowbridge.squids.live/snowbridge-subsquid-polkadot@v2/api/graphql",
         kusama: {
