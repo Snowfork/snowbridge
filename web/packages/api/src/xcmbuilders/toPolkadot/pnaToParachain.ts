@@ -105,7 +105,7 @@ export function buildAssetHubPNAReceivedXcm(
                             ],
                         },
                     },
-                    preserveOrigin: true,
+                    preserveOrigin: false,
                     assets: [
                         {
                             reserveDeposit: {
@@ -262,7 +262,7 @@ export function sendMessageXCM(
                             ],
                         },
                     },
-                    preserveOrigin: true,
+                    preserveOrigin: false,
                     assets: [
                         {
                             reserveDeposit: {
@@ -509,7 +509,7 @@ export function buildAssetHubPNAReceivedXcmWithDOTFee(
                             ],
                         },
                     },
-                    preserveOrigin: true,
+                    preserveOrigin: false,
                     assets: [
                         {
                             reserveDeposit: {
@@ -622,7 +622,7 @@ export function sendMessageXCMWithDOTDestFee(
                             ],
                         },
                     },
-                    preserveOrigin: true,
+                    preserveOrigin: false,
                     assets: [
                         {
                             reserveDeposit: {
