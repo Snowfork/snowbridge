@@ -1006,14 +1006,12 @@ pub fn mint_feb_2026_xcm() -> BridgeHubRuntimeCall {
 
     // USDT (Tether) ERC20 on Ethereum Mainnet
     let usdt_address: [u8; 20] = hex!("dac17f958d2ee523a2206206994597c13d831ec7");
-    // 499.74 USDT (6 decimals)
-    // TODO: Verify exact on-chain amount from block 12115680
-    let usdt_amount: u128 = 499_740_000;
+    // 499.739459 USDT (6 decimals) - exact on-chain amount from extrinsic 11369277-3
+    let usdt_amount: u128 = 499_739_459;
 
-    // Beneficiary on AssetHub - the account to receive the refunded USDT
-    // TODO: Replace with the actual user's AccountId32
+    // Beneficiary: 16AQJHpSRMh5X1mULm4dCgYxrQLsrnK3uwCQ436iitYk1ru7 (Hydration sender)
     let beneficiary: [u8; 32] =
-        hex!("0000000000000000000000000000000000000000000000000000000000000000");
+        hex!("e458cde73940bd29d637face28de378dfb933f21734cfb1d24a0edfb4b81f31c");
 
     // USDT location: Ethereum ERC20 foreign asset
     let usdt_location = Location {
