@@ -8,14 +8,14 @@ This guide is for parachain teams (e.g. Hydration) migrating their Snowbridge in
 
 Your parachain must support:
 
-* **XCM v5** (locations use array format: `x1: [junction]`)
+* **XCM v5**
 * **XcmPaymentApi** runtime API (for fee estimation)
-* **supportsV2** flag in the Snowbridge asset registry
+* **supportsV2** flag in the Snowbridge asset registry (Snowbridge team will add this)
 
 For Polkadot-to-Ethereum V2 transfers, additionally:
 
-* **Ether balance support** (`hasEthBalance`)
-* **AliasOrigin support** (`supportsAliasOrigin`)
+* **Ether balance support**
+* **AliasOrigin support**
 
 ***
 
