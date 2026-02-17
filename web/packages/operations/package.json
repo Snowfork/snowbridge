@@ -47,6 +47,7 @@
     "transferEthToAcalaV1": "npx ts-node src/transfer_from_e2p.ts 2000 ETH 150000000000000",
     "transferEthToAcalaV2": "npx ts-node src/transfer_from_e2p_v2.ts 2000 ETH 150000000000000",
     "transferEthToBifrostV2": "npx ts-node src/transfer_from_e2p_v2.ts 2030 ETH 150000000000000",
+    "transferEthFromBifrostV2": "npx ts-node src/transfer_from_e2p_v2.ts 2030 ETH 150000000000000",
     "transferEthToHydrationV2": "npx ts-node src/transfer_from_e2p_v2.ts 2034 ETH 150000000000000",
     "transferEthFromHydrationV2": "npx ts-node src/transfer_from_p2e_v2.ts 2034 ETH 150000000000000",
     "transferEthFromAcalaV2": "npx ts-node src/transfer_from_p2e_v2.ts 2000 ETH 150000000000000",
