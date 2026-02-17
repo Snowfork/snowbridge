@@ -983,6 +983,95 @@ pub fn replay_sep_2025_xcm() -> crate::asset_hub_runtime::RuntimeCall {
     asset_hub_xcm
 }
 
+/// Mint refund for a failed Hydration→Ethereum USDT transfer (Feb 2026).
+///
+/// Transaction: 0xcce3ccdd216ad59c2c602987fe7e8e77ab68dbe83a4555dff630ea346a512c2a
+/// The transfer failed on BridgeHub and the user's USDT was burnt on AssetHub.
+/// This sends XCM from BridgeHub→AssetHub with ReserveAssetDeposited to mint
+/// the USDT back to the beneficiary.
+pub fn mint_feb_2026_xcm() -> BridgeHubRuntimeCall {
+    use crate::bridge_hub_runtime::runtime_types::{
+        pallet_xcm,
+        staging_xcm::v5::{
+            asset::{Asset, AssetFilter, AssetId, Assets, Fungibility, WildAsset},
+            junction::Junction,
+            junctions::Junctions,
+            location::Location,
+            Instruction::*,
+            Xcm,
+        },
+        xcm::{v3::WeightLimit, VersionedLocation, VersionedXcm},
+    };
+    use hex_literal::hex;
+
+    // USDT (Tether) ERC20 on Ethereum Mainnet
+    let usdt_address: [u8; 20] = hex!("dac17f958d2ee523a2206206994597c13d831ec7");
+    // 499.74 USDT (6 decimals)
+    // TODO: Verify exact on-chain amount from block 12115680
+    let usdt_amount: u128 = 499_740_000;
+
+    // Beneficiary on AssetHub - the account to receive the refunded USDT
+    // TODO: Replace with the actual user's AccountId32
+    let beneficiary: [u8; 32] =
+        hex!("0000000000000000000000000000000000000000000000000000000000000000");
+
+    // USDT location: Ethereum ERC20 foreign asset
+    let usdt_location = Location {
+        parents: 2,
+        interior: Junctions::X2([
+            Junction::GlobalConsensus(
+                crate::bridge_hub_runtime::runtime_types::staging_xcm::v5::junction::NetworkId::Ethereum {
+                    chain_id: crate::bridge_hub_runtime::CHAIN_ID,
+                },
+            ),
+            Junction::AccountKey20 {
+                network: None,
+                key: usdt_address,
+            },
+        ]),
+    };
+
+    // XCM message from BridgeHub to AssetHub:
+    // BridgeHub is the reserve for Ethereum-bridged assets, so ReserveAssetDeposited
+    // will mint the USDT on AssetHub.
+    let instructions = vec![
+        ReserveAssetDeposited(Assets(vec![Asset {
+            id: AssetId(usdt_location.clone()),
+            fun: Fungibility::Fungible(usdt_amount),
+        }])),
+        ClearOrigin,
+        BuyExecution {
+            fees: Asset {
+                id: AssetId(usdt_location),
+                fun: Fungibility::Fungible(usdt_amount),
+            },
+            weight_limit: WeightLimit::Unlimited,
+        },
+        DepositAsset {
+            assets: AssetFilter::Wild(WildAsset::AllCounted(1)),
+            beneficiary: Location {
+                parents: 0,
+                interior: Junctions::X1([Junction::AccountId32 {
+                    network: None,
+                    id: beneficiary,
+                }]),
+            },
+        },
+        SetTopic(hex!(
+            "cce3ccdd216ad59c2c602987fe7e8e77ab68dbe83a4555dff630ea346a512c2a"
+        )),
+    ];
+
+    // BridgeHub sends XCM to AssetHub via pallet_xcm::send
+    BridgeHubRuntimeCall::PolkadotXcm(pallet_xcm::pallet::Call::send {
+        dest: Box::new(VersionedLocation::V5(Location {
+            parents: 1,
+            interior: Junctions::X1([Junction::Parachain(crate::constants::ASSET_HUB_ID)]),
+        })),
+        message: Box::new(VersionedXcm::V5(Xcm(instructions))),
+    })
+}
+
 #[cfg(feature = "polkadot")]
 pub fn frequency_token_registrations() -> Vec<BridgeHubRuntimeCall> {
     use crate::bridge_hub_runtime::runtime_types::{

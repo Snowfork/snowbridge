@@ -68,6 +68,8 @@ pub enum Command {
     UpgradeV2,
     /// Replay failed XCM messages from September 2025
     ReplaySep2025,
+    /// Mint refund for failed Hydration→Ethereum transfer (Feb 2026)
+    MintFeb2026,
     /// Set BridgeHubEthereumBaseFeeV2 on Paseo
     SetPaseoFeeV2,
 }
@@ -533,6 +535,10 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
         Command::ReplaySep2025 => {
             let asset_hub_call = commands::replay_sep_2025_xcm();
             send_xcm_asset_hub(&context, vec![asset_hub_call]).await?
+        }
+        Command::MintFeb2026 => {
+            let bridge_hub_call = commands::mint_feb_2026_xcm();
+            send_xcm_bridge_hub(&context, vec![bridge_hub_call]).await?
         }
         Command::SetPaseoFeeV2 => {
             #[cfg(not(feature = "paseo"))]
