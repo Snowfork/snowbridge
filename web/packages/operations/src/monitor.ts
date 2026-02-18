@@ -15,7 +15,7 @@ export const monitorParams: {
             type: "substrate" | "ethereum"
             balance?: bigint
         }[]
-        TO_MONITOR_CHAINS?: { id: number; name?: string; type: "substrate" | "ethereum" }[]
+        TO_MONITOR_CHAINS?: { id: string; name?: string; type: "substrate" | "ethereum" }[]
     }
 } = {
     local_e2e: {
@@ -147,17 +147,18 @@ export const monitorParams: {
             },
         ],
         TO_MONITOR_CHAINS: [
-            { id: 1000, name: "AssetHub", type: "substrate" },
-            { id: 1002, name: "BridgeHub", type: "substrate" },
-            { id: 2034, name: "Hydration", type: "substrate" },
-            { id: 2043, name: "Neuroweb", type: "substrate" },
-            { id: 3369, name: "Mythos", type: "substrate" },
-            { id: 2030, name: "Bifrost", type: "substrate" },
-            { id: 2000, name: "Acala", type: "substrate" },
-            { id: 1, name: "Ethereum Mainnet", type: "ethereum" },
-            { id: 10, name: "Optimism", type: "ethereum" },
-            { id: 8453, name: "Base", type: "ethereum" },
-            { id: 42161, name: "Arbitrum", type: "ethereum" },
+            { id: "1000", name: "AssetHub", type: "substrate" },
+            { id: "kusama_1000", name: "AssetHub on Westend", type: "substrate" },
+            { id: "1002", name: "BridgeHub", type: "substrate" },
+            { id: "2034", name: "Hydration", type: "substrate" },
+            { id: "2043", name: "Neuroweb", type: "substrate" },
+            { id: "3369", name: "Mythos", type: "substrate" },
+            { id: "2030", name: "Bifrost", type: "substrate" },
+            { id: "2000", name: "Acala", type: "substrate" },
+            { id: "1", name: "Ethereum Mainnet", type: "ethereum" },
+            { id: "10", name: "Optimism", type: "ethereum" },
+            { id: "8453", name: "Base", type: "ethereum" },
+            { id: "42161", name: "Arbitrum", type: "ethereum" },
         ],
     },
     westend_sepolia: {
@@ -394,11 +395,19 @@ export const fetchIndexerStatus = async (context: Context, env: Environment) => 
             try {
                 let latestBlock = 0
                 if (chain.type === "substrate") {
-                    latestBlock = (
-                        await (await context.parachain(chain.id)).query.system.number()
-                    ).toPrimitive() as number
+                    if (chain.id.toString().startsWith("kusama")) {
+                        latestBlock = (
+                            await (
+                                await context.kusamaParachain(Number(chain.id.split("_")[1]))
+                            ).query.system.number()
+                        ).toPrimitive() as number
+                    } else {
+                        latestBlock = (
+                            await (await context.parachain(Number(chain.id))).query.system.number()
+                        ).toPrimitive() as number
+                    }
                 } else if (chain.type === "ethereum") {
-                    latestBlock = await context.ethChain(chain.id).getBlockNumber()
+                    latestBlock = await context.ethChain(Number(chain.id)).getBlockNumber()
                 }
                 const status = await subsquidV2.fetchLatestBlockFromIndexer(
                     context.graphqlApiUrl(),
