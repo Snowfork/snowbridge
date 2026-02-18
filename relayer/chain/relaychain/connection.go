@@ -367,7 +367,7 @@ func (conn *Connection) FilterParachainHeads(paraHeads []ParaHead, relayChainBlo
 
 	// If the runtime version is v2.0.7 use the whitelisted parathreads
 	// TODO: remove after enacted: https://polkadot.subsquare.io/referenda/1840
-	if runtimeVersion.SpecVersion >= 2_000_007 {
+	if runtimeVersion.SpecName == "polkadot" && runtimeVersion.SpecVersion >= 2_000_007 {
 		// add whitelisted parathreads (deduplicating automatically via map)
 		for _, whitelistedID := range BeefyWhitelistedParathreads {
 			parachains[whitelistedID] = struct{}{}
