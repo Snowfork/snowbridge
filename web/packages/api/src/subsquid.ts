@@ -85,7 +85,7 @@ $graphqlApiUrl --no-progress-meter | jq "."
 }
 **/
 export const fetchLatestBlockFromIndexer = async (graphqlApiUrl: string, id: string) => {
-    let query = `query { latestBlockOnChain(id: ${id}) {
+    let query = `query { latestBlockOnChain(id: "${id}") {
                     height
                     name
                 }}`
