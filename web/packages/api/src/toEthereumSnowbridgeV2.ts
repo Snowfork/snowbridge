@@ -572,7 +572,7 @@ export const validateTransferFromAssetHub = async (
 
     const logs: ValidationLog[] = []
     const sourceParachainImpl = await paraImplementation(sourceParachain)
-    const nativeBalance = await sourceParachainImpl.getNativeBalance(sourceAccountHex)
+    const nativeBalance = await sourceParachainImpl.getNativeBalance(sourceAccountHex, true)
     let dotBalance = await sourceParachainImpl.getDotBalance(sourceAccountHex)
     let tokenBalance: any
     let isNativeBalance = false
@@ -581,7 +581,7 @@ export const validateTransferFromAssetHub = async (
         transfer.computed.sourceAssetMetadata.location &&
         isRelaychainLocation(transfer.computed.sourceAssetMetadata.location)
     ) {
-        tokenBalance = await sourceParachainImpl.getNativeBalance(sourceAccountHex)
+        tokenBalance = await sourceParachainImpl.getNativeBalance(sourceAccountHex, true)
         isNativeBalance = true
     } else {
         tokenBalance = await sourceParachainImpl.getTokenBalance(
@@ -764,7 +764,7 @@ export const validateTransferFromParachain = async (
 
     const logs: ValidationLog[] = []
     const sourceParachainImpl = await paraImplementation(sourceParachain)
-    const nativeBalance = await sourceParachainImpl.getNativeBalance(sourceAccountHex)
+    const nativeBalance = await sourceParachainImpl.getNativeBalance(sourceAccountHex, true)
     let dotBalance: bigint | undefined = undefined
     if (source.features.hasDotBalance) {
         dotBalance = await sourceParachainImpl.getDotBalance(sourceAccountHex)
@@ -776,7 +776,7 @@ export const validateTransferFromParachain = async (
         sourceAssetMetadata.decimals === source.info.tokenDecimals &&
         sourceAssetMetadata.symbol == source.info.tokenSymbols
     if (isNativeBalance) {
-        tokenBalance = await sourceParachainImpl.getNativeBalance(sourceAccountHex)
+        tokenBalance = await sourceParachainImpl.getNativeBalance(sourceAccountHex, true)
     } else {
         tokenBalance = await sourceParachainImpl.getTokenBalance(
             sourceAccountHex,
