@@ -359,9 +359,19 @@ func (conn *Connection) FilterParachainHeads(paraHeads []ParaHead, relayChainBlo
 		parachains[parachain] = struct{}{}
 	}
 
-	// add whitelisted parathreads (deduplicating automatically via map)
-	for _, whitelistedID := range BeefyWhitelistedParathreads {
-		parachains[whitelistedID] = struct{}{}
+	// Get the runtime spec version for the current block
+	runtimeVersion, err := conn.API().RPC.State.GetRuntimeVersion(relayChainBlockHash)
+	if err != nil {
+		return nil, err
+	}
+
+	// If the runtime version is v2.0.7 use the whitelisted parathreads
+	// TODO: remove after enacted: https://polkadot.subsquare.io/referenda/1840
+	if runtimeVersion.SpecVersion >= 2_000_007 {
+		// add whitelisted parathreads (deduplicating automatically via map)
+		for _, whitelistedID := range BeefyWhitelistedParathreads {
+			parachains[whitelistedID] = struct{}{}
+		}
 	}
 
 	// paraHeads is a superset that includes both parachains and parathreads. Filtering paraHeads will
