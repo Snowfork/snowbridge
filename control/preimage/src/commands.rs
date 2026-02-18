@@ -861,7 +861,7 @@ pub fn replay_sep_2025_xcm() -> crate::asset_hub_runtime::RuntimeCall {
             Instruction::*,
             Xcm,
         },
-        xcm::{VersionedLocation, VersionedXcm, v3::WeightLimit},
+        xcm::{v3::WeightLimit, VersionedLocation, VersionedXcm},
     };
     use hex_literal::hex;
 
@@ -916,12 +916,10 @@ pub fn replay_sep_2025_xcm() -> crate::asset_hub_runtime::RuntimeCall {
         ),
     ];
 
-    let mut all_instructions = vec![
-        UnpaidExecution {
-            weight_limit: WeightLimit::Unlimited,
-            check_origin: None,
-        },
-    ];
+    let mut all_instructions = vec![UnpaidExecution {
+        weight_limit: WeightLimit::Unlimited,
+        check_origin: None,
+    }];
 
     // Add all failed messages as separate ExportMessage instructions
     for (asset_type, amount, beneficiary_address, topic) in failed_messages.iter() {
@@ -973,13 +971,14 @@ pub fn replay_sep_2025_xcm() -> crate::asset_hub_runtime::RuntimeCall {
         all_instructions.push(SetTopic(*topic));
     }
 
-    let asset_hub_xcm = crate::asset_hub_runtime::RuntimeCall::PolkadotXcm(pallet_xcm::pallet::Call::send {
-        dest: Box::new(VersionedLocation::V5(Location {
-            parents: 1,
-            interior: Junctions::X1([Junction::Parachain(crate::constants::BRIDGE_HUB_ID)]),
-        })),
-        message: Box::new(VersionedXcm::V5(Xcm(all_instructions))),
-    });
+    let asset_hub_xcm =
+        crate::asset_hub_runtime::RuntimeCall::PolkadotXcm(pallet_xcm::pallet::Call::send {
+            dest: Box::new(VersionedLocation::V5(Location {
+                parents: 1,
+                interior: Junctions::X1([Junction::Parachain(crate::constants::BRIDGE_HUB_ID)]),
+            })),
+            message: Box::new(VersionedXcm::V5(Xcm(all_instructions))),
+        });
     asset_hub_xcm
 }
 

@@ -1,15 +1,15 @@
-use crate::{constants::*, TreasuryProposal2024Args};
+use crate::TreasuryProposal2024Args;
 
-use crate::helpers::utility_force_batch;
-use crate::relay_runtime::runtime_types::{
+use crate::asset_hub_runtime::runtime_types::{
     pallet_treasury,
+    parachains_common::pay::VersionedLocatableAccount,
     polkadot_runtime_common::impls::VersionedLocatableAsset,
     staging_xcm::v5::{
         asset::AssetId, junction::Junction, junctions::Junctions, location::Location,
     },
-    xcm::VersionedLocation,
 };
-use crate::relay_runtime::RuntimeCall as RelayRuntimeCall;
+use crate::asset_hub_runtime::RuntimeCall as AssetHubRuntimeCall;
+use crate::helpers::utility_force_batch;
 use polkadot_runtime_constants::currency::UNITS;
 use polkadot_runtime_constants::time::DAYS;
 
@@ -174,8 +174,8 @@ const SPENDS: [Spend; 23] = [
 
 pub const LAUNCH_BLOCK: u32 = 21292000;
 
-pub fn treasury_proposal(params: &TreasuryProposal2024Args) -> RelayRuntimeCall {
-    let mut calls: Vec<RelayRuntimeCall> = vec![];
+pub fn treasury_proposal(params: &TreasuryProposal2024Args) -> AssetHubRuntimeCall {
+    let mut calls: Vec<AssetHubRuntimeCall> = vec![];
 
     for spend in SPENDS.iter() {
         let (asset_id, asset_location, asset_amount) = spend.asset.into();
@@ -197,22 +197,28 @@ fn make_treasury_spend(
     asset: Location,
     amount: u128,
     valid_from: Option<u32>,
-) -> RelayRuntimeCall {
-    let call = RelayRuntimeCall::Treasury(pallet_treasury::pallet::Call::spend {
+) -> AssetHubRuntimeCall {
+    let call = AssetHubRuntimeCall::Treasury(pallet_treasury::pallet::Call::spend {
         asset_kind: Box::new(VersionedLocatableAsset::V5 {
             location: Location {
                 parents: 0,
-                interior: Junctions::X1([Junction::Parachain(ASSET_HUB_ID)]),
+                interior: Junctions::Here,
             },
             asset_id: AssetId(asset),
         }),
-        beneficiary: Box::new(VersionedLocation::V5(Location {
-            parents: 0,
-            interior: Junctions::X1([Junction::AccountId32 {
-                network: None,
-                id: beneficiary,
-            }]),
-        })),
+        beneficiary: Box::new(VersionedLocatableAccount::V5 {
+            location: Location {
+                parents: 0,
+                interior: Junctions::Here,
+            },
+            account_id: Location {
+                parents: 0,
+                interior: Junctions::X1([Junction::AccountId32 {
+                    network: None,
+                    id: beneficiary,
+                }]),
+            },
+        }),
         amount,
         valid_from,
     });

@@ -3,6 +3,7 @@ mod bridge_hub_runtime;
 mod commands;
 mod constants;
 mod helpers;
+#[allow(unused)]
 mod relay_runtime;
 mod treasury_commands;
 
@@ -311,7 +312,7 @@ pub enum Format {
 
 struct Context {
     bridge_hub_api: Box<OnlineClient<PolkadotConfig>>,
-    asset_hub_api: Box<OnlineClient<PolkadotConfig>>,
+    _asset_hub_api: Box<OnlineClient<PolkadotConfig>>,
     _relay_api: Box<OnlineClient<PolkadotConfig>>,
 }
 
@@ -344,7 +345,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     let context = Context {
         bridge_hub_api: Box::new(bridge_hub_api),
-        asset_hub_api: Box::new(asset_hub_api),
+        _asset_hub_api: Box::new(asset_hub_api),
         _relay_api: Box::new(relay_api),
     };
 
