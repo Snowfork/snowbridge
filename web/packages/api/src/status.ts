@@ -67,7 +67,7 @@ export type Sovereign = { name: string; account: string; balance: bigint; type: 
 export type IndexerServiceStatusInfo = {
     chain: string
     latency: number
-    paraid?: number
+    id?: number
 }
 
 type Relayer = { name: string; account: string; type: SourceType; balance?: bigint }

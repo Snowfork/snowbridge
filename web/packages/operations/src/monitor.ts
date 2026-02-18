@@ -15,7 +15,7 @@ export const monitorParams: {
             type: "substrate" | "ethereum"
             balance?: bigint
         }[]
-        TO_MONITOR_PARACHAINS?: number[]
+        TO_MONITOR_CHAINS?: { id: number; name?: string; type: "substrate" | "ethereum" }[]
     }
 } = {
     local_e2e: {
@@ -146,7 +146,19 @@ export const monitorParams: {
                 type: "ethereum",
             },
         ],
-        TO_MONITOR_PARACHAINS: [2034, 2043, 3369], // Hydration, OriginTrail, Mythos
+        TO_MONITOR_CHAINS: [
+            { id: 1000, name: "AssetHub", type: "substrate" },
+            { id: 1002, name: "BridgeHub", type: "substrate" },
+            { id: 2034, name: "Hydration", type: "substrate" },
+            { id: 2043, name: "Neuroweb", type: "substrate" },
+            { id: 3369, name: "Mythos", type: "substrate" },
+            { id: 2030, name: "Bifrost", type: "substrate" },
+            { id: 2000, name: "Acala", type: "substrate" },
+            { id: 1, name: "Ethereum Mainnet", type: "ethereum" },
+            { id: 10, name: "Optimism", type: "ethereum" },
+            { id: 8453, name: "Base", type: "ethereum" },
+            { id: 42161, name: "Arbitrum", type: "ethereum" },
+        ],
     },
     westend_sepolia: {
         PRIMARY_GOVERNANCE_CHANNEL_ID:
@@ -186,18 +198,6 @@ export const monitorParams: {
             },
         ],
     },
-}
-
-const parseMonitorParachainsOverride = (): number[] | undefined => {
-    const raw = process.env["MONITOR_PARACHAINS"]
-    if (!raw) {
-        return undefined
-    }
-    const parsed = raw
-        .split(/[\s,]+/)
-        .map((value) => Number.parseInt(value, 10))
-        .filter((value) => Number.isFinite(value))
-    return parsed.length ? parsed : undefined
 }
 
 function contextConfigOverrides(input: Environment): Environment {
@@ -386,55 +386,32 @@ const fetchBalances = async (context: Context, env: Environment) => {
 }
 
 export const fetchIndexerStatus = async (context: Context, env: Environment) => {
-    const [assetHub, bridgeHub, ethereum] = await Promise.all([
-        context.assetHub(),
-        context.bridgeHub(),
-        context.ethereum(),
-    ])
-
     let indexerInfos: status.IndexerServiceStatusInfo[] = []
-    const latestBlockOfAH = (await assetHub.query.system.number()).toPrimitive() as number
-    const latestBlockOfBH = (await bridgeHub.query.system.number()).toPrimitive() as number
-    const latestBlockOfEth = await ethereum.getBlockNumber()
-
-    const chains = await subsquidV2.fetchLatestBlocksSynced(
-        context.graphqlApiUrl(),
-        env.name == "polkadot_mainnet",
-    )
-    for (let chain of chains) {
-        let info: status.IndexerServiceStatusInfo = {
-            chain: chain.name,
-            latency: 0,
-        }
-        if (chain.name == "assethub") {
-            info.latency = latestBlockOfAH - chain.height
-        } else if (chain.name == "bridgehub") {
-            info.latency = latestBlockOfBH - chain.height
-        } else if (chain.name == "ethereum") {
-            info.latency = latestBlockOfEth - chain.height
-        }
-        indexerInfos.push(info)
-    }
     // Allow runtime override of monitored parachains without changing defaults.
-    let monitorChains =
-        parseMonitorParachainsOverride() ?? monitorParams[env.name].TO_MONITOR_PARACHAINS
+    let monitorChains = monitorParams[env.name].TO_MONITOR_CHAINS
     if (monitorChains && monitorChains.length) {
-        for (const paraid of monitorChains) {
+        for (const chain of monitorChains) {
             try {
-                const chain = await context.parachain(paraid)
-                const latestBlock = (await chain.query.system.number()).toPrimitive() as number
-                const status = await subsquidV2.fetchSyncStatusOfParachain(
+                let latestBlock = 0
+                if (chain.type === "substrate") {
+                    latestBlock = (
+                        await (await context.parachain(chain.id)).query.system.number()
+                    ).toPrimitive() as number
+                } else if (chain.type === "ethereum") {
+                    latestBlock = await context.ethChain(chain.id).getBlockNumber()
+                }
+                const status = await subsquidV2.fetchLatestBlockFromIndexer(
                     context.graphqlApiUrl(),
-                    paraid,
+                    chain.id.toString(),
                 )
                 const info: status.IndexerServiceStatusInfo = {
                     chain: status.name,
-                    paraid: status.paraid,
+                    id: status.paraid,
                     latency: latestBlock - status.height,
                 }
                 indexerInfos.push(info)
             } catch (e) {
-                console.error(`Failed to fetch indexer status for parachain ${paraid}:`, e)
+                console.error(`Failed to fetch indexer status for chain ${chain.id}:`, e)
             }
         }
     }
