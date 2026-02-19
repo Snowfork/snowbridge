@@ -29,7 +29,7 @@ contract DeployGateway is Script {
             keccak256(abi.encodePacked(vm.envString("NODE_ENV")))
                 == keccak256(abi.encodePacked("westend_sepolia"))
         ) {
-            address beefyClient = 0xA04460B1D8bBef33F54edB2C3115e3E4D41237A6;
+            address beefyClient = 0x2Bc7eC7fe8EC8BDDE511003F4fe82Bc86b69894a;
             gatewayLogic = new GatewaySepolia202602(address(beefyClient), address(executor));
         }
 
