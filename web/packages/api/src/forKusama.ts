@@ -30,7 +30,7 @@ import {
     XcmDryRunEffects,
 } from "@polkadot/types/interfaces"
 import { Result } from "@polkadot/types"
-import { beneficiaryMultiAddress, padFeeByPercentage } from "./utils"
+import { beneficiaryMultiAddress, padFeeByPercentage, u32ToLeBytes } from "./utils"
 import { paraImplementation } from "./parachains"
 
 export type Transfer = {
@@ -262,6 +262,7 @@ export async function createTransfer(
     const { assetHubParaId } = registry
     const destParaId = registry.kusama?.assetHubParaId
     let sourceParaId = assetHubParaId
+    const sourceParachainImpl = await paraImplementation(parachain)
 
     let sourceAccountHex = sourceAccount
     if (!isHex(sourceAccountHex)) {
@@ -280,10 +281,11 @@ export async function createTransfer(
         sourceParaId,
         destParaId,
     )
-    let messageId = await buildMessageId(
-        parachain,
+    const accountNonce = await sourceParachainImpl.accountNonce(sourceAccountHex)
+    let messageId = buildMessageId(
         sourceParaId,
         sourceAccountHex,
+        accountNonce,
         tokenAddress,
         beneficiaryAccount,
         amount,
@@ -789,21 +791,18 @@ async function dryRunDestAssetHub(assetHub: ApiPromise, parachainId: number, xcm
     }
 }
 
-async function buildMessageId(
-    parachain: ApiPromise,
+function buildMessageId(
     sourceParaId: number,
     sourceAccountHex: string,
+    accountNonce: number,
     tokenAddress: string,
     beneficiaryAccount: string,
     amount: bigint,
-) {
-    const [accountNextId] = await Promise.all([
-        parachain.rpc.system.accountNextIndex(sourceAccountHex),
-    ])
+): string {
     const entropy = new Uint8Array([
         ...stringToU8a(sourceParaId.toString()),
         ...hexToU8a(sourceAccountHex),
-        ...accountNextId.toU8a(),
+        ...u32ToLeBytes(accountNonce),
         ...hexToU8a(tokenAddress),
         ...stringToU8a(beneficiaryAccount),
         ...stringToU8a(amount.toString()),

@@ -223,6 +223,7 @@ export class PNAToAH implements TransferInterface {
                 destParachain,
                 claimer,
                 topic,
+                totalInputAmount: amount,
             },
             tx,
         }
@@ -277,10 +278,10 @@ export class PNAToAH implements TransferInterface {
             logs.push({
                 kind: ValidationKind.Error,
                 reason: ValidationReason.GatewaySpenderLimitReached,
-                message: "The amount transferred is greater than the users token balance.",
+                message:
+                    "The Snowbridge gateway contract needs to approved as a spender for this token and amount.",
             })
         }
-
         if (tokenBalance.balance < amount) {
             logs.push({
                 kind: ValidationKind.Error,

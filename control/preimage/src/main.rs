@@ -3,6 +3,7 @@ mod bridge_hub_runtime;
 mod commands;
 mod constants;
 mod helpers;
+#[allow(unused)]
 mod relay_runtime;
 mod treasury_commands;
 
@@ -68,6 +69,8 @@ pub enum Command {
     UpgradeV2,
     /// Replay failed XCM messages from September 2025
     ReplaySep2025,
+    /// Mint refund for failed Hydration→Ethereum transfer (Feb 2026)
+    MintFeb2026,
     /// Set BridgeHubEthereumBaseFeeV2 on Paseo
     SetPaseoFeeV2,
 }
@@ -309,7 +312,7 @@ pub enum Format {
 
 struct Context {
     bridge_hub_api: Box<OnlineClient<PolkadotConfig>>,
-    asset_hub_api: Box<OnlineClient<PolkadotConfig>>,
+    _asset_hub_api: Box<OnlineClient<PolkadotConfig>>,
     _relay_api: Box<OnlineClient<PolkadotConfig>>,
 }
 
@@ -342,7 +345,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     let context = Context {
         bridge_hub_api: Box::new(bridge_hub_api),
-        asset_hub_api: Box::new(asset_hub_api),
+        _asset_hub_api: Box::new(asset_hub_api),
         _relay_api: Box::new(relay_api),
     };
 
@@ -533,6 +536,10 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
         Command::ReplaySep2025 => {
             let asset_hub_call = commands::replay_sep_2025_xcm();
             send_xcm_asset_hub(&context, vec![asset_hub_call]).await?
+        }
+        Command::MintFeb2026 => {
+            let bridge_hub_call = commands::mint_feb_2026_xcm();
+            send_xcm_bridge_hub(&context, vec![bridge_hub_call]).await?
         }
         Command::SetPaseoFeeV2 => {
             #[cfg(not(feature = "paseo"))]

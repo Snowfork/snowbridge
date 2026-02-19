@@ -1,11 +1,11 @@
 import { Keyring } from "@polkadot/keyring"
-import { Context, toPolkadotSnowbridgeV2, toPolkadotV2 } from "@snowbridge/api"
+import { Context, toPolkadotSnowbridgeV2, toPolkadotV2, xcmBuilder } from "@snowbridge/api"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { formatEther, Wallet } from "ethers"
 import { bridgeInfoFor } from "@snowbridge/registry"
 import { WETH9__factory } from "@snowbridge/contract-types"
 
-export const transferToPolkadot = async (destParaId: number, symbol: string, amount: bigint) => {
+export const transferToPolkadot = async (destParaId: number, symbol: string, amount: bigint, feeAsset?: string) => {
     await cryptoWaitReady()
 
     let env = "local_e2e"
@@ -38,8 +38,6 @@ export const transferToPolkadot = async (destParaId: number, symbol: string, amo
         throw Error(`No token found for ${symbol}`)
     }
 
-    const relayerFee = 100_000_000_000_000n // 0.000100000000000000 ETH (~ $.5)
-
     console.log("TOKEN_CONTRACT", TOKEN_CONTRACT)
     if (symbol.toLowerCase().startsWith("weth")) {
         console.log("# Deposit and Approve WETH")
@@ -64,7 +62,10 @@ export const transferToPolkadot = async (destParaId: number, symbol: string, amo
             TOKEN_CONTRACT,
         )
         // Step 1. Get the delivery fee for the transaction
-        let fee = await transferImpl.getDeliveryFee(context, registry, TOKEN_CONTRACT, destParaId)
+        const feeAssetLocation = feeAsset?.toLowerCase() === "dot" ? xcmBuilder.DOT_LOCATION : undefined
+        let fee = await transferImpl.getDeliveryFee(context, registry, TOKEN_CONTRACT, destParaId, {
+            feeAsset: feeAssetLocation,
+        })
 
         console.log("fee: ", fee)
         // Step 2. Create a transfer tx

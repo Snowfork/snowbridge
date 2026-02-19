@@ -70,8 +70,8 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
             "3369": "wss://paseo-muse-rpc.polkadot.io",
             "2043": `wss://parachain-testnet-rpc.origin-trail.network`,
         },
-        gatewayContract: "0x1607C1368bc943130258318c91bBd8cFf3D063E6",
-        beefyContract: "0x2c780945beb1241fE9c645800110cb9C4bBbb639",
+        gatewayContract: "0x1607c1368bc943130258318c91bbd8cff3d063e6",
+        beefyContract: "0x2c780945beb1241fe9c645800110cb9c4bbbb639",
         assetHubParaId: 1000,
         bridgeHubParaId: 1002,
         v2_parachains: [1000],
@@ -93,6 +93,8 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
             "1": "https://ethereum-rpc.publicnode.com",
             "1284": "https://rpc.api.moonbeam.network",
             "8453": "https://base-rpc.publicnode.com",
+            "42161": "https://arbitrum-one-rpc.publicnode.com",
+            "10": "https://optimism-rpc.publicnode.com",
         },
         relaychainUrl: "https://polkadot-rpc.n.dwellir.com",
         parachains: {
@@ -108,7 +110,7 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
             //"3397": "wss://rpc.jamton.network",
         },
         gatewayContract: "0x27ca963c279c93801941e1eb8799c23f407d68e7",
-        beefyContract: "0x1817874feAb3ce053d0F40AbC23870DB35C2AFfc",
+        beefyContract: "0x1817874feab3ce053d0f40abc23870db35c2affc",
         assetHubParaId: 1000,
         bridgeHubParaId: 1002,
         v2_parachains: [1000],
@@ -134,14 +136,14 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
         },
         l2Bridge: {
             acrossAPIUrl: "https://app.across.to/api",
-            l1AdapterAddress: "0x313E8c9Fb47613f2B1A436bE978c2BB75727fcC5",
-            l1HandlerAddress: "0x924a9f036260DdD5808007E1AA95f08eD08aA569",
+            l1AdapterAddress: "0xd3b11c36404b092645522b682832fcdee07d2668",
+            l1HandlerAddress: "0x924a9f036260ddd5808007e1aa95f08ed08aa569",
             l1FeeTokenAddress: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
-            l1SwapQuoterAddress: "0x61fFE014bA17989E743c5F6cB21bF9697530B21e",
-            l1SwapRouterAddress: "0xE592427A0AEce92De3Edee1F18E0157C05861564",
+            l1SwapQuoterAddress: "0x61ffe014ba17989e743c5f6cb21bf9697530b21e",
+            l1SwapRouterAddress: "0xe592427a0aece92de3edee1f18e0157c05861564",
             l2Chains: {
                 "8453": {
-                    adapterAddress: "0xCd5d2c665E3AC84bF5c67FE7a0C48748dA40db2F",
+                    adapterAddress: "0x07fe4E7340976FC873B74bAfe3C3e5b0e01f3665".toLowerCase(),
                     feeTokenAddress: "0x4200000000000000000000000000000000000006",
                     swapRoutes: [
                         // WETH
@@ -152,8 +154,44 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
                         },
                         // USDC
                         {
-                            inputToken: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-                            outputToken: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+                            inputToken: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+                            outputToken: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                            swapFee: 500,
+                        },
+                    ],
+                },
+                "42161": {
+                    adapterAddress: "0x836895Ad176235Dfe9C59b3df56C7579d90ea338".toLowerCase(),
+                    feeTokenAddress: "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1".toLowerCase(),
+                    swapRoutes: [
+                        // WETH
+                        {
+                            inputToken: "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1".toLowerCase(),
+                            outputToken: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                            swapFee: 0,
+                        },
+                        // USDC
+                        {
+                            inputToken: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831".toLowerCase(),
+                            outputToken: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                            swapFee: 500,
+                        },
+                    ],
+                },
+                "10": {
+                    adapterAddress: "0x836895Ad176235Dfe9C59b3df56C7579d90ea338".toLowerCase(),
+                    feeTokenAddress: "0x4200000000000000000000000000000000000006".toLowerCase(),
+                    swapRoutes: [
+                        // WETH
+                        {
+                            inputToken: "0x4200000000000000000000000000000000000006".toLowerCase(),
+                            outputToken: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                            swapFee: 0,
+                        },
+                        // USDC
+                        {
+                            inputToken: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85".toLowerCase(),
+                            outputToken: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
                             swapFee: 500,
                         },
                     ],
@@ -168,6 +206,7 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
         ethereumChains: {
             "11155111": "https://ethereum-sepolia-rpc.publicnode.com",
             "84532": "https://base-sepolia-rpc.publicnode.com",
+            "421614": "https://arbitrum-sepolia-rpc.publicnode.com",
         },
         relaychainUrl: "wss://westend-rpc.n.dwellir.com",
         parachains: {
@@ -175,7 +214,7 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
             "1002": "wss://bridge-hub-westend-rpc.n.dwellir.com",
         },
         gatewayContract: "0x9ed8b47bc3417e3bd0507adc06e56e2fa360a4e9",
-        beefyContract: "0xA04460B1D8bBef33F54edB2C3115e3E4D41237A6",
+        beefyContract: "0xa04460b1d8bbef33f54edb2c3115e3e4d41237a6",
         assetHubParaId: 1000,
         bridgeHubParaId: 1002,
         v2_parachains: [1000],
@@ -183,14 +222,14 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
             "https://snowbridge.squids.live/snowbridge-subsquid-westend@v1/api/graphql",
         l2Bridge: {
             acrossAPIUrl: "https://testnet.across.to/api",
-            l1AdapterAddress: "0xA5B8589bD534701be49916c4d2e634aB1c765Cbf",
-            l1HandlerAddress: "0x924a9f036260DdD5808007E1AA95f08eD08aA569",
-            l1FeeTokenAddress: "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14",
-            l1SwapRouterAddress: "0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E",
-            l1SwapQuoterAddress: "0xEd1f6473345F45b75F8179591dd5bA1888cf2FB3",
+            l1AdapterAddress: "0xCDa9bFf39cdF39E95F4B699422E422195091126d".toLowerCase(),
+            l1HandlerAddress: "0x924a9f036260ddd5808007e1aa95f08ed08aa569",
+            l1FeeTokenAddress: "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+            l1SwapRouterAddress: "0x3bfa4769fb09eefc5a80d6e87c3b9c650f7ae48e",
+            l1SwapQuoterAddress: "0xed1f6473345f45b75f8179591dd5ba1888cf2fb3",
             l2Chains: {
                 "84532": {
-                    adapterAddress: "0xf06939613A3838Af11104c898758220dB9093679",
+                    adapterAddress: "0xf06939613a3838af11104c898758220db9093679",
                     feeTokenAddress: "0x4200000000000000000000000000000000000006",
                     swapRoutes: [
                         // WETH
@@ -203,6 +242,24 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
                         {
                             inputToken: "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
                             outputToken: "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
+                            swapFee: 500,
+                        },
+                    ],
+                },
+                "421614": {
+                    adapterAddress: "0xcB3d8043bDbfB0D9b30de279A09132073d1dE561".toLowerCase(),
+                    feeTokenAddress: "0x980B62Da83eFf3D4576C647993b0c1D7faf17c73".toLowerCase(),
+                    swapRoutes: [
+                        // WETH
+                        {
+                            inputToken: "0x980B62Da83eFf3D4576C647993b0c1D7faf17c73".toLowerCase(),
+                            outputToken: "0xfff9976782d46cc05630d1f6ebab18b2324d6b14".toLowerCase(),
+                            swapFee: 0,
+                        },
+                        // USDC
+                        {
+                            inputToken: "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d".toLowerCase(),
+                            outputToken: "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238".toLowerCase(),
                             swapFee: 500,
                         },
                     ],
@@ -232,7 +289,9 @@ export function defaultPathFilter(envName: string): (_: Path) => boolean {
                 // Disallow MUSE to any location but 3369
                 if (
                     path.asset === "0xb34a6924a02100ba6ef12af1c798285e8f7a16ee" &&
-                    ((path.destination.id !== 3369 && path.source.kind === "ethereum") ||
+                    ((path.destination.kind === "polkadot" &&
+                        path.destination.id !== 3369 &&
+                        path.source.kind === "ethereum") ||
                         (path.source.id !== 3369 && path.source.kind === "polkadot"))
                 ) {
                     return false
@@ -248,7 +307,9 @@ export function defaultPathFilter(envName: string): (_: Path) => boolean {
                 // Disallow MYTH to any location but 3369
                 if (
                     path.asset === "0xba41ddf06b7ffd89d1267b5a93bfef2424eb2003" &&
-                    ((path.destination.id !== 3369 && path.source.kind === "ethereum") ||
+                    ((path.destination.kind === "polkadot" &&
+                        path.destination.id !== 3369 &&
+                        path.source.kind === "ethereum") ||
                         (path.source.id !== 3369 && path.source.kind === "polkadot"))
                 ) {
                     return false
@@ -257,7 +318,8 @@ export function defaultPathFilter(envName: string): (_: Path) => boolean {
                 // Allow TRAC to go to Hydration (2034) and Neuroweb (2043) only
                 if (
                     path.asset === "0xaa7a9ca87d3694b5755f213b5d04094b8d0f0a6f" &&
-                    ((path.destination.id !== 2034 &&
+                    ((path.destination.kind === "polkadot" &&
+                        path.destination.id !== 2034 &&
                         path.destination.id !== 2043 &&
                         path.source.kind === "ethereum") ||
                         (path.source.id !== 2034 &&
@@ -272,6 +334,7 @@ export function defaultPathFilter(envName: string): (_: Path) => boolean {
                     (path.asset === "0x9d39a5de30e57443bff2a8307a4256c8797a3497" || // Staked USDe
                         path.asset === "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd" || // Savings USD
                         path.asset === "0x6b175474e89094c44da98b954eedeac495271d0f") && // DAI
+                    path.destination.kind === "polkadot" &&
                     path.destination.id === 2034 // Hydration
                 ) {
                     return false
@@ -297,6 +360,7 @@ export function defaultPathFilter(envName: string): (_: Path) => boolean {
 
 function buildTransferLocations(
     registry: AssetRegistry,
+    environment: Environment,
     filter?: (path: Path) => boolean,
 ): TransferRoute[] {
     const ethChain = registry.ethereumChains[`ethereum_${registry.ethChainId}`]
@@ -386,6 +450,73 @@ function buildTransferLocations(
         }
     }
 
+    // L2 paths
+    if (environment.l2Bridge) {
+        // Do asset hub only, in future we can loop through all v2 enabled parachains.
+        for (const l2ChainKey of Object.keys(environment.l2Bridge.l2Chains)) {
+            const l2ChainId = Number(l2ChainKey)
+            const l2Chain = environment.l2Bridge.l2Chains[l2ChainId]
+            const ethChain = registry.ethereumChains[`ethereum_l2_${l2ChainId}`]
+            if (!ethChain || !l2Chain) {
+                console.warn(`Could not find ethereum l2 chain ${l2ChainId}. Skipping...`)
+                continue
+            }
+            const assetHubAssets = Object.keys(assetHub.assets)
+            const destinationAssets = Object.values(ethChain.assets)
+                .map((a) => a.swapTokenAddress?.toLowerCase())
+                .filter((a) => a !== undefined)
+
+            // The asset exists on ethereum, parachain and asset hub
+            const commonAssets = new Set(
+                ethAssets.filter(
+                    (sa) =>
+                        assetHubAssets.find((da) => da === sa) &&
+                        destinationAssets.find((da) => da === sa),
+                ),
+            )
+            for (const asset of commonAssets) {
+                const p1: Path = {
+                    source: { kind: assetHub.kind, id: assetHub.id },
+                    destination: { kind: ethChain.kind, id: ethChain.id },
+                    asset,
+                }
+                if (pathFilter(p1)) {
+                    locations.push(p1)
+                }
+                const p2: Path = {
+                    source: p1.destination, // L2 Chain
+                    destination: p1.source, // Asset Hub
+                    asset,
+                }
+                if (pathFilter(p2)) {
+                    locations.push(p2)
+                }
+            }
+        }
+
+        const results: TransferRoute[] = []
+        for (const location of locations) {
+            let source = results.find(
+                (s) =>
+                    s.from.kind === location.source.kind &&
+                    s.from.id === location.source.id &&
+                    s.to.kind === location.destination.kind &&
+                    s.to.id === location.destination.id,
+            )
+
+            if (!source) {
+                source = {
+                    from: location.source,
+                    to: location.destination,
+                    assets: [],
+                }
+                results.push(source)
+            }
+            source.assets = source.assets.concat(location.asset)
+        }
+    }
+
+    // Combine all paths into routes
     const results: TransferRoute[] = []
     for (const location of locations) {
         let source = results.find(
@@ -755,7 +886,7 @@ async function indexParachain(
         const destinationXcm = xcmBuilder.buildParachainERC20ReceivedXcmOnDestination(
             parachain.provider.registry,
             ethChainId,
-            "0x0000000000000000000000000000000000000000",
+            assetsV2.ETHER_TOKEN_ADDRESS,
             340282366920938463463374607431768211455n,
             340282366920938463463374607431768211455n,
             info.accountType === "AccountId32"
@@ -808,7 +939,7 @@ async function indexEthChain(
     metadataOverrides: ERC20MetadataOverrideMap,
     l2Chains: { [l2ChainId: number]: L2ForwardMetadata },
 ): Promise<EthereumChain> {
-    const id = networkName !== "unknown" ? networkName : undefined
+    const name = networkName !== "unknown" ? networkName : undefined
     if (networkChainId == ethChainId) {
         // Asset Hub and get meta data
         const assetHub = parachains[`polkadot_${assetHubParaId}`]
@@ -866,6 +997,7 @@ async function indexEthChain(
         return {
             kind: "ethereum",
             id: networkChainId,
+            name,
             assets,
             key: `ethereum_${networkChainId}`,
             baseDeliveryGas: 120_000n,
@@ -874,23 +1006,24 @@ async function indexEthChain(
         const assets: ERC20MetadataMap = {}
         for (const route of l2Chains[networkChainId].swapRoutes) {
             let asset = await assetErc20Metadata(provider, route.inputToken)
-            assets[route.inputToken] = {
+            assets[route.inputToken.toLowerCase()] = {
                 ...asset,
-                swapTokenAddress: route.outputToken,
+                swapTokenAddress: route.outputToken.toLowerCase(),
                 swapFee: route.swapFee,
             }
         }
-        assets["0x0000000000000000000000000000000000000000"] = {
-            token: "0x0000000000000000000000000000000000000000",
+        assets[assetsV2.ETHER_TOKEN_ADDRESS] = {
+            token: assetsV2.ETHER_TOKEN_ADDRESS,
             name: "Ether",
             symbol: "Ether",
             decimals: 18,
-            swapTokenAddress: "0x0000000000000000000000000000000000000000",
+            swapTokenAddress: assetsV2.ETHER_TOKEN_ADDRESS,
             swapFee: 0,
         }
         return {
             kind: "ethereum_l2",
             id: networkChainId,
+            name,
             assets,
             key: `ethereum_l2_${networkChainId}`,
         }
@@ -942,6 +1075,7 @@ async function indexEthChain(
             kind: "ethereum",
             id: networkChainId,
             key: `ethereum_${networkChainId}`,
+            name,
             evmParachainId: evmParachainChain.id,
             assets,
             precompile,
@@ -1005,7 +1139,7 @@ async function assetErc20Metadata(
         erc20Metadata.decimals(),
     ])
     return {
-        token,
+        token: token.toLowerCase(),
         name: String(name),
         symbol: String(symbol),
         decimals: Number(decimals),
@@ -1049,7 +1183,7 @@ async function getRegisteredPnas(
     }
     const environment = SNOWBRIDGE_ENV[env]
     const registry = await buildRegistry(environment)
-    const routes = buildTransferLocations(registry)
+    const routes = buildTransferLocations(registry, environment)
     const bridge: BridgeInfo = { environment, routes, registry }
     const json = generateTsObject(bridge, 4)
     const fileContents = `const registry = ${json} as const\nexport default registry\n`

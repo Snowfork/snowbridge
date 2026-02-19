@@ -1,6 +1,6 @@
 import { AssetMap, PNAMap } from "@snowbridge/base-types"
 import { ParachainBase } from "./parachainBase"
-import { convertToXcmV3X1, DOT_LOCATION, getTokenFromLocation } from "../xcmBuilder"
+import { DOT_LOCATION, getTokenFromLocation } from "../xcmBuilder"
 
 export class HydrationParachain extends ParachainBase {
     getXC20DOT() {
@@ -9,7 +9,7 @@ export class HydrationParachain extends ParachainBase {
 
     async getLocationBalance(location: any, account: string, _pnaAssetId?: any): Promise<bigint> {
         const paraAssetId = (
-            await this.provider.query.assetRegistry.locationAssets(convertToXcmV3X1(location))
+            await this.provider.query.assetRegistry.locationAssets(location)
         ).toPrimitive()
         if (!paraAssetId) {
             throw Error(`DOT not registered for spec ${this.specName}.`)

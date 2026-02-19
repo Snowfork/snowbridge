@@ -2,6 +2,8 @@ import { ApiPromise } from "@polkadot/api"
 import { Asset, AssetMap, ChainProperties, PNAMap, SubstrateAccount } from "@snowbridge/base-types"
 import { Result } from "@polkadot/types"
 import { XcmDryRunApiError, XcmDryRunEffects } from "@polkadot/types/interfaces"
+import { Codec } from "@polkadot/types/types"
+import { BN } from "@polkadot/util"
 import { DOT_LOCATION, erc20Location, HERE_LOCATION, parachainLocation } from "../xcmBuilder"
 
 export abstract class ParachainBase {
@@ -77,6 +79,19 @@ export abstract class ParachainBase {
     async getNativeBalance(account: string): Promise<bigint> {
         const acc = await this.getNativeAccount(account)
         return acc.data.free
+    }
+
+    async accountNonce(account: string): Promise<number> {
+        const accountNextId = await this.provider.rpc.system.accountNextIndex(account)
+        return accountNextId.toNumber()
+    }
+
+    async getDeliveryFeeFromStorage(feeKeyHex: string): Promise<bigint> {
+        const feeStorageItem = await this.provider.rpc.state.getStorage(feeKeyHex)
+        if (!feeStorageItem) return 0n
+
+        const leFee = new BN((feeStorageItem as Codec).toHex().replace("0x", ""), "hex", "le")
+        return leFee.eqn(0) ? 0n : BigInt(leFee.toString())
     }
 
     getNativeBalanceLocation(relativeTo: "here" | "sibling"): any {

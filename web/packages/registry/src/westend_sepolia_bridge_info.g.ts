@@ -5,6 +5,7 @@ const registry = {
         beaconApiUrl: "https://lodestar-sepolia.chainsafe.io",
         ethereumChains: {
             "84532": "https://base-sepolia-rpc.publicnode.com",
+            "421614": "https://arbitrum-sepolia-rpc.publicnode.com",
             "11155111": "https://ethereum-sepolia-rpc.publicnode.com",
         },
         relaychainUrl: "wss://westend-rpc.n.dwellir.com",
@@ -13,7 +14,7 @@ const registry = {
             "1002": "wss://bridge-hub-westend-rpc.n.dwellir.com",
         },
         gatewayContract: "0x9ed8b47bc3417e3bd0507adc06e56e2fa360a4e9",
-        beefyContract: "0xA04460B1D8bBef33F54edB2C3115e3E4D41237A6",
+        beefyContract: "0xa04460b1d8bbef33f54edb2c3115e3e4d41237a6",
         assetHubParaId: 1000,
         bridgeHubParaId: 1002,
         v2_parachains: [1000],
@@ -21,14 +22,14 @@ const registry = {
             "https://snowbridge.squids.live/snowbridge-subsquid-westend@v1/api/graphql",
         l2Bridge: {
             acrossAPIUrl: "https://testnet.across.to/api",
-            l1AdapterAddress: "0xA5B8589bD534701be49916c4d2e634aB1c765Cbf",
-            l1HandlerAddress: "0x924a9f036260DdD5808007E1AA95f08eD08aA569",
-            l1FeeTokenAddress: "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14",
-            l1SwapRouterAddress: "0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E",
-            l1SwapQuoterAddress: "0xEd1f6473345F45b75F8179591dd5bA1888cf2FB3",
+            l1AdapterAddress: "0xcda9bff39cdf39e95f4b699422e422195091126d",
+            l1HandlerAddress: "0x924a9f036260ddd5808007e1aa95f08ed08aa569",
+            l1FeeTokenAddress: "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+            l1SwapRouterAddress: "0x3bfa4769fb09eefc5a80d6e87c3b9c650f7ae48e",
+            l1SwapQuoterAddress: "0xed1f6473345f45b75f8179591dd5ba1888cf2fb3",
             l2Chains: {
                 "84532": {
-                    adapterAddress: "0xf06939613A3838Af11104c898758220dB9093679",
+                    adapterAddress: "0xf06939613a3838af11104c898758220db9093679",
                     feeTokenAddress: "0x4200000000000000000000000000000000000006",
                     swapRoutes: [
                         {
@@ -38,6 +39,22 @@ const registry = {
                         },
                         {
                             inputToken: "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
+                            outputToken: "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
+                            swapFee: 500,
+                        },
+                    ],
+                },
+                "421614": {
+                    adapterAddress: "0xcb3d8043bdbfb0d9b30de279a09132073d1de561",
+                    feeTokenAddress: "0x980b62da83eff3d4576c647993b0c1d7faf17c73",
+                    swapRoutes: [
+                        {
+                            inputToken: "0x980b62da83eff3d4576c647993b0c1d7faf17c73",
+                            outputToken: "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+                            swapFee: 0,
+                        },
+                        {
+                            inputToken: "0x75faf114eafb1bdbe2f0316df893fd58ce46aa4d",
                             outputToken: "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
                             swapFee: 500,
                         },
@@ -83,9 +100,69 @@ const registry = {
                 "0xf50fb50d65c8c1f6c72e4d8397c984933afc8f7e",
             ],
         },
+        {
+            from: {
+                kind: "polkadot",
+                id: 1000,
+            },
+            to: {
+                kind: "ethereum_l2",
+                id: 84532,
+            },
+            assets: [
+                "0x0000000000000000000000000000000000000000",
+                "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
+                "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+            ],
+        },
+        {
+            from: {
+                kind: "ethereum_l2",
+                id: 84532,
+            },
+            to: {
+                kind: "polkadot",
+                id: 1000,
+            },
+            assets: [
+                "0x0000000000000000000000000000000000000000",
+                "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
+                "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+            ],
+        },
+        {
+            from: {
+                kind: "polkadot",
+                id: 1000,
+            },
+            to: {
+                kind: "ethereum_l2",
+                id: 421614,
+            },
+            assets: [
+                "0x0000000000000000000000000000000000000000",
+                "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
+                "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+            ],
+        },
+        {
+            from: {
+                kind: "ethereum_l2",
+                id: 421614,
+            },
+            to: {
+                kind: "polkadot",
+                id: 1000,
+            },
+            assets: [
+                "0x0000000000000000000000000000000000000000",
+                "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
+                "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+            ],
+        },
     ],
     registry: {
-        timestamp: "2026-01-28T21:33:34.219Z",
+        timestamp: "2026-02-16T10:24:33.190Z",
         environment: "westend_sepolia",
         ethChainId: 11155111,
         gatewayAddress: "0x9ed8b47bc3417e3bd0507adc06e56e2fa360a4e9",
@@ -99,7 +176,7 @@ const registry = {
             accountType: "AccountId32",
             name: "Westend",
             specName: "westend",
-            specVersion: 1021001,
+            specVersion: 1021002,
         },
         bridgeHub: {
             tokenSymbols: "WND",
@@ -109,12 +186,13 @@ const registry = {
             accountType: "AccountId32",
             name: "Westend BridgeHub",
             specName: "bridge-hub-westend",
-            specVersion: 1021000,
+            specVersion: 1021001,
         },
         ethereumChains: {
             ethereum_l2_84532: {
                 kind: "ethereum_l2",
                 id: 84532,
+                name: "base-sepolia",
                 assets: {
                     "0x4200000000000000000000000000000000000006": {
                         token: "0x4200000000000000000000000000000000000006",
@@ -143,9 +221,42 @@ const registry = {
                 },
                 key: "ethereum_l2_84532",
             },
+            ethereum_l2_421614: {
+                kind: "ethereum_l2",
+                id: 421614,
+                name: "arbitrum-sepolia",
+                assets: {
+                    "0x980b62da83eff3d4576c647993b0c1d7faf17c73": {
+                        token: "0x980b62da83eff3d4576c647993b0c1d7faf17c73",
+                        name: "WETH",
+                        symbol: "WETH",
+                        decimals: 18,
+                        swapTokenAddress: "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+                        swapFee: 0,
+                    },
+                    "0x75faf114eafb1bdbe2f0316df893fd58ce46aa4d": {
+                        token: "0x75faf114eafb1bdbe2f0316df893fd58ce46aa4d",
+                        name: "USD Coin",
+                        symbol: "USDC",
+                        decimals: 6,
+                        swapTokenAddress: "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
+                        swapFee: 500,
+                    },
+                    "0x0000000000000000000000000000000000000000": {
+                        token: "0x0000000000000000000000000000000000000000",
+                        name: "Ether",
+                        symbol: "Ether",
+                        decimals: 18,
+                        swapTokenAddress: "0x0000000000000000000000000000000000000000",
+                        swapFee: 0,
+                    },
+                },
+                key: "ethereum_l2_421614",
+            },
             ethereum_11155111: {
                 kind: "ethereum",
                 id: 11155111,
+                name: "sepolia",
                 assets: {
                     "0x0000000000000000000000000000000000000000": {
                         token: "0x0000000000000000000000000000000000000000",
@@ -231,7 +342,7 @@ const registry = {
                     accountType: "AccountId32",
                     name: "Westend Asset Hub",
                     specName: "westmint",
-                    specVersion: 1021000,
+                    specVersion: 1021003,
                 },
                 assets: {
                     "0x0000000000000000000000000000000000000000": {

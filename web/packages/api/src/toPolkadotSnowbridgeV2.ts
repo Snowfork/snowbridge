@@ -29,7 +29,8 @@ export type DeliveryFee = {
     assetHubDeliveryFeeEther: bigint
     assetHubExecutionFeeEther: bigint
     destinationDeliveryFeeEther: bigint
-    destinationExecutionFeeEther: bigint
+    destinationExecutionFeeEther?: bigint
+    destinationExecutionFeeDOT?: bigint
     relayerFee: bigint
     extrinsicFeeDot: bigint // Fee for submitting to BridgeHub in DOT (part of relayerFee)
     extrinsicFeeEther: bigint // Fee for submitting to BridgeHub in Ether (part of relayerFee)
@@ -64,6 +65,7 @@ export type Transfer = {
         claimer: any
         topic: string
         l2AdapterAddress?: string
+        totalInputAmount: bigint
     }
     tx: ContractTransaction
 }
@@ -73,6 +75,7 @@ export type ValidationResult = {
     success: boolean
     data: {
         etherBalance: bigint
+        totalInputAmount?: bigint
         tokenBalance: {
             balance: bigint
             gatewayAllowance: bigint
