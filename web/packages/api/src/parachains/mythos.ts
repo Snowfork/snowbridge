@@ -78,4 +78,16 @@ export class MythosParachain extends ParachainBase {
         }
         return await this.calculateXcmFee(destinationXcm, asset)
     }
+
+    swapAsset1ForAsset2(_asset1: any, _asset2: any, _exactAsset1Balance: bigint): Promise<bigint> {
+        throw Error(`${this.specName} does not support.`)
+    }
+
+    getAssetHubConversionPalletSwap(
+        asset1: any,
+        asset2: any,
+        exactAsset2Balance: bigint,
+    ): Promise<bigint> {
+        throw Error(`${this.specName} does not support.`)
+    }
 }

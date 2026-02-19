@@ -1,3 +1,5 @@
+import { FeeEstimateError, FeeEstimateErrorDetails } from "@snowbridge/base-types"
+
 export const estimateFees = async (
     apiEndpoint: string,
     inputToken: string,
@@ -16,12 +18,12 @@ export const estimateFees = async (
 
     const url = apiEndpoint + "/suggested-fees?" + new URLSearchParams(params)
 
-    let data
-    try {
-        data = await (await fetch(url)).json()
-    } catch (error) {
-        throw new Error(`Failed to fetch suggested fees from ${url}: ${String(error)}`)
+    const response = await fetch(url)
+    if (!response.ok) {
+        const error = await response.json()
+        throw new FeeEstimateError(error as FeeEstimateErrorDetails)
     }
+    const data = await response.json()
 
     if (
         !data ||

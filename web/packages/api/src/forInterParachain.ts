@@ -9,7 +9,7 @@ import {
     buildERC20ToAssetHubFromParachain,
     buildDepositAllAssetsWithTopic,
 } from "./xcmBuilder"
-import { Asset, AssetRegistry, Parachain, AssetMap } from "@snowbridge/base-types"
+import { Asset, AssetRegistry, Parachain } from "@snowbridge/base-types"
 import { beneficiaryMultiAddress, padFeeByPercentage } from "./utils"
 import { paraImplementation } from "./parachains"
 import { Context } from "."
@@ -21,9 +21,7 @@ import {
     XcmDryRunApiError,
     XcmDryRunEffects,
 } from "@polkadot/types/interfaces"
-import { ParachainBase } from "./parachains/parachainBase"
 import { u8aToHex } from "@polkadot/util"
-import { validateAccount } from "./assets_v2"
 
 export type Transfer = {
     input: {
@@ -60,16 +58,16 @@ function resolveInputs(
     sourceParaId: number,
     destParaId: number,
 ) {
-    const sourceParachain = registry.parachains[sourceParaId.toString()]
+    const sourceParachain = registry.parachains[`polkadot_${sourceParaId}`]
     if (!sourceParachain) {
         throw Error(`Could not find ${sourceParaId} in the asset registry.`)
     }
-    const destParachain = registry.parachains[destParaId.toString()]
+    const destParachain = registry.parachains[`polkadot_${destParaId}`]
     if (!destParachain) {
         throw Error(`Could not find ${destParaId} in the asset registry.`)
     }
 
-    if (destParachain.parachainId === sourceParachain.parachainId) {
+    if (destParachain.id === sourceParachain.id) {
         throw Error("Source and destination are the same.")
     }
 
@@ -184,10 +182,11 @@ export async function createTransfer(
         sourceParachain: sourceParachainMeta,
         destParachain,
     } = resolveInputs(registry, tokenAddress, source.parachainId, destinationParaId)
-    let messageId = await buildMessageId(
-        sourceParachain,
+    const accountNonce = await source.accountNonce(sourceAccountHex)
+    let messageId = buildMessageId(
         source.parachainId,
         sourceAccountHex,
+        accountNonce,
         tokenAddress,
         beneficiaryAccount,
         amount,
@@ -348,8 +347,7 @@ export async function validateTransfer(
         dryRunError = dryRunDestination.errorMessage
 
         if (!destAssetMetadata.isSufficient) {
-            const { accountMaxConsumers, accountExists } = await validateAccount(
-                destination,
+            const { accountMaxConsumers, accountExists } = await destination.validateAccount(
                 beneficiaryAddressHex,
                 registry.ethChainId,
                 tokenAddress,

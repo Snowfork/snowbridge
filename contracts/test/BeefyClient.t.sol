@@ -49,7 +49,7 @@ contract BeefyClientTest is Test {
         randaoCommitDelay = uint8(vm.envOr("RANDAO_COMMIT_DELAY", uint256(3)));
         randaoCommitExpiration = uint8(vm.envOr("RANDAO_COMMIT_EXP", uint256(8)));
         minNumRequiredSignatures = uint8(vm.envOr("MINIMUM_REQUIRED_SIGNATURES", uint256(17)));
-        fiatShamirRequiresSignatures = vm.envOr("FIAT_SHAMIR_REQUIRED_SIGNATURES", uint256(101));
+        fiatShamirRequiresSignatures = vm.envOr("FIAT_SHAMIR_REQUIRED_SIGNATURES", uint256(111));
         signatureUsageCount = vm.envOr("SIGNATURE_USAGE_COUNT", uint256(0));
         prevRandao = uint32(vm.envOr("PREV_RANDAO", uint256(377)));
 

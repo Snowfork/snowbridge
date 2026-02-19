@@ -29,19 +29,16 @@ import {
     bridgeLocation,
 } from "./xcmBuilder"
 import { xxhashAsHex } from "@polkadot/util-crypto"
-import { BN, hexToU8a } from "@polkadot/util"
+import { BN } from "@polkadot/util"
 import { padFeeByPercentage } from "./utils"
 import { paraImplementation } from "./parachains"
 import { Context } from "./index"
-import {
-    ETHER_TOKEN_ADDRESS,
-    findL2TokenAddress,
-    getAssetHubConversionPalletSwap,
-} from "./assets_v2"
+import { ETHER_TOKEN_ADDRESS, findL2TokenAddress } from "./assets_v2"
 import { getOperatingStatus } from "./status"
 import { AbstractProvider, ethers, Wallet, TransactionReceipt } from "ethers"
 import { CreateAgent } from "./registration/agent/createAgent"
 import { estimateFees } from "./across/api"
+import { AgentCreation } from "./registration/agent/agentInterface"
 
 export { ValidationKind, signAndSend } from "./toEthereum_v2"
 
@@ -249,7 +246,7 @@ export const estimateEthereumExecutionFee = async (
     const { tokenErcMetadata } = resolveInputs(registry, tokenAddress, sourceParaId)
 
     // Calculate execution cost on ethereum
-    let ethereumChain = registry.ethereumChains[registry.ethChainId.toString()]
+    let ethereumChain = registry.ethereumChains[`ethereum_${registry.ethChainId}`]
     let feeData = await ethereum.getFeeData()
     let ethereumExecutionFee =
         (feeData.gasPrice ?? 2_000_000_000n) *
@@ -351,8 +348,7 @@ export const estimateFeesFromAssetHub = async (
     if (feeLocation) {
         // If the fee asset is DOT, then one swap from DOT to Ether is required on AH
         if (isRelaychainLocation(feeLocation)) {
-            ethereumExecutionFeeInNative = await getAssetHubConversionPalletSwap(
-                assetHub,
+            ethereumExecutionFeeInNative = await assetHubImpl.getAssetHubConversionPalletSwap(
                 DOT_LOCATION,
                 bridgeLocation(registry.ethChainId),
                 padFeeByPercentage(ethereumExecutionFee, feeSlippagePadPercentage),
@@ -397,7 +393,7 @@ export const estimateFeesFromParachains = async (
         contractCall?: ContractCall
     },
 ): Promise<DeliveryFee> => {
-    const sourceParachain = registry.parachains[sourceParaId.toString()]
+    const sourceParachain = registry.parachains[`polkadot_${sourceParaId}`]
     const sourceParachainImpl = await paraImplementation(await context.parachain(sourceParaId))
 
     const assetHub = await context.parachain(registry.assetHubParaId)
@@ -495,8 +491,7 @@ export const estimateFeesFromParachains = async (
     if (feeLocation) {
         // If the fee asset is DOT, then one swap from DOT to Ether is required on AH
         if (isRelaychainLocation(feeLocation)) {
-            ethereumExecutionFeeInNative = await getAssetHubConversionPalletSwap(
-                assetHub,
+            ethereumExecutionFeeInNative = await assetHubImpl.getAssetHubConversionPalletSwap(
                 DOT_LOCATION,
                 bridgeLocation(registry.ethChainId),
                 padFeeByPercentage(ethereumExecutionFee, feeSlippagePadPercentage),
@@ -507,21 +502,18 @@ export const estimateFeesFromParachains = async (
         // On Parachains, we can use their native asset as the fee token.
         // If the fee is in native, we need to swap it to DOT first, then swap DOT to Ether to cover the ethereum execution fee.
         else if (isParachainNative(feeLocation, sourceParaId)) {
-            let ethereumExecutionFeeInDOT = await getAssetHubConversionPalletSwap(
-                assetHub,
+            let ethereumExecutionFeeInDOT = await assetHubImpl.getAssetHubConversionPalletSwap(
                 DOT_LOCATION,
                 bridgeLocation(registry.ethChainId),
                 padFeeByPercentage(ethereumExecutionFee, feeSlippagePadPercentage),
             )
-            ethereumExecutionFeeInNative = await getAssetHubConversionPalletSwap(
-                assetHub,
+            ethereumExecutionFeeInNative = await assetHubImpl.getAssetHubConversionPalletSwap(
                 feeLocation,
                 DOT_LOCATION,
                 padFeeByPercentage(ethereumExecutionFeeInDOT, feeSlippagePadPercentage),
             )
             totalFeeInDot += ethereumExecutionFeeInDOT
-            totalFeeInNative = await getAssetHubConversionPalletSwap(
-                assetHub,
+            totalFeeInNative = await assetHubImpl.getAssetHubConversionPalletSwap(
                 feeLocation,
                 DOT_LOCATION,
                 padFeeByPercentage(totalFeeInDot, feeSlippagePadPercentage),
@@ -990,7 +982,7 @@ export function createAgentCreationImplementation() {
 }
 
 export async function sendAgentCreation(
-    creation: any,
+    creation: AgentCreation,
     wallet: Wallet,
 ): Promise<TransactionReceipt> {
     const response = await wallet.sendTransaction(creation.tx)
@@ -1041,7 +1033,7 @@ export async function buildL2Call(
         let calldata = l1Adapter.interface.encodeFunctionData("depositNativeEther", [
             {
                 inputToken: tokenAddress,
-                outputToken: l2TokenAddress,
+                outputToken: l2FeeTokenAddress,
                 inputAmount: tokenAmount,
                 outputAmount: tokenAmount - l2BridgeFeeInL1Token,
                 destinationChainId: l2ChainId,
@@ -1090,13 +1082,12 @@ export async function buildL2Call(
     return { l2Call, fee: l2BridgeFeeInL1Token }
 }
 
-export async function sourceAgentAddress(
+export async function sourceAgentId(
     context: Context,
     parachainId: number,
     sourceAccountHex: string,
-): Promise<string> {
+) {
     const bridgeHub = await context.bridgeHub()
-    const gateway = context.gateway()
     let sourceLocation = {
         parents: 1,
         interior: { x2: [{ parachain: parachainId }, { accountId32: { id: sourceAccountHex } }] },
@@ -1104,7 +1095,16 @@ export async function sourceAgentAddress(
     let versionedLocation = bridgeHub.registry.createType("XcmVersionedLocation", {
         v5: sourceLocation,
     })
-    let agentID = (await bridgeHub.call.controlV2Api.agentId(versionedLocation)).toHex()
+    return (await bridgeHub.call.controlV2Api.agentId(versionedLocation)).toHex()
+}
+
+export async function sourceAgentAddress(
+    context: Context,
+    parachainId: number,
+    sourceAccountHex: string,
+): Promise<string> {
+    const gateway = context.gateway()
+    let agentID = await sourceAgentId(context, parachainId, sourceAccountHex)
     let agentAddress = await gateway.agentOf(agentID)
     return agentAddress
 }

@@ -70,7 +70,8 @@ func (d MerkleProofData) String() string {
 }
 
 func CreateParachainMerkleProof(heads []relaychain.ParaHead, paraID uint32) (MerkleProofData, error) {
-	// sort slice by para ID
+	// sort slice by para ID, sorting is still necessary to mirror the logic in https://github.com/polkadot-fellows/runtimes/pull/1073
+	// as they change para_heads to a BTreeMap which is inherently asending order by key (para ID)
 	sort.Sort(ByParaID(heads))
 
 	// loop headers, convert to pre leaves and find header being proven

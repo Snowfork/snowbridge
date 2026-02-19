@@ -22,7 +22,6 @@ import {
     buildTransferKusamaToPolkadotExportXCM,
     buildTransferPolkadotToKusamaExportXCM,
 } from "./xcmBuilderKusama"
-import { getAssetHubConversionPalletSwap, validateAccount } from "./assets_v2"
 import { Asset, AssetRegistry, Parachain, AssetMap } from "@snowbridge/base-types"
 import {
     CallDryRunEffects,
@@ -31,9 +30,8 @@ import {
     XcmDryRunEffects,
 } from "@polkadot/types/interfaces"
 import { Result } from "@polkadot/types"
-import { beneficiaryMultiAddress, padFeeByPercentage } from "./utils"
+import { beneficiaryMultiAddress, padFeeByPercentage, u32ToLeBytes } from "./utils"
 import { paraImplementation } from "./parachains"
-import { ParachainBase } from "./parachains/parachainBase"
 
 export type Transfer = {
     input: {
@@ -79,21 +77,20 @@ function resolveInputs(
     sourceParaId: number,
     destParaId: number,
 ) {
-    const sourceParachain = registry.parachains[sourceParaId.toString()]
+    const sourceParachain = registry.parachains[`polkadot_${sourceParaId}`]
     if (!sourceParachain) {
         throw Error(`Could not find ${sourceParaId} in the asset registry.`)
     }
-    const destParachain = registry.kusama?.parachains[destParaId.toString()]
+    const destParachain = registry.kusama?.parachains[`kusama_${destParaId}`]
     if (!destParachain) {
         throw Error(`Could not find ${destParaId} in the asset registry.`)
     }
 
-    const sourceAssetMetadata = registry.parachains[sourceParaId].assets[tokenAddress.toLowerCase()]
+    const sourceAssetMetadata = sourceParachain.assets[tokenAddress.toLowerCase()]
     if (!sourceAssetMetadata) {
         throw Error(`Token ${tokenAddress} not registered on source asset hub.`)
     }
-    const destAssetMetadata =
-        registry.kusama?.parachains[destParaId].assets[tokenAddress.toLowerCase()]
+    const destAssetMetadata = destParachain.assets[tokenAddress.toLowerCase()]
     if (!destAssetMetadata) {
         throw Error(`Token ${tokenAddress} not registered on destination asset hub.`)
     }
@@ -218,18 +215,17 @@ export async function getDeliveryFee(
     if (direction == Direction.ToPolkadot) {
         feeAssetOnDest = ksmLocationOnPolkadotAssetHub
         minBalanceFeeDest = getDestFeeAssetMinimumBalance(
-            registry.parachains[registry.assetHubParaId].assets,
+            registry.parachains[`polkadot_${registry.assetHubParaId}`].assets,
             "kusama",
         )
     } else {
         feeAssetOnDest = dotLocationOnKusamaAssetHub
         minBalanceFeeDest = getDestFeeAssetMinimumBalance(
-            registry.kusama.parachains[registry.kusama.assetHubParaId].assets,
+            registry.kusama.parachains[`kusama_${registry.kusama.assetHubParaId}`].assets,
             "polkadot",
         )
     }
-    let destinationFee = await getAssetHubConversionPalletSwap(
-        destAssetHub,
+    let destinationFee = await destAssetHubImpl.getAssetHubConversionPalletSwap(
         feeAssetOnDest,
         NATIVE_TOKEN_LOCATION,
         destinationFeeInDestNative,
@@ -266,6 +262,7 @@ export async function createTransfer(
     const { assetHubParaId } = registry
     const destParaId = registry.kusama?.assetHubParaId
     let sourceParaId = assetHubParaId
+    const sourceParachainImpl = await paraImplementation(parachain)
 
     let sourceAccountHex = sourceAccount
     if (!isHex(sourceAccountHex)) {
@@ -284,10 +281,11 @@ export async function createTransfer(
         sourceParaId,
         destParaId,
     )
-    let messageId = await buildMessageId(
-        parachain,
+    const accountNonce = await sourceParachainImpl.accountNonce(sourceAccountHex)
+    let messageId = buildMessageId(
         sourceParaId,
         sourceAccountHex,
+        accountNonce,
         tokenAddress,
         beneficiaryAccount,
         amount,
@@ -489,8 +487,7 @@ export async function validateTransfer(
 
         // Only run the account validation if the dry run failed.
         const destAssetHubImpl = await paraImplementation(destAssetHub)
-        const { accountMaxConsumers, accountExists } = await validateAccount(
-            destAssetHubImpl,
+        const { accountMaxConsumers, accountExists } = await destAssetHubImpl.validateAccount(
             beneficiaryAddressHex,
             registry.ethChainId,
             tokenAddress,
@@ -794,21 +791,18 @@ async function dryRunDestAssetHub(assetHub: ApiPromise, parachainId: number, xcm
     }
 }
 
-async function buildMessageId(
-    parachain: ApiPromise,
+function buildMessageId(
     sourceParaId: number,
     sourceAccountHex: string,
+    accountNonce: number,
     tokenAddress: string,
     beneficiaryAccount: string,
     amount: bigint,
-) {
-    const [accountNextId] = await Promise.all([
-        parachain.rpc.system.accountNextIndex(sourceAccountHex),
-    ])
+): string {
     const entropy = new Uint8Array([
         ...stringToU8a(sourceParaId.toString()),
         ...hexToU8a(sourceAccountHex),
-        ...accountNextId.toU8a(),
+        ...u32ToLeBytes(accountNonce),
         ...hexToU8a(tokenAddress),
         ...stringToU8a(beneficiaryAccount),
         ...stringToU8a(amount.toString()),
@@ -820,13 +814,15 @@ function getTokenLocation(registry: AssetRegistry, direction: Direction, tokenAd
     let location
     if (direction == Direction.ToPolkadot) {
         location =
-            registry.kusama?.parachains[registry.kusama?.assetHubParaId].assets[tokenAddress]
-                .location
+            registry.kusama?.parachains[`kusama_${registry.kusama?.assetHubParaId}`].assets[
+                tokenAddress
+            ].location
         if (!location) {
             location = erc20Location(registry.ethChainId, tokenAddress)
         }
     } else {
-        location = registry.parachains[registry.assetHubParaId].assets[tokenAddress].location
+        location =
+            registry.parachains[`polkadot_${registry.assetHubParaId}`].assets[tokenAddress].location
         if (!location) {
             location = erc20Location(registry.ethChainId, tokenAddress)
         }
@@ -853,9 +849,11 @@ function nativeFeeAsset(direction: Direction) {
 
 function getTransferAsset(direction: Direction, tokenAddress: string, registry: AssetRegistry) {
     if (direction == Direction.ToPolkadot) {
-        return registry.kusama?.parachains[registry.kusama?.assetHubParaId].assets[tokenAddress]
+        return registry.kusama?.parachains[`kusama_${registry.kusama?.assetHubParaId}`].assets[
+            tokenAddress
+        ]
     } else {
-        return registry.parachains[registry.assetHubParaId].assets[tokenAddress]
+        return registry.parachains[`polkadot_${registry.assetHubParaId}`].assets[tokenAddress]
     }
 }
 

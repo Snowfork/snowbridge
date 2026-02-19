@@ -162,6 +162,9 @@ importers:
       '@snowbridge/api':
         specifier: workspace:*
         version: link:../api
+      '@snowbridge/base-types':
+        specifier: workspace:*
+        version: link:../base-types
       '@snowbridge/contract-types':
         specifier: workspace:*
         version: link:../contract-types

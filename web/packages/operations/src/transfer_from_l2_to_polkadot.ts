@@ -2,7 +2,7 @@ import { Keyring } from "@polkadot/keyring"
 import { Context, toPolkadotSnowbridgeV2, toPolkadotV2 } from "@snowbridge/api"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { formatEther, Wallet } from "ethers"
-import { assetRegistryFor, environmentFor } from "@snowbridge/registry"
+import { bridgeInfoFor } from "@snowbridge/registry"
 import { IERC20__factory } from "@snowbridge/contract-types"
 import { ETHER_TOKEN_ADDRESS } from "@snowbridge/api/dist/assets_v2"
 
@@ -20,7 +20,8 @@ export const transferToPolkadot = async (
     }
     console.log(`Using environment '${env}'`)
 
-    const context = new Context(environmentFor(env))
+    const { registry, environment } = bridgeInfoFor(env)
+    const context = new Context(environment)
 
     const polkadot_keyring = new Keyring({ type: "sr25519" })
 
@@ -34,9 +35,7 @@ export const transferToPolkadot = async (
 
     console.log("eth", ETHEREUM_ACCOUNT_PUBLIC, "sub", POLKADOT_ACCOUNT_PUBLIC)
 
-    const registry = assetRegistryFor(env)
-
-    const assets = registry.ethereumChains[l2ChainId].assets
+    const assets = registry.ethereumChains[`ethereum_l2_${l2ChainId}`].assets
     const TOKEN_CONTRACT = Object.keys(assets)
         .map((t) => assets[t])
         .find((asset) => asset.symbol.toLowerCase().startsWith(symbol.toLowerCase()))?.token
@@ -131,7 +130,7 @@ export const transferToPolkadot = async (
         console.log("execution cost:", formatEther(executionFee))
         console.log("total cost:", formatEther(fee.totalFeeInWei + executionFee))
         console.log("ether sent:", formatEther(totalValue - fee.totalFeeInWei))
-        console.log("dry run:", await context.ethereum().call(tx))
+        console.log("dry run:", await context.ethChain(l2ChainId).call(tx))
 
         if (process.env["DRY_RUN"] != "true") {
             console.log("sending tx")

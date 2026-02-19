@@ -3,7 +3,7 @@ import { Context } from "@snowbridge/api"
 import { IGatewayV1__factory as IGateway__factory } from "@snowbridge/contract-types"
 import { Contract, ethers, LogDescription, Wallet } from "ethers"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
-import { environmentFor } from "@snowbridge/registry"
+import { bridgeInfoFor } from "@snowbridge/registry"
 
 export const registerERC20 = async (tokenAddress: string) => {
     let env = "local_e2e"
@@ -13,7 +13,8 @@ export const registerERC20 = async (tokenAddress: string) => {
     console.log(`Using environment '${env}'`)
     await cryptoWaitReady()
 
-    const context = new Context(environmentFor(env))
+    const { environment } = bridgeInfoFor(env)
+    const context = new Context(environment)
 
     const ETHEREUM_ACCOUNT = new Wallet(
         process.env.ETHEREUM_KEY ?? "Your Key Goes Here",
