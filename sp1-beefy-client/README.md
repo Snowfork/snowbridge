@@ -61,6 +61,20 @@ cargo run -- submit-fiat-shamir commitment.json bitfield.json proofs.json leaf.j
    - `verifySubmitFinal` for final submissions
    - `verifySubmitFiatShamir` for Fiat-Shamir submissions
 
+## Alignment with BeefyClient.sol
+
+The SP1 program is designed to match `BeefyClient.submitFiatShamir` exactly:
+
+- **Bitfield**: `uint256[]` format (32 bytes per element), `keccak256(abi.encodePacked(bitfield))` for hashing
+- **Commitment/MMR encoding**: ScaleCodec (byte-reversed for fixed-size integers)
+- **Fiat-Shamir**: Domain `SNOWBRIDGE-FIAT-SHAMIR-v1`, full 32-byte seed, `keccak256(seed||iteration)` for subsampling
+- **leafProofOrder**: `uint256` (32 bytes, bits 0..n for proof order)
+
+## Input Formats for Script
+
+- **bitfield.json**: Array of hex strings (`"0x..."`) or binary strings; binary strings are split into 256-bit chunks
+- **leaf_proof_order.json**: Number (e.g. `0` or `14`) or string; converted to uint256 (32 bytes)
+
 ## Differences from Solidity Implementation
 
 1. **Proof Generation**: Instead of executing verification logic on-chain, it's executed off-chain and proven

@@ -47,9 +47,12 @@ pub struct ValidatorSet {
     pub root: [u8; 32],
 }
 
-// Constants
+// Constants (must match BeefyClient.sol)
 const MMR_ROOT_ID: [u8; 2] = *b"mh";
 const FIAT_SHAMIR_DOMAIN_ID: &[u8] = b"SNOWBRIDGE-FIAT-SHAMIR-v1";
+
+/// Bitfield element: 32 bytes (uint256) matching Solidity Bitfield.sol
+type BitfieldElement = [u8; 32];
 const FIAT_SHAMIR_REQUIRED_SIGNATURES: u32 = 111;
 
 // Global state variables (in a real implementation, these would be stored in the contract)
@@ -83,13 +86,13 @@ fn main() {
 }
 
 fn submit_fiat_shamir() {
-    // Read inputs
+    // Read inputs (formats must match BeefyClient.sol)
     let commitment = read::<Commitment>();
-    let bitfield = read::<Vec<u64>>();
+    let bitfield = read::<Vec<BitfieldElement>>();
     let proofs = read::<Vec<ValidatorProof>>();
     let leaf = read::<MMRLeaf>();
     let leaf_proof = read::<Vec<[u8; 32]>>();
-    let leaf_proof_order = read::<Vec<u8>>();
+    let leaf_proof_order = read::<[u8; 32]>(); // uint256, bits 0..=n for proof order
 
     // Verify all validator proofs
     let commitment_hash = hash_commitment(&commitment);
@@ -114,14 +117,21 @@ fn submit_fiat_shamir() {
 
     verify_fiat_shamir_commitment(&validator_set, &bitfield, &proofs, &commitment_hash);
 
-    // Verify MMR proof
-    verify_mmr_proof(&commitment, &leaf, &leaf_proof, &leaf_proof_order);
+    let is_next_session = (commitment.validator_set_id as u128) == state.next_validator_set.id;
+
+    // Verify MMR proof only when transitioning to next validator set (matches BeefyClient.sol)
+    if is_next_session {
+        if leaf.next_authority_set_id != (state.next_validator_set.id + 1) as u64 {
+            panic!("Invalid MMR leaf");
+        }
+        verify_mmr_proof(&commitment, &leaf, &leaf_proof, &leaf_proof_order);
+    }
 
     // Update state
     state.latest_mmr_root = extract_mmr_root(&commitment);
     state.latest_beefy_block = commitment.block_number as u64;
 
-    if (commitment.validator_set_id as u128) == state.next_validator_set.id {
+    if is_next_session {
         state.current_validator_set = state.next_validator_set.clone();
         state.next_validator_set = ValidatorSet {
             id: (commitment.validator_set_id as u128) + 1,
@@ -130,9 +140,10 @@ fn submit_fiat_shamir() {
         };
     }
 
-    // Commit the results
+    // Commit the results (order must match SP1BeefyClient.sol)
     commit(&state.latest_mmr_root);
     commit(&state.latest_beefy_block.to_le_bytes());
+    commit(&commitment_hash);
 }
 
 // Helper functions
@@ -142,43 +153,55 @@ fn hash_commitment(commitment: &Commitment) -> [u8; 32] {
     keccak256(&encoded)
 }
 
+/// ScaleCodec.encodeCommitment - must match BeefyClient.sol
 fn encode_commitment(commitment: &Commitment) -> Vec<u8> {
     let mut out = Vec::new();
     out.extend_from_slice(&encode_commitment_payload(&commitment.payload));
-    out.extend_from_slice(&commitment.block_number.to_le_bytes());
-    out.extend_from_slice(&commitment.validator_set_id.to_le_bytes());
+    out.extend_from_slice(&scale_encode_u32(commitment.block_number));
+    out.extend_from_slice(&scale_encode_u64(commitment.validator_set_id));
     out
 }
 
 fn encode_commitment_payload(payload: &[PayloadItem]) -> Vec<u8> {
     let mut encoded = Vec::new();
-    encoded.extend_from_slice(&encode_compact_u32(payload.len() as u32));
+    encoded.extend_from_slice(&scale_encode_compact_u32(payload.len() as u32));
 
     for item in payload {
         encoded.extend_from_slice(&item.payload_id);
-        encoded.extend_from_slice(&encode_compact_u32(item.data.len() as u32));
+        encoded.extend_from_slice(&scale_encode_compact_u32(item.data.len() as u32));
         encoded.extend_from_slice(&item.data);
     }
 
     encoded
 }
 
-fn encode_compact_u32(value: u32) -> Vec<u8> {
-    if value < 1 << 6 {
-        vec![(value as u8) << 2]
-    } else if value < 1 << 14 {
-        let v = (value << 2) | 0x01;
-        vec![(v & 0xff) as u8, ((v >> 8) & 0xff) as u8]
-    } else if value < 1 << 30 {
-        let v = (value << 2) | 0x02;
-        vec![
-            (v & 0xff) as u8,
-            ((v >> 8) & 0xff) as u8,
-            ((v >> 16) & 0xff) as u8,
-            ((v >> 24) & 0xff) as u8,
-        ]
+/// ScaleCodec.encodeU32 - byte-reversed (big-endian output)
+fn scale_encode_u32(value: u32) -> [u8; 4] {
+    value.to_be_bytes()
+}
+
+/// ScaleCodec.encodeU64 - byte-reversed (big-endian output)
+fn scale_encode_u64(value: u64) -> [u8; 8] {
+    value.to_be_bytes()
+}
+
+/// ScaleCodec.encodeCompactU32 - reverse16/reverse32 swap bytes
+fn scale_encode_compact_u32(value: u32) -> Vec<u8> {
+    if value <= 63 {
+        vec![(value << 2) as u8]
+    } else if value <= (1 << 14) - 1 {
+        let v = ((value << 2) | 1) as u16;
+        let b = v.to_be_bytes();
+        vec![b[1], b[0]]
+    } else if value <= (1 << 30) - 1 {
+        let v = (value << 2) | 2;
+        let b = v.to_be_bytes();
+        vec![b[3], b[2], b[1], b[0]]
     } else {
-        panic!("CompactU32 too large");
+        let mut out = vec![3u8];
+        let b = value.to_be_bytes();
+        out.extend_from_slice(&[b[3], b[2], b[1], b[0]]);
+        out
     }
 }
 
@@ -234,22 +257,24 @@ fn verify_validator_in_set(
     )
 }
 
-fn is_bit_set(bitfield: &[u64], index: usize, length: usize) -> bool {
+/// Bitfield.isSet - element = index >> 8, bit = index % 256 (matches Bitfield.sol)
+fn is_bit_set(bitfield: &[BitfieldElement], index: usize, length: usize) -> bool {
     if index >= length {
         return false;
     }
 
-    let word_index = index / 64;
-    let bit_index = index % 64;
-
-    if word_index >= bitfield.len() {
+    let element_index = index >> 8;
+    if element_index >= bitfield.len() {
         return false;
     }
 
-    (bitfield[word_index] & (1u64 << bit_index)) != 0
+    let element = &bitfield[element_index];
+    let byte_index = 31 - (index / 8);
+    let bit_index = index % 8;
+    ((element[byte_index] >> bit_index) & 1) != 0
 }
 
-fn count_set_bits(bitfield: &[u64], length: usize) -> usize {
+fn count_set_bits(bitfield: &[BitfieldElement], length: usize) -> usize {
     let mut count = 0;
     for i in 0..length {
         if is_bit_set(bitfield, i, length) {
@@ -259,10 +284,11 @@ fn count_set_bits(bitfield: &[u64], length: usize) -> usize {
     count
 }
 
-fn hash_bitfield(bitfield: &[u64]) -> [u8; 32] {
+/// keccak256(abi.encodePacked(bitfield)) - matches BeefyClient fiatShamirFinalBitfield
+fn hash_bitfield(bitfield: &[BitfieldElement]) -> [u8; 32] {
     let mut hasher = Keccak256::new();
-    for word in bitfield {
-        hasher.update(&word.to_le_bytes());
+    for element in bitfield {
+        hasher.update(element);
     }
     let result = hasher.finalize();
     let mut hash = [0u8; 32];
@@ -282,7 +308,7 @@ fn compute_max_required_signatures(length: usize) -> u32 {
 
 fn verify_validator_proofs(
     validator_set: &ValidatorSet,
-    bitfield: &[u64],
+    bitfield: &[BitfieldElement],
     proofs: &[ValidatorProof],
     commitment_hash: &[u8; 32],
 ) {
@@ -316,7 +342,7 @@ fn verify_validator_proofs(
 
 fn verify_fiat_shamir_commitment(
     validator_set: &ValidatorSet,
-    bitfield: &[u64],
+    bitfield: &[BitfieldElement],
     proofs: &[ValidatorProof],
     commitment_hash: &[u8; 32],
 ) {
@@ -333,7 +359,7 @@ fn verify_mmr_proof(
     commitment: &Commitment,
     leaf: &MMRLeaf,
     leaf_proof: &[[u8; 32]],
-    leaf_proof_order: &[u8],
+    leaf_proof_order: &[u8; 32],
 ) {
     let mmr_root = extract_mmr_root(commitment);
     let leaf_hash = keccak256(&encode_mmr_leaf(leaf));
@@ -351,12 +377,12 @@ fn verify_mmr_proof(
     }
 }
 
-// Helper function matching MMRProof.verifyLeafProof from Solidity
+/// MMRProof.verifyLeafProof - (proofOrder >> i) & 1 for order
 fn mmr_verify_leaf_proof(
     root: &[u8; 32],
     leaf: &[u8; 32],
     leaf_proof: &[[u8; 32]],
-    leaf_proof_order: &[u8],
+    leaf_proof_order: &[u8; 32],
 ) -> bool {
     let mut acc = *leaf;
     for (i, item) in leaf_proof.iter().enumerate() {
@@ -385,24 +411,26 @@ fn extract_mmr_root(commitment: &Commitment) -> [u8; 32] {
     panic!("MMR root not found in commitment");
 }
 
+/// fiatShamirFinalBitfield - seed = uint256(fiatShamirHash) (full 32 bytes)
 fn fiat_shamir_final_bitfield(
     validator_set: &ValidatorSet,
-    bitfield: &[u64],
+    bitfield: &[BitfieldElement],
     commitment_hash: &[u8; 32],
-) -> Vec<u64> {
+) -> Vec<BitfieldElement> {
     let bitfield_hash = hash_bitfield(bitfield);
     let fiat_hash = create_fiat_shamir_hash(commitment_hash, &bitfield_hash, validator_set);
-    
+
     let max_required = compute_max_required_signatures(validator_set.length as usize) as usize;
     let required = std::cmp::min(FIAT_SHAMIR_REQUIRED_SIGNATURES as usize, max_required);
     subsample_bitfield(
-        u64::from_be_bytes(fiat_hash[24..32].try_into().unwrap()),
+        fiat_hash,
         bitfield,
         validator_set.length as usize,
         required,
     )
 }
 
+/// createFiatShamirHash - bytes32(uint256(v)) for id/length (must match BeefyClient.sol)
 fn create_fiat_shamir_hash(
     commitment_hash: &[u8; 32],
     bitfield_hash: &[u8; 32],
@@ -425,13 +453,14 @@ fn create_fiat_shamir_hash(
     hash
 }
 
+/// encodeMMRLeaf - ScaleCodec encoding (must match BeefyClient.sol)
 fn encode_mmr_leaf(leaf: &MMRLeaf) -> Vec<u8> {
     let mut out = Vec::new();
     out.push(leaf.version);
-    out.extend_from_slice(&leaf.parent_number.to_le_bytes());
+    out.extend_from_slice(&scale_encode_u32(leaf.parent_number));
     out.extend_from_slice(&leaf.parent_hash);
-    out.extend_from_slice(&leaf.next_authority_set_id.to_le_bytes());
-    out.extend_from_slice(&leaf.next_authority_set_len.to_le_bytes());
+    out.extend_from_slice(&scale_encode_u64(leaf.next_authority_set_id));
+    out.extend_from_slice(&scale_encode_u32(leaf.next_authority_set_len));
     out.extend_from_slice(&leaf.next_authority_set_root);
     out.extend_from_slice(&leaf.parachain_heads_root);
     out
@@ -470,24 +499,25 @@ fn substrate_merkle_root(
     node
 }
 
+/// Bitfield.subsample - keccak256(abi.encodePacked(seed, iteration)), seed/iteration uint256
 fn subsample_bitfield(
-    seed: u64,
-    prior_bitfield: &[u64],
+    seed: [u8; 32],
+    prior_bitfield: &[BitfieldElement],
     prior_bitfield_size: usize,
     n: usize,
-) -> Vec<u64> {
+) -> Vec<BitfieldElement> {
     if prior_bitfield.len() != container_length(prior_bitfield_size)
         || n > count_set_bits(prior_bitfield, prior_bitfield_size)
     {
         panic!("Invalid sampling params");
     }
 
-    let mut output = vec![0u64; prior_bitfield.len()];
+    let mut output = vec![[0u8; 32]; prior_bitfield.len()];
     let mut found = 0usize;
-    let mut i = 0usize;
+    let mut i = 0u64;
 
     while found < n {
-        let index = make_index(seed, i as u64, prior_bitfield_size);
+        let index = make_index(seed, i, prior_bitfield_size);
         if !is_bit_set(prior_bitfield, index, prior_bitfield_size)
             || is_bit_set(&output, index, prior_bitfield_size)
         {
@@ -503,45 +533,56 @@ fn subsample_bitfield(
     output
 }
 
-fn make_index(seed: u64, iteration: u64, length: usize) -> usize {
+/// Bitfield.makeIndex - keccak256(abi.encodePacked(seed, iteration)) % length
+/// Both seed and iteration are uint256 (32 bytes); iteration is zero-padded for u64
+fn make_index(seed: [u8; 32], iteration: u64, length: usize) -> usize {
     if length == 0 {
         return 0;
     }
-    let mut buf = [0u8; 16];
-    buf[..8].copy_from_slice(&seed.to_le_bytes());
-    buf[8..].copy_from_slice(&iteration.to_le_bytes());
+    let mut buf = [0u8; 64];
+    buf[..32].copy_from_slice(&seed);
+    let mut iter_padded = [0u8; 32];
+    iter_padded[24..].copy_from_slice(&iteration.to_be_bytes());
+    buf[32..].copy_from_slice(&iter_padded);
     let hash = keccak256(&buf);
-    let mut num = [0u8; 8];
-    num.copy_from_slice(&hash[..8]);
-    (u64::from_le_bytes(num) as usize) % length
+    u256_mod_usize(&hash, length)
+}
+
+/// Compute bytes32 as uint256 mod n (matches Solidity mod(keccak256(...), length))
+fn u256_mod_usize(bytes: &[u8; 32], n: usize) -> usize {
+    let mut result: u128 = 0;
+    for &b in bytes {
+        result = (result * 256 + b as u128) % n as u128;
+    }
+    result as usize
 }
 
 fn container_length(bitfield_size: usize) -> usize {
-    (bitfield_size + 63) / 64
+    (bitfield_size + 255) / 256
 }
 
-fn validate_bitfield_padding(bitfield: &[u64], length: usize) {
+fn validate_bitfield_padding(bitfield: &[BitfieldElement], length: usize) {
     let container_len = container_length(length);
     if container_len == 0 || bitfield.is_empty() {
         return;
     }
 
-    // Check if there are padding bits in the last element
-    let valid_bits_in_last_element = length % 64;
+    let valid_bits_in_last_element = length % 256;
     if valid_bits_in_last_element == 0 {
-        // All bits in last element are valid, no padding
         return;
     }
 
-    // Create a mask for padding bits: all bits from validBitsInLastElement to 63
-    let padding_mask = u64::MAX << valid_bits_in_last_element;
-    let last_element = bitfield[container_len - 1];
-    if (last_element & padding_mask) != 0 {
-        panic!("Invalid bitfield padding");
+    let last_element = &bitfield[container_len - 1];
+    for bit in valid_bits_in_last_element..256 {
+        let byte_index = 31 - (bit / 8);
+        let bit_index = bit % 8;
+        if (last_element[byte_index] >> bit_index) & 1 != 0 {
+            panic!("Invalid bitfield padding");
+        }
     }
 }
 
-fn validate_bitfield(bitfield: &[u64], length: usize, required_min_bits: u32) {
+fn validate_bitfield(bitfield: &[BitfieldElement], length: usize, required_min_bits: u32) {
     // Check bitfield length matches container length
     let expected_container_len = container_length(length);
     if bitfield.len() != expected_container_len {
@@ -558,27 +599,27 @@ fn validate_bitfield(bitfield: &[u64], length: usize, required_min_bits: u32) {
     validate_bitfield_padding(bitfield, length);
 }
 
-fn set_bit(bitfield: &mut [u64], index: usize) {
-    let word = index / 64;
-    let bit = index % 64;
-    bitfield[word] |= 1u64 << bit;
+fn set_bit(bitfield: &mut [BitfieldElement], index: usize) {
+    let element_index = index >> 8;
+    let byte_index = 31 - (index / 8);
+    let bit_index = index % 8;
+    bitfield[element_index][byte_index] |= 1 << bit_index;
 }
 
-fn unset_bit(bitfield: &mut [u64], index: usize) {
-    let word = index / 64;
-    let bit = index % 64;
-    bitfield[word] &= !(1u64 << bit);
+fn unset_bit(bitfield: &mut [BitfieldElement], index: usize) {
+    let element_index = index >> 8;
+    let byte_index = 31 - (index / 8);
+    let bit_index = index % 8;
+    bitfield[element_index][byte_index] &= !(1 << bit_index);
 }
 
-fn proof_order_bit(order: &[u8], index: usize) -> u8 {
-    if order.is_empty() {
+/// Extract bit i from uint256 proofOrder: (proofOrder >> i) & 1
+fn proof_order_bit(order: &[u8; 32], index: usize) -> u8 {
+    if index >= 256 {
         return 0;
     }
-    let byte_index = index / 8;
-    if byte_index >= order.len() {
-        return 0;
-    }
-    (order[byte_index] >> (index % 8)) & 1
+    let byte_index = 31 - (index / 8);
+    ((order[byte_index] >> (index % 8)) & 1) as u8
 }
 
 fn hash_pairs(x: [u8; 32], y: [u8; 32], order: u8) -> [u8; 32] {

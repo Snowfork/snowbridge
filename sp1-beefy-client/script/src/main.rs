@@ -3,6 +3,60 @@ use std::fs;
 
 use serde::{Deserialize, Serialize};
 
+/// Convert bitfield from JSON to Vec<[u8; 32]> (uint256[] format for BeefyClient)
+/// Supports: array of hex strings "0x...", or array of binary strings (split into 256-bit chunks)
+fn parse_bitfield(value: &serde_json::Value) -> anyhow::Result<Vec<[u8; 32]>> {
+    let arr = value
+        .as_array()
+        .ok_or_else(|| anyhow::anyhow!("bitfield must be array"))?;
+    let mut result = Vec::new();
+    for item in arr {
+        if let Some(s) = item.as_str() {
+            if s.starts_with("0x") {
+                let hex_bytes = hex::decode(s.trim_start_matches("0x"))?;
+                if hex_bytes.len() != 32 {
+                    anyhow::bail!("hex element must be 32 bytes");
+                }
+                let mut arr = [0u8; 32];
+                arr.copy_from_slice(&hex_bytes);
+                result.push(arr);
+            } else {
+                let bits: Vec<u8> = s
+                    .chars()
+                    .map(|c| if c == '1' { 1u8 } else { 0u8 })
+                    .collect();
+                for chunk in bits.chunks(256) {
+                    let mut elem = [0u8; 32];
+                    for (byte_idx, bit_chunk) in chunk.chunks(8).take(32).enumerate() {
+                        let byte = bit_chunk
+                            .iter()
+                            .enumerate()
+                            .map(|(i, &b)| b << i)
+                            .fold(0u8, |a, b| a | b);
+                        elem[31 - byte_idx] = byte;
+                    }
+                    result.push(elem);
+                }
+            }
+        } else {
+            anyhow::bail!("bitfield element must be string");
+        }
+    }
+    Ok(result)
+}
+
+/// Convert leafProofOrder (number) to [u8; 32] (uint256 big-endian)
+fn parse_leaf_proof_order(value: &serde_json::Value) -> anyhow::Result<[u8; 32]> {
+    let n = match value {
+        serde_json::Value::Number(n) => n.as_u64().unwrap_or(0),
+        serde_json::Value::String(s) => s.parse::<u64>().unwrap_or(0),
+        _ => 0,
+    };
+    let mut arr = [0u8; 32];
+    arr[24..].copy_from_slice(&n.to_be_bytes());
+    Ok(arr)
+}
+
 // Types matching the program inputs
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Commitment {
@@ -71,9 +125,10 @@ fn main() -> anyhow::Result<()> {
             let commitment: Commitment = serde_json::from_str(&commitment_json)?;
             stdin.write(&commitment);
 
-            // Read and write bitfield
+            // Read and write bitfield (uint256[] format)
             let bitfield_json = fs::read_to_string(&args[3])?;
-            let bitfield: Vec<u64> = serde_json::from_str(&bitfield_json)?;
+            let bitfield_value: serde_json::Value = serde_json::from_str(&bitfield_json)?;
+            let bitfield = parse_bitfield(&bitfield_value)?;
             stdin.write(&bitfield);
 
             // Read and write proofs
@@ -91,9 +146,11 @@ fn main() -> anyhow::Result<()> {
             let leaf_proof: Vec<[u8; 32]> = serde_json::from_str(&leaf_proof_json)?;
             stdin.write(&leaf_proof);
 
-            // Read and write leaf proof order
+            // Read and write leaf proof order (uint256)
             let leaf_proof_order_json = fs::read_to_string(&args[7])?;
-            let leaf_proof_order: Vec<u8> = serde_json::from_str(&leaf_proof_order_json)?;
+            let leaf_proof_order_value: serde_json::Value =
+                serde_json::from_str(&leaf_proof_order_json)?;
+            let leaf_proof_order = parse_leaf_proof_order(&leaf_proof_order_value)?;
             stdin.write(&leaf_proof_order);
         }
         _ => {
