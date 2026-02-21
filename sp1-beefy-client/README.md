@@ -70,6 +70,21 @@ The SP1 program is designed to match `BeefyClient.submitFiatShamir` exactly:
 - **Fiat-Shamir**: Domain `SNOWBRIDGE-FIAT-SHAMIR-v1`, full 32-byte seed, `keccak256(seed||iteration)` for subsampling
 - **leafProofOrder**: `uint256` (32 bytes, bits 0..n for proof order)
 
+## Initial State (Build Time)
+
+The program's initial state (Beefy checkpoint) is baked in at build time from `contracts/test/data/checkpoint.json`. Edit this file for your deployment.
+
+```json
+{
+  "latestMMRRoot": "0x...",
+  "latestBeefyBlock": 0,
+  "currentValidatorSet": { "id": 12766, "length": 300, "root": "0x..." },
+  "nextValidatorSet": { "id": 12767, "length": 600, "root": "0x..." }
+}
+```
+
+Rebuild the program when deploying to a new chain or after a checkpoint change.
+
 ## Input Formats for Script
 
 - **bitfield.json**: Array of hex strings (`"0x..."`) or binary strings; binary strings are split into 256-bit chunks

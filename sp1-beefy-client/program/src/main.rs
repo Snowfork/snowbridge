@@ -55,7 +55,8 @@ const FIAT_SHAMIR_DOMAIN_ID: &[u8] = b"SNOWBRIDGE-FIAT-SHAMIR-v1";
 type BitfieldElement = [u8; 32];
 const FIAT_SHAMIR_REQUIRED_SIGNATURES: u32 = 111;
 
-// Global state variables (in a real implementation, these would be stored in the contract)
+/// State: on-chain values. Validator sets are fixed at deployment (initialization).
+/// latest_mmr_root and latest_beefy_block are the prior verified values.
 #[derive(Debug, Clone)]
 struct State {
     latest_mmr_root: [u8; 32],
@@ -64,22 +65,11 @@ struct State {
     next_validator_set: ValidatorSet,
 }
 
-static STATE: LazyLock<Mutex<State>> = LazyLock::new(|| {
-    Mutex::new(State {
-        latest_mmr_root: [0u8; 32],
-        latest_beefy_block: 0,
-        current_validator_set: ValidatorSet {
-            id: 0,
-            length: 0,
-            root: [0u8; 32],
-        },
-        next_validator_set: ValidatorSet {
-            id: 0,
-            length: 0,
-            root: [0u8; 32],
-        },
-    })
-});
+// Initial state baked in at build time from contracts/test/data/checkpoint.json
+include!(concat!(env!("OUT_DIR"), "/checkpoint.rs"));
+
+/// Current state, initialized from checkpoint and updated on each successful submit_fiat_shamir.
+static STATE: LazyLock<Mutex<State>> = LazyLock::new(|| Mutex::new(INITIAL_STATE.clone()));
 
 fn main() {
     submit_fiat_shamir();
@@ -96,6 +86,7 @@ fn submit_fiat_shamir() {
 
     // Verify all validator proofs
     let commitment_hash = hash_commitment(&commitment);
+
     let mut state = STATE.lock().unwrap();
 
     // Check for stale commitment
@@ -127,7 +118,7 @@ fn submit_fiat_shamir() {
         verify_mmr_proof(&commitment, &leaf, &leaf_proof, &leaf_proof_order);
     }
 
-    // Update state
+    // Update STATE on success
     state.latest_mmr_root = extract_mmr_root(&commitment);
     state.latest_beefy_block = commitment.block_number as u64;
 
@@ -139,6 +130,7 @@ fn submit_fiat_shamir() {
             root: leaf.next_authority_set_root,
         };
     }
+    // STATE is held in Mutex and persists for the duration of this execution
 
     // Commit the results (order must match SP1BeefyClient.sol)
     commit(&state.latest_mmr_root);

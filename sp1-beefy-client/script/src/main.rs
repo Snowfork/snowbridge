@@ -45,6 +45,45 @@ fn parse_bitfield(value: &serde_json::Value) -> anyhow::Result<Vec<[u8; 32]>> {
     Ok(result)
 }
 
+/// Deserialize [u8; 2] from string (e.g. "mh")
+fn deserialize_bytes_2<'de, D>(deserializer: D) -> Result<[u8; 2], D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let s: String = serde::Deserialize::deserialize(deserializer)?;
+    let bytes = s.as_bytes();
+    if bytes.len() != 2 {
+        return Err(serde::de::Error::custom("expected 2-byte string"));
+    }
+    Ok([bytes[0], bytes[1]])
+}
+
+/// Deserialize [u8; 32] from hex string (e.g. "0x1234...")
+fn deserialize_hex_bytes_32<'de, D>(deserializer: D) -> Result<[u8; 32], D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let s: String = serde::Deserialize::deserialize(deserializer)?;
+    let s = s.trim_start_matches("0x");
+    let bytes = hex::decode(s).map_err(serde::de::Error::custom)?;
+    if bytes.len() != 32 {
+        return Err(serde::de::Error::custom("expected 32 bytes for hex field"));
+    }
+    let mut arr = [0u8; 32];
+    arr.copy_from_slice(&bytes);
+    Ok(arr)
+}
+
+/// Deserialize Vec<u8> from hex string (e.g. "0x1234...")
+fn deserialize_hex_vec<'de, D>(deserializer: D) -> Result<Vec<u8>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let s: String = serde::Deserialize::deserialize(deserializer)?;
+    let s = s.trim_start_matches("0x");
+    hex::decode(s).map_err(serde::de::Error::custom)
+}
+
 /// Convert leafProofOrder (number) to [u8; 32] (uint256 big-endian)
 fn parse_leaf_proof_order(value: &serde_json::Value) -> anyhow::Result<[u8; 32]> {
     let n = match value {
@@ -57,17 +96,21 @@ fn parse_leaf_proof_order(value: &serde_json::Value) -> anyhow::Result<[u8; 32]>
     Ok(arr)
 }
 
-// Types matching the program inputs
+// Types matching the program inputs (with JSON camelCase support)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Commitment {
+    #[serde(rename = "blockNumber", alias = "block_number")]
     pub block_number: u32,
+    #[serde(rename = "validatorSetID", alias = "validator_set_id")]
     pub validator_set_id: u64,
     pub payload: Vec<PayloadItem>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PayloadItem {
+    #[serde(rename = "payloadID", alias = "payload_id", deserialize_with = "deserialize_bytes_2")]
     pub payload_id: [u8; 2],
+    #[serde(deserialize_with = "deserialize_hex_vec")]
     pub data: Vec<u8>,
 }
 
@@ -84,11 +127,17 @@ pub struct ValidatorProof {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MMRLeaf {
     pub version: u8,
+    #[serde(rename = "parentNumber", alias = "parent_number")]
     pub parent_number: u32,
+    #[serde(rename = "parentHash", alias = "parent_hash", deserialize_with = "deserialize_hex_bytes_32")]
     pub parent_hash: [u8; 32],
+    #[serde(rename = "nextAuthoritySetID", alias = "next_authority_set_id")]
     pub next_authority_set_id: u64,
+    #[serde(rename = "nextAuthoritySetLen", alias = "next_authority_set_len")]
     pub next_authority_set_len: u32,
+    #[serde(rename = "nextAuthoritySetRoot", alias = "next_authority_set_root", deserialize_with = "deserialize_hex_bytes_32")]
     pub next_authority_set_root: [u8; 32],
+    #[serde(rename = "parachainHeadsRoot", alias = "parachain_heads_root", deserialize_with = "deserialize_hex_bytes_32")]
     pub parachain_heads_root: [u8; 32],
 }
 
@@ -109,14 +158,20 @@ fn main() -> anyhow::Result<()> {
     // Read command line arguments
     let args: Vec<String> = std::env::args().collect();
     if args.len() < 2 {
-        eprintln!("Usage: {} submit-fiat-shamir <commitment.json> <bitfield.json> <proofs.json> <leaf.json> <leaf_proof.json> <leaf_proof_order.json>", args[0]);
+        eprintln!(
+            "Usage: {} submit-fiat-shamir <commitment.json> <bitfield.json> <proofs.json> <leaf.json> <leaf_proof.json> <leaf_proof_order.json>",
+            args[0]
+        );
         std::process::exit(1);
     }
 
     match args[1].as_str() {
         "submit-fiat-shamir" => {
             if args.len() < 8 {
-                eprintln!("Usage: {} submit-fiat-shamir <commitment.json> <bitfield.json> <proofs.json> <leaf.json> <leaf_proof.json> <leaf_proof_order.json>", args[0]);
+                eprintln!(
+                    "Usage: {} submit-fiat-shamir <commitment.json> <bitfield.json> <proofs.json> <leaf.json> <leaf_proof.json> <leaf_proof_order.json>",
+                    args[0]
+                );
                 std::process::exit(1);
             }
 
