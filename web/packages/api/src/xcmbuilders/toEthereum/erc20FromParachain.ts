@@ -191,7 +191,8 @@ export function buildTransferXcmFromParachain(
     let sourceLocation = accountToLocation(sourceAccount)
     let tokenLocation = erc20Location(ethChainId, asset.token)
 
-    let localDOTFeeAmount: bigint = fee.localExecutionFeeDOT! + fee.localDeliveryFeeDOT!
+    let localDOTFeeAmount: bigint =
+        (fee.localExecutionFeeDOT ?? 0n) + (fee.localDeliveryFeeDOT ?? 0n)
     let totalDOTFeeAmount: bigint = fee.totalFeeInDot!
     let remoteEtherFeeAmount: bigint = fee.ethereumExecutionFee!
 

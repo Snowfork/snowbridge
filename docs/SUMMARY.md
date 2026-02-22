@@ -18,6 +18,7 @@
   * [SDK](developers/snowbridge-v1/typescript-sdk.md)
   * [Parachain Integration](developers/snowbridge-v1/parachain-integration.md)
   * [Token Transfers](developers/snowbridge-v1/token-transfers.md)
+* [V1 to V2 Upgrade Guide](developers/v1-to-v2-upgrade-guide.md)
 
 ## Security
 
