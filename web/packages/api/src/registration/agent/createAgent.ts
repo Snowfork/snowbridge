@@ -5,11 +5,11 @@ import {
     AgentCreation,
     AgentCreationValidationResult,
 } from "./agentInterface"
-import { IGatewayV2__factory as IGateway__factory } from "../../contracts"
+import { IGATEWAY_V2_ABI } from "../../contracts"
 import { Context } from "../../index"
 import { ValidationKind } from "../../toPolkadotSnowbridgeV2"
 import { ValidationLog, ValidationReason } from "../../toPolkadot_v2"
-import { AbstractProvider, Contract } from "ethers"
+import { AbstractProvider, Contract, Interface } from "ethers"
 
 export class CreateAgent implements AgentCreationInterface {
     async createAgentCreation(
@@ -22,7 +22,7 @@ export class CreateAgent implements AgentCreationInterface {
         sourceAccount: string,
         agentId: string,
     ): Promise<AgentCreation> {
-        const ifce = IGateway__factory.createInterface()
+        const ifce = new Interface(IGATEWAY_V2_ABI)
         const con = new Contract(registry.gatewayAddress, ifce)
 
         const tx = await con.getFunction("v2_createAgent").populateTransaction(agentId, {

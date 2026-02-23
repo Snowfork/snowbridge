@@ -1,7 +1,7 @@
 import { ApiPromise } from "@polkadot/api"
 import { AssetRegistry } from "@snowbridge/base-types"
 import { Connections, TransferInterface } from "./transferInterface"
-import { IGatewayV2__factory as IGateway__factory, IGatewayV2 as IGateway } from "../../contracts"
+import { IGATEWAY_V2_ABI, IGatewayV2 as IGateway } from "../../contracts"
 import { Context } from "../../index"
 import {
     buildMessageId,
@@ -27,7 +27,7 @@ import {
     sendMessageXCM,
     sendMessageXCMWithDOTDestFee,
 } from "../../xcmbuilders/toPolkadot/pnaToParachain"
-import { AbstractProvider, Contract } from "ethers"
+import { AbstractProvider, Contract, Interface } from "ethers"
 import { getOperatingStatus } from "../../status"
 import { hexToU8a } from "@polkadot/util"
 
@@ -239,7 +239,7 @@ export class PNAToParachain implements TransferInterface {
             beneficiaryMultiAddress(beneficiaryAccount)
         let value = fee.totalFeeInWei
 
-        const ifce = IGateway__factory.createInterface()
+        const ifce = new Interface(IGATEWAY_V2_ABI)
         const con = new Contract(registry.gatewayAddress, ifce)
 
         if (!ahAssetMetadata.foreignId) {
