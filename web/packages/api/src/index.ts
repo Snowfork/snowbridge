@@ -18,7 +18,7 @@ import {
     SnowbridgeL1Adaptor__factory,
     SnowbridgeL2Adaptor,
     SnowbridgeL2Adaptor__factory,
-} from "@snowbridge/contract-types"
+} from "./contracts"
 import { Environment } from "@snowbridge/base-types"
 
 export * as toPolkadotV2 from "./toPolkadot_v2"
@@ -296,11 +296,6 @@ export class Context {
     }
 
     async destroyContext(): Promise<void> {
-        // clean up contract listeners
-        if (this.#beefyClient) await this.beefyClient().removeAllListeners()
-        if (this.#gateway) await this.gateway().removeAllListeners()
-        if (this.#gatewayV2) await this.gatewayV2().removeAllListeners()
-
         // clean up ethereum
         for (const ethChainKey of Object.keys(this.environment.ethereumChains)) {
             if (

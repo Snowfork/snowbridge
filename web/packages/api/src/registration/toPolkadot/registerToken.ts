@@ -7,7 +7,7 @@ import {
     TokenRegistration,
     RegistrationValidationResult,
 } from "./registrationInterface"
-import { IGatewayV2__factory as IGateway__factory } from "@snowbridge/contract-types"
+import { IGatewayV2__factory as IGateway__factory } from "../../contracts"
 import { Context } from "../../index"
 import { ValidationKind } from "../../toPolkadotSnowbridgeV2"
 import { FeeInfo, ValidationLog, ValidationReason } from "../../toPolkadot_v2"

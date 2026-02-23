@@ -1,6 +1,6 @@
 import { AssetRegistry } from "@snowbridge/base-types"
 import { Context } from "../../index"
-import { IGatewayV2 as IGateway } from "@snowbridge/contract-types"
+import { IGatewayV2 as IGateway } from "../../contracts"
 import { ApiPromise } from "@polkadot/api"
 import { AbstractProvider, ContractTransaction } from "ethers"
 import { OperationStatus } from "../../status"
