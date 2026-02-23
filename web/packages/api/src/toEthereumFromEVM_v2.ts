@@ -14,7 +14,7 @@ import {
     Parachain,
 } from "@snowbridge/base-types"
 import { getOperatingStatus, OperationStatus } from "./status"
-import { IGatewayV1 as IGateway } from "@snowbridge/contract-types"
+import { IGatewayV1 as IGateway } from "./contracts"
 import { EventRecord } from "@polkadot/types/interfaces"
 import { AbstractProvider, Contract, ContractTransaction, TransactionReceipt } from "ethers"
 import { paraImplementation } from "./parachains"

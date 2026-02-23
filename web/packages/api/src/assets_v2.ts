@@ -1,5 +1,5 @@
 import { AbstractProvider } from "ethers"
-import { IERC20__factory } from "@snowbridge/contract-types"
+import { IERC20__factory } from "./contracts"
 import { AssetRegistry, Parachain } from "@snowbridge/base-types"
 
 export const ETHER_TOKEN_ADDRESS = "0x0000000000000000000000000000000000000000"

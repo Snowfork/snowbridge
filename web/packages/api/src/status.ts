@@ -1,7 +1,7 @@
 import { Context, subsquidV2 } from "./index"
 import { fetchBeaconSlot, fetchFinalityUpdate } from "./utils"
 import { ApiPromise } from "@polkadot/api"
-import { IGatewayV1, IGatewayV2 } from "@snowbridge/contract-types"
+import { IGatewayV1, IGatewayV2 } from "./contracts"
 
 export type OperatingMode = "Normal" | "Halted"
 export type BridgeStatusInfo = {
