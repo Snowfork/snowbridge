@@ -9,10 +9,17 @@ import { PNAToAH } from "./transfers/toPolkadot/pnaToAH"
 import { ERC20ToParachain } from "./transfers/toPolkadot/erc20ToParachain"
 import { PNAToParachain } from "./transfers/toPolkadot/pnaToParachain"
 import { MultiAddressStruct } from "./contracts"
-import { AbiCoder, ContractTransaction, LogDescription, TransactionReceipt, Wallet } from "ethers"
+import {
+    AbiCoder,
+    ContractTransaction,
+    Interface,
+    LogDescription,
+    TransactionReceipt,
+    Wallet,
+} from "ethers"
 import { hexToU8a, stringToU8a } from "@polkadot/util"
 import { blake2AsHex } from "@polkadot/util-crypto"
-import { IGatewayV2__factory } from "./contracts"
+import { IGATEWAY_V2_ABI } from "./contracts"
 import { OperationStatus } from "./status"
 import { FeeInfo, ValidationLog } from "./toPolkadot_v2"
 import { ApiPromise } from "@polkadot/api"
@@ -220,7 +227,7 @@ export async function getMessageReceipt(
     receipt: TransactionReceipt,
 ): Promise<MessageReceipt | null> {
     const events: LogDescription[] = []
-    const gatewayInterface = IGatewayV2__factory.createInterface()
+    const gatewayInterface = new Interface(IGATEWAY_V2_ABI)
     receipt.logs.forEach((log) => {
         let event = gatewayInterface.parseLog({
             topics: [...log.topics],

@@ -4,17 +4,14 @@ import {
     Contract,
     ContractTransaction,
     FeeData,
+    Interface,
     LogDescription,
     parseUnits,
     TransactionReceipt,
 } from "ethers"
 import { beneficiaryMultiAddress, padFeeByPercentage, paraIdToSovereignAccount } from "./utils"
-import {
-    IERC20__factory,
-    IGatewayV1 as IGateway,
-    IGatewayV1__factory as IGateway__factory,
-} from "./contracts"
-import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
+import { IERC20, IERC20_ABI, IGATEWAY_V1_ABI, IGatewayV1 as IGateway } from "./contracts"
+import { erc20Balance, ETHER_TOKEN_ADDRESS } from "./assets_v2"
 import { Asset, AssetRegistry, ERC20Metadata, Parachain } from "@snowbridge/base-types"
 import { getOperatingStatus, OperationStatus } from "./status"
 import { ApiPromise } from "@polkadot/api"
@@ -229,7 +226,7 @@ export async function createTransfer(
     if (tokenAddress === ETHER_TOKEN_ADDRESS) {
         value += amount
     }
-    const ifce = IGateway__factory.createInterface()
+    const ifce = new Interface(IGATEWAY_V1_ABI)
     const con = new Contract(registry.gatewayAddress, ifce)
 
     const totalFeeDot = fee.destinationDeliveryFeeDOT + fee.destinationExecutionFeeDOT
@@ -556,7 +553,7 @@ export async function getMessageReceipt(
     receipt: TransactionReceipt,
 ): Promise<MessageReceipt | null> {
     const events: LogDescription[] = []
-    const gatewayInterface = IGateway__factory.createInterface()
+    const gatewayInterface = new Interface(IGATEWAY_V1_ABI)
     receipt.logs.forEach((log) => {
         let event = gatewayInterface.parseLog({
             topics: [...log.topics],
@@ -577,23 +574,6 @@ export async function getMessageReceipt(
         blockHash: receipt.blockHash,
         txHash: receipt.hash,
         txIndex: receipt.index,
-    }
-}
-
-async function erc20Balance(
-    ethereum: AbstractProvider,
-    tokenAddress: string,
-    owner: string,
-    spender: string,
-) {
-    const tokenContract = IERC20__factory.connect(tokenAddress, ethereum)
-    const [balance, gatewayAllowance] = await Promise.all([
-        tokenContract.balanceOf(owner),
-        tokenContract.allowance(owner, spender),
-    ])
-    return {
-        balance,
-        gatewayAllowance,
     }
 }
 

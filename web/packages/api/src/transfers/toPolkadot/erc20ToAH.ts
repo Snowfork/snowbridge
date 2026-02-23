@@ -1,7 +1,7 @@
 import { ApiPromise } from "@polkadot/api"
 import { AssetRegistry } from "@snowbridge/base-types"
 import { Connections, TransferInterface } from "./transferInterface"
-import { IGatewayV2__factory as IGateway__factory, IGatewayV2 as IGateway } from "../../contracts"
+import { IGATEWAY_V2_ABI, IGatewayV2 as IGateway } from "../../contracts"
 import { Context } from "../../index"
 import {
     calculateRelayerFee,
@@ -19,7 +19,7 @@ import { accountId32Location, DOT_LOCATION, erc20Location } from "../../xcmBuild
 import { paraImplementation } from "../../parachains"
 import { erc20Balance, ETHER_TOKEN_ADDRESS } from "../../assets_v2"
 import { beneficiaryMultiAddress, padFeeByPercentage } from "../../utils"
-import { AbstractProvider, Contract } from "ethers"
+import { AbstractProvider, Contract, Interface } from "ethers"
 import { FeeInfo, resolveInputs, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
 import { buildMessageId, Transfer, ValidationResult } from "../../toPolkadotSnowbridgeV2"
 import { getOperatingStatus } from "../../status"
@@ -160,7 +160,7 @@ export class ERC20ToAH implements TransferInterface {
         } else {
             assets = [encodeNativeAsset(tokenAddress, amount)]
         }
-        const ifce = IGateway__factory.createInterface()
+        const ifce = new Interface(IGATEWAY_V2_ABI)
         const con = new Contract(registry.gatewayAddress, ifce)
         const accountNonce = await ethereum.getTransactionCount(sourceAccount, "pending")
 
