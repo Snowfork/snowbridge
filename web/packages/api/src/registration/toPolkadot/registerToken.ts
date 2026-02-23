@@ -7,11 +7,11 @@ import {
     TokenRegistration,
     RegistrationValidationResult,
 } from "./registrationInterface"
-import { IGatewayV2__factory as IGateway__factory } from "../../contracts"
+import { IGATEWAY_V2_ABI } from "../../contracts"
 import { Context } from "../../index"
 import { ValidationKind } from "../../toPolkadotSnowbridgeV2"
 import { FeeInfo, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
-import { AbstractProvider, Contract } from "ethers"
+import { AbstractProvider, Contract, Interface } from "ethers"
 import { getOperatingStatus } from "../../status"
 import { DOT_LOCATION, erc20Location } from "../../xcmBuilder"
 import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
@@ -118,7 +118,7 @@ export class RegisterToken implements RegistrationInterface {
         tokenAddress: string,
         fee: RegistrationFee,
     ): Promise<TokenRegistration> {
-        const ifce = IGateway__factory.createInterface()
+        const ifce = new Interface(IGATEWAY_V2_ABI)
         const con = new Contract(registry.gatewayAddress, ifce)
 
         const totalValue = fee.totalFeeInWei
