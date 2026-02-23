@@ -3,6 +3,7 @@
 pragma solidity 0.8.33;
 
 import {ECDSA} from "openzeppelin/utils/cryptography/ECDSA.sol";
+import {BLS12381} from "./utils/BLS12381.sol";
 import {SubstrateMerkleProof} from "./utils/SubstrateMerkleProof.sol";
 import {Bitfield} from "./utils/Bitfield.sol";
 import {Uint16Array, createUint16Array} from "./utils/Uint16Array.sol";
@@ -89,18 +90,53 @@ contract BeefyClient {
 
     /**
      * @dev The ValidatorProof is a proof used to verify a commitment signature
+     * This is used for the two-phase ECDSA submission (submitInitial/submitFinal)
      */
     struct ValidatorProof {
-        // The parity bit to specify the intended solution
+        // ECDSA signature components
         uint8 v;
-        // The x component on the secp256k1 curve
         bytes32 r;
-        // The challenge solution
         bytes32 s;
         // Leaf index of the validator address in the merkle tree
         uint256 index;
         // Validator address
         address account;
+        // Merkle proof for the validator
+        bytes32[] proof;
+    }
+
+    /**
+     * @dev BLS validator proof for aggregated submissions
+     */
+    struct BLSValidatorProof {
+        // BLS signature (G1 point, 48 bytes compressed)
+        bytes signature;
+        // BLS public key (G2 point, 96 bytes compressed)
+        bytes publicKey;
+        // Leaf index of the validator public key in the merkle tree
+        uint256 index;
+        // Merkle proof for the validator
+        bytes32[] proof;
+    }
+
+    /**
+     * @dev Proof for aggregated BLS signature submission (simplified, no sub-sampling)
+     */
+    struct AggregatedProof {
+        // Pre-aggregated BLS signature from all validators (G1 point, 48 bytes)
+        bytes aggregatedSignature;
+        // Array of validator public keys that signed
+        ValidatorMetadata[] validators;
+    }
+
+    /**
+     * @dev Metadata for a validator in an aggregated proof
+     */
+    struct ValidatorMetadata {
+        // BLS public key (G2 point, 96 bytes compressed)
+        bytes publicKey;
+        // Leaf index of the validator public key in the merkle tree
+        uint256 index;
         // Merkle proof for the validator
         bytes32[] proof;
     }
@@ -469,7 +505,11 @@ contract BeefyClient {
      * @dev Compute the hash of a commitment
      * @param commitment the commitment to hash
      */
-    function computeCommitmentHash(Commitment calldata commitment) external pure returns (bytes32) {
+    function computeCommitmentHash(Commitment calldata commitment)
+        external
+        pure
+        returns (bytes32)
+    {
         return keccak256(encodeCommitment(commitment));
     }
 
@@ -564,6 +604,73 @@ contract BeefyClient {
 
         bytes32 commitmentHash = keccak256(encodeCommitment(commitment));
         verifyFiatShamirCommitment(commitmentHash, bitfield, vset, proofs);
+
+        if (is_next_session) {
+            if (leaf.nextAuthoritySetID != nextValidatorSet.id + 1) {
+                revert InvalidMMRLeaf();
+            }
+            bool leafIsValid = MMRProof.verifyLeafProof(
+                newMMRRoot, keccak256(encodeMMRLeaf(leaf)), leafProof, leafProofOrder
+            );
+            if (!leafIsValid) {
+                revert InvalidMMRLeafProof();
+            }
+            currentValidatorSet = nextValidatorSet;
+            nextValidatorSet.id = leaf.nextAuthoritySetID;
+            nextValidatorSet.length = leaf.nextAuthoritySetLen;
+            nextValidatorSet.root = leaf.nextAuthoritySetRoot;
+            nextValidatorSet.usageCounters = createUint16Array(leaf.nextAuthoritySetLen);
+        }
+
+        latestMMRRoot = newMMRRoot;
+        latestBeefyBlock = commitment.blockNumber;
+
+        emit NewMMRRoot(newMMRRoot, commitment.blockNumber);
+    }
+
+    /**
+     * @dev Submit a commitment with pre-aggregated BLS signature (simplified, no sub-sampling)
+     * This is the most gas-efficient submission method for BLS signatures.
+     * Relayers aggregate all validator signatures off-chain and submit a single aggregated signature.
+     *
+     * @param commitment contains the full commitment that was signed
+     * @param aggregatedProof contains the pre-aggregated signature and validator metadata
+     * @param leaf an MMR leaf provable using the MMR root in the commitment payload
+     * @param leafProof an MMR leaf proof
+     * @param leafProofOrder a bitfield describing the order of each item (left vs right)
+     */
+    function submitBLSAggregated(
+        Commitment calldata commitment,
+        AggregatedProof calldata aggregatedProof,
+        MMRLeaf calldata leaf,
+        bytes32[] calldata leafProof,
+        uint256 leafProofOrder
+    ) external {
+        if (commitment.blockNumber <= latestBeefyBlock) {
+            revert StaleCommitment();
+        }
+
+        bool is_next_session = false;
+        ValidatorSetState storage vset = currentValidatorSet;
+        if (commitment.validatorSetID == nextValidatorSet.id) {
+            is_next_session = true;
+            vset = nextValidatorSet;
+        } else if (commitment.validatorSetID != currentValidatorSet.id) {
+            revert InvalidCommitment();
+        }
+
+        // Verify we have enough validators (2/3+ quorum)
+        uint256 numValidators = aggregatedProof.validators.length;
+        if (numValidators < computeQuorum(vset.length)) {
+            revert InvalidBitfield();
+        }
+
+        bytes32 commitmentHash = keccak256(encodeCommitment(commitment));
+
+        // Verify the aggregated signature
+        verifyBLSAggregatedCommitment(commitmentHash, vset, aggregatedProof);
+
+        bytes32 newMMRRoot = ensureProvidesMMRRoot(commitment);
 
         if (is_next_session) {
             if (leaf.nextAuthoritySetID != nextValidatorSet.id + 1) {
@@ -728,6 +835,49 @@ contract BeefyClient {
         }
     }
 
+    /**
+     * @dev Verify commitment with pre-aggregated signature (no sub-sampling, most efficient)
+     * @param commitmentHash The hash of the commitment
+     * @param vset The validator set
+     * @param aggregatedProof The pre-aggregated proof with signature and validator metadata
+     */
+    function verifyBLSAggregatedCommitment(
+        bytes32 commitmentHash,
+        ValidatorSetState storage vset,
+        AggregatedProof calldata aggregatedProof
+    ) internal view {
+        uint256 numValidators = aggregatedProof.validators.length;
+
+        // Collect public keys and verify merkle proofs
+        bytes[] memory publicKeys = new bytes[](numValidators);
+        bool[] memory seen = new bool[](vset.length);
+
+        for (uint256 i = 0; i < numValidators; i++) {
+            ValidatorMetadata calldata validator = aggregatedProof.validators[i];
+
+            // Check that validator is actually in the validator set
+            if (!isValidatorInSetBLS(vset, validator.publicKey, validator.index, validator.proof))
+            {
+                revert InvalidValidatorProof();
+            }
+
+            // Ensure no validator appears more than once
+            if (seen[validator.index]) {
+                revert InvalidValidatorProof();
+            }
+            seen[validator.index] = true;
+
+            publicKeys[i] = validator.publicKey;
+        }
+
+        // Verify the pre-aggregated signature against all public keys
+        if (!BLS12381.verifyAggregated(
+                commitmentHash, aggregatedProof.aggregatedSignature, publicKeys
+            )) {
+            revert InvalidSignature();
+        }
+    }
+
     function createFiatShamirHash(
         bytes32 commitmentHash,
         bytes32 bitFieldHash,
@@ -825,7 +975,7 @@ contract BeefyClient {
     }
 
     /**
-     * @dev Checks if a validators address is a member of the merkle tree
+     * @dev Checks if a validator's address is a member of the merkle tree (ECDSA version)
      * @param vset The validator set
      * @param account The address of the validator to check for inclusion in `vset`.
      * @param index The leaf index of the account in the merkle tree of validator set addresses.
@@ -839,6 +989,24 @@ contract BeefyClient {
         bytes32[] calldata proof
     ) internal view returns (bool) {
         bytes32 hashedLeaf = keccak256(abi.encodePacked(account));
+        return SubstrateMerkleProof.verify(vset.root, hashedLeaf, index, vset.length, proof);
+    }
+
+    /**
+     * @dev Checks if a validator's BLS public key is a member of the merkle tree (BLS version)
+     * @param vset The validator set
+     * @param publicKey The BLS public key of the validator to check for inclusion in `vset`.
+     * @param index The leaf index of the public key in the merkle tree of validator set.
+     * @param proof Merkle proof required for validation of the public key
+     * @return true if the validator is in the set
+     */
+    function isValidatorInSetBLS(
+        ValidatorSetState storage vset,
+        bytes calldata publicKey,
+        uint256 index,
+        bytes32[] calldata proof
+    ) internal view returns (bool) {
+        bytes32 hashedLeaf = keccak256(abi.encodePacked(publicKey));
         return SubstrateMerkleProof.verify(vset.root, hashedLeaf, index, vset.length, proof);
     }
 
