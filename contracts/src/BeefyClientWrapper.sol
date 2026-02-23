@@ -27,6 +27,7 @@ contract BeefyClientWrapper {
     error InvalidAddress();
     error NotTicketOwner();
     error TicketAlreadyOwned();
+    error InsufficientProgress();
 
     // Base transaction gas cost (intrinsic gas for any Ethereum transaction)
     uint256 private constant BASE_TX_GAS = 21000;
@@ -70,6 +71,12 @@ contract BeefyClientWrapper {
         IBeefyClient.ValidatorProof calldata proof
     ) external {
         uint256 startGas = gasleft();
+
+        // Revert early if commitment won't make enough progress for a refund
+        uint64 latestBeefy = _beefyClient().latestBeefyBlock();
+        if (commitment.blockNumber <= latestBeefy || commitment.blockNumber - latestBeefy < refundTarget) {
+            revert InsufficientProgress();
+        }
 
         // Check if ticket is already owned (prevent race condition between relayers)
         bytes32 commitmentHash = _beefyClient().computeCommitmentHash(commitment);
@@ -166,7 +173,7 @@ contract BeefyClientWrapper {
     }
 
     /**
-     * @dev Abandon a ticket. Useful if another relayer is competing for the same commitment.
+     * @dev Abandon a ticket. Useful if a relayer decides to stop mid-session.
      * Credited cost is forfeited when clearing a ticket.
      */
     function clearTicket(bytes32 commitmentHash) external {

@@ -11,10 +11,11 @@ import (
 // These errors indicate normal competition between relayers or stale data,
 // and should not cause relayer restarts.
 var (
-	ErrTicketAlreadyOwned = computeSelector("TicketAlreadyOwned()")
-	ErrNotTicketOwner     = computeSelector("NotTicketOwner()")
-	ErrStaleCommitment    = computeSelector("StaleCommitment()")
-	ErrInvalidCommitment  = computeSelector("InvalidCommitment()")
+	ErrTicketAlreadyOwned    = computeSelector("TicketAlreadyOwned()")
+	ErrNotTicketOwner        = computeSelector("NotTicketOwner()")
+	ErrStaleCommitment       = computeSelector("StaleCommitment()")
+	ErrInvalidCommitment     = computeSelector("InvalidCommitment()")
+	ErrInsufficientProgress  = computeSelector("InsufficientProgress()")
 )
 
 func computeSelector(sig string) [4]byte {
@@ -78,11 +79,12 @@ func isExpectedSelector(data interface{}) bool {
 	return sel == ErrTicketAlreadyOwned ||
 		sel == ErrNotTicketOwner ||
 		sel == ErrStaleCommitment ||
-		sel == ErrInvalidCommitment
+		sel == ErrInvalidCommitment ||
+		sel == ErrInsufficientProgress
 }
 
 func containsExpectedSelector(s string) bool {
-	for _, sel := range [][4]byte{ErrTicketAlreadyOwned, ErrNotTicketOwner, ErrStaleCommitment, ErrInvalidCommitment} {
+	for _, sel := range [][4]byte{ErrTicketAlreadyOwned, ErrNotTicketOwner, ErrStaleCommitment, ErrInvalidCommitment, ErrInsufficientProgress} {
 		hex := common.Bytes2Hex(sel[:])
 		if strings.Contains(s, "0x"+hex) || strings.Contains(s, hex) {
 			return true

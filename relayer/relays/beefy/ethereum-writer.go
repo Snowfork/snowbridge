@@ -127,6 +127,9 @@ func (wr *EthereumWriter) queryBeefyClientState(ctx context.Context) (*BeefyClie
 }
 
 func (wr *EthereumWriter) submit(ctx context.Context, task *Request) error {
+	// Dynamically disable wrapper if it has insufficient funds
+	wr.useWrapper = wr.isWrapperFunded(ctx)
+
 	// Check if another relayer already has a session in progress (wrapper only)
 	if wr.useWrapper {
 		shouldSkip, err := wr.shouldSkipDueToPendingSession(ctx, task)
@@ -190,6 +193,15 @@ func (wr *EthereumWriter) submit(ctx context.Context, task *Request) error {
 		log.WithFields(logrus.Fields{
 			"beefyBlock": task.SignedCommitment.Commitment.BlockNumber,
 		}).Info("Commitment already synced")
+		return nil
+	}
+
+	// Re-check progress after RandaoCommitDelay (another relayer may have advanced the light client)
+	insufficient, err := wr.isProgressInsufficient(ctx, task)
+	if err != nil {
+		return fmt.Errorf("check progress before commitPrevRandao: %w", err)
+	}
+	if insufficient {
 		return nil
 	}
 
@@ -397,6 +409,32 @@ func (wr *EthereumWriter) isTaskOutdated(ctx context.Context, task *Request) (bo
 }
 
 func (wr *EthereumWriter) submitFiatShamir(ctx context.Context, task *Request) error {
+	// Dynamically disable wrapper if it has insufficient funds
+	wr.useWrapper = wr.isWrapperFunded(ctx)
+
+	// Check if expected progress is sufficient for refund (wrapper only)
+	insufficient, err := wr.isProgressInsufficient(ctx, task)
+	if err != nil {
+		return fmt.Errorf("check progress: %w", err)
+	}
+	if insufficient {
+		return nil
+	}
+
+	// Check if another relayer already has a session in progress (wrapper only)
+	if wr.useWrapper {
+		shouldSkip, err := wr.shouldSkipDueToPendingSession(ctx, task)
+		if err != nil {
+			return fmt.Errorf("check pending session: %w", err)
+		}
+		if shouldSkip {
+			log.WithFields(logrus.Fields{
+				"beefyBlock": task.SignedCommitment.Commitment.BlockNumber,
+			}).Info("Skipping submission: another session already in progress with sufficient progress")
+			return nil
+		}
+	}
+
 	signedValidators := []*big.Int{}
 	for i, signature := range task.SignedCommitment.Signatures {
 		if signature.IsSome() {
@@ -459,6 +497,80 @@ func (wr *EthereumWriter) submitFiatShamir(ctx context.Context, task *Request) e
 	}).Debug("Transaction submitFiatShamir succeeded")
 
 	return nil
+}
+
+// isWrapperFunded checks if the wrapper has sufficient balance to cover a refund.
+// Returns false if the wrapper is not configured, has insufficient funds, or on error.
+func (wr *EthereumWriter) isWrapperFunded(ctx context.Context) bool {
+	if !wr.useWrapper {
+		return false
+	}
+
+	wrapperAddress := common.HexToAddress(wr.config.Contracts.BeefyClientWrapper)
+	balance, err := wr.conn.Client().BalanceAt(ctx, wrapperAddress, nil)
+	if err != nil {
+		log.WithError(err).Warn("Failed to check wrapper balance")
+		return false
+	}
+
+	callOpts := bind.CallOpts{Context: ctx}
+	maxRefund, err := wr.wrapperContract.MaxRefundAmount(&callOpts)
+	if err != nil {
+		log.WithError(err).Warn("Failed to get maxRefundAmount")
+		return false
+	}
+
+	if balance.Cmp(maxRefund) < 0 {
+		log.WithFields(logrus.Fields{
+			"balance":   balance,
+			"maxRefund": maxRefund,
+		}).Warn("Wrapper has insufficient funds, submitting directly to BeefyClient")
+		return false
+	}
+
+	return true
+}
+
+// isProgressInsufficient checks if the expected progress for this commitment
+// would be below the refund target. Only relevant when using the wrapper.
+func (wr *EthereumWriter) isProgressInsufficient(ctx context.Context, task *Request) (bool, error) {
+	if !wr.useWrapper {
+		return false, nil
+	}
+
+	callOpts := bind.CallOpts{Context: ctx}
+
+	latestBeefyBlock, err := wr.beefyClient.LatestBeefyBlock(&callOpts)
+	if err != nil {
+		return false, fmt.Errorf("get latest beefy block: %w", err)
+	}
+
+	refundTarget, err := wr.wrapperContract.RefundTarget(&callOpts)
+	if err != nil {
+		return false, fmt.Errorf("get refund target: %w", err)
+	}
+
+	commitmentBlock := uint64(task.SignedCommitment.Commitment.BlockNumber)
+	if commitmentBlock <= latestBeefyBlock {
+		log.WithFields(logrus.Fields{
+			"commitmentBlock":  commitmentBlock,
+			"latestBeefyBlock": latestBeefyBlock,
+		}).Info("Skipping submission: commitment already behind latest beefy block")
+		return true, nil
+	}
+
+	progress := commitmentBlock - latestBeefyBlock
+	if progress < refundTarget.Uint64() {
+		log.WithFields(logrus.Fields{
+			"commitmentBlock":  commitmentBlock,
+			"latestBeefyBlock": latestBeefyBlock,
+			"progress":         progress,
+			"refundTarget":     refundTarget.Uint64(),
+		}).Info("Skipping submission: expected progress insufficient for refund")
+		return true, nil
+	}
+
+	return false, nil
 }
 
 // shouldSkipDueToPendingSession checks if another relayer already has a session in progress
@@ -656,5 +768,14 @@ func (wr *EthereumWriter) computeCommitmentHash(task *Request) ([32]byte, error)
 		From:    wr.conn.Keypair().CommonAddress(),
 	}
 	commitment := toBeefyClientCommitment(&task.SignedCommitment.Commitment)
-	return wr.beefyClient.ComputeCommitmentHash(callOpts, ToBeefyClientCommitment(commitment))
+	hash, err := wr.beefyClient.ComputeCommitmentHash(callOpts, ToBeefyClientCommitment(commitment))
+	if err != nil {
+		log.WithError(err).Debug("On-chain computeCommitmentHash not available, falling back to local computation")
+		localHash, localErr := task.CommitmentHash()
+		if localErr != nil {
+			return [32]byte{}, localErr
+		}
+		return *localHash, nil
+	}
+	return hash, nil
 }
