@@ -1,10 +1,7 @@
 import { ApiPromise } from "@polkadot/api"
 import { AssetRegistry } from "@snowbridge/base-types"
 import { Connections, TransferInterface } from "./transferInterface"
-import {
-    IGatewayV2__factory as IGateway__factory,
-    IGatewayV2 as IGateway,
-} from "@snowbridge/contract-types"
+import { IGatewayV2__factory as IGateway__factory, IGatewayV2 as IGateway } from "../../contracts"
 import { Context } from "../../index"
 import {
     calculateRelayerFee,

@@ -24,12 +24,13 @@ import { getOperatingStatus } from "../../status"
 import { hexToU8a } from "@polkadot/util"
 import {
     DepositParamsStruct,
+    QuoteExactOutputSingleParamsStruct,
     SendParamsStruct,
     SwapParamsStruct,
-} from "@snowbridge/contract-types/dist/SnowbridgeL2Adaptor"
+    ISwapQuoter,
+} from "../../contracts"
 import { estimateFees } from "../../across/api"
 import { ContractTransaction } from "ethers/lib.commonjs/contract/types"
-import { ISwapQuoter } from "@snowbridge/contract-types"
 
 export class ERC20ToAH implements TransferInterface {
     async getDeliveryFee(
@@ -149,7 +150,7 @@ export class ERC20ToAH implements TransferInterface {
                 registry.ethereumChains?.[`ethereum_l2_${l2ChainId}`]?.assets[l2TokenAddress]
                     ?.swapFee
             let swapQuoter = context.l1SwapQuoter()
-            let params: ISwapQuoter.QuoteExactOutputSingleParamsStruct = {
+            let params: QuoteExactOutputSingleParamsStruct = {
                 tokenIn: tokenAddress,
                 tokenOut: context.l1FeeTokenAddress(),
                 amount: assetHubExecutionFeeEther + relayerFee,
