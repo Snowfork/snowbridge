@@ -1,7 +1,7 @@
 import { ApiPromise } from "@polkadot/api"
 import { AssetRegistry } from "@snowbridge/base-types"
 import { Connections, TransferInterface } from "./transferInterface"
-import { IGatewayV2__factory as IGateway__factory, IGatewayV2 as IGateway } from "../../contracts"
+import { IGATEWAY_V2_ABI, IGatewayV2 as IGateway } from "../../contracts"
 import { Context } from "../../index"
 import {
     buildMessageId,
@@ -25,7 +25,7 @@ import {
     buildParachainERC20ReceivedXcmOnDestination,
     buildParachainERC20ReceivedXcmOnDestinationWithDOTFee,
 } from "../../xcmbuilders/toPolkadot/erc20ToParachain"
-import { AbstractProvider, Contract } from "ethers"
+import { AbstractProvider, Contract, Interface } from "ethers"
 import {
     sendMessageXCM,
     sendMessageXCMWithDOTDestFee,
@@ -248,7 +248,7 @@ export class ERC20ToParachain implements TransferInterface {
         } else {
             assets = [encodeNativeAsset(tokenAddress, amount)]
         }
-        const ifce = IGateway__factory.createInterface()
+        const ifce = new Interface(IGATEWAY_V2_ABI)
         const con = new Contract(registry.gatewayAddress, ifce)
 
         const accountNonce = await ethereum.getTransactionCount(sourceAccount, "pending")
