@@ -23,7 +23,9 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// SessionTimeout is the duration after which a pending session is considered expired
+// SessionTimeout is the duration after which a pending session is considered expired.
+// This should be longer than a full submission cycle (submitInitial → RandaoCommitDelay →
+// commitPrevRandao → submitFinal) to avoid competing with legitimate in-progress sessions.
 const SessionTimeout = 40 * time.Minute
 
 type EthereumWriter struct {
@@ -600,6 +602,17 @@ func (wr *EthereumWriter) shouldSkipDueToPendingSession(ctx context.Context, tas
 		return false, nil
 	}
 
+	taskBlock := uint64(task.SignedCommitment.Commitment.BlockNumber)
+
+	// Our commitment is more recent — submit it to advance the light client further
+	if taskBlock > highestPendingBlock.Uint64() {
+		log.WithFields(logrus.Fields{
+			"taskBlock":           taskBlock,
+			"highestPendingBlock": highestPendingBlock.Uint64(),
+		}).Info("Our commitment is more recent than pending session, proceeding")
+		return false, nil
+	}
+
 	latestBeefyBlock, err := wr.beefyClient.LatestBeefyBlock(&callOpts)
 	if err != nil {
 		return false, fmt.Errorf("get latest beefy block: %w", err)
@@ -617,7 +630,8 @@ func (wr *EthereumWriter) shouldSkipDueToPendingSession(ctx context.Context, tas
 		return false, nil
 	}
 
-	// Check if the session has expired (> 40 minutes old)
+	// Check if the session has expired. SessionTimeout is longer than a full submission
+	// cycle to avoid competing with legitimate in-progress sessions.
 	pendingTimestamp, err := wr.wrapperContract.HighestPendingBlockTimestamp(&callOpts)
 	if err != nil {
 		return false, fmt.Errorf("get highest pending block timestamp: %w", err)
@@ -627,7 +641,7 @@ func (wr *EthereumWriter) shouldSkipDueToPendingSession(ctx context.Context, tas
 	if sessionAge > int64(SessionTimeout.Seconds()) {
 		log.WithFields(logrus.Fields{
 			"highestPendingBlock": highestPendingBlock.Uint64(),
-			"sessionAgeMinutes":   sessionAge / 60,
+			"sessionAgeMinutes":  sessionAge / 60,
 		}).Info("Pending session has expired, proceeding with new submission")
 		return false, nil
 	}
@@ -635,6 +649,7 @@ func (wr *EthereumWriter) shouldSkipDueToPendingSession(ctx context.Context, tas
 	log.WithFields(logrus.Fields{
 		"highestPendingBlock": highestPendingBlock.Uint64(),
 		"latestBeefyBlock":    latestBeefyBlock,
+		"taskBlock":            taskBlock,
 		"pendingProgress":     pendingProgress,
 		"sessionAgeMinutes":   sessionAge / 60,
 	}).Debug("Active session in progress with sufficient progress")
