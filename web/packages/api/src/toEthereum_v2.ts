@@ -27,7 +27,7 @@ import {
     ERC20Metadata,
     Parachain,
 } from "@snowbridge/base-types"
-import { IGatewayV1 as IGateway } from "@snowbridge/contract-types"
+import { IGatewayV1 as IGateway } from "./contracts"
 import {
     CallDryRunEffects,
     EventRecord,
