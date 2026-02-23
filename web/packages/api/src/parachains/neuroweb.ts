@@ -1,9 +1,7 @@
 import { ParachainBase } from "./parachainBase"
-import { DOT_LOCATION, erc20Location } from "../xcmBuilder"
+import { erc20Location } from "../xcmBuilder"
 import { AssetMap, PNAMap } from "@snowbridge/base-types"
 import { ApiPromise } from "@polkadot/api"
-import { SubmittableExtrinsic } from "@polkadot/api/types"
-import { ISubmittableResult } from "@polkadot/types/types"
 
 export const NEUROWEB_TEST_CHAIN_ID = 11155111 // Sepolia
 export const NEUROWEB_TEST_TOKEN_ID = "0xef32abea56beff54f61da319a7311098d6fbcea9"
@@ -122,16 +120,6 @@ export class NeurowebParachain extends ParachainBase {
             await this.provider.query.assets.account(TRAC_ASSET_ID, account)
         ).toPrimitive() as any
         return BigInt(accountData?.balance ?? 0n)
-    }
-
-    createWrapTx(amount: bigint): SubmittableExtrinsic<"promise", ISubmittableResult> {
-        // TODO: Delete, unused
-        return this.provider.tx.wrapper.tracWrap(amount)
-    }
-
-    createUnwrapTx(amount: bigint): SubmittableExtrinsic<"promise", ISubmittableResult> {
-        // TODO: Delete, unused
-        return this.provider.tx.wrapper.tracUnwrap(amount)
     }
 
     swapAsset1ForAsset2(_asset1: any, _asset2: any, _exactAsset1Balance: bigint): Promise<bigint> {

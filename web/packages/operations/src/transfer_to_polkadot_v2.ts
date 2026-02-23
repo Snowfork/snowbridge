@@ -5,7 +5,12 @@ import { formatEther, Wallet } from "ethers"
 import { bridgeInfoFor } from "@snowbridge/registry"
 import { WETH9__factory } from "@snowbridge/contract-types"
 
-export const transferToPolkadot = async (destParaId: number, symbol: string, amount: bigint, feeAsset?: string) => {
+export const transferToPolkadot = async (
+    destParaId: number,
+    symbol: string,
+    amount: bigint,
+    feeAsset?: string,
+) => {
     await cryptoWaitReady()
 
     let env = "local_e2e"
@@ -62,7 +67,8 @@ export const transferToPolkadot = async (destParaId: number, symbol: string, amo
             TOKEN_CONTRACT,
         )
         // Step 1. Get the delivery fee for the transaction
-        const feeAssetLocation = feeAsset?.toLowerCase() === "dot" ? xcmBuilder.DOT_LOCATION : undefined
+        const feeAssetLocation =
+            feeAsset?.toLowerCase() === "dot" ? xcmBuilder.DOT_LOCATION : undefined
         let fee = await transferImpl.getDeliveryFee(context, registry, TOKEN_CONTRACT, destParaId, {
             feeAsset: feeAssetLocation,
         })

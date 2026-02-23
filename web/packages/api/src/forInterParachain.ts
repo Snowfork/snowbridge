@@ -289,7 +289,7 @@ export async function validateTransfer(
     } = transfer.computed
     const { tx } = transfer
 
-    const nativeBalance = await source.getNativeBalance(sourceAccountHex)
+    const nativeBalance = await source.getNativeBalance(sourceAccountHex, true)
     const tokenBalance = await source.getTokenBalance(
         sourceAccountHex,
         registry.ethChainId,

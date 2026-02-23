@@ -63,21 +63,31 @@ export abstract class ParachainBase {
 
     async getNativeAccount(account: string): Promise<SubstrateAccount> {
         const accountData = (await this.provider.query.system.account(account)).toPrimitive() as any
+        const free = BigInt(accountData.data.free)
+        const frozen = BigInt(accountData.data.frozen)
+        const reserved = BigInt(accountData.data.reserved)
+        const transferable = free - frozen
+        const total = free + reserved
         return {
             nonce: BigInt(accountData.nonce),
             consumers: BigInt(accountData.consumers),
             providers: BigInt(accountData.providers),
             sufficients: BigInt(accountData.sufficients),
             data: {
-                free: BigInt(accountData.data.free),
-                reserved: BigInt(accountData.data.reserved),
-                frozen: BigInt(accountData.data.frozen),
+                free,
+                reserved,
+                frozen,
+                transferable,
+                total,
             },
         }
     }
 
-    async getNativeBalance(account: string): Promise<bigint> {
+    async getNativeBalance(account: string, transferable?: boolean): Promise<bigint> {
         const acc = await this.getNativeAccount(account)
+        if (transferable === true) {
+            return acc.data.transferable
+        }
         return acc.data.free
     }
 

@@ -878,6 +878,7 @@ async function indexParachain(
         info.accountType === "AccountId32"
             ? "0x0000000000000000000000000000000000000000000000000000000000000000"
             : "0x0000000000000000000000000000000000000000",
+        false,
     )
 
     let estimatedExecutionFeeDOT = 0n

@@ -235,6 +235,8 @@ export type SubstrateAccount = {
     free: bigint;
     reserved: bigint;
     frozen: bigint;
+    transferable: bigint;
+    total: bigint;
   };
 };
 

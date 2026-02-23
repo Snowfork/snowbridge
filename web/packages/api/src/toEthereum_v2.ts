@@ -490,7 +490,7 @@ export async function validateTransfer(
 
     const logs: ValidationLog[] = []
     const sourceParachainImpl = await paraImplementation(sourceParachain)
-    const nativeBalance = await sourceParachainImpl.getNativeBalance(sourceAccountHex)
+    const nativeBalance = await sourceParachainImpl.getNativeBalance(sourceAccountHex, true)
     let dotBalance: bigint | undefined = undefined
     if (source.features.hasDotBalance) {
         dotBalance = await sourceParachainImpl.getDotBalance(sourceAccountHex)
@@ -503,14 +503,14 @@ export async function validateTransfer(
         transfer.computed.ahAssetMetadata.location?.parents == DOT_LOCATION.parents &&
         transfer.computed.ahAssetMetadata.location?.interior == DOT_LOCATION.interior
     ) {
-        tokenBalance = await sourceParachainImpl.getNativeBalance(sourceAccountHex)
+        tokenBalance = await sourceParachainImpl.getNativeBalance(sourceAccountHex, true)
         isNativeBalance = true
     } else {
         isNativeBalance =
             sourceAssetMetadata.decimals === source.info.tokenDecimals &&
             sourceAssetMetadata.symbol == source.info.tokenSymbols
         if (isNativeBalance) {
-            tokenBalance = await sourceParachainImpl.getNativeBalance(sourceAccountHex)
+            tokenBalance = await sourceParachainImpl.getNativeBalance(sourceAccountHex, true)
         } else {
             tokenBalance = await sourceParachainImpl.getTokenBalance(
                 sourceAccountHex,
