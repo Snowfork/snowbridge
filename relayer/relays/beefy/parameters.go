@@ -16,16 +16,16 @@ import (
 )
 
 type InitialRequestParams struct {
-	Commitment contracts.IBeefyClientCommitment
+	Commitment contracts.BeefyClientCommitment
 	Bitfield   []*big.Int
-	Proof      contracts.IBeefyClientValidatorProof
+	Proof      contracts.BeefyClientValidatorProof
 }
 
 type FinalRequestParams struct {
-	Commitment     contracts.IBeefyClientCommitment
+	Commitment     contracts.BeefyClientCommitment
 	Bitfield       []*big.Int
-	Proofs         []contracts.IBeefyClientValidatorProof
-	Leaf           contracts.IBeefyClientMMRLeaf
+	Proofs         []contracts.BeefyClientValidatorProof
+	Leaf           contracts.BeefyClientMMRLeaf
 	LeafProof      [][32]byte
 	LeafProofOrder *big.Int
 }
@@ -72,7 +72,7 @@ func (r *Request) MakeSubmitInitialParams(valAddrIndex int64, initialBitfield []
 	msg := InitialRequestParams{
 		Commitment: *commitment,
 		Bitfield:   initialBitfield,
-		Proof: contracts.IBeefyClientValidatorProof{
+		Proof: contracts.BeefyClientValidatorProof{
 			V:       v,
 			R:       _r,
 			S:       s,
@@ -85,8 +85,8 @@ func (r *Request) MakeSubmitInitialParams(valAddrIndex int64, initialBitfield []
 	return &msg, nil
 }
 
-func toBeefyClientCommitment(c *types.Commitment) *contracts.IBeefyClientCommitment {
-	return &contracts.IBeefyClientCommitment{
+func toBeefyClientCommitment(c *types.Commitment) *contracts.BeefyClientCommitment {
+	return &contracts.BeefyClientCommitment{
 		BlockNumber:    c.BlockNumber,
 		ValidatorSetID: c.ValidatorSetID,
 		Payload:        toBeefyPayload(c.Payload),
@@ -158,7 +158,7 @@ func (r *Request) generateValidatorAddressProof(validatorIndex int64) ([][32]byt
 }
 
 func (r *Request) MakeSubmitFinalParams(validatorIndices []uint64, initialBitfield []*big.Int) (*FinalRequestParams, error) {
-	validatorProofs := []contracts.IBeefyClientValidatorProof{}
+	validatorProofs := []contracts.BeefyClientValidatorProof{}
 
 	for _, validatorIndex := range validatorIndices {
 		ok, beefySig := r.SignedCommitment.Signatures[validatorIndex].Unwrap()
@@ -180,7 +180,7 @@ func (r *Request) MakeSubmitFinalParams(validatorIndices []uint64, initialBitfie
 			return nil, err
 		}
 
-		validatorProofs = append(validatorProofs, contracts.IBeefyClientValidatorProof{
+		validatorProofs = append(validatorProofs, contracts.BeefyClientValidatorProof{
 			V:       v,
 			R:       _r,
 			S:       s,
@@ -190,18 +190,18 @@ func (r *Request) MakeSubmitFinalParams(validatorIndices []uint64, initialBitfie
 		})
 	}
 
-	commitment := contracts.IBeefyClientCommitment{
+	commitment := contracts.BeefyClientCommitment{
 		Payload:        toBeefyPayload(r.SignedCommitment.Commitment.Payload),
 		BlockNumber:    r.SignedCommitment.Commitment.BlockNumber,
 		ValidatorSetID: r.SignedCommitment.Commitment.ValidatorSetID,
 	}
 
-	inputLeaf := contracts.IBeefyClientMMRLeaf{}
+	inputLeaf := contracts.BeefyClientMMRLeaf{}
 
 	var merkleProofItems [][32]byte
 
 	proofOrder := new(big.Int)
-	inputLeaf = contracts.IBeefyClientMMRLeaf{
+	inputLeaf = contracts.BeefyClientMMRLeaf{
 		Version:              uint8(r.Proof.Leaf.Version),
 		ParentNumber:         uint32(r.Proof.Leaf.ParentNumberAndHash.ParentNumber),
 		ParentHash:           r.Proof.Leaf.ParentNumberAndHash.Hash,
@@ -227,10 +227,10 @@ func (r *Request) MakeSubmitFinalParams(validatorIndices []uint64, initialBitfie
 	return &msg, nil
 }
 
-func toBeefyPayload(items []types.PayloadItem) []contracts.IBeefyClientPayloadItem {
-	beefyItems := make([]contracts.IBeefyClientPayloadItem, len(items))
+func toBeefyPayload(items []types.PayloadItem) []contracts.BeefyClientPayloadItem {
+	beefyItems := make([]contracts.BeefyClientPayloadItem, len(items))
 	for i, item := range items {
-		beefyItems[i] = contracts.IBeefyClientPayloadItem{
+		beefyItems[i] = contracts.BeefyClientPayloadItem{
 			PayloadID: item.ID,
 			Data:      item.Data,
 		}
@@ -239,7 +239,7 @@ func toBeefyPayload(items []types.PayloadItem) []contracts.IBeefyClientPayloadIt
 	return beefyItems
 }
 
-func commitmentToLog(commitment contracts.IBeefyClientCommitment) logrus.Fields {
+func commitmentToLog(commitment contracts.BeefyClientCommitment) logrus.Fields {
 	payloadFields := make([]logrus.Fields, len(commitment.Payload))
 	for i, payloadItem := range commitment.Payload {
 		payloadFields[i] = logrus.Fields{
@@ -264,7 +264,7 @@ func bitfieldToStrings(bitfield []*big.Int) []string {
 	return strings
 }
 
-func proofToLog(proof contracts.IBeefyClientValidatorProof) logrus.Fields {
+func proofToLog(proof contracts.BeefyClientValidatorProof) logrus.Fields {
 	hexProof := make([]string, len(proof.Proof))
 	for i, proof := range proof.Proof {
 		hexProof[i] = Hex(proof[:])
@@ -280,49 +280,3 @@ func proofToLog(proof contracts.IBeefyClientValidatorProof) logrus.Fields {
 	}
 }
 
-// Converter functions for direct BeefyClient contract (without wrapper)
-func ToBeefyClientCommitment(c *contracts.IBeefyClientCommitment) contracts.BeefyClientCommitment {
-	payload := make([]contracts.BeefyClientPayloadItem, len(c.Payload))
-	for i, item := range c.Payload {
-		payload[i] = contracts.BeefyClientPayloadItem{
-			PayloadID: item.PayloadID,
-			Data:      item.Data,
-		}
-	}
-	return contracts.BeefyClientCommitment{
-		BlockNumber:    c.BlockNumber,
-		ValidatorSetID: c.ValidatorSetID,
-		Payload:        payload,
-	}
-}
-
-func ToBeefyClientValidatorProof(p *contracts.IBeefyClientValidatorProof) contracts.BeefyClientValidatorProof {
-	return contracts.BeefyClientValidatorProof{
-		V:       p.V,
-		R:       p.R,
-		S:       p.S,
-		Index:   p.Index,
-		Account: p.Account,
-		Proof:   p.Proof,
-	}
-}
-
-func ToBeefyClientValidatorProofs(proofs []contracts.IBeefyClientValidatorProof) []contracts.BeefyClientValidatorProof {
-	result := make([]contracts.BeefyClientValidatorProof, len(proofs))
-	for i, p := range proofs {
-		result[i] = ToBeefyClientValidatorProof(&p)
-	}
-	return result
-}
-
-func ToBeefyClientMMRLeaf(leaf *contracts.IBeefyClientMMRLeaf) contracts.BeefyClientMMRLeaf {
-	return contracts.BeefyClientMMRLeaf{
-		Version:              leaf.Version,
-		ParentNumber:         leaf.ParentNumber,
-		ParentHash:           leaf.ParentHash,
-		ParachainHeadsRoot:   leaf.ParachainHeadsRoot,
-		NextAuthoritySetID:   leaf.NextAuthoritySetID,
-		NextAuthoritySetLen:  leaf.NextAuthoritySetLen,
-		NextAuthoritySetRoot: leaf.NextAuthoritySetRoot,
-	}
-}

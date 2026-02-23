@@ -12,6 +12,7 @@ contract DeployBeefyClientWrapper is Script {
         uint256 maxGasPrice;
         uint256 maxRefundAmount;
         uint256 refundTarget;
+        uint256 ticketTimeout;
     }
 
     function readConfig() internal returns (Config memory config) {
@@ -19,7 +20,8 @@ contract DeployBeefyClientWrapper is Script {
             gateway: vm.envAddress("GATEWAY_PROXY_ADDRESS"),
             maxGasPrice: vm.envOr("MAX_GAS_PRICE", uint256(100 gwei)),
             maxRefundAmount: vm.envOr("MAX_REFUND_AMOUNT", uint256(0.05 ether)),
-            refundTarget: vm.envOr("REFUND_TARGET", uint256(350)) // ~35 min for 100% refund
+            refundTarget: vm.envOr("REFUND_TARGET", uint256(350)), // ~35 min for 100% refund
+            ticketTimeout: vm.envOr("TICKET_TIMEOUT", uint256(15 minutes))
         });
     }
 
@@ -32,7 +34,8 @@ contract DeployBeefyClientWrapper is Script {
             config.gateway,
             config.maxGasPrice,
             config.maxRefundAmount,
-            config.refundTarget
+            config.refundTarget,
+            config.ticketTimeout
         );
 
         console.log("BeefyClientWrapper:", address(wrapper));

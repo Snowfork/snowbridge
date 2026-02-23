@@ -27,12 +27,13 @@ import (
 const SessionTimeout = 40 * time.Minute
 
 type EthereumWriter struct {
-	config          *SinkConfig
-	conn            *ethereum.Connection
-	useWrapper      bool
-	wrapperContract *contracts.BeefyClientWrapper
-	beefyClient     *contracts.BeefyClient
-	blockWaitPeriod uint64
+	config              *SinkConfig
+	conn                *ethereum.Connection
+	useWrapper          bool
+	wrapperContract     *contracts.BeefyClientWrapper
+	wrapperBeefyClient  *contracts.BeefyClient
+	beefyClient         *contracts.BeefyClient
+	blockWaitPeriod     uint64
 }
 
 func NewEthereumWriter(
@@ -380,6 +381,14 @@ func (wr *EthereumWriter) initialize(ctx context.Context) error {
 		}
 		wr.wrapperContract = wrapperContract
 
+		// BeefyClient binding at the wrapper address for submitInitial/submitFinal/submitFiatShamir
+		// (same ABI signatures, routed through wrapper for gas refunds)
+		wrapperBeefyClient, err := contracts.NewBeefyClient(wrapperAddress, wr.conn.Client())
+		if err != nil {
+			return fmt.Errorf("create wrapper beefy client: %w", err)
+		}
+		wr.wrapperBeefyClient = wrapperBeefyClient
+
 		log.WithFields(logrus.Fields{
 			"beefyClient":       beefyClientAddress.Hex(),
 			"wrapper":           wrapperAddress.Hex(),
@@ -684,17 +693,17 @@ func (wr *EthereumWriter) createFinalBitfield(commitmentHash [32]byte, initialBi
 	return wr.beefyClient.CreateFinalBitfield(callOpts, commitmentHash, initialBitfield)
 }
 
-func (wr *EthereumWriter) createFiatShamirFinalBitfield(commitment *contracts.IBeefyClientCommitment, initialBitfield []*big.Int) ([]*big.Int, error) {
+func (wr *EthereumWriter) createFiatShamirFinalBitfield(commitment *contracts.BeefyClientCommitment, initialBitfield []*big.Int) ([]*big.Int, error) {
 	callOpts := &bind.CallOpts{
 		Pending: true,
 		From:    wr.conn.Keypair().CommonAddress(),
 	}
-	return wr.beefyClient.CreateFiatShamirFinalBitfield(callOpts, ToBeefyClientCommitment(commitment), initialBitfield)
+	return wr.beefyClient.CreateFiatShamirFinalBitfield(callOpts, *commitment, initialBitfield)
 }
 
 func (wr *EthereumWriter) submitInitial(ctx context.Context, msg *InitialRequestParams) (*types.Transaction, error) {
 	if wr.useWrapper {
-		return wr.wrapperContract.SubmitInitial(
+		return wr.wrapperBeefyClient.SubmitInitial(
 			wr.conn.MakeTxOpts(ctx),
 			msg.Commitment,
 			msg.Bitfield,
@@ -703,9 +712,9 @@ func (wr *EthereumWriter) submitInitial(ctx context.Context, msg *InitialRequest
 	}
 	return wr.beefyClient.SubmitInitial(
 		wr.conn.MakeTxOpts(ctx),
-		ToBeefyClientCommitment(&msg.Commitment),
+		msg.Commitment,
 		msg.Bitfield,
-		ToBeefyClientValidatorProof(&msg.Proof),
+		msg.Proof,
 	)
 }
 
@@ -718,7 +727,7 @@ func (wr *EthereumWriter) doCommitPrevRandao(ctx context.Context, commitmentHash
 
 func (wr *EthereumWriter) submitFinal(ctx context.Context, params *FinalRequestParams) (*types.Transaction, error) {
 	if wr.useWrapper {
-		return wr.wrapperContract.SubmitFinal(
+		return wr.wrapperBeefyClient.SubmitFinal(
 			wr.conn.MakeTxOpts(ctx),
 			params.Commitment,
 			params.Bitfield,
@@ -730,10 +739,10 @@ func (wr *EthereumWriter) submitFinal(ctx context.Context, params *FinalRequestP
 	}
 	return wr.beefyClient.SubmitFinal(
 		wr.conn.MakeTxOpts(ctx),
-		ToBeefyClientCommitment(&params.Commitment),
+		params.Commitment,
 		params.Bitfield,
-		ToBeefyClientValidatorProofs(params.Proofs),
-		ToBeefyClientMMRLeaf(&params.Leaf),
+		params.Proofs,
+		params.Leaf,
 		params.LeafProof,
 		params.LeafProofOrder,
 	)
@@ -741,7 +750,7 @@ func (wr *EthereumWriter) submitFinal(ctx context.Context, params *FinalRequestP
 
 func (wr *EthereumWriter) doSubmitFiatShamir(ctx context.Context, params *FinalRequestParams) (*types.Transaction, error) {
 	if wr.useWrapper {
-		return wr.wrapperContract.SubmitFiatShamir(
+		return wr.wrapperBeefyClient.SubmitFiatShamir(
 			wr.conn.MakeTxOpts(ctx),
 			params.Commitment,
 			params.Bitfield,
@@ -753,10 +762,10 @@ func (wr *EthereumWriter) doSubmitFiatShamir(ctx context.Context, params *FinalR
 	}
 	return wr.beefyClient.SubmitFiatShamir(
 		wr.conn.MakeTxOpts(ctx),
-		ToBeefyClientCommitment(&params.Commitment),
+		params.Commitment,
 		params.Bitfield,
-		ToBeefyClientValidatorProofs(params.Proofs),
-		ToBeefyClientMMRLeaf(&params.Leaf),
+		params.Proofs,
+		params.Leaf,
 		params.LeafProof,
 		params.LeafProofOrder,
 	)
@@ -768,7 +777,7 @@ func (wr *EthereumWriter) computeCommitmentHash(task *Request) ([32]byte, error)
 		From:    wr.conn.Keypair().CommonAddress(),
 	}
 	commitment := toBeefyClientCommitment(&task.SignedCommitment.Commitment)
-	hash, err := wr.beefyClient.ComputeCommitmentHash(callOpts, ToBeefyClientCommitment(commitment))
+	hash, err := wr.beefyClient.ComputeCommitmentHash(callOpts, *commitment)
 	if err != nil {
 		log.WithError(err).Debug("On-chain computeCommitmentHash not available, falling back to local computation")
 		localHash, localErr := task.CommitmentHash()

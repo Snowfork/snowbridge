@@ -165,6 +165,7 @@ contract BeefyClientWrapperTest is Test {
     uint256 constant MAX_REFUND_AMOUNT = 0.05 ether;
     uint256 constant REFUND_TARGET = 350; // ~35 min for 100% refund
     uint256 constant INITIAL_BEEFY_BLOCK = 1000;
+    uint256 constant TICKET_TIMEOUT = 1 hours;
 
     function setUp() public {
         // Deploy mock BeefyClient and Gateway
@@ -176,7 +177,8 @@ contract BeefyClientWrapperTest is Test {
             address(mockGateway),
             MAX_GAS_PRICE,
             MAX_REFUND_AMOUNT,
-            REFUND_TARGET
+            REFUND_TARGET,
+            TICKET_TIMEOUT
         );
 
         // Fund the wrapper with ETH for refunds
@@ -235,6 +237,7 @@ contract BeefyClientWrapperTest is Test {
         assertEq(wrapper.maxGasPrice(), MAX_GAS_PRICE);
         assertEq(wrapper.maxRefundAmount(), MAX_REFUND_AMOUNT);
         assertEq(wrapper.refundTarget(), REFUND_TARGET);
+        assertEq(wrapper.ticketTimeout(), TICKET_TIMEOUT);
     }
 
     function test_invalidGatewayAddress() public {
@@ -243,7 +246,8 @@ contract BeefyClientWrapperTest is Test {
             address(0),
             MAX_GAS_PRICE,
             MAX_REFUND_AMOUNT,
-            REFUND_TARGET
+            REFUND_TARGET,
+            TICKET_TIMEOUT
         );
     }
 
@@ -344,42 +348,6 @@ contract BeefyClientWrapperTest is Test {
         wrapper.submitFinal(commitment, bitfield, proofs, leaf, leafProof, 0);
     }
 
-    function test_clearTicket() public {
-        uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + REFUND_TARGET);
-        BeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
-        uint256[] memory bitfield = new uint256[](1);
-        BeefyClient.ValidatorProof memory proof = createValidatorProof();
-
-        vm.startPrank(relayer1);
-        vm.txGasPrice(50 gwei);
-        wrapper.submitInitial(commitment, bitfield, proof);
-
-        bytes32 commitmentHash = computeCommitmentHash(commitment);
-        assertEq(wrapper.ticketOwner(commitmentHash), relayer1);
-        assertGt(wrapper.creditedCost(commitmentHash), 0);
-
-        // Clear ticket - gas should be forfeited
-        wrapper.clearTicket(commitmentHash);
-        assertEq(wrapper.ticketOwner(commitmentHash), address(0));
-        assertEq(wrapper.creditedCost(commitmentHash), 0);
-        vm.stopPrank();
-    }
-
-    function test_clearTicket_notOwner() public {
-        uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + REFUND_TARGET);
-        BeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
-        uint256[] memory bitfield = new uint256[](1);
-        BeefyClient.ValidatorProof memory proof = createValidatorProof();
-
-        vm.prank(relayer1);
-        wrapper.submitInitial(commitment, bitfield, proof);
-
-        bytes32 commitmentHash = computeCommitmentHash(commitment);
-        vm.prank(relayer2);
-        vm.expectRevert(BeefyClientWrapper.NotTicketOwner.selector);
-        wrapper.clearTicket(commitmentHash);
-    }
-
     /* Progress-Based Refund Tests */
 
     function test_costCreditedOnSubmitInitial() public {
@@ -399,7 +367,8 @@ contract BeefyClientWrapperTest is Test {
 
         // Cost should be credited (ETH, not raw gas)
         bytes32 commitmentHash = computeCommitmentHash(commitment);
-        assertGt(wrapper.creditedCost(commitmentHash), 0);
+        (, uint256 credited,) = wrapper.pendingTickets(commitmentHash);
+        assertGt(credited, 0);
     }
 
     function test_costCreditedAtPerStepGasPrice() public {
@@ -418,13 +387,13 @@ contract BeefyClientWrapperTest is Test {
         vm.prank(relayer1);
         vm.txGasPrice(10 gwei);
         wrapper.submitInitial(commitment, bitfield, proof);
-        uint256 costAfterInitial = wrapper.creditedCost(commitmentHash);
+        (, uint256 costAfterInitial,) = wrapper.pendingTickets(commitmentHash);
 
         // Step 2: commitPrevRandao at 90 gwei
         vm.prank(relayer1);
         vm.txGasPrice(90 gwei);
         wrapper.commitPrevRandao(commitmentHash);
-        uint256 costAfterCommit = wrapper.creditedCost(commitmentHash);
+        (, uint256 costAfterCommit,) = wrapper.pendingTickets(commitmentHash);
 
         // The cost from commitPrevRandao should be much higher per gas unit than submitInitial
         uint256 commitCost = costAfterCommit - costAfterInitial;
@@ -476,7 +445,8 @@ contract BeefyClientWrapperTest is Test {
 
         vm.stopPrank();
 
-        assertEq(wrapper.creditedCost(commitmentHash), 0);
+        (, uint256 credited,) = wrapper.pendingTickets(commitmentHash);
+        assertEq(credited, 0);
     }
 
     function test_submitInitialRevertsForLowProgress() public {
@@ -550,7 +520,8 @@ contract BeefyClientWrapperTest is Test {
             address(mockGateway),
             MAX_GAS_PRICE,
             0.0001 ether,
-            REFUND_TARGET
+            REFUND_TARGET,
+            TICKET_TIMEOUT
         );
         vm.deal(address(lowMaxWrapper), 100 ether);
 
@@ -584,7 +555,8 @@ contract BeefyClientWrapperTest is Test {
             address(mockGateway),
             MAX_GAS_PRICE,
             MAX_REFUND_AMOUNT,
-            REFUND_TARGET
+            REFUND_TARGET,
+            TICKET_TIMEOUT
         );
 
         uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + REFUND_TARGET);
@@ -606,6 +578,52 @@ contract BeefyClientWrapperTest is Test {
 
         assertEq(relayer1.balance, relayerBalanceBefore); // No refund
         assertEq(mockBeefyClient.submitFinalCount(), 1); // Submission succeeded
+    }
+
+    /* Ticket Timeout Tests */
+
+    function test_overwriteExpiredTicket() public {
+        uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + REFUND_TARGET);
+        BeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
+        uint256[] memory bitfield = new uint256[](1);
+        BeefyClient.ValidatorProof memory proof = createValidatorProof();
+
+        // relayer1 submits initial
+        vm.prank(relayer1);
+        wrapper.submitInitial(commitment, bitfield, proof);
+
+        bytes32 commitmentHash = computeCommitmentHash(commitment);
+        (address owner,,) = wrapper.pendingTickets(commitmentHash);
+        assertEq(owner, relayer1);
+
+        // Advance time past timeout
+        vm.warp(block.timestamp + TICKET_TIMEOUT + 1);
+
+        // relayer2 can now overwrite the expired ticket
+        vm.prank(relayer2);
+        wrapper.submitInitial(commitment, bitfield, proof);
+
+        (owner,,) = wrapper.pendingTickets(commitmentHash);
+        assertEq(owner, relayer2);
+    }
+
+    function test_cannotOverwriteNonExpiredTicket() public {
+        uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + REFUND_TARGET);
+        BeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
+        uint256[] memory bitfield = new uint256[](1);
+        BeefyClient.ValidatorProof memory proof = createValidatorProof();
+
+        // relayer1 submits initial
+        vm.prank(relayer1);
+        wrapper.submitInitial(commitment, bitfield, proof);
+
+        // Advance time but NOT past timeout
+        vm.warp(block.timestamp + TICKET_TIMEOUT - 1);
+
+        // relayer2 cannot overwrite — ticket still active
+        vm.prank(relayer2);
+        vm.expectRevert(BeefyClientWrapper.TicketAlreadyOwned.selector);
+        wrapper.submitInitial(commitment, bitfield, proof);
     }
 
     /* Deposit Tests */
@@ -744,7 +762,8 @@ contract BeefyClientWrapperTransferFailedTest is Test {
             address(mockGateway),
             100 gwei,
             0.05 ether,
-            REFUND_TARGET
+            REFUND_TARGET,
+            1 hours
         );
         vm.deal(address(wrapper), 100 ether);
     }

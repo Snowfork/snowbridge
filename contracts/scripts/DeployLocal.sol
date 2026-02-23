@@ -87,7 +87,8 @@ contract DeployLocal is Script {
             address(gateway),
             vm.envUint("BEEFY_WRAPPER_MAX_GAS_PRICE"),
             vm.envUint("BEEFY_WRAPPER_MAX_REFUND_AMOUNT"),
-            vm.envUint("BEEFY_WRAPPER_REFUND_TARGET")
+            vm.envUint("BEEFY_WRAPPER_REFUND_TARGET"),
+            vm.envUint("BEEFY_WRAPPER_TICKET_TIMEOUT")
         );
 
         // Fund wrapper for refunds

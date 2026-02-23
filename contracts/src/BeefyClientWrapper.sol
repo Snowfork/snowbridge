@@ -29,19 +29,25 @@ contract BeefyClientWrapper {
     error TicketAlreadyOwned();
     error InsufficientProgress();
 
+    struct PendingTicket {
+        address owner;
+        uint256 creditedCost;
+        uint64 createdAt;
+    }
+
     // Base transaction gas cost (intrinsic gas for any Ethereum transaction)
     uint256 private constant BASE_TX_GAS = 21000;
 
     address public immutable gateway;
 
     // Ticket tracking (for multi-step submission)
-    mapping(bytes32 => address) public ticketOwner;
-    mapping(bytes32 => uint256) public creditedCost; // Accumulated ETH cost from previous steps
+    mapping(bytes32 => PendingTicket) public pendingTickets;
 
     // Refund configuration (immutable)
     uint256 public immutable maxGasPrice;
     uint256 public immutable maxRefundAmount;
     uint256 public immutable refundTarget; // Blocks of progress for 100% gas refund (e.g., 350 = ~35 min)
+    uint256 public immutable ticketTimeout; // Seconds before a pending ticket expires
 
     // Highest commitment block number currently in progress (helps relayers avoid duplicate work)
     uint256 public highestPendingBlock;
@@ -51,7 +57,8 @@ contract BeefyClientWrapper {
         address _gateway,
         uint256 _maxGasPrice,
         uint256 _maxRefundAmount,
-        uint256 _refundTarget
+        uint256 _refundTarget,
+        uint256 _ticketTimeout
     ) {
         if (_gateway == address(0)) {
             revert InvalidAddress();
@@ -61,6 +68,7 @@ contract BeefyClientWrapper {
         maxGasPrice = _maxGasPrice;
         maxRefundAmount = _maxRefundAmount;
         refundTarget = _refundTarget;
+        ticketTimeout = _ticketTimeout;
     }
 
     /* Beefy Client Proxy Functions */
@@ -80,13 +88,20 @@ contract BeefyClientWrapper {
 
         // Check if ticket is already owned (prevent race condition between relayers)
         bytes32 commitmentHash = _beefyClient().computeCommitmentHash(commitment);
-        if (ticketOwner[commitmentHash] != address(0)) {
-            revert TicketAlreadyOwned();
+        PendingTicket storage ticket = pendingTickets[commitmentHash];
+        if (ticket.owner != address(0)) {
+            // Allow overwriting only if the ticket has expired
+            if (block.timestamp < ticket.createdAt + ticketTimeout) {
+                revert TicketAlreadyOwned();
+            }
+            // Expired ticket — clear it so a new relayer can take over
+            delete pendingTickets[commitmentHash];
         }
 
         _beefyClient().submitInitial(commitment, bitfield, proof);
 
-        ticketOwner[commitmentHash] = msg.sender;
+        pendingTickets[commitmentHash] =
+            PendingTicket({owner: msg.sender, creditedCost: 0, createdAt: uint64(block.timestamp)});
 
         // Track highest pending block so other relayers can check before starting
         if (commitment.blockNumber > highestPendingBlock) {
@@ -100,7 +115,7 @@ contract BeefyClientWrapper {
     function commitPrevRandao(bytes32 commitmentHash) external {
         uint256 startGas = gasleft();
 
-        if (ticketOwner[commitmentHash] != msg.sender) {
+        if (pendingTickets[commitmentHash].owner != msg.sender) {
             revert NotTicketOwner();
         }
 
@@ -123,7 +138,7 @@ contract BeefyClientWrapper {
         uint64 previousBeefyBlock = _beefyClient().latestBeefyBlock();
 
         bytes32 commitmentHash = _beefyClient().computeCommitmentHash(commitment);
-        if (ticketOwner[commitmentHash] != msg.sender) {
+        if (pendingTickets[commitmentHash].owner != msg.sender) {
             revert NotTicketOwner();
         }
 
@@ -138,9 +153,8 @@ contract BeefyClientWrapper {
             highestPendingBlockTimestamp = 0;
         }
 
-        uint256 previousCost = creditedCost[commitmentHash];
-        delete creditedCost[commitmentHash];
-        delete ticketOwner[commitmentHash];
+        uint256 previousCost = pendingTickets[commitmentHash].creditedCost;
+        delete pendingTickets[commitmentHash];
 
         _refundWithProgress(startGas, previousCost, progress);
     }
@@ -172,19 +186,6 @@ contract BeefyClientWrapper {
         _refundWithProgress(startGas, 0, progress);
     }
 
-    /**
-     * @dev Abandon a ticket. Useful if a relayer decides to stop mid-session.
-     * Credited cost is forfeited when clearing a ticket.
-     */
-    function clearTicket(bytes32 commitmentHash) external {
-        if (ticketOwner[commitmentHash] != msg.sender) {
-            revert NotTicketOwner();
-        }
-
-        delete creditedCost[commitmentHash];
-        delete ticketOwner[commitmentHash];
-    }
-
     /* Internal Functions */
 
     function _beefyClient() internal view returns (BeefyClient) {
@@ -198,7 +199,7 @@ contract BeefyClientWrapper {
     function _creditCost(uint256 startGas, bytes32 commitmentHash) internal {
         uint256 gasUsed = startGas - gasleft() + BASE_TX_GAS;
         uint256 cost = gasUsed * _effectiveGasPrice();
-        creditedCost[commitmentHash] += cost;
+        pendingTickets[commitmentHash].creditedCost += cost;
         emit CostCredited(msg.sender, commitmentHash, cost);
     }
 
