@@ -5,7 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
 
 import {BeefyClientWrapper} from "../src/BeefyClientWrapper.sol";
-import {IBeefyClient} from "../src/interfaces/IBeefyClient.sol";
+import {BeefyClient} from "../src/BeefyClient.sol";
 import {ScaleCodec} from "../src/utils/ScaleCodec.sol";
 
 /**
@@ -44,9 +44,9 @@ contract MockBeefyClient {
     }
 
     function submitInitial(
-        IBeefyClient.Commitment calldata commitment,
+        BeefyClient.Commitment calldata commitment,
         uint256[] calldata,
-        IBeefyClient.ValidatorProof calldata
+        BeefyClient.ValidatorProof calldata
     ) external {
         // Just track that it was called and create a ticket
         submitInitialCount++;
@@ -60,10 +60,10 @@ contract MockBeefyClient {
     }
 
     function submitFinal(
-        IBeefyClient.Commitment calldata commitment,
+        BeefyClient.Commitment calldata commitment,
         uint256[] calldata,
-        IBeefyClient.ValidatorProof[] calldata,
-        IBeefyClient.MMRLeaf calldata,
+        BeefyClient.ValidatorProof[] calldata,
+        BeefyClient.MMRLeaf calldata,
         bytes32[] calldata,
         uint256
     ) external {
@@ -100,7 +100,7 @@ contract MockBeefyClient {
         return (2, 100, bytes32(0));
     }
 
-    function computeCommitmentHash(IBeefyClient.Commitment calldata commitment) external pure returns (bytes32) {
+    function computeCommitmentHash(BeefyClient.Commitment calldata commitment) external pure returns (bytes32) {
         return keccak256(_encodeCommitment(commitment));
     }
 
@@ -111,10 +111,10 @@ contract MockBeefyClient {
     uint256 public submitFiatShamirCount;
 
     function submitFiatShamir(
-        IBeefyClient.Commitment calldata commitment,
+        BeefyClient.Commitment calldata commitment,
         uint256[] calldata,
-        IBeefyClient.ValidatorProof[] calldata,
-        IBeefyClient.MMRLeaf calldata,
+        BeefyClient.ValidatorProof[] calldata,
+        BeefyClient.MMRLeaf calldata,
         bytes32[] calldata,
         uint256
     ) external {
@@ -122,7 +122,7 @@ contract MockBeefyClient {
         latestBeefyBlock = commitment.blockNumber;
     }
 
-    function _encodeCommitment(IBeefyClient.Commitment calldata commitment)
+    function _encodeCommitment(BeefyClient.Commitment calldata commitment)
         internal
         pure
         returns (bytes memory)
@@ -134,7 +134,7 @@ contract MockBeefyClient {
         );
     }
 
-    function _encodeCommitmentPayload(IBeefyClient.PayloadItem[] calldata items)
+    function _encodeCommitmentPayload(BeefyClient.PayloadItem[] calldata items)
         internal
         pure
         returns (bytes memory)
@@ -185,31 +185,31 @@ contract BeefyClientWrapperTest is Test {
 
     /* Helper Functions */
 
-    function createCommitment(uint32 blockNumber) internal pure returns (IBeefyClient.Commitment memory) {
-        IBeefyClient.PayloadItem[] memory payload = new IBeefyClient.PayloadItem[](1);
-        payload[0] = IBeefyClient.PayloadItem(bytes2("mh"), abi.encodePacked(bytes32(0)));
-        return IBeefyClient.Commitment(blockNumber, 1, payload);
+    function createCommitment(uint32 blockNumber) internal pure returns (BeefyClient.Commitment memory) {
+        BeefyClient.PayloadItem[] memory payload = new BeefyClient.PayloadItem[](1);
+        payload[0] = BeefyClient.PayloadItem(bytes2("mh"), abi.encodePacked(bytes32(0)));
+        return BeefyClient.Commitment(blockNumber, 1, payload);
     }
 
-    function createValidatorProof() internal pure returns (IBeefyClient.ValidatorProof memory) {
+    function createValidatorProof() internal pure returns (BeefyClient.ValidatorProof memory) {
         bytes32[] memory proof = new bytes32[](0);
-        return IBeefyClient.ValidatorProof(27, bytes32(0), bytes32(0), 0, address(0), proof);
+        return BeefyClient.ValidatorProof(27, bytes32(0), bytes32(0), 0, address(0), proof);
     }
 
-    function createValidatorProofs(uint256 count) internal pure returns (IBeefyClient.ValidatorProof[] memory) {
-        IBeefyClient.ValidatorProof[] memory proofs = new IBeefyClient.ValidatorProof[](count);
+    function createValidatorProofs(uint256 count) internal pure returns (BeefyClient.ValidatorProof[] memory) {
+        BeefyClient.ValidatorProof[] memory proofs = new BeefyClient.ValidatorProof[](count);
         for (uint256 i = 0; i < count; i++) {
             bytes32[] memory proof = new bytes32[](0);
-            proofs[i] = IBeefyClient.ValidatorProof(27, bytes32(0), bytes32(0), i, address(0), proof);
+            proofs[i] = BeefyClient.ValidatorProof(27, bytes32(0), bytes32(0), i, address(0), proof);
         }
         return proofs;
     }
 
-    function createMMRLeaf() internal pure returns (IBeefyClient.MMRLeaf memory) {
-        return IBeefyClient.MMRLeaf(1, 0, bytes32(0), 1, 100, bytes32(0), bytes32(0));
+    function createMMRLeaf() internal pure returns (BeefyClient.MMRLeaf memory) {
+        return BeefyClient.MMRLeaf(1, 0, bytes32(0), 1, 100, bytes32(0), bytes32(0));
     }
 
-    function computeCommitmentHash(IBeefyClient.Commitment memory commitment) internal pure returns (bytes32) {
+    function computeCommitmentHash(BeefyClient.Commitment memory commitment) internal pure returns (bytes32) {
         bytes memory payload = ScaleCodec.checkedEncodeCompactU32(commitment.payload.length);
         for (uint256 i = 0; i < commitment.payload.length; i++) {
             payload = bytes.concat(
@@ -250,12 +250,12 @@ contract BeefyClientWrapperTest is Test {
     /* Submission Flow Tests */
 
     function test_fullSubmissionFlow() public {
-        uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + 100);
-        IBeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
+        uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + REFUND_TARGET);
+        BeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
         uint256[] memory bitfield = new uint256[](1);
-        IBeefyClient.ValidatorProof memory proof = createValidatorProof();
-        IBeefyClient.ValidatorProof[] memory proofs = createValidatorProofs(1);
-        IBeefyClient.MMRLeaf memory leaf = createMMRLeaf();
+        BeefyClient.ValidatorProof memory proof = createValidatorProof();
+        BeefyClient.ValidatorProof[] memory proofs = createValidatorProofs(1);
+        BeefyClient.MMRLeaf memory leaf = createMMRLeaf();
         bytes32[] memory leafProof = new bytes32[](0);
 
         // Step 1: submitInitial
@@ -277,10 +277,10 @@ contract BeefyClientWrapperTest is Test {
 
     function test_anyoneCanSubmit() public {
         // Anyone can submit - no whitelist
-        uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + 100);
-        IBeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
+        uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + REFUND_TARGET);
+        BeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
         uint256[] memory bitfield = new uint256[](1);
-        IBeefyClient.ValidatorProof memory proof = createValidatorProof();
+        BeefyClient.ValidatorProof memory proof = createValidatorProof();
 
         // Random address can submit
         vm.prank(anyone);
@@ -290,10 +290,10 @@ contract BeefyClientWrapperTest is Test {
     }
 
     function test_onlyTicketOwnerCanCommitPrevRandao() public {
-        uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + 100);
-        IBeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
+        uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + REFUND_TARGET);
+        BeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
         uint256[] memory bitfield = new uint256[](1);
-        IBeefyClient.ValidatorProof memory proof = createValidatorProof();
+        BeefyClient.ValidatorProof memory proof = createValidatorProof();
 
         // relayer1 submits initial
         vm.prank(relayer1);
@@ -307,10 +307,10 @@ contract BeefyClientWrapperTest is Test {
     }
 
     function test_cannotOverwriteExistingTicketOwner() public {
-        uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + 100);
-        IBeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
+        uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + REFUND_TARGET);
+        BeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
         uint256[] memory bitfield = new uint256[](1);
-        IBeefyClient.ValidatorProof memory proof = createValidatorProof();
+        BeefyClient.ValidatorProof memory proof = createValidatorProof();
 
         // relayer1 submits initial
         vm.prank(relayer1);
@@ -323,12 +323,12 @@ contract BeefyClientWrapperTest is Test {
     }
 
     function test_onlyTicketOwnerCanSubmitFinal() public {
-        uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + 100);
-        IBeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
+        uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + REFUND_TARGET);
+        BeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
         uint256[] memory bitfield = new uint256[](1);
-        IBeefyClient.ValidatorProof memory proof = createValidatorProof();
-        IBeefyClient.ValidatorProof[] memory proofs = createValidatorProofs(1);
-        IBeefyClient.MMRLeaf memory leaf = createMMRLeaf();
+        BeefyClient.ValidatorProof memory proof = createValidatorProof();
+        BeefyClient.ValidatorProof[] memory proofs = createValidatorProofs(1);
+        BeefyClient.MMRLeaf memory leaf = createMMRLeaf();
         bytes32[] memory leafProof = new bytes32[](0);
 
         // relayer1 submits initial and commits
@@ -345,10 +345,10 @@ contract BeefyClientWrapperTest is Test {
     }
 
     function test_clearTicket() public {
-        uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + 100);
-        IBeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
+        uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + REFUND_TARGET);
+        BeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
         uint256[] memory bitfield = new uint256[](1);
-        IBeefyClient.ValidatorProof memory proof = createValidatorProof();
+        BeefyClient.ValidatorProof memory proof = createValidatorProof();
 
         vm.startPrank(relayer1);
         vm.txGasPrice(50 gwei);
@@ -366,10 +366,10 @@ contract BeefyClientWrapperTest is Test {
     }
 
     function test_clearTicket_notOwner() public {
-        uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + 100);
-        IBeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
+        uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + REFUND_TARGET);
+        BeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
         uint256[] memory bitfield = new uint256[](1);
-        IBeefyClient.ValidatorProof memory proof = createValidatorProof();
+        BeefyClient.ValidatorProof memory proof = createValidatorProof();
 
         vm.prank(relayer1);
         wrapper.submitInitial(commitment, bitfield, proof);
@@ -383,10 +383,10 @@ contract BeefyClientWrapperTest is Test {
     /* Progress-Based Refund Tests */
 
     function test_costCreditedOnSubmitInitial() public {
-        uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + 100);
-        IBeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
+        uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + REFUND_TARGET);
+        BeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
         uint256[] memory bitfield = new uint256[](1);
-        IBeefyClient.ValidatorProof memory proof = createValidatorProof();
+        BeefyClient.ValidatorProof memory proof = createValidatorProof();
 
         uint256 relayerBalanceBefore = relayer1.balance;
 
@@ -406,11 +406,11 @@ contract BeefyClientWrapperTest is Test {
         // Verify that each step captures gas cost at its own tx.gasprice,
         // not at the final step's gas price.
         uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + REFUND_TARGET);
-        IBeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
+        BeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
         uint256[] memory bitfield = new uint256[](1);
-        IBeefyClient.ValidatorProof memory proof = createValidatorProof();
-        IBeefyClient.ValidatorProof[] memory proofs = createValidatorProofs(1);
-        IBeefyClient.MMRLeaf memory leaf = createMMRLeaf();
+        BeefyClient.ValidatorProof memory proof = createValidatorProof();
+        BeefyClient.ValidatorProof[] memory proofs = createValidatorProofs(1);
+        BeefyClient.MMRLeaf memory leaf = createMMRLeaf();
         bytes32[] memory leafProof = new bytes32[](0);
         bytes32 commitmentHash = computeCommitmentHash(commitment);
 
@@ -452,11 +452,11 @@ contract BeefyClientWrapperTest is Test {
 
     function test_refundSentOnlyAfterSubmitFinal() public {
         uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + REFUND_TARGET); // 100% refund
-        IBeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
+        BeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
         uint256[] memory bitfield = new uint256[](1);
-        IBeefyClient.ValidatorProof memory proof = createValidatorProof();
-        IBeefyClient.ValidatorProof[] memory proofs = createValidatorProofs(1);
-        IBeefyClient.MMRLeaf memory leaf = createMMRLeaf();
+        BeefyClient.ValidatorProof memory proof = createValidatorProof();
+        BeefyClient.ValidatorProof[] memory proofs = createValidatorProofs(1);
+        BeefyClient.MMRLeaf memory leaf = createMMRLeaf();
         bytes32[] memory leafProof = new bytes32[](0);
 
         uint256 relayerBalanceBefore = relayer1.balance;
@@ -479,39 +479,27 @@ contract BeefyClientWrapperTest is Test {
         assertEq(wrapper.creditedCost(commitmentHash), 0);
     }
 
-    function test_noRefundForLowProgress() public {
-        // Below refund target = no refund
-        uint32 progress = uint32(REFUND_TARGET / 2); // 150 blocks (below 300 threshold)
+    function test_submitInitialRevertsForLowProgress() public {
+        // Below refund target = submitInitial reverts
+        uint32 progress = uint32(REFUND_TARGET / 2);
         uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + progress);
-        IBeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
+        BeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
         uint256[] memory bitfield = new uint256[](1);
-        IBeefyClient.ValidatorProof memory proof = createValidatorProof();
-        IBeefyClient.ValidatorProof[] memory proofs = createValidatorProofs(1);
-        IBeefyClient.MMRLeaf memory leaf = createMMRLeaf();
-        bytes32[] memory leafProof = new bytes32[](0);
+        BeefyClient.ValidatorProof memory proof = createValidatorProof();
 
-        uint256 relayerBalanceBefore = relayer1.balance;
-
-        vm.startPrank(relayer1);
-        vm.txGasPrice(50 gwei);
+        vm.prank(relayer1);
+        vm.expectRevert(BeefyClientWrapper.InsufficientProgress.selector);
         wrapper.submitInitial(commitment, bitfield, proof);
-        bytes32 commitmentHash = computeCommitmentHash(commitment);
-        wrapper.commitPrevRandao(commitmentHash);
-        wrapper.submitFinal(commitment, bitfield, proofs, leaf, leafProof, 0);
-        vm.stopPrank();
-
-        // Verify no refund was paid (progress below threshold)
-        assertEq(relayer1.balance, relayerBalanceBefore);
     }
 
     function test_fullRefundAt100PercentProgress() public {
         // 100% of refund target = 100% refund
         uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + REFUND_TARGET);
-        IBeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
+        BeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
         uint256[] memory bitfield = new uint256[](1);
-        IBeefyClient.ValidatorProof memory proof = createValidatorProof();
-        IBeefyClient.ValidatorProof[] memory proofs = createValidatorProofs(1);
-        IBeefyClient.MMRLeaf memory leaf = createMMRLeaf();
+        BeefyClient.ValidatorProof memory proof = createValidatorProof();
+        BeefyClient.ValidatorProof[] memory proofs = createValidatorProofs(1);
+        BeefyClient.MMRLeaf memory leaf = createMMRLeaf();
         bytes32[] memory leafProof = new bytes32[](0);
 
         uint256 relayerBalanceBefore = relayer1.balance;
@@ -530,11 +518,11 @@ contract BeefyClientWrapperTest is Test {
 
     function test_refundCappedAtMaxGasPrice() public {
         uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + REFUND_TARGET);
-        IBeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
+        BeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
         uint256[] memory bitfield = new uint256[](1);
-        IBeefyClient.ValidatorProof memory proof = createValidatorProof();
-        IBeefyClient.ValidatorProof[] memory proofs = createValidatorProofs(1);
-        IBeefyClient.MMRLeaf memory leaf = createMMRLeaf();
+        BeefyClient.ValidatorProof memory proof = createValidatorProof();
+        BeefyClient.ValidatorProof[] memory proofs = createValidatorProofs(1);
+        BeefyClient.MMRLeaf memory leaf = createMMRLeaf();
         bytes32[] memory leafProof = new bytes32[](0);
 
         uint256 relayerBalanceBefore = relayer1.balance;
@@ -567,11 +555,11 @@ contract BeefyClientWrapperTest is Test {
         vm.deal(address(lowMaxWrapper), 100 ether);
 
         uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + REFUND_TARGET);
-        IBeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
+        BeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
         uint256[] memory bitfield = new uint256[](1);
-        IBeefyClient.ValidatorProof memory proof = createValidatorProof();
-        IBeefyClient.ValidatorProof[] memory proofs = createValidatorProofs(1);
-        IBeefyClient.MMRLeaf memory leaf = createMMRLeaf();
+        BeefyClient.ValidatorProof memory proof = createValidatorProof();
+        BeefyClient.ValidatorProof[] memory proofs = createValidatorProofs(1);
+        BeefyClient.MMRLeaf memory leaf = createMMRLeaf();
         bytes32[] memory leafProof = new bytes32[](0);
 
         uint256 relayerBalanceBefore = relayer1.balance;
@@ -600,11 +588,11 @@ contract BeefyClientWrapperTest is Test {
         );
 
         uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + REFUND_TARGET);
-        IBeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
+        BeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
         uint256[] memory bitfield = new uint256[](1);
-        IBeefyClient.ValidatorProof memory proof = createValidatorProof();
-        IBeefyClient.ValidatorProof[] memory proofs = createValidatorProofs(1);
-        IBeefyClient.MMRLeaf memory leaf = createMMRLeaf();
+        BeefyClient.ValidatorProof memory proof = createValidatorProof();
+        BeefyClient.ValidatorProof[] memory proofs = createValidatorProofs(1);
+        BeefyClient.MMRLeaf memory leaf = createMMRLeaf();
         bytes32[] memory leafProof = new bytes32[](0);
 
         uint256 relayerBalanceBefore = relayer1.balance;
@@ -636,10 +624,10 @@ contract BeefyClientWrapperTest is Test {
 
     function test_submitFiatShamir() public {
         uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + 500);
-        IBeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
+        BeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
         uint256[] memory bitfield = new uint256[](1);
-        IBeefyClient.ValidatorProof[] memory proofs = createValidatorProofs(1);
-        IBeefyClient.MMRLeaf memory leaf = createMMRLeaf();
+        BeefyClient.ValidatorProof[] memory proofs = createValidatorProofs(1);
+        BeefyClient.MMRLeaf memory leaf = createMMRLeaf();
         bytes32[] memory leafProof = new bytes32[](0);
 
         vm.prank(relayer1);
@@ -650,20 +638,20 @@ contract BeefyClientWrapperTest is Test {
 
     function test_submitFiatShamir_clearsHighestPendingBlock() public {
         // First create a pending session
-        uint32 pendingBlockNumber = uint32(INITIAL_BEEFY_BLOCK + 100);
-        IBeefyClient.Commitment memory pendingCommitment = createCommitment(pendingBlockNumber);
+        uint32 pendingBlockNumber = uint32(INITIAL_BEEFY_BLOCK + REFUND_TARGET);
+        BeefyClient.Commitment memory pendingCommitment = createCommitment(pendingBlockNumber);
         uint256[] memory bitfield = new uint256[](1);
-        IBeefyClient.ValidatorProof memory proof = createValidatorProof();
+        BeefyClient.ValidatorProof memory proof = createValidatorProof();
 
         vm.prank(relayer1);
         wrapper.submitInitial(pendingCommitment, bitfield, proof);
         assertEq(wrapper.highestPendingBlock(), pendingBlockNumber);
 
         // Submit Fiat Shamir with higher block number
-        uint32 fiatShamirBlockNumber = uint32(INITIAL_BEEFY_BLOCK + 200);
-        IBeefyClient.Commitment memory fiatShamirCommitment = createCommitment(fiatShamirBlockNumber);
-        IBeefyClient.ValidatorProof[] memory proofs = createValidatorProofs(1);
-        IBeefyClient.MMRLeaf memory leaf = createMMRLeaf();
+        uint32 fiatShamirBlockNumber = uint32(INITIAL_BEEFY_BLOCK + REFUND_TARGET + 100);
+        BeefyClient.Commitment memory fiatShamirCommitment = createCommitment(fiatShamirBlockNumber);
+        BeefyClient.ValidatorProof[] memory proofs = createValidatorProofs(1);
+        BeefyClient.MMRLeaf memory leaf = createMMRLeaf();
         bytes32[] memory leafProof = new bytes32[](0);
 
         vm.prank(relayer2);
@@ -678,10 +666,10 @@ contract BeefyClientWrapperTest is Test {
 
     function test_submitInitial_doesNotUpdateHighestPendingBlock_whenLower() public {
         // First submission sets highestPendingBlock
-        uint32 higherBlockNumber = uint32(INITIAL_BEEFY_BLOCK + 500);
-        IBeefyClient.Commitment memory commitment1 = createCommitment(higherBlockNumber);
+        uint32 higherBlockNumber = uint32(INITIAL_BEEFY_BLOCK + REFUND_TARGET + 200);
+        BeefyClient.Commitment memory commitment1 = createCommitment(higherBlockNumber);
         uint256[] memory bitfield = new uint256[](1);
-        IBeefyClient.ValidatorProof memory proof = createValidatorProof();
+        BeefyClient.ValidatorProof memory proof = createValidatorProof();
 
         vm.prank(relayer1);
         wrapper.submitInitial(commitment1, bitfield, proof);
@@ -689,8 +677,8 @@ contract BeefyClientWrapperTest is Test {
         uint256 timestamp1 = wrapper.highestPendingBlockTimestamp();
 
         // Second submission with lower block number should NOT update
-        uint32 lowerBlockNumber = uint32(INITIAL_BEEFY_BLOCK + 200);
-        IBeefyClient.Commitment memory commitment2 = createCommitment(lowerBlockNumber);
+        uint32 lowerBlockNumber = uint32(INITIAL_BEEFY_BLOCK + REFUND_TARGET);
+        BeefyClient.Commitment memory commitment2 = createCommitment(lowerBlockNumber);
 
         vm.prank(relayer2);
         wrapper.submitInitial(commitment2, bitfield, proof);
@@ -713,9 +701,9 @@ contract RejectingRelayer {
     }
 
     function submitInitial(
-        IBeefyClient.Commitment calldata commitment,
+        BeefyClient.Commitment calldata commitment,
         uint256[] calldata bitfield,
-        IBeefyClient.ValidatorProof calldata proof
+        BeefyClient.ValidatorProof calldata proof
     ) external {
         wrapper.submitInitial(commitment, bitfield, proof);
     }
@@ -725,10 +713,10 @@ contract RejectingRelayer {
     }
 
     function submitFinal(
-        IBeefyClient.Commitment calldata commitment,
+        BeefyClient.Commitment calldata commitment,
         uint256[] calldata bitfield,
-        IBeefyClient.ValidatorProof[] calldata proofs,
-        IBeefyClient.MMRLeaf calldata leaf,
+        BeefyClient.ValidatorProof[] calldata proofs,
+        BeefyClient.MMRLeaf calldata leaf,
         bytes32[] calldata leafProof,
         uint256 leafProofOrder
     ) external {
@@ -767,16 +755,16 @@ contract BeefyClientWrapperTransferFailedTest is Test {
 
         // Create commitment with enough progress for refund
         uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + REFUND_TARGET);
-        IBeefyClient.PayloadItem[] memory payload = new IBeefyClient.PayloadItem[](1);
-        payload[0] = IBeefyClient.PayloadItem(bytes2("mh"), abi.encodePacked(bytes32(0)));
-        IBeefyClient.Commitment memory commitment = IBeefyClient.Commitment(newBlockNumber, 1, payload);
+        BeefyClient.PayloadItem[] memory payload = new BeefyClient.PayloadItem[](1);
+        payload[0] = BeefyClient.PayloadItem(bytes2("mh"), abi.encodePacked(bytes32(0)));
+        BeefyClient.Commitment memory commitment = BeefyClient.Commitment(newBlockNumber, 1, payload);
 
         uint256[] memory bitfield = new uint256[](1);
         bytes32[] memory proof = new bytes32[](0);
-        IBeefyClient.ValidatorProof memory validatorProof = IBeefyClient.ValidatorProof(27, bytes32(0), bytes32(0), 0, address(0), proof);
-        IBeefyClient.ValidatorProof[] memory proofs = new IBeefyClient.ValidatorProof[](1);
+        BeefyClient.ValidatorProof memory validatorProof = BeefyClient.ValidatorProof(27, bytes32(0), bytes32(0), 0, address(0), proof);
+        BeefyClient.ValidatorProof[] memory proofs = new BeefyClient.ValidatorProof[](1);
         proofs[0] = validatorProof;
-        IBeefyClient.MMRLeaf memory leaf = IBeefyClient.MMRLeaf(1, 0, bytes32(0), 1, 100, bytes32(0), bytes32(0));
+        BeefyClient.MMRLeaf memory leaf = BeefyClient.MMRLeaf(1, 0, bytes32(0), 1, 100, bytes32(0), bytes32(0));
         bytes32[] memory leafProof = new bytes32[](0);
 
         uint256 wrapperBalanceBefore = address(wrapper).balance;

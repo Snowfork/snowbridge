@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.33;
 
-import {IBeefyClient} from "./interfaces/IBeefyClient.sol";
+import {BeefyClient} from "./BeefyClient.sol";
 
 interface IGateway {
     function BEEFY_CLIENT() external view returns (address);
@@ -66,9 +66,9 @@ contract BeefyClientWrapper {
     /* Beefy Client Proxy Functions */
 
     function submitInitial(
-        IBeefyClient.Commitment calldata commitment,
+        BeefyClient.Commitment calldata commitment,
         uint256[] calldata bitfield,
-        IBeefyClient.ValidatorProof calldata proof
+        BeefyClient.ValidatorProof calldata proof
     ) external {
         uint256 startGas = gasleft();
 
@@ -110,10 +110,10 @@ contract BeefyClientWrapper {
     }
 
     function submitFinal(
-        IBeefyClient.Commitment calldata commitment,
+        BeefyClient.Commitment calldata commitment,
         uint256[] calldata bitfield,
-        IBeefyClient.ValidatorProof[] calldata proofs,
-        IBeefyClient.MMRLeaf calldata leaf,
+        BeefyClient.ValidatorProof[] calldata proofs,
+        BeefyClient.MMRLeaf calldata leaf,
         bytes32[] calldata leafProof,
         uint256 leafProofOrder
     ) external {
@@ -146,10 +146,10 @@ contract BeefyClientWrapper {
     }
 
     function submitFiatShamir(
-        IBeefyClient.Commitment calldata commitment,
+        BeefyClient.Commitment calldata commitment,
         uint256[] calldata bitfield,
-        IBeefyClient.ValidatorProof[] calldata proofs,
-        IBeefyClient.MMRLeaf calldata leaf,
+        BeefyClient.ValidatorProof[] calldata proofs,
+        BeefyClient.MMRLeaf calldata leaf,
         bytes32[] calldata leafProof,
         uint256 leafProofOrder
     ) external {
@@ -187,8 +187,8 @@ contract BeefyClientWrapper {
 
     /* Internal Functions */
 
-    function _beefyClient() internal view returns (IBeefyClient) {
-        return IBeefyClient(IGateway(gateway).BEEFY_CLIENT());
+    function _beefyClient() internal view returns (BeefyClient) {
+        return BeefyClient(IGateway(gateway).BEEFY_CLIENT());
     }
 
     function _effectiveGasPrice() internal view returns (uint256) {
