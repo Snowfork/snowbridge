@@ -131,7 +131,7 @@ jobs:
           draft: false
           prerelease: false
 
-      - name: Upload Release Asset
+      - name: Upload Release Asset - Binary
         if: ${{ !inputs.image_tag }}
         uses: actions/upload-release-asset@v1
         env:
@@ -141,6 +141,29 @@ jobs:
           asset_path: ./relayer/build/snowbridge-relay
           asset_name: snowbridge-relay
           asset_content_type: application/octet-stream
+
+      - name: Upload Release Asset - Docker Compose
+        if: ${{ !inputs.image_tag }}
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./relayer/docker-compose.yml
+          asset_name: docker-compose.yml
+          asset_content_type: text/yaml
+
+      - name: Upload Release Asset - Mainnet Env
+        if: ${{ !inputs.image_tag }}
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./relayer/.env.mainnet.example
+          asset_name: .env.mainnet.example
+          asset_content_type: text/plain
+
 
       - name: Determine image tag
         id: image_tag

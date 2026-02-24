@@ -20,7 +20,7 @@ FROM ubuntu:22.04
 RUN apt-get update && apt-get install -y gettext-base curl && rm -rf /var/lib/apt/lists/*
 COPY --from=go-builder /opt/relayer/build/snowbridge-relay /usr/local/bin/
 COPY --from=rust-builder /opt/gas-estimator/target/release/snowbridge-gas-estimator /usr/local/bin/
+COPY relayer/config/docker/ /config/
 COPY relayer/scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
-VOLUME ["/config"]
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

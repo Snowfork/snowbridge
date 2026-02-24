@@ -5,18 +5,15 @@ x-logging: &awslogs
     awslogs-group: snowbridge/${ENVIRONMENT:-prod}
     awslogs-create-group: "true"
 
+x-image: &image
+  image: ghcr.io/snowfork/snowbridge-relay:${IMAGE_TAG:-latest}
+  platform: linux/amd64
+
 services:
   beacon-state-service:
-    image: ghcr.io/snowfork/snowbridge-relay
-    build:
-      context: ..
-      dockerfile: relayer/Dockerfile
-      args:
-        - GAS_ESTIMATOR_NETWORK=${GAS_ESTIMATOR_NETWORK:-polkadot}
-    platform: linux/amd64
+    <<: *image
     command: run beacon-state-service --config /config/beacon-state-service.json
     volumes:
-      - ./config/docker:/config
       - beacon-state-data:/data
     ports:
       - "8080:8080"
@@ -41,14 +38,12 @@ services:
         awslogs-create-group: "true"
 
   beacon:
-    image: ghcr.io/snowfork/snowbridge-relay
-    platform: linux/amd64
+    <<: *image
     command: >
       run beacon
       --config /config/beacon.json
       --substrate.private-key-id ${BEACON_RELAY_SUBSTRATE_KEY_ID}
     volumes:
-      - ./config/docker:/config
       - beacon-data:/data
     environment:
       - AWS_REGION=${AWS_REGION}
@@ -73,14 +68,11 @@ services:
         awslogs-create-group: "true"
 
   ethereum-v2:
-    image: ghcr.io/snowfork/snowbridge-relay
-    platform: linux/amd64
+    <<: *image
     command: >
       run ethereum-v2
       --config /config/ethereum-v2.json
       --substrate.private-key-id ${ETHEREUM_V2_RELAY_SUBSTRATE_KEY_ID}
-    volumes:
-      - ./config/docker:/config
     environment:
       - AWS_REGION=${AWS_REGION}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
@@ -109,14 +101,11 @@ services:
         awslogs-create-group: "true"
 
   ethereum:
-    image: ghcr.io/snowfork/snowbridge-relay
-    platform: linux/amd64
+    <<: *image
     command: >
       run ethereum
       --config /config/ethereum.json
       --substrate.private-key-id ${ETHEREUM_RELAY_SUBSTRATE_KEY_ID}
-    volumes:
-      - ./config/docker:/config
     environment:
       - AWS_REGION=${AWS_REGION}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
@@ -146,16 +135,13 @@ services:
         awslogs-create-group: "true"
 
   beefy:
-    image: ghcr.io/snowfork/snowbridge-relay
-    platform: linux/amd64
+    <<: *image
     profiles:
       - expensive
     command: >
       run beefy
       --config /config/beefy.json
       --ethereum.private-key-id ${BEEFY_RELAY_ETHEREUM_KEY_ID}
-    volumes:
-      - ./config/docker:/config
     environment:
       - AWS_REGION=${AWS_REGION}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
@@ -175,14 +161,11 @@ services:
         awslogs-create-group: "true"
 
   parachain-v2:
-    image: ghcr.io/snowfork/snowbridge-relay
-    platform: linux/amd64
+    <<: *image
     command: >
       run parachain-v2
       --config /config/parachain-v2.json
       --ethereum.private-key-id ${PARACHAIN_V2_RELAY_ETHEREUM_KEY_ID}
-    volumes:
-      - ./config/docker:/config
     environment:
       - AWS_REGION=${AWS_REGION}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
@@ -206,14 +189,11 @@ services:
         awslogs-create-group: "true"
 
   reward:
-    image: ghcr.io/snowfork/snowbridge-relay
-    platform: linux/amd64
+    <<: *image
     command: >
       run reward
       --config /config/reward.json
       --substrate.private-key-id ${REWARD_RELAY_SUBSTRATE_KEY_ID}
-    volumes:
-      - ./config/docker:/config
     environment:
       - AWS_REGION=${AWS_REGION}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
@@ -240,14 +220,11 @@ services:
         awslogs-create-group: "true"
 
   parachain:
-    image: ghcr.io/snowfork/snowbridge-relay
-    platform: linux/amd64
+    <<: *image
     command: >
       run parachain
       --config /config/parachain.json
       --ethereum.private-key-id ${PARACHAIN_RELAY_ETHEREUM_KEY_ID}
-    volumes:
-      - ./config/docker:/config
     environment:
       - AWS_REGION=${AWS_REGION}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
@@ -271,8 +248,7 @@ services:
         awslogs-create-group: "true"
 
   beefy-on-demand:
-    image: ghcr.io/snowfork/snowbridge-relay
-    platform: linux/amd64
+    <<: *image
     profiles:
       - expensive
     command: >
@@ -280,8 +256,6 @@ services:
       --config /config/beefy.json
       --ethereum.private-key-id ${BEEFY_ON_DEMAND_RELAY_ETHEREUM_KEY_ID}
       --on-demand
-    volumes:
-      - ./config/docker:/config
     environment:
       - AWS_REGION=${AWS_REGION}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
