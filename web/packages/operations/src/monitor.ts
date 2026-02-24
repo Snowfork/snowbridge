@@ -1,6 +1,6 @@
 import { u8aToHex } from "@polkadot/util"
 import { blake2AsU8a } from "@polkadot/util-crypto"
-import { Context, status, utils, subsquidV2 } from "@snowbridge/api"
+import { Context, createApi, status, utils, subsquidV2 } from "@snowbridge/api"
 import { sendMetrics } from "./alarm"
 import { Environment } from "../../base-types/dist"
 import { bridgeInfoFor } from "@snowbridge/registry"
@@ -248,14 +248,20 @@ export const monitor = async (): Promise<status.AllMetrics> => {
     if (process.env.NODE_ENV !== undefined) {
         env = process.env.NODE_ENV
     }
-    const { environment: snowbridgeEnv } = bridgeInfoFor(env)
+    const info = bridgeInfoFor(env)
+    const { environment: snowbridgeEnv } = info
     if (snowbridgeEnv === undefined) {
         throw Error(`Unknown environment '${env}'`)
     }
 
     const { name } = snowbridgeEnv
 
-    const context = new Context(contextConfigOverrides(snowbridgeEnv))
+    const context = createApi({
+        info: {
+            ...info,
+            environment: contextConfigOverrides(snowbridgeEnv),
+        },
+    }).context
 
     const bridgeStatus = await status.bridgeStatusInfo(context, {
         polkadotBlockTimeInSeconds: 6,

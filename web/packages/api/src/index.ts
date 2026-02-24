@@ -12,7 +12,7 @@ import {
     SnowbridgeL2Adaptor,
 } from "./contracts"
 import { EthersEthereumProvider, type EthereumProvider } from "./EthereumProvider"
-import { Environment } from "@snowbridge/base-types"
+import { BridgeInfo, Environment } from "@snowbridge/base-types"
 
 export * as toPolkadotV2 from "./toPolkadot_v2"
 export * as toEthereumV2 from "./toEthereum_v2"
@@ -423,4 +423,17 @@ export class Context {
         }
         return this.environment.l2Bridge.acrossAPIUrl as string
     }
+}
+
+export class SnowbridgeApi {
+    readonly context: Context
+    constructor(options: ApiOptions) {
+        this.context = new Context(options.info.environment)
+    }
+
+}
+
+type ApiOptions = { info: BridgeInfo }
+export function createApi(options: ApiOptions): SnowbridgeApi {
+    return new SnowbridgeApi(options)
 }

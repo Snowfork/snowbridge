@@ -1,5 +1,5 @@
 import { Keyring } from "@polkadot/keyring"
-import { assetsV2, Context, historyV2, toPolkadotV2 } from "@snowbridge/api"
+import { assetsV2, createApi, historyV2, toPolkadotV2 } from "@snowbridge/api"
 import { formatEther, Wallet } from "ethers"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { setTimeout } from "timers/promises"
@@ -10,10 +10,11 @@ import { bridgeInfoFor } from "@snowbridge/registry"
 
     // Get the registry of parachains and assets.
     const env = "polkadot_mainnet"
-    const { registry, environment } = bridgeInfoFor(env)
+    const info = bridgeInfoFor(env)
+    const { registry } = info
 
     // Initialize the context which establishes and pool connections
-    const context = new Context(environment)
+    const context = createApi({ info }).context
 
     // Initialize ethereum wallet.
     const ETHEREUM_ACCOUNT = new Wallet(
