@@ -12,7 +12,7 @@ import {
 import { Asset, AssetRegistry, Parachain } from "@snowbridge/base-types"
 import { beneficiaryMultiAddress, padFeeByPercentage } from "./utils"
 import { paraImplementation } from "./parachains"
-import { Context } from "."
+import { EthersContext } from "."
 import { buildMessageId } from "./toEthereum_v2"
 import { Result } from "@polkadot/types"
 import {
@@ -88,7 +88,7 @@ function resolveInputs(
 }
 
 export async function getDeliveryFee(
-    connections: { context: Context; sourceParaId: number; destinationParaId: number },
+    connections: { context: EthersContext; sourceParaId: number; destinationParaId: number },
     registry: AssetRegistry,
     tokenAddress: string,
     options?: {
@@ -148,7 +148,7 @@ export async function getDeliveryFee(
 }
 
 export async function createTransfer(
-    connections: { context: Context; sourceParaId: number },
+    connections: { context: EthersContext; sourceParaId: number },
     registry: AssetRegistry,
     sourceAccount: string,
     beneficiaryAccount: string,
@@ -249,7 +249,7 @@ export type ValidationResult = {
 }
 
 export async function validateTransfer(
-    connections: { context: Context; sourceParaId: number; destinationParaId: number },
+    connections: { context: EthersContext; sourceParaId: number; destinationParaId: number },
     transfer: Transfer,
 ): Promise<ValidationResult> {
     const sourceParachain = await connections.context.parachain(connections.sourceParaId)
@@ -392,7 +392,7 @@ export type MessageReceipt = {
 }
 
 export async function signAndSend(
-    connections: { context: Context; sourceParaId: number },
+    connections: { context: EthersContext; sourceParaId: number },
     transfer: Transfer,
     account: AddressOrPair,
     options: Partial<SignerOptions>,

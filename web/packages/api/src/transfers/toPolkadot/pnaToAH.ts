@@ -1,7 +1,7 @@
 import { AssetRegistry } from "@snowbridge/base-types"
 import { TransferInterface } from "./transferInterface"
 import { IGATEWAY_V2_ABI } from "../../contracts"
-import { Context } from "../../index"
+import { EthersContext } from "../../index"
 import {
     buildMessageId,
     calculateRelayerFee,
@@ -25,7 +25,7 @@ import { hexToU8a } from "@polkadot/util"
 
 export class PNAToAH implements TransferInterface {
     async getDeliveryFee(
-        context: Context,
+        context: EthersContext,
         registry: AssetRegistry,
         tokenAddress: string,
         _destinationParaId: number,
@@ -112,7 +112,7 @@ export class PNAToAH implements TransferInterface {
     }
 
     async createTransfer(
-        context: Context,
+        context: EthersContext,
         registry: AssetRegistry,
         destinationParaId: number,
         sourceAccount: string,
@@ -202,10 +202,7 @@ export class PNAToAH implements TransferInterface {
         }
     }
 
-    async validateTransfer(
-        context: Context,
-        transfer: Transfer,
-    ): Promise<ValidationResult> {
+    async validateTransfer(context: EthersContext, transfer: Transfer): Promise<ValidationResult> {
         const { tx } = transfer
         const { amount, sourceAccount, tokenAddress, registry } = transfer.input
         const ethereum = context.ethereum()

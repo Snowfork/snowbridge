@@ -1,6 +1,6 @@
 import "dotenv/config"
 import { Keyring } from "@polkadot/keyring"
-import { createApi, forKusama } from "@snowbridge/api"
+import { EthersEthereumProvider, createApi, forKusama } from "@snowbridge/api"
 import { Direction } from "@snowbridge/api/dist/forKusama"
 import { bridgeInfoFor } from "@snowbridge/registry"
 
@@ -20,7 +20,7 @@ export const transferForKusama = async (
         throw Error(`Unknown environment '${env}'`)
     }
 
-    const context = createApi({ info }).context
+    const context = createApi({ info, ethereumProvider: new EthersEthereumProvider() }).context
 
     const [polkadotAssetHub, kusamaAssetHub] = await Promise.all([
         context.assetHub(),

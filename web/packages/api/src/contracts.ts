@@ -34,21 +34,7 @@ export type SwapParamsStruct = {
     callData: string
 }
 
-export type ContractFunctionLike = {
-    populateTransaction(...args: any[]): Promise<any>
-}
-
-export type ContractLike = {
-    removeAllListeners(): Promise<any>
-    getFunction(name: string): ContractFunctionLike
-    interface: {
-        encodeFunctionData(name: string, values?: ReadonlyArray<any>): string
-    }
-    target: unknown
-    getAddress(): Promise<string>
-}
-
-export type IGatewayV1 = ContractLike & {
+export type IGatewayV1 = {
     quoteSendTokenFee(
         tokenAddress: string,
         destinationParaId: number,
@@ -60,30 +46,24 @@ export type IGatewayV1 = ContractLike & {
     agentOf(agentId: string): Promise<string>
 }
 
-export type IGatewayV2 = ContractLike & {
+export type IGatewayV2 = {
     operatingMode(): Promise<bigint>
     v2_outboundNonce(): Promise<bigint>
     isTokenRegistered(tokenAddress: string): Promise<boolean>
     agentOf(agentId: string): Promise<string>
 }
 
-export type BeefyClient = ContractLike & {
+export type BeefyClient = {
     latestBeefyBlock(): Promise<bigint>
 }
 
-export type SnowbridgeL1Adaptor = ContractLike
-export type ISwapRouter = ContractLike
-export type ISwapLegacyRouter = ContractLike
-
-export type ISwapQuoter = ContractLike & {
+export type ISwapQuoter = {
     quoteExactOutputSingle: {
         staticCall(params: QuoteExactOutputSingleParamsStruct): Promise<readonly [bigint, ...any[]]>
     }
 }
 
-export type SnowbridgeL2Adaptor = ContractLike
-
-export type IERC20 = ContractLike & {
+export type IERC20 = {
     balanceOf(owner: string): Promise<bigint>
     allowance(owner: string, spender: string): Promise<bigint>
 }

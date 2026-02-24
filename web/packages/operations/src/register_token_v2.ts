@@ -1,5 +1,5 @@
 import "dotenv/config"
-import { createApi, toPolkadotSnowbridgeV2 } from "@snowbridge/api"
+import { EthersEthereumProvider, createApi, toPolkadotSnowbridgeV2 } from "@snowbridge/api"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { Wallet } from "ethers"
 import { bridgeInfoFor } from "@snowbridge/registry"
@@ -15,7 +15,7 @@ export const registerTokenV2 = async (tokenAddress: string) => {
 
     const info = bridgeInfoFor(env)
     const { registry } = info
-    const context = createApi({ info }).context
+    const context = createApi({ info, ethereumProvider: new EthersEthereumProvider() }).context
 
     const ETHEREUM_ACCOUNT = new Wallet(
         process.env.ETHEREUM_KEY ?? "Your Key Goes Here",
@@ -49,10 +49,7 @@ export const registerTokenV2 = async (tokenAddress: string) => {
         )
 
         // Step 3. Validate the transaction.
-        const validation = await registrationImpl.validateRegistration(
-            context,
-            registration,
-        )
+        const validation = await registrationImpl.validateRegistration(context, registration)
 
         // Check validation logs for errors
         if (validation.logs.find((l) => l.kind == toPolkadotSnowbridgeV2.ValidationKind.Error)) {

@@ -1,5 +1,5 @@
 import "dotenv/config"
-import { createApi, toEthereumSnowbridgeV2 } from "@snowbridge/api"
+import { EthersEthereumProvider, createApi, toEthereumSnowbridgeV2 } from "@snowbridge/api"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { Wallet } from "ethers"
 import { bridgeInfoFor } from "@snowbridge/registry"
@@ -17,7 +17,7 @@ export const createAgent = async (agentId: string) => {
 
     const info = bridgeInfoFor(env)
     const { registry } = info
-    const context = createApi({ info }).context
+    const context = createApi({ info, ethereumProvider: new EthersEthereumProvider() }).context
 
     const ETHEREUM_ACCOUNT = new Wallet(
         process.env.ETHEREUM_KEY ?? "Your Key Goes Here",
@@ -43,10 +43,7 @@ export const createAgent = async (agentId: string) => {
         )
 
         // Step 2. Validate the transaction.
-        const validation = await agentCreationImpl.validateAgentCreation(
-            context,
-            creation,
-        )
+        const validation = await agentCreationImpl.validateAgentCreation(context, creation)
 
         // Check validation logs for errors
         const errorLogs = validation.logs.filter(

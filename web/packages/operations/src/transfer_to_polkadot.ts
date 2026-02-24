@@ -1,5 +1,5 @@
 import { Keyring } from "@polkadot/keyring"
-import { createApi, toPolkadotV2 } from "@snowbridge/api"
+import { EthersEthereumProvider, createApi, toPolkadotV2 } from "@snowbridge/api"
 import { formatEther, Wallet } from "ethers"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { bridgeInfoFor } from "@snowbridge/registry"
@@ -20,7 +20,7 @@ export const transferToPolkadot = async (
 
     const info = bridgeInfoFor(env)
     const { registry } = info
-    const context = createApi({ info }).context
+    const context = createApi({ info, ethereumProvider: new EthersEthereumProvider() }).context
 
     const ETHEREUM_ACCOUNT = new Wallet(
         process.env.ETHEREUM_KEY ?? "Your Key Goes Here",
@@ -118,10 +118,7 @@ export const transferToPolkadot = async (
         )
 
         // Step 3. Validate the transaction.
-        const validation = await toPolkadotV2.validateTransfer(
-            context,
-            transfer,
-        )
+        const validation = await toPolkadotV2.validateTransfer(context, transfer)
         console.log("validation result", validation)
 
         // Step 4. Check validation logs for errors

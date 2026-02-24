@@ -32,7 +32,7 @@ import { xxhashAsHex } from "@polkadot/util-crypto"
 import { BN } from "@polkadot/util"
 import { padFeeByPercentage } from "./utils"
 import { paraImplementation } from "./parachains"
-import { Context } from "./index"
+import { Context, EthersContext } from "./index"
 import { ETHER_TOKEN_ADDRESS, findL2TokenAddress } from "./assets_v2"
 import { getOperatingStatus } from "./status"
 import { AbstractProvider, ethers, Wallet, TransactionReceipt } from "ethers"
@@ -233,7 +233,7 @@ export type DeliveryXcm = {
 }
 
 export const estimateEthereumExecutionFee = async (
-    context: Context,
+    context: EthersContext,
     registry: AssetRegistry,
     sourceParaId: number,
     tokenAddress: string,
@@ -257,7 +257,7 @@ export const estimateEthereumExecutionFee = async (
 }
 
 export const estimateFeesFromAssetHub = async (
-    context: Context,
+    context: EthersContext,
     registry: AssetRegistry,
     tokenAddress: string,
     deliveryXcm: DeliveryXcm,
@@ -380,7 +380,7 @@ export const estimateFeesFromAssetHub = async (
 }
 
 export const estimateFeesFromParachains = async (
-    context: Context,
+    context: EthersContext,
     sourceParaId: number,
     registry: AssetRegistry,
     tokenAddress: string,
@@ -533,7 +533,7 @@ export const estimateFeesFromParachains = async (
 }
 
 export const validateTransferFromAssetHub = async (
-    context: Context,
+    context: EthersContext,
     transfer: Transfer,
 ): Promise<ValidationResult> => {
     const { registry, fee, tokenAddress, amount } = transfer.input
@@ -719,7 +719,7 @@ export const validateTransferFromAssetHub = async (
 }
 
 export const validateTransferFromParachain = async (
-    context: Context,
+    context: EthersContext,
     transfer: Transfer,
 ): Promise<ValidationResult> => {
     const { registry, fee, tokenAddress, amount } = transfer.input
@@ -910,7 +910,7 @@ export const validateTransferFromParachain = async (
     }
 }
 
-export async function buildContractCallHex(context: Context, contractCall: ContractCall) {
+export async function buildContractCallHex(context: EthersContext, contractCall: ContractCall) {
     const bridgeHub = await context.bridgeHub()
     const callHex = bridgeHub.createType("ContractCall", {
         target: contractCall.target,
@@ -975,7 +975,7 @@ export async function sendAgentCreation(
 }
 
 export async function buildL2Call(
-    context: Context,
+    context: EthersContext,
     registry: AssetRegistry,
     tokenAddress: string,
     l2ChainId: number,
@@ -1064,7 +1064,7 @@ export async function buildL2Call(
 }
 
 export async function sourceAgentId(
-    context: Context,
+    context: EthersContext,
     parachainId: number,
     sourceAccountHex: string,
 ) {
@@ -1080,7 +1080,7 @@ export async function sourceAgentId(
 }
 
 export async function sourceAgentAddress(
-    context: Context,
+    context: EthersContext,
     parachainId: number,
     sourceAccountHex: string,
 ): Promise<string> {

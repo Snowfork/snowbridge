@@ -1,6 +1,13 @@
 import { u8aToHex } from "@polkadot/util"
 import { blake2AsU8a } from "@polkadot/util-crypto"
-import { Context, createApi, status, utils, subsquidV2 } from "@snowbridge/api"
+import {
+    EthersContext,
+    EthersEthereumProvider,
+    createApi,
+    status,
+    subsquidV2,
+    utils,
+} from "@snowbridge/api"
 import { sendMetrics } from "./alarm"
 import { Environment } from "../../base-types/dist"
 import { bridgeInfoFor } from "@snowbridge/registry"
@@ -261,6 +268,7 @@ export const monitor = async (): Promise<status.AllMetrics> => {
             ...info,
             environment: contextConfigOverrides(snowbridgeEnv),
         },
+        ethereumProvider: new EthersEthereumProvider(),
     }).context
 
     const bridgeStatus = await status.bridgeStatusInfo(context, {
@@ -308,7 +316,7 @@ export const monitor = async (): Promise<status.AllMetrics> => {
     return allMetrics
 }
 
-const fetchChannelStatus = async (context: Context, env: Environment) => {
+const fetchChannelStatus = async (context: EthersContext, env: Environment) => {
     let assethubChannelStatus = await status.channelStatusInfo(
         context,
         utils.paraIdToChannelId(env.assetHubParaId),
@@ -330,7 +338,7 @@ const fetchChannelStatus = async (context: Context, env: Environment) => {
     return [assethubChannelStatus, primaryGov, secondaryGov]
 }
 
-const fetchBalances = async (context: Context, env: Environment) => {
+const fetchBalances = async (context: EthersContext, env: Environment) => {
     const [bridgeHub, ethereum] = await Promise.all([context.bridgeHub(), context.ethereum()])
 
     let relayers = []
@@ -397,7 +405,7 @@ const fetchBalances = async (context: Context, env: Environment) => {
     return { relayers, sovereigns }
 }
 
-export const fetchIndexerStatus = async (context: Context, env: Environment) => {
+export const fetchIndexerStatus = async (context: EthersContext, env: Environment) => {
     let indexerInfos: status.IndexerServiceStatusInfo[] = []
     // Allow runtime override of monitored parachains without changing defaults.
     let monitorChains = monitorParams[env.name].TO_MONITOR_CHAINS

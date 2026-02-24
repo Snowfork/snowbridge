@@ -18,7 +18,7 @@ import {
     Transfer,
     ValidationResult,
 } from "../../toEthereum_v2"
-import { Context } from "../.."
+import { EthersContext } from "../.."
 import { TransferInterface } from "./transferInterface"
 import {
     buildContractCallHex,
@@ -31,7 +31,7 @@ import {
 
 export class ERC20FromAH implements TransferInterface {
     async getDeliveryFee(
-        context: Context,
+        context: EthersContext,
         registry: AssetRegistry,
         l2ChainId: number,
         tokenAddress: string,
@@ -92,7 +92,7 @@ export class ERC20FromAH implements TransferInterface {
     }
 
     async createTransfer(
-        context: Context,
+        context: EthersContext,
         registry: AssetRegistry,
         l2ChainId: number,
         tokenAddress: string,
@@ -182,12 +182,12 @@ export class ERC20FromAH implements TransferInterface {
         }
     }
 
-    async validateTransfer(context: Context, transfer: Transfer): Promise<ValidationResult> {
+    async validateTransfer(context: EthersContext, transfer: Transfer): Promise<ValidationResult> {
         return validateTransferFromAssetHub(context, transfer)
     }
 
     async createTx(
-        context: Context,
+        context: EthersContext,
         parachain: ApiPromise,
         ethChainId: number,
         sourceAccount: string,

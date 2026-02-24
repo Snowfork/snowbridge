@@ -18,7 +18,7 @@ import {
     Transfer,
     ValidationResult,
 } from "../../toEthereum_v2"
-import { Context } from "../.."
+import { EthersContext } from "../.."
 import { TransferInterface } from "./transferInterface"
 import {
     buildContractCallHex,
@@ -30,7 +30,7 @@ import {
 
 export class PNAFromAH implements TransferInterface {
     async getDeliveryFee(
-        source: { sourceParaId: number; context: Context },
+        source: { sourceParaId: number; context: EthersContext },
         registry: AssetRegistry,
         tokenAddress: string,
         options?: {
@@ -94,7 +94,7 @@ export class PNAFromAH implements TransferInterface {
     }
 
     async createTransfer(
-        source: { sourceParaId: number; context: Context },
+        source: { sourceParaId: number; context: EthersContext },
         registry: AssetRegistry,
         sourceAccount: string,
         beneficiaryAccount: string,
@@ -166,12 +166,12 @@ export class PNAFromAH implements TransferInterface {
         }
     }
 
-    async validateTransfer(context: Context, transfer: Transfer): Promise<ValidationResult> {
+    async validateTransfer(context: EthersContext, transfer: Transfer): Promise<ValidationResult> {
         return validateTransferFromAssetHub(context, transfer)
     }
 
     async createTx(
-        context: Context,
+        context: EthersContext,
         parachain: ApiPromise,
         ethChainId: number,
         sourceAccount: string,

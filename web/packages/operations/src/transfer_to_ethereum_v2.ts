@@ -1,5 +1,10 @@
 import { Keyring } from "@polkadot/keyring"
-import { createApi, toEthereumSnowbridgeV2, toEthereumV2 } from "@snowbridge/api"
+import {
+    EthersEthereumProvider,
+    createApi,
+    toEthereumSnowbridgeV2,
+    toEthereumV2,
+} from "@snowbridge/api"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { formatUnits, Wallet } from "ethers"
 import { bridgeInfoFor } from "@snowbridge/registry"
@@ -24,7 +29,7 @@ export const transferToEthereum = async (
 
     const info = bridgeInfoFor(env)
     const { registry } = info
-    const context = createApi({ info }).context
+    const context = createApi({ info, ethereumProvider: new EthersEthereumProvider() }).context
 
     const polkadot_keyring = new Keyring({ type: "sr25519" })
 

@@ -27,7 +27,7 @@ import { accountToLocation, DOT_LOCATION, erc20Location } from "./xcmBuilder"
 import { Codec } from "@polkadot/types/types"
 import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
 import { padFeeByPercentage } from "./utils"
-import { Context } from "./index"
+import { EthersContext } from "./index"
 export { ValidationKind } from "./toPolkadot_v2"
 import { ParachainBase } from "./parachains/parachainBase"
 
@@ -324,7 +324,7 @@ export async function calculateRelayerFee(
 }
 
 export async function buildSwapCallData(
-    context: Context,
+    context: EthersContext,
     registry: AssetRegistry,
     l2ChainId: number,
     l2TokenAddress: string,

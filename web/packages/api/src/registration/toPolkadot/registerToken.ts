@@ -7,7 +7,7 @@ import {
     RegistrationValidationResult,
 } from "./registrationInterface"
 import { IGATEWAY_V2_ABI } from "../../contracts"
-import { Context } from "../../index"
+import { EthersContext } from "../../index"
 import { ValidationKind } from "../../toPolkadotSnowbridgeV2"
 import { FeeInfo, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
 import { Contract, Interface } from "ethers"
@@ -27,7 +27,7 @@ const getAssetDeposit = (assetHub: ApiPromise): bigint => {
 
 export class RegisterToken implements RegistrationInterface {
     async getRegistrationFee(
-        context: Context,
+        context: EthersContext,
         registry: AssetRegistry,
         relayerFee: bigint,
         options?: {
@@ -97,7 +97,7 @@ export class RegisterToken implements RegistrationInterface {
     }
 
     async createRegistration(
-        context: Context,
+        context: EthersContext,
         registry: AssetRegistry,
         sourceAccount: string,
         tokenAddress: string,
@@ -139,7 +139,7 @@ export class RegisterToken implements RegistrationInterface {
     }
 
     async validateRegistration(
-        context: Context,
+        context: EthersContext,
         registration: TokenRegistration,
     ): Promise<RegistrationValidationResult> {
         const { tx } = registration

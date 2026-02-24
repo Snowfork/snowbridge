@@ -1,6 +1,6 @@
 import { AssetRegistry } from "@snowbridge/base-types"
 import { TransferInterface } from "./transferInterface"
-import { Context } from "../../index"
+import { EthersContext } from "../../index"
 import {
     buildSwapCallData,
     calculateRelayerFee,
@@ -34,7 +34,7 @@ import { ContractTransaction } from "ethers/lib.commonjs/contract/types"
 
 export class ERC20ToAH implements TransferInterface {
     async getDeliveryFee(
-        context: Context,
+        context: EthersContext,
         registry: AssetRegistry,
         l2ChainId: number,
         l2TokenAddress: string,
@@ -193,7 +193,7 @@ export class ERC20ToAH implements TransferInterface {
     }
 
     async createTransfer(
-        context: Context,
+        context: EthersContext,
         registry: AssetRegistry,
         l2ChainId: number,
         l2TokenAddress: string,
@@ -345,7 +345,7 @@ export class ERC20ToAH implements TransferInterface {
         }
     }
 
-    async validateTransfer(context: Context, transfer: Transfer): Promise<ValidationResult> {
+    async validateTransfer(context: EthersContext, transfer: Transfer): Promise<ValidationResult> {
         const { tx } = transfer
         const { amount, sourceAccount, tokenAddress, registry, l2TokenAddress, sourceChainId } =
             transfer.input

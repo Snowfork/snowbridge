@@ -1,5 +1,5 @@
 import { Keyring } from "@polkadot/keyring"
-import { createApi } from "@snowbridge/api"
+import { EthersEthereumProvider, createApi } from "@snowbridge/api"
 import { IGatewayV1__factory as IGateway__factory } from "@snowbridge/contract-types"
 import { Contract, ethers, LogDescription, Wallet } from "ethers"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
@@ -14,7 +14,7 @@ export const registerERC20 = async (tokenAddress: string) => {
     await cryptoWaitReady()
 
     const info = bridgeInfoFor(env)
-    const context = createApi({ info }).context
+    const context = createApi({ info, ethereumProvider: new EthersEthereumProvider() }).context
 
     const ETHEREUM_ACCOUNT = new Wallet(
         process.env.ETHEREUM_KEY ?? "Your Key Goes Here",

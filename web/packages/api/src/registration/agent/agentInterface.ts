@@ -1,5 +1,5 @@
 import { AssetRegistry } from "@snowbridge/base-types"
-import { Context } from "../../index"
+import { EthersContext } from "../../index"
 import { ContractTransaction } from "ethers"
 import { FeeInfo, ValidationLog } from "../../toPolkadot_v2"
 
@@ -29,14 +29,14 @@ export type AgentCreationValidationResult = {
 
 export interface AgentCreationInterface {
     createAgentCreation(
-        context: Context,
+        context: EthersContext,
         registry: AssetRegistry,
         sourceAccount: string,
         agentId: string,
     ): Promise<AgentCreation>
 
     validateAgentCreation(
-        context: Context,
+        context: EthersContext,
         creation: AgentCreation,
     ): Promise<AgentCreationValidationResult>
 }

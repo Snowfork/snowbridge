@@ -30,7 +30,7 @@ import {
     ValidationLog,
     ValidationReason,
 } from "./toEthereum_v2"
-import { Context } from "./index"
+import { EthersContext } from "./index"
 
 const PALLET_XCM_PRECOMPILE = [
     {
@@ -98,7 +98,7 @@ export type TransferEvm = {
 }
 
 export async function createTransferEvm(
-    source: { sourceParaId: number; context: Context },
+    source: { sourceParaId: number; context: EthersContext },
     registry: AssetRegistry,
     sourceAccount: string,
     beneficiaryAccount: string,
@@ -226,7 +226,7 @@ export type ValidationResultEvm = {
 }
 
 export async function validateTransferEvm(
-    context: Context,
+    context: EthersContext,
     transfer: TransferEvm,
 ): Promise<ValidationResultEvm> {
     const { registry, fee, tokenAddress, amount, beneficiaryAccount } = transfer.input
@@ -475,7 +475,7 @@ export type MessageReceiptEvm = {
 }
 
 export async function getMessageReceipt(
-    source: { sourceParaId: number; context: Context },
+    source: { sourceParaId: number; context: EthersContext },
     receipt: TransactionReceipt,
 ): Promise<MessageReceiptEvm> {
     const sourceParachain = await source.context.parachain(source.sourceParaId)

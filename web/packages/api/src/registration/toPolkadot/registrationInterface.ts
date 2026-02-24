@@ -1,5 +1,5 @@
 import { AssetRegistry } from "@snowbridge/base-types"
-import { Context } from "../../index"
+import { EthersContext } from "../../index"
 import { ContractTransaction } from "ethers"
 import { OperationStatus } from "../../status"
 import { FeeInfo, ValidationLog } from "../../toPolkadot_v2"
@@ -42,7 +42,7 @@ export type RegistrationFee = {
 
 export interface RegistrationInterface {
     getRegistrationFee(
-        context: Context,
+        context: EthersContext,
         registry: AssetRegistry,
         relayerFee: bigint,
         options?: {
@@ -51,7 +51,7 @@ export interface RegistrationInterface {
     ): Promise<RegistrationFee>
 
     createRegistration(
-        context: Context,
+        context: EthersContext,
         registry: AssetRegistry,
         sourceAccount: string,
         tokenAddress: string,
@@ -59,7 +59,7 @@ export interface RegistrationInterface {
     ): Promise<TokenRegistration>
 
     validateRegistration(
-        context: Context,
+        context: EthersContext,
         registration: TokenRegistration,
     ): Promise<RegistrationValidationResult>
 }
