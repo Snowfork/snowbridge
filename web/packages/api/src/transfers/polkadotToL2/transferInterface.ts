@@ -1,10 +1,10 @@
 import { AssetRegistry, ContractCall } from "@snowbridge/base-types"
 import { DeliveryFee, Transfer, ValidationResult } from "../../toEthereum_v2"
-import { Context } from "../../index"
+import { EthersContext } from "../../index"
 
 export interface TransferInterface {
     getDeliveryFee(
-        context: Context,
+        context: EthersContext,
         registry: AssetRegistry,
         l2ChainId: number,
         tokenAddress: string,
@@ -22,7 +22,7 @@ export interface TransferInterface {
     ): Promise<DeliveryFee>
 
     createTransfer(
-        context: Context,
+        context: EthersContext,
         registry: AssetRegistry,
         l2ChainId: number,
         tokenAddress: string,
@@ -37,5 +37,5 @@ export interface TransferInterface {
         },
     ): Promise<Transfer>
 
-    validateTransfer(context: Context, transfer: Transfer): Promise<ValidationResult>
+    validateTransfer(context: EthersContext, transfer: Transfer): Promise<ValidationResult>
 }

@@ -27,7 +27,7 @@ import {
 import { Result } from "@polkadot/types"
 import { XcmDryRunApiError, XcmDryRunEffects } from "@polkadot/types/interfaces"
 import { paraImplementation } from "./parachains"
-import { Context } from "./index"
+import { EthersContext } from "./index"
 
 export type Transfer = {
     input: {
@@ -120,7 +120,7 @@ export type MessageReceipt = {
 }
 
 export async function getDeliveryFee(
-    context: Context,
+    context: EthersContext,
     registry: AssetRegistry,
     tokenAddress: string,
     destinationParaId: number,
@@ -251,7 +251,7 @@ export async function createTransfer(
 }
 
 export async function validateTransfer(
-    context: Context,
+    context: EthersContext,
     transfer: Transfer,
 ): Promise<ValidationResult> {
     const { tx } = transfer

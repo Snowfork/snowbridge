@@ -1,10 +1,10 @@
 import { AssetRegistry } from "@snowbridge/base-types"
-import { Context } from "../../index"
+import { EthersContext } from "../../index"
 import { DeliveryFee, Transfer, ValidationResult } from "../../toPolkadotSnowbridgeV2"
 
 export interface TransferInterface {
     getDeliveryFee(
-        context: Context,
+        context: EthersContext,
         registry: AssetRegistry,
         l2ChainId: number,
         tokenAddress: string,
@@ -21,7 +21,7 @@ export interface TransferInterface {
     ): Promise<DeliveryFee>
 
     createTransfer(
-        context: Context,
+        context: EthersContext,
         registry: AssetRegistry,
         l2ChainId: number,
         tokenAddress: string,
@@ -36,5 +36,5 @@ export interface TransferInterface {
         },
     ): Promise<Transfer>
 
-    validateTransfer(context: Context, transfer: Transfer): Promise<ValidationResult>
+    validateTransfer(context: EthersContext, transfer: Transfer): Promise<ValidationResult>
 }

@@ -1,7 +1,7 @@
 import { AssetRegistry } from "@snowbridge/base-types"
 import { TransferInterface } from "./transferInterface"
 import { IGATEWAY_V2_ABI } from "../../contracts"
-import { Context } from "../../index"
+import { EthersContext } from "../../index"
 import {
     buildMessageId,
     calculateRelayerFee,
@@ -34,7 +34,7 @@ import { hexToU8a } from "@polkadot/util"
 
 export class ERC20ToParachain implements TransferInterface {
     async getDeliveryFee(
-        context: Context,
+        context: EthersContext,
         registry: AssetRegistry,
         tokenAddress: string,
         destinationParaId: number,
@@ -189,7 +189,7 @@ export class ERC20ToParachain implements TransferInterface {
     }
 
     async createTransfer(
-        context: Context,
+        context: EthersContext,
         registry: AssetRegistry,
         destinationParaId: number,
         sourceAccount: string,
@@ -312,10 +312,7 @@ export class ERC20ToParachain implements TransferInterface {
         }
     }
 
-    async validateTransfer(
-        context: Context,
-        transfer: Transfer,
-    ): Promise<ValidationResult> {
+    async validateTransfer(context: EthersContext, transfer: Transfer): Promise<ValidationResult> {
         const { tx } = transfer
         const { amount, sourceAccount, tokenAddress, registry, destinationParaId } = transfer.input
         const ethereum = context.ethereum()

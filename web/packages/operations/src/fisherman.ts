@@ -1,4 +1,4 @@
-import { createApi } from "@snowbridge/api"
+import { EthersEthereumProvider, createApi } from "@snowbridge/api"
 import { BeefyClient, BeefyClient__factory } from "@snowbridge/contract-types"
 import { AbstractProvider } from "ethers"
 import { existsSync } from "fs"
@@ -38,7 +38,7 @@ export const run = async (): Promise<void> => {
         throw Error(`Unknown environment '${env}'`)
     }
 
-    const ctx = createApi({ info }).context
+    const ctx = createApi({ info, ethereumProvider: new EthersEthereumProvider() }).context
 
     const relaychain = await ctx.relaychain()
     await relaychain.isReady
