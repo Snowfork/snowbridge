@@ -1,12 +1,12 @@
 import { AssetRegistry } from "@snowbridge/base-types"
 import { DeliveryFee } from "../../toPolkadotSnowbridgeV2"
-import { Context } from "../../index"
+import { EthersContext } from "../../index"
 import { Transfer } from "../../toPolkadotSnowbridgeV2"
 import { ValidationResult } from "../../toPolkadotSnowbridgeV2"
 
 export interface TransferInterface {
     getDeliveryFee(
-        context: Context,
+        context: EthersContext,
         registry: AssetRegistry,
         tokenAddress: string,
         destinationParaId: number,
@@ -19,7 +19,7 @@ export interface TransferInterface {
     ): Promise<DeliveryFee>
 
     createTransfer(
-        context: Context,
+        context: EthersContext,
         registry: AssetRegistry,
         destinationParaId: number,
         sourceAccount: string,
@@ -30,5 +30,5 @@ export interface TransferInterface {
         customXcm?: any[], // Optional custom XCM instructions to append
     ): Promise<Transfer>
 
-    validateTransfer(context: Context, transfer: Transfer): Promise<ValidationResult>
+    validateTransfer(context: EthersContext, transfer: Transfer): Promise<ValidationResult>
 }

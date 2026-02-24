@@ -1,17 +1,7 @@
 // import '@polkadot/api-augment/polkadot'
 import { ApiPromise, HttpProvider, WsProvider } from "@polkadot/api"
-import { AbstractProvider, Contract, Interface, InterfaceAbi } from "ethers"
-import {
-    BeefyClient,
-    IGatewayV1,
-    IGatewayV2,
-    ISwapLegacyRouter,
-    ISwapQuoter,
-    ISwapRouter,
-    SnowbridgeL1Adaptor,
-    SnowbridgeL2Adaptor,
-} from "./contracts"
-import { EthersEthereumProvider, type EthereumProvider } from "./EthereumProvider"
+import { BeefyClient, IGatewayV1, IGatewayV2, ISwapQuoter } from "./contracts"
+import { type EthereumProvider } from "./EthereumProvider"
 import { BridgeInfo, Environment } from "@snowbridge/base-types"
 
 export * as toPolkadotV2 from "./toPolkadot_v2"
@@ -32,22 +22,22 @@ export * as neuroWeb from "./parachains/neuroweb"
 export * as toPolkadotSnowbridgeV2 from "./toPolkadotSnowbridgeV2"
 export * as addTip from "./addTip"
 export { EthersEthereumProvider } from "./EthereumProvider"
-export type { EthereumProvider } from "./EthereumProvider"
+export type { EthereumProvider, EthersContext } from "./EthereumProvider"
 
-export class Context {
+export class Context<EConnection, EContract, EAbi, EInterface> {
     readonly environment: Environment
-    readonly ethereumProvider: EthereumProvider<AbstractProvider, Contract, InterfaceAbi, Interface>
+    readonly ethereumProvider: EthereumProvider<EConnection, EContract, EAbi, EInterface>
 
     // Ethereum
-    #ethChains: Record<string, AbstractProvider>
-    #gateway?: Contract & IGatewayV1
-    #gatewayV2?: Contract & IGatewayV2
-    #beefyClient?: Contract & BeefyClient
-    #l1Adapter?: Contract & SnowbridgeL1Adaptor
-    #l1SwapQuoter?: Contract & ISwapQuoter
-    #l1SwapRouter?: Contract & ISwapRouter
-    #l1LegacySwapRouter?: Contract & ISwapLegacyRouter
-    #l2Adapters: { [l2ChainId: number]: Contract & SnowbridgeL2Adaptor } = {}
+    #ethChains: Record<string, EConnection>
+    #gateway?: EContract & IGatewayV1
+    #gatewayV2?: EContract & IGatewayV2
+    #beefyClient?: EContract & BeefyClient
+    #l1Adapter?: EContract
+    #l1SwapQuoter?: EContract & ISwapQuoter
+    #l1SwapRouter?: EContract
+    #l1LegacySwapRouter?: EContract
+    #l2Adapters: { [l2ChainId: number]: EContract } = {}
 
     // Substrate
     #polkadotParachains: Record<string, Promise<ApiPromise>>
@@ -57,9 +47,12 @@ export class Context {
     static #rpcInitTimeoutMs = 40_000
     static #wsRequestTimeoutMs = 30_000
 
-    constructor(environment: Environment) {
+    constructor(
+        environment: Environment,
+        ethereumProvider: EthereumProvider<EConnection, EContract, EAbi, EInterface>,
+    ) {
         this.environment = environment
-        this.ethereumProvider = new EthersEthereumProvider()
+        this.ethereumProvider = ethereumProvider
         this.#polkadotParachains = {}
         this.#kusamaParachains = {}
         this.#ethChains = {}
@@ -210,7 +203,7 @@ export class Context {
         return await this.#kusamaParachains[paraIdKey]
     }
 
-    setEthProvider(ethChainId: number, provider: AbstractProvider) {
+    setEthProvider(ethChainId: number, provider: EConnection) {
         const ethChainKey = ethChainId.toString()
         if (ethChainKey in this.#ethChains) {
             this.ethereumProvider.destroyProvider(this.#ethChains[ethChainKey])
@@ -218,7 +211,7 @@ export class Context {
         this.#ethChains[ethChainKey] = provider
     }
 
-    ethChain(ethChainId: number): AbstractProvider {
+    ethChain(ethChainId: number): EConnection {
         const ethChainKey = ethChainId.toString()
         if (ethChainKey in this.#ethChains) {
             return this.#ethChains[ethChainKey]
@@ -227,12 +220,7 @@ export class Context {
         const { ethereumChains } = this.environment
         if (ethChainKey in ethereumChains) {
             const url = ethereumChains[ethChainKey]
-            let provider: AbstractProvider
-            if (typeof url === "string") {
-                provider = this.ethereumProvider.createProvider(url)
-            } else {
-                provider = url as AbstractProvider
-            }
+            const provider = this.ethereumProvider.createProvider(url)
             this.#ethChains[ethChainKey] = provider
             return provider
         } else {
@@ -240,11 +228,11 @@ export class Context {
         }
     }
 
-    ethereum(): AbstractProvider {
+    ethereum(): EConnection {
         return this.ethChain(this.environment.ethChainId)
     }
 
-    gateway(): Contract & IGatewayV1 {
+    gateway(): EContract & IGatewayV1 {
         if (this.#gateway) {
             return this.#gateway
         }
@@ -252,10 +240,10 @@ export class Context {
             this.environment.gatewayContract,
             this.ethereum(),
         )
-        return this.#gateway
+        return this.#gateway!
     }
 
-    gatewayV2(): Contract & IGatewayV2 {
+    gatewayV2(): EContract & IGatewayV2 {
         if (this.#gatewayV2) {
             return this.#gatewayV2
         }
@@ -263,10 +251,10 @@ export class Context {
             this.environment.gatewayContract,
             this.ethereum(),
         )
-        return this.#gatewayV2
+        return this.#gatewayV2!
     }
 
-    beefyClient(): Contract & BeefyClient {
+    beefyClient(): EContract & BeefyClient {
         if (this.#beefyClient) {
             return this.#beefyClient
         }
@@ -274,7 +262,7 @@ export class Context {
             this.environment.beefyContract,
             this.ethereum(),
         )
-        return this.#beefyClient
+        return this.#beefyClient!
     }
 
     graphqlApiUrl(): string {
@@ -315,7 +303,7 @@ export class Context {
         }
     }
 
-    l1Adapter(): Contract & SnowbridgeL1Adaptor {
+    l1Adapter(): EContract {
         if (!this.environment.l2Bridge) {
             throw new Error("L2 bridge configuration is missing.")
         }
@@ -326,10 +314,10 @@ export class Context {
             this.environment.l2Bridge.l1AdapterAddress as string,
             this.ethereum(),
         )
-        return this.#l1Adapter
+        return this.#l1Adapter!
     }
 
-    l1SwapQuoter(): Contract & ISwapQuoter {
+    l1SwapQuoter(): EContract {
         if (!this.environment.l2Bridge) {
             throw new Error("L2 bridge configuration is missing.")
         }
@@ -340,7 +328,7 @@ export class Context {
             this.environment.l2Bridge.l1SwapQuoterAddress as string,
             this.ethereum(),
         )
-        return this.#l1SwapQuoter
+        return this.#l1SwapQuoter!
     }
 
     l1SwapRouterAddress(): string {
@@ -350,7 +338,7 @@ export class Context {
         return this.environment.l2Bridge.l1SwapRouterAddress as string
     }
 
-    l1SwapRouter(): Contract & ISwapRouter {
+    l1SwapRouter(): EContract {
         if (!this.environment.l2Bridge) {
             throw new Error("L2 bridge configuration is missing.")
         }
@@ -361,10 +349,10 @@ export class Context {
             this.l1SwapRouterAddress(),
             this.ethereum(),
         )
-        return this.#l1SwapRouter
+        return this.#l1SwapRouter!
     }
 
-    l1LegacySwapRouter(): Contract & ISwapLegacyRouter {
+    l1LegacySwapRouter(): EContract {
         if (!this.environment.l2Bridge) {
             throw new Error("L2 bridge configuration is missing.")
         }
@@ -375,7 +363,7 @@ export class Context {
             this.environment.l2Bridge.l1SwapRouterAddress as string,
             this.ethereum(),
         )
-        return this.#l1LegacySwapRouter
+        return this.#l1LegacySwapRouter!
     }
 
     l1HandlerAddress(): string {
@@ -392,7 +380,7 @@ export class Context {
         return this.environment.l2Bridge.l1FeeTokenAddress as string
     }
 
-    l2Adapter(l2ChainId: number): Contract & SnowbridgeL2Adaptor {
+    l2Adapter(l2ChainId: number): EContract {
         if (!this.environment.l2Bridge) {
             throw new Error("L2 bridge configuration is missing.")
         }
@@ -425,15 +413,20 @@ export class Context {
     }
 }
 
-export class SnowbridgeApi {
-    readonly context: Context
-    constructor(options: ApiOptions) {
-        this.context = new Context(options.info.environment)
-    }
-
+export type ApiOptions<EConnection, EContract, EAbi, EInterface> = {
+    info: BridgeInfo
+    ethereumProvider: EthereumProvider<EConnection, EContract, EAbi, EInterface>
 }
 
-type ApiOptions = { info: BridgeInfo }
-export function createApi(options: ApiOptions): SnowbridgeApi {
+export class SnowbridgeApi<EConnection, EContract, EAbi, EInterface> {
+    readonly context: Context<EConnection, EContract, EAbi, EInterface>
+    constructor(options: ApiOptions<EConnection, EContract, EAbi, EInterface>) {
+        this.context = new Context(options.info.environment, options.ethereumProvider)
+    }
+}
+
+export function createApi<EConnection, EContract, EAbi, EInterface>(
+    options: ApiOptions<EConnection, EContract, EAbi, EInterface>,
+): SnowbridgeApi<EConnection, EContract, EAbi, EInterface> {
     return new SnowbridgeApi(options)
 }

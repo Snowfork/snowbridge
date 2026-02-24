@@ -38,7 +38,7 @@ import { Result } from "@polkadot/types"
 import { FeeData } from "ethers"
 import { paraImplementation } from "./parachains"
 import { padFeeByPercentage, u32ToLeBytes } from "./utils"
-import { Context } from "./index"
+import { EthersContext } from "./index"
 import { ParachainBase } from "./parachains/parachainBase"
 
 export type Transfer = {
@@ -92,7 +92,7 @@ export type FeeInfo = {
 }
 
 export async function createTransfer(
-    source: { sourceParaId: number; context: Context },
+    source: { sourceParaId: number; context: EthersContext },
     registry: AssetRegistry,
     sourceAccount: string,
     beneficiaryAccount: string,
@@ -198,7 +198,7 @@ export async function createTransfer(
 }
 
 export async function getDeliveryFee(
-    context: Context,
+    context: EthersContext,
     parachain: number,
     registry: AssetRegistry,
     tokenAddress: string,
@@ -453,7 +453,7 @@ export type ValidationResult = {
 }
 
 export async function validateTransfer(
-    context: Context,
+    context: EthersContext,
     transfer: Transfer,
 ): Promise<ValidationResult> {
     const { registry, fee, tokenAddress, amount, beneficiaryAccount } = transfer.input
@@ -785,7 +785,7 @@ export type MessageReceipt = {
 }
 
 export async function signAndSend(
-    context: Context,
+    context: EthersContext,
     transfer: Transfer,
     account: AddressOrPair,
     options: Partial<SignerOptions>,
