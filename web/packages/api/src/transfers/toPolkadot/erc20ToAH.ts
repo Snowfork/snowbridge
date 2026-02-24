@@ -1,7 +1,6 @@
-import { ApiPromise } from "@polkadot/api"
 import { AssetRegistry } from "@snowbridge/base-types"
-import { Connections, TransferInterface } from "./transferInterface"
-import { IGATEWAY_V2_ABI, IGatewayV2 as IGateway } from "../../contracts"
+import { TransferInterface } from "./transferInterface"
+import { IGATEWAY_V2_ABI } from "../../contracts"
 import { Context } from "../../index"
 import {
     calculateRelayerFee,
@@ -19,7 +18,7 @@ import { accountId32Location, DOT_LOCATION, erc20Location } from "../../xcmBuild
 import { paraImplementation } from "../../parachains"
 import { erc20Balance, ETHER_TOKEN_ADDRESS } from "../../assets_v2"
 import { beneficiaryMultiAddress, padFeeByPercentage } from "../../utils"
-import { AbstractProvider, Contract, Interface } from "ethers"
+import { Contract, Interface } from "ethers"
 import { FeeInfo, resolveInputs, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
 import { buildMessageId, Transfer, ValidationResult } from "../../toPolkadotSnowbridgeV2"
 import { getOperatingStatus } from "../../status"
@@ -27,14 +26,7 @@ import { hexToU8a } from "@polkadot/util"
 
 export class ERC20ToAH implements TransferInterface {
     async getDeliveryFee(
-        context:
-            | Context
-            | {
-                  gateway: IGateway
-                  assetHub: ApiPromise
-                  bridgeHub: ApiPromise
-                  destination: ApiPromise
-              },
+        context: Context,
         registry: AssetRegistry,
         tokenAddress: string,
         _destinationParaId: number,
@@ -45,13 +37,8 @@ export class ERC20ToAH implements TransferInterface {
             overrideRelayerFee: bigint
         },
     ): Promise<DeliveryFee> {
-        const { assetHub, bridgeHub } =
-            context instanceof Context
-                ? {
-                      assetHub: await context.assetHub(),
-                      bridgeHub: await context.bridgeHub(),
-                  }
-                : context
+        const assetHub = await context.assetHub()
+        const bridgeHub = await context.bridgeHub()
 
         let assetHubXcm = buildAssetHubERC20ReceivedXcm(
             assetHub.registry,
@@ -118,13 +105,7 @@ export class ERC20ToAH implements TransferInterface {
     }
 
     async createTransfer(
-        context:
-            | Context
-            | {
-                  ethereum: AbstractProvider
-                  assetHub: ApiPromise
-                  destination: ApiPromise
-              },
+        context: Context,
         registry: AssetRegistry,
         destinationParaId: number,
         sourceAccount: string,
@@ -134,13 +115,8 @@ export class ERC20ToAH implements TransferInterface {
         fee: DeliveryFee,
         customXcm?: any[],
     ): Promise<Transfer> {
-        const { ethereum, assetHub } =
-            context instanceof Context
-                ? {
-                      ethereum: context.ethereum(),
-                      assetHub: await context.assetHub(),
-                  }
-                : context
+        const ethereum = context.ethereum()
+        const assetHub = await context.assetHub()
 
         const { tokenErcMetadata, destParachain, ahAssetMetadata, destAssetMetadata } =
             resolveInputs(registry, tokenAddress, destinationParaId)
@@ -222,20 +198,15 @@ export class ERC20ToAH implements TransferInterface {
     }
 
     async validateTransfer(
-        context: Context | Connections,
+        context: Context,
         transfer: Transfer,
     ): Promise<ValidationResult> {
         const { tx } = transfer
         const { amount, sourceAccount, tokenAddress, registry } = transfer.input
-        const { ethereum, gateway, bridgeHub, assetHub } =
-            context instanceof Context
-                ? {
-                      ethereum: context.ethereum(),
-                      gateway: context.gateway(),
-                      bridgeHub: await context.bridgeHub(),
-                      assetHub: await context.assetHub(),
-                  }
-                : context
+        const ethereum = context.ethereum()
+        const gateway = context.gateway()
+        const bridgeHub = await context.bridgeHub()
+        const assetHub = await context.assetHub()
 
         const { totalValue, minimalBalance, ahAssetMetadata, beneficiaryAddressHex, claimer } =
             transfer.computed

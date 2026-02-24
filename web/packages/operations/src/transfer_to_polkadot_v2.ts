@@ -76,14 +76,7 @@ export const transferToPolkadot = async (
         console.log("fee: ", fee)
         // Step 2. Create a transfer tx
         const transfer = await transferImpl.createTransfer(
-            {
-                ethereum: context.ethereum(),
-                assetHub: await context.assetHub(),
-                destination:
-                    destParaId !== registry.assetHubParaId
-                        ? await context.parachain(destParaId)
-                        : undefined,
-            },
+            context,
             registry,
             destParaId,
             ETHEREUM_ACCOUNT_PUBLIC,
@@ -95,16 +88,7 @@ export const transferToPolkadot = async (
 
         // Step 3. Validate the transaction.
         const validation = await transferImpl.validateTransfer(
-            {
-                ethereum: context.ethereum(),
-                gateway: context.gatewayV2(),
-                bridgeHub: await context.bridgeHub(),
-                assetHub: await context.assetHub(),
-                destination:
-                    destParaId !== registry.assetHubParaId
-                        ? await context.parachain(destParaId)
-                        : undefined,
-            },
+            context,
             transfer,
         )
         console.log("validation result", validation)
