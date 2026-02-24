@@ -288,16 +288,6 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         return AssetsStorage.layout().tokenRegistry[token].foreignID;
     }
 
-    // Total fee for registering a token
-    function quoteRegisterTokenFee() external view returns (uint256) {
-        return CallsV1.quoteRegisterTokenFee();
-    }
-
-    // Register an Ethereum-native token in the gateway and on AssetHub
-    function registerToken(address token) external payable nonreentrant {
-        CallsV1.registerToken(token);
-    }
-
     // Total fee for sending a token
     function quoteSendTokenFee(address token, ParaID destinationChain, uint128 destinationFee)
         external
