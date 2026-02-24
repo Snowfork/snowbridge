@@ -35,9 +35,7 @@ export const createAgent = async (agentId: string) => {
 
         // Step 1. Create an agent creation tx
         const creation = await agentCreationImpl.createAgentCreation(
-            {
-                ethereum: context.ethereum(),
-            },
+            context,
             registry,
             ETHEREUM_ACCOUNT_PUBLIC,
             agentId,
@@ -45,10 +43,7 @@ export const createAgent = async (agentId: string) => {
 
         // Step 2. Validate the transaction.
         const validation = await agentCreationImpl.validateAgentCreation(
-            {
-                ethereum: context.ethereum(),
-                gateway: context.gatewayV2(),
-            },
+            context,
             creation,
         )
 

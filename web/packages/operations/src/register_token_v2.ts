@@ -40,9 +40,7 @@ export const registerTokenV2 = async (tokenAddress: string) => {
 
         // Step 2. Create a registration tx
         const registration = await registrationImpl.createRegistration(
-            {
-                ethereum: context.ethereum(),
-            },
+            context,
             registry,
             ETHEREUM_ACCOUNT_PUBLIC,
             TOKEN_CONTRACT,
@@ -51,12 +49,7 @@ export const registerTokenV2 = async (tokenAddress: string) => {
 
         // Step 3. Validate the transaction.
         const validation = await registrationImpl.validateRegistration(
-            {
-                ethereum: context.ethereum(),
-                gateway: context.gatewayV2(),
-                bridgeHub: await context.bridgeHub(),
-                assetHub: await context.assetHub(),
-            },
+            context,
             registration,
         )
 

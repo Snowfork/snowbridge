@@ -1,23 +1,14 @@
 import { AssetRegistry } from "@snowbridge/base-types"
-import {
-    AgentConnections,
-    AgentCreationInterface,
-    AgentCreation,
-    AgentCreationValidationResult,
-} from "./agentInterface"
+import { AgentCreationInterface, AgentCreation, AgentCreationValidationResult } from "./agentInterface"
 import { IGATEWAY_V2_ABI } from "../../contracts"
 import { Context } from "../../index"
 import { ValidationKind } from "../../toPolkadotSnowbridgeV2"
 import { ValidationLog, ValidationReason } from "../../toPolkadot_v2"
-import { AbstractProvider, Contract, Interface } from "ethers"
+import { Contract, Interface } from "ethers"
 
 export class CreateAgent implements AgentCreationInterface {
     async createAgentCreation(
-        context:
-            | Context
-            | {
-                  ethereum: AbstractProvider
-              },
+        context: Context,
         registry: AssetRegistry,
         sourceAccount: string,
         agentId: string,
@@ -43,18 +34,13 @@ export class CreateAgent implements AgentCreationInterface {
     }
 
     async validateAgentCreation(
-        context: Context | AgentConnections,
+        context: Context,
         creation: AgentCreation,
     ): Promise<AgentCreationValidationResult> {
         const { tx } = creation
         const { sourceAccount, agentId } = creation.input
-        const { ethereum, gateway } =
-            context instanceof Context
-                ? {
-                      ethereum: context.ethereum(),
-                      gateway: context.gatewayV2(),
-                  }
-                : context
+        const ethereum = context.ethereum()
+        const gateway = context.gatewayV2()
 
         const logs: ValidationLog[] = []
 
