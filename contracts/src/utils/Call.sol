@@ -49,4 +49,26 @@ library Call {
         }
         return success;
     }
+
+    /**
+     * @notice Safely perform a low level delegatecall without copying any returndata
+     *
+     * @param target   Address to delegatecall into
+     * @param data Calldata to pass to the delegatecall
+     */
+    function safeDelegateCall(address target, bytes memory data) internal returns (bool) {
+        bool success;
+        assembly {
+            success :=
+                delegatecall(
+                    gas(), // gas
+                    target, // recipient
+                    add(data, 0x20), // inloc
+                    mload(data), // inlen
+                    0, // outloc
+                    0 // outlen
+                )
+        }
+        return success;
+    }
 }

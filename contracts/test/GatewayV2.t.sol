@@ -38,6 +38,7 @@ import {
     UnlockNativeTokenParams,
     RegisterForeignTokenParams,
     MintForeignTokenParams,
+    DelegateCallContractParams,
     CallContractParams,
     Payload,
     Asset,
@@ -52,7 +53,8 @@ import {
     InboundMessage,
     OperatingMode,
     ParaID,
-    Command
+    Command,
+    UnlockNativeTokenParams as UnlockNativeTokenParamsV1
 } from "../src/v1/Types.sol";
 
 import {WETH9} from "canonical-weth/WETH9.sol";
@@ -148,7 +150,7 @@ contract GatewayV2Test is Test {
     TestHandlers handler;
     MockImpl impl;
 
-    event SaidHello(string indexed message);
+    event SaidHello(string indexed message, address sender, address self);
 
     function setUp() public {
         weth = new WETH9();
@@ -316,6 +318,90 @@ contract GatewayV2Test is Test {
 
         CommandV2[] memory commands = new CommandV2[](1);
         commands[0] = CommandV2({kind: CommandKind.CallContract, gas: 1, payload: payload});
+        return commands;
+    }
+
+    function makeDelegateCallContractCommand() public view returns (CommandV2[] memory) {
+        bytes memory data = abi.encodeWithSignature("sayHello(string)", "World");
+        DelegateCallContractParams memory params =
+            DelegateCallContractParams({target: address(helloWorld), data: data});
+        bytes memory payload = abi.encode(params);
+
+        CommandV2[] memory commands = new CommandV2[](1);
+        commands[0] =
+            CommandV2({kind: CommandKind.DelegateCallContract, gas: 500_000, payload: payload});
+        return commands;
+    }
+
+    function makeDelegateCallContractCommandToV1HandleUnlockNativeToken(bytes memory v1Payload)
+        public
+        view
+        returns (CommandV2[] memory)
+    {
+        bytes memory data =
+            abi.encodeWithSignature("callV1HandleUnlockNativeToken(bytes)", v1Payload);
+        DelegateCallContractParams memory params =
+            DelegateCallContractParams({target: address(helloWorld), data: data});
+        bytes memory payload = abi.encode(params);
+
+        CommandV2[] memory commands = new CommandV2[](1);
+        commands[0] =
+            CommandV2({kind: CommandKind.DelegateCallContract, gas: 500_000, payload: payload});
+        return commands;
+    }
+
+    function makeDelegateCallContractCommandToDelegateCallV1HandleUnlockNativeToken()
+        public
+        view
+        returns (CommandV2[] memory)
+    {
+        bytes memory data = abi.encodeWithSignature(
+            "delegateCallV1HandleUnlockNativeToken(address,bytes)", address(gatewayLogic), bytes("")
+        );
+        DelegateCallContractParams memory params =
+            DelegateCallContractParams({target: address(helloWorld), data: data});
+        bytes memory payload = abi.encode(params);
+
+        CommandV2[] memory commands = new CommandV2[](1);
+        commands[0] =
+            CommandV2({kind: CommandKind.DelegateCallContract, gas: 500_000, payload: payload});
+        return commands;
+    }
+
+    function makeDelegateCallContractCommandToV2DispatchUnlockNativeToken(
+        bytes memory v2Payload,
+        bytes32 origin
+    ) public view returns (CommandV2[] memory) {
+        bytes memory data = abi.encodeWithSignature(
+            "callV2DispatchUnlockNativeToken(bytes,bytes32)", v2Payload, origin
+        );
+        DelegateCallContractParams memory params =
+            DelegateCallContractParams({target: address(helloWorld), data: data});
+        bytes memory payload = abi.encode(params);
+
+        CommandV2[] memory commands = new CommandV2[](1);
+        commands[0] =
+            CommandV2({kind: CommandKind.DelegateCallContract, gas: 500_000, payload: payload});
+        return commands;
+    }
+
+    function makeDelegateCallContractCommandToDelegateCallV2DispatchUnlockNativeToken(
+        bytes memory v2Payload,
+        bytes32 origin
+    ) public view returns (CommandV2[] memory) {
+        bytes memory data = abi.encodeWithSignature(
+            "delegateCallV2DispatchUnlockNativeToken(address,bytes,bytes32)",
+            address(gatewayLogic),
+            v2Payload,
+            origin
+        );
+        DelegateCallContractParams memory params =
+            DelegateCallContractParams({target: address(helloWorld), data: data});
+        bytes memory payload = abi.encode(params);
+
+        CommandV2[] memory commands = new CommandV2[](1);
+        commands[0] =
+            CommandV2({kind: CommandKind.DelegateCallContract, gas: 500_000, payload: payload});
         return commands;
     }
 
@@ -598,6 +684,9 @@ contract GatewayV2Test is Test {
     function testAgentCallContractSuccess() public {
         bytes32 topic = keccak256("topic");
 
+        vm.expectEmit(false, false, false, true, address(helloWorld));
+        emit SaidHello("Hello there, World", assetHubAgent, address(helloWorld));
+
         vm.expectEmit(true, false, false, true);
         emit IGatewayV2.InboundMessageDispatched(1, topic, true, relayerRewardAddress);
 
@@ -615,6 +704,190 @@ contract GatewayV2Test is Test {
                 makeMockProof(),
                 relayerRewardAddress
             );
+    }
+
+    function testAgentDelegateCallContractSuccess() public {
+        bytes32 topic = keccak256("topic");
+
+        vm.expectEmit(false, false, false, true, assetHubAgent);
+        emit SaidHello("Hello there, World", address(gateway), assetHubAgent);
+
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.InboundMessageDispatched(1, topic, true, relayerRewardAddress);
+
+        vm.deal(assetHubAgent, 1 ether);
+        hoax(relayer, 1 ether);
+        IGatewayV2(address(gateway))
+            .v2_submit(
+                InboundMessageV2({
+                    origin: Constants.ASSET_HUB_AGENT_ID,
+                    nonce: 1,
+                    topic: topic,
+                    commands: makeDelegateCallContractCommand()
+                }),
+                proof,
+                makeMockProof(),
+                relayerRewardAddress
+            );
+    }
+
+    function testAgentDelegateCallContractCannotCallV1HandleUnlockNativeToken() public {
+        bytes32 topic = keccak256("topic");
+        UnlockNativeTokenParamsV1 memory p = UnlockNativeTokenParamsV1({
+            agentID: bytes32(uint256(0x9999)),
+            token: address(0),
+            recipient: makeAddr("recipient"),
+            amount: 1
+        });
+
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.CommandFailed(1, 0);
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.InboundMessageDispatched(1, topic, false, relayerRewardAddress);
+
+        vm.deal(assetHubAgent, 1 ether);
+        hoax(relayer, 1 ether);
+        IGatewayV2(address(gateway))
+            .v2_submit(
+                InboundMessageV2({
+                    origin: Constants.ASSET_HUB_AGENT_ID,
+                    nonce: 1,
+                    topic: topic,
+                    commands: makeDelegateCallContractCommandToV1HandleUnlockNativeToken(
+                        abi.encode(p)
+                    )
+                }),
+                proof,
+                makeMockProof(),
+                relayerRewardAddress
+            );
+    }
+
+    function testAgentDelegateCallContractCannotCallV1HandleUnlockNativeTokenWhenOnlySelfEnabled()
+        public
+    {
+        bytes32 topic = keccak256("topic");
+        address recipient = makeAddr("recipient");
+        uint128 amount = 0.1 ether;
+        UnlockNativeTokenParamsV1 memory p = UnlockNativeTokenParamsV1({
+            agentID: Constants.ASSET_HUB_AGENT_ID,
+            token: address(0),
+            recipient: recipient,
+            amount: amount
+        });
+
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.CommandFailed(1, 0);
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.InboundMessageDispatched(1, topic, false, relayerRewardAddress);
+
+        vm.deal(assetHubAgent, 1 ether);
+        hoax(relayer, 1 ether);
+        IGatewayV2(address(gateway))
+            .v2_submit(
+                InboundMessageV2({
+                    origin: Constants.ASSET_HUB_AGENT_ID,
+                    nonce: 1,
+                    topic: topic,
+                    commands: makeDelegateCallContractCommandToV1HandleUnlockNativeToken(
+                        abi.encode(p)
+                    )
+                }),
+                proof,
+                makeMockProof(),
+                relayerRewardAddress
+            );
+
+        assertEq(recipient.balance, 0);
+    }
+
+    function testAgentDelegateCallContractCannotDelegateCallV1HandleUnlockNativeToken() public {
+        bytes32 topic = keccak256("topic");
+
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.CommandFailed(1, 0);
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.InboundMessageDispatched(1, topic, false, relayerRewardAddress);
+
+        vm.deal(assetHubAgent, 1 ether);
+        hoax(relayer, 1 ether);
+        IGatewayV2(address(gateway))
+            .v2_submit(
+                InboundMessageV2({
+                    origin: Constants.ASSET_HUB_AGENT_ID,
+                    nonce: 1,
+                    topic: topic,
+                    commands: makeDelegateCallContractCommandToDelegateCallV1HandleUnlockNativeToken(
+                        )
+                }),
+                proof,
+                makeMockProof(),
+                relayerRewardAddress
+            );
+    }
+
+    function testAgentDelegateCallContractCannotCallV2DispatchUnlockNativeToken() public {
+        bytes32 topic = keccak256("topic");
+        address recipient = makeAddr("recipient");
+        uint128 amount = 0.1 ether;
+        UnlockNativeTokenParams memory p =
+            UnlockNativeTokenParams({token: address(0), recipient: recipient, amount: amount});
+
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.CommandFailed(1, 0);
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.InboundMessageDispatched(1, topic, false, relayerRewardAddress);
+
+        vm.deal(assetHubAgent, 1 ether);
+        hoax(relayer, 1 ether);
+        IGatewayV2(address(gateway))
+            .v2_submit(
+                InboundMessageV2({
+                    origin: Constants.ASSET_HUB_AGENT_ID,
+                    nonce: 1,
+                    topic: topic,
+                    commands: makeDelegateCallContractCommandToV2DispatchUnlockNativeToken(
+                        abi.encode(p), Constants.ASSET_HUB_AGENT_ID
+                    )
+                }),
+                proof,
+                makeMockProof(),
+                relayerRewardAddress
+            );
+
+        assertEq(recipient.balance, 0);
+    }
+
+    function testAgentDelegateCallContractCannotDelegateCallV2DispatchUnlockNativeToken() public {
+        bytes32 topic = keccak256("topic");
+        address recipient = makeAddr("recipient");
+        uint128 amount = 0.1 ether;
+        UnlockNativeTokenParams memory p =
+            UnlockNativeTokenParams({token: address(0), recipient: recipient, amount: amount});
+
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.CommandFailed(1, 0);
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.InboundMessageDispatched(1, topic, false, relayerRewardAddress);
+
+        vm.deal(assetHubAgent, 1 ether);
+        hoax(relayer, 1 ether);
+        IGatewayV2(address(gateway))
+            .v2_submit(
+                InboundMessageV2({
+                    origin: Constants.ASSET_HUB_AGENT_ID,
+                    nonce: 1,
+                    topic: topic,
+                    commands: makeDelegateCallContractCommandToDelegateCallV2DispatchUnlockNativeToken(
+                        abi.encode(p), Constants.ASSET_HUB_AGENT_ID
+                    )
+                }),
+                proof,
+                makeMockProof(),
+                relayerRewardAddress
+            );
+
+        assertEq(recipient.balance, 0);
     }
 
     function testCreateAgent() public {
@@ -932,6 +1205,20 @@ contract GatewayV2Test is Test {
 
         bool ok = gatewayLogic.callDispatch(cmd, bytes32(uint256(0x9999)));
         assertTrue(!ok, "callContract with missing agent should return false");
+    }
+
+    function testDelegateCallContractAgentDoesNotExistReturnsFalse() public {
+        DelegateCallContractParams memory p =
+            DelegateCallContractParams({target: address(0xdead), data: ""});
+        bytes memory payload = abi.encode(p);
+
+        // origin corresponds to agent id; use a non-existent id
+        CommandV2 memory cmd = CommandV2({
+            kind: CommandKind.DelegateCallContract, gas: uint64(200_000), payload: payload
+        });
+
+        bool ok = gatewayLogic.callDispatch(cmd, bytes32(uint256(0x9999)));
+        assertTrue(!ok, "delegateCallContract with missing agent should return false");
     }
 
     function testInsufficientGasReverts() public {

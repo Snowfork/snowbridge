@@ -36,6 +36,8 @@ library CommandKind {
     uint8 constant MintForeignToken = 4;
     // Call an arbitrary solidity contract
     uint8 constant CallContract = 5;
+    // Delegatecall into an arbitrary solidity contract
+    uint8 constant DelegateCallContract = 6;
 }
 
 // Payload for outbound messages destined for Polkadot
@@ -183,6 +185,14 @@ struct CallContractParams {
     bytes data;
     // Ether value
     uint256 value;
+}
+
+// Payload for DelegateCallContractParams instruction
+struct DelegateCallContractParams {
+    // target contract
+    address target;
+    // Delegatecall data
+    bytes data;
 }
 
 enum Network {

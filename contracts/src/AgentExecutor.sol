@@ -29,4 +29,12 @@ contract AgentExecutor {
             revert();
         }
     }
+
+    // Delegatecall into contract
+    function delegateCallContract(address target, bytes memory data) external {
+        bool success = Call.safeDelegateCall(target, data);
+        if (!success) {
+            revert();
+        }
+    }
 }
