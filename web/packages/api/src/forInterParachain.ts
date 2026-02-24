@@ -88,22 +88,15 @@ function resolveInputs(
 }
 
 export async function getDeliveryFee(
-    connections:
-        | { context: Context; sourceParaId: number; destinationParaId: number }
-        | { sourceParachain: ApiPromise; destParachain: ApiPromise },
+    connections: { context: Context; sourceParaId: number; destinationParaId: number },
     registry: AssetRegistry,
     tokenAddress: string,
     options?: {
         padPercentage?: bigint
     },
 ): Promise<DeliveryFee> {
-    const { sourceParachain, destParachain } =
-        "sourceParaId" in connections
-            ? {
-                  sourceParachain: await connections.context.parachain(connections.sourceParaId),
-                  destParachain: await connections.context.parachain(connections.destinationParaId),
-              }
-            : connections
+    const sourceParachain = await connections.context.parachain(connections.sourceParaId)
+    const destParachain = await connections.context.parachain(connections.destinationParaId)
 
     const [source, destination] = await Promise.all([
         paraImplementation(sourceParachain),
@@ -155,7 +148,7 @@ export async function getDeliveryFee(
 }
 
 export async function createTransfer(
-    connections: { context: Context; sourceParaId: number } | { sourceParachain: ApiPromise },
+    connections: { context: Context; sourceParaId: number },
     registry: AssetRegistry,
     sourceAccount: string,
     beneficiaryAccount: string,
@@ -164,12 +157,7 @@ export async function createTransfer(
     amount: bigint,
     fee: DeliveryFee,
 ): Promise<Transfer> {
-    const { sourceParachain } =
-        "sourceParaId" in connections
-            ? {
-                  sourceParachain: await connections.context.parachain(connections.sourceParaId),
-              }
-            : connections
+    const sourceParachain = await connections.context.parachain(connections.sourceParaId)
 
     const source = await paraImplementation(sourceParachain)
 
@@ -261,18 +249,11 @@ export type ValidationResult = {
 }
 
 export async function validateTransfer(
-    connections:
-        | { context: Context; sourceParaId: number; destinationParaId: number }
-        | { sourceParachain: ApiPromise; destParachain: ApiPromise },
+    connections: { context: Context; sourceParaId: number; destinationParaId: number },
     transfer: Transfer,
 ): Promise<ValidationResult> {
-    const { sourceParachain, destParachain } =
-        "sourceParaId" in connections
-            ? {
-                  sourceParachain: await connections.context.parachain(connections.sourceParaId),
-                  destParachain: await connections.context.parachain(connections.destinationParaId),
-              }
-            : connections
+    const sourceParachain = await connections.context.parachain(connections.sourceParaId)
+    const destParachain = await connections.context.parachain(connections.destinationParaId)
 
     const [source, destination] = await Promise.all([
         paraImplementation(sourceParachain),
@@ -411,15 +392,12 @@ export type MessageReceipt = {
 }
 
 export async function signAndSend(
-    connections: { context: Context; sourceParaId: number } | { sourceParachain: ApiPromise },
+    connections: { context: Context; sourceParaId: number },
     transfer: Transfer,
     account: AddressOrPair,
     options: Partial<SignerOptions>,
 ): Promise<MessageReceipt> {
-    const { sourceParachain } =
-        "sourceParaId" in connections
-            ? { sourceParachain: await connections.context.parachain(connections.sourceParaId) }
-            : connections
+    const sourceParachain = await connections.context.parachain(connections.sourceParaId)
     const result = await new Promise<MessageReceipt>((resolve, reject) => {
         try {
             transfer.tx.signAndSend(account, options, (c) => {

@@ -92,7 +92,7 @@ export type FeeInfo = {
 }
 
 export async function createTransfer(
-    source: { sourceParaId: number; context: Context } | { parachain: ApiPromise },
+    source: { sourceParaId: number; context: Context },
     registry: AssetRegistry,
     sourceAccount: string,
     beneficiaryAccount: string,
@@ -107,10 +107,7 @@ export async function createTransfer(
         sourceAccountHex = u8aToHex(decodeAddress(sourceAccount))
     }
 
-    const { parachain } =
-        "sourceParaId" in source
-            ? { parachain: await source.context.parachain(source.sourceParaId) }
-            : source
+    const parachain = await source.context.parachain(source.sourceParaId)
 
     const sourceParachainImpl = await paraImplementation(parachain)
     const { tokenErcMetadata, sourceParachain, ahAssetMetadata, sourceAssetMetadata } =
@@ -201,7 +198,7 @@ export async function createTransfer(
 }
 
 export async function getDeliveryFee(
-    context: Context | { assetHub: ApiPromise; source: ApiPromise },
+    context: Context,
     parachain: number,
     registry: AssetRegistry,
     tokenAddress: string,
@@ -211,10 +208,8 @@ export async function getDeliveryFee(
         defaultFee?: bigint
     },
 ): Promise<DeliveryFee> {
-    const { assetHub, source } =
-        context instanceof Context
-            ? { assetHub: await context.assetHub(), source: await context.parachain(parachain) }
-            : context
+    const assetHub = await context.assetHub()
+    const source = await context.parachain(parachain)
 
     // Fees stored in 0x5fbc5c7ba58845ad1f1a9a7c5bc12fad
     const feePadPercentage = options?.padPercentage ?? 33n
@@ -458,14 +453,7 @@ export type ValidationResult = {
 }
 
 export async function validateTransfer(
-    context:
-        | Context
-        | {
-              sourceParachain: ApiPromise
-              assetHub: ApiPromise
-              gateway: IGateway
-              bridgeHub: ApiPromise
-          },
+    context: Context,
     transfer: Transfer,
 ): Promise<ValidationResult> {
     const { registry, fee, tokenAddress, amount, beneficiaryAccount } = transfer.input
@@ -476,15 +464,10 @@ export async function validateTransfer(
         sourceAssetMetadata,
     } = transfer.computed
 
-    const { sourceParachain, assetHub, gateway, bridgeHub } =
-        context instanceof Context
-            ? {
-                  sourceParachain: await context.parachain(sourceParaId),
-                  assetHub: await context.assetHub(),
-                  gateway: context.gateway(),
-                  bridgeHub: await context.bridgeHub(),
-              }
-            : context
+    const sourceParachain = await context.parachain(sourceParaId)
+    const assetHub = await context.assetHub()
+    const gateway = context.gateway()
+    const bridgeHub = await context.bridgeHub()
 
     const { tx } = transfer
 
@@ -802,18 +785,13 @@ export type MessageReceipt = {
 }
 
 export async function signAndSend(
-    context: Context | { sourceParachain: ApiPromise },
+    context: Context,
     transfer: Transfer,
     account: AddressOrPair,
     options: Partial<SignerOptions>,
 ): Promise<MessageReceipt> {
     const { sourceParaId } = transfer.computed
-    const { sourceParachain } =
-        context instanceof Context
-            ? {
-                  sourceParachain: await context.parachain(sourceParaId),
-              }
-            : context
+    const sourceParachain = await context.parachain(sourceParaId)
 
     const result = await new Promise<MessageReceipt>((resolve, reject) => {
         try {

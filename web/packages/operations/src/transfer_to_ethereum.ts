@@ -40,7 +40,7 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
     {
         // Step 1. Get the delivery fee for the transaction
         const fee = await toEthereumV2.getDeliveryFee(
-            { assetHub: await context.assetHub(), source: await context.parachain(sourceParaId) },
+            context,
             sourceParaId,
             registry,
             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion

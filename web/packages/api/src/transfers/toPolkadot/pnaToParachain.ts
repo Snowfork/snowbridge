@@ -1,7 +1,6 @@
-import { ApiPromise } from "@polkadot/api"
 import { AssetRegistry } from "@snowbridge/base-types"
-import { Connections, TransferInterface } from "./transferInterface"
-import { IGATEWAY_V2_ABI, IGatewayV2 as IGateway } from "../../contracts"
+import { TransferInterface } from "./transferInterface"
+import { IGATEWAY_V2_ABI } from "../../contracts"
 import { Context } from "../../index"
 import {
     buildMessageId,
@@ -27,20 +26,13 @@ import {
     sendMessageXCM,
     sendMessageXCMWithDOTDestFee,
 } from "../../xcmbuilders/toPolkadot/pnaToParachain"
-import { AbstractProvider, Contract, Interface } from "ethers"
+import { Contract, Interface } from "ethers"
 import { getOperatingStatus } from "../../status"
 import { hexToU8a } from "@polkadot/util"
 
 export class PNAToParachain implements TransferInterface {
     async getDeliveryFee(
-        context:
-            | Context
-            | {
-                  gateway: IGateway
-                  assetHub: ApiPromise
-                  bridgeHub: ApiPromise
-                  destination: ApiPromise
-              },
+        context: Context,
         registry: AssetRegistry,
         tokenAddress: string,
         destinationParaId: number,
@@ -51,14 +43,9 @@ export class PNAToParachain implements TransferInterface {
             overrideRelayerFee?: bigint
         },
     ): Promise<DeliveryFee> {
-        const { assetHub, bridgeHub, destination } =
-            context instanceof Context
-                ? {
-                      assetHub: await context.assetHub(),
-                      bridgeHub: await context.bridgeHub(),
-                      destination: await context.parachain(destinationParaId),
-                  }
-                : context
+        const assetHub = await context.assetHub()
+        const bridgeHub = await context.bridgeHub()
+        const destination = await context.parachain(destinationParaId)
 
         const { destParachain, destAssetMetadata } = resolveInputs(
             registry,
@@ -201,13 +188,7 @@ export class PNAToParachain implements TransferInterface {
     }
 
     async createTransfer(
-        context:
-            | Context
-            | {
-                  ethereum: AbstractProvider
-                  assetHub: ApiPromise
-                  destination: ApiPromise
-              },
+        context: Context,
         registry: AssetRegistry,
         destinationParaId: number,
         sourceAccount: string,
@@ -217,14 +198,9 @@ export class PNAToParachain implements TransferInterface {
         fee: DeliveryFee,
         customXcm?: any[],
     ): Promise<Transfer> {
-        const { ethereum, assetHub, destination } =
-            context instanceof Context
-                ? {
-                      ethereum: context.ethereum(),
-                      assetHub: await context.assetHub(),
-                      destination: await context.parachain(destinationParaId),
-                  }
-                : context
+        const ethereum = context.ethereum()
+        const assetHub = await context.assetHub()
+        const destination = await context.parachain(destinationParaId)
         if (!destination) {
             throw Error(`Unable to connect to destination parachain with ID ${destinationParaId}.`)
         }
@@ -334,26 +310,16 @@ export class PNAToParachain implements TransferInterface {
     }
 
     async validateTransfer(
-        context: Context | Connections,
+        context: Context,
         transfer: Transfer,
     ): Promise<ValidationResult> {
         const { tx } = transfer
         const { amount, sourceAccount, tokenAddress, registry, destinationParaId } = transfer.input
-        const {
-            ethereum,
-            gateway,
-            bridgeHub,
-            assetHub,
-            destination: destParachainApi,
-        } = context instanceof Context
-            ? {
-                  ethereum: context.ethereum(),
-                  gateway: context.gateway(),
-                  bridgeHub: await context.bridgeHub(),
-                  assetHub: await context.assetHub(),
-                  destination: await context.parachain(destinationParaId),
-              }
-            : context
+        const ethereum = context.ethereum()
+        const gateway = context.gateway()
+        const bridgeHub = await context.bridgeHub()
+        const assetHub = await context.assetHub()
+        const destParachainApi = await context.parachain(destinationParaId)
 
         const {
             totalValue,

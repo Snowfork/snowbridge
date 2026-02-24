@@ -1,13 +1,7 @@
 import { AssetRegistry } from "@snowbridge/base-types"
 import { Context } from "../../index"
-import { IGatewayV2 as IGateway } from "../../contracts"
-import { AbstractProvider, ContractTransaction } from "ethers"
+import { ContractTransaction } from "ethers"
 import { FeeInfo, ValidationLog } from "../../toPolkadot_v2"
-
-export interface AgentConnections {
-    ethereum: AbstractProvider
-    gateway: IGateway
-}
 
 export type AgentCreation = {
     input: {
@@ -35,18 +29,14 @@ export type AgentCreationValidationResult = {
 
 export interface AgentCreationInterface {
     createAgentCreation(
-        context:
-            | Context
-            | {
-                  ethereum: AbstractProvider
-              },
+        context: Context,
         registry: AssetRegistry,
         sourceAccount: string,
         agentId: string,
     ): Promise<AgentCreation>
 
     validateAgentCreation(
-        context: Context | AgentConnections,
+        context: Context,
         creation: AgentCreation,
     ): Promise<AgentCreationValidationResult>
 }

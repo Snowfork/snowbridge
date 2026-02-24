@@ -1,17 +1,8 @@
 import { AssetRegistry } from "@snowbridge/base-types"
 import { Context } from "../../index"
-import { IGatewayV2 as IGateway } from "../../contracts"
-import { ApiPromise } from "@polkadot/api"
-import { AbstractProvider, ContractTransaction } from "ethers"
+import { ContractTransaction } from "ethers"
 import { OperationStatus } from "../../status"
 import { FeeInfo, ValidationLog } from "../../toPolkadot_v2"
-
-export interface Connections {
-    ethereum: AbstractProvider
-    gateway: IGateway
-    bridgeHub: ApiPromise
-    assetHub: ApiPromise
-}
 
 export type TokenRegistration = {
     input: {
@@ -51,12 +42,7 @@ export type RegistrationFee = {
 
 export interface RegistrationInterface {
     getRegistrationFee(
-        context:
-            | Context
-            | {
-                  assetHub: ApiPromise
-                  bridgeHub: ApiPromise
-              },
+        context: Context,
         registry: AssetRegistry,
         relayerFee: bigint,
         options?: {
@@ -65,11 +51,7 @@ export interface RegistrationInterface {
     ): Promise<RegistrationFee>
 
     createRegistration(
-        context:
-            | Context
-            | {
-                  ethereum: AbstractProvider
-              },
+        context: Context,
         registry: AssetRegistry,
         sourceAccount: string,
         tokenAddress: string,
@@ -77,7 +59,7 @@ export interface RegistrationInterface {
     ): Promise<TokenRegistration>
 
     validateRegistration(
-        context: Context | Connections,
+        context: Context,
         registration: TokenRegistration,
     ): Promise<RegistrationValidationResult>
 }

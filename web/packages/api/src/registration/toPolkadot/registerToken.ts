@@ -1,7 +1,6 @@
 import { ApiPromise } from "@polkadot/api"
 import { AssetRegistry } from "@snowbridge/base-types"
 import {
-    Connections,
     RegistrationInterface,
     RegistrationFee,
     TokenRegistration,
@@ -11,7 +10,7 @@ import { IGATEWAY_V2_ABI } from "../../contracts"
 import { Context } from "../../index"
 import { ValidationKind } from "../../toPolkadotSnowbridgeV2"
 import { FeeInfo, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
-import { AbstractProvider, Contract, Interface } from "ethers"
+import { Contract, Interface } from "ethers"
 import { getOperatingStatus } from "../../status"
 import { DOT_LOCATION, erc20Location } from "../../xcmBuilder"
 import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
@@ -28,25 +27,15 @@ const getAssetDeposit = (assetHub: ApiPromise): bigint => {
 
 export class RegisterToken implements RegistrationInterface {
     async getRegistrationFee(
-        context:
-            | Context
-            | {
-                  assetHub: ApiPromise
-                  bridgeHub: ApiPromise
-              },
+        context: Context,
         registry: AssetRegistry,
         relayerFee: bigint,
         options?: {
             paddFeeByPercentage?: bigint
         },
     ): Promise<RegistrationFee> {
-        const { assetHub, bridgeHub } =
-            context instanceof Context
-                ? {
-                      assetHub: await context.assetHub(),
-                      bridgeHub: await context.bridgeHub(),
-                  }
-                : context
+        const assetHub = await context.assetHub()
+        const bridgeHub = await context.bridgeHub()
 
         const paddFeeByPercentage = options?.paddFeeByPercentage ?? 33n
         const ether = erc20Location(registry.ethChainId, ETHER_TOKEN_ADDRESS)
@@ -108,11 +97,7 @@ export class RegisterToken implements RegistrationInterface {
     }
 
     async createRegistration(
-        context:
-            | Context
-            | {
-                  ethereum: AbstractProvider
-              },
+        context: Context,
         registry: AssetRegistry,
         sourceAccount: string,
         tokenAddress: string,
@@ -154,20 +139,15 @@ export class RegisterToken implements RegistrationInterface {
     }
 
     async validateRegistration(
-        context: Context | Connections,
+        context: Context,
         registration: TokenRegistration,
     ): Promise<RegistrationValidationResult> {
         const { tx } = registration
         const { sourceAccount, tokenAddress, registry } = registration.input
-        const { ethereum, gateway, bridgeHub, assetHub } =
-            context instanceof Context
-                ? {
-                      ethereum: context.ethereum(),
-                      gateway: context.gatewayV2(),
-                      bridgeHub: await context.bridgeHub(),
-                      assetHub: await context.assetHub(),
-                  }
-                : { ...context, assetHub: context.assetHub }
+        const ethereum = context.ethereum()
+        const gateway = context.gatewayV2()
+        const bridgeHub = await context.bridgeHub()
+        const assetHub = await context.assetHub()
 
         const { totalValue } = registration.computed
         const logs: ValidationLog[] = []

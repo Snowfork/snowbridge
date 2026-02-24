@@ -10,7 +10,7 @@ import {
     TransactionReceipt,
 } from "ethers"
 import { beneficiaryMultiAddress, padFeeByPercentage, paraIdToSovereignAccount } from "./utils"
-import { IERC20, IERC20_ABI, IGATEWAY_V1_ABI, IGatewayV1 as IGateway } from "./contracts"
+import { IERC20, IERC20_ABI, IGATEWAY_V1_ABI } from "./contracts"
 import { erc20Balance, ETHER_TOKEN_ADDRESS } from "./assets_v2"
 import { Asset, AssetRegistry, ERC20Metadata, Parachain } from "@snowbridge/base-types"
 import { getOperatingStatus, OperationStatus } from "./status"
@@ -109,14 +109,6 @@ export type ValidationResult = {
     transfer: Transfer
 }
 
-interface Connections {
-    ethereum: AbstractProvider
-    gateway: IGateway
-    bridgeHub: ApiPromise
-    assetHub: ApiPromise
-    destParachain?: ApiPromise
-}
-
 export type MessageReceipt = {
     channelId: string
     nonce: bigint
@@ -128,20 +120,15 @@ export type MessageReceipt = {
 }
 
 export async function getDeliveryFee(
-    context: Context | { gateway: IGateway; assetHub: ApiPromise; destination: ApiPromise },
+    context: Context,
     registry: AssetRegistry,
     tokenAddress: string,
     destinationParaId: number,
     paddFeeByPercentage?: bigint,
 ): Promise<DeliveryFee> {
-    const { gateway, assetHub, destination } =
-        context instanceof Context
-            ? {
-                  gateway: context.gateway(),
-                  assetHub: await context.assetHub(),
-                  destination: await context.parachain(destinationParaId),
-              }
-            : context
+    const gateway = context.gateway()
+    const assetHub = await context.assetHub()
+    const destination = await context.parachain(destinationParaId)
 
     const { destParachain, destAssetMetadata } = resolveInputs(
         registry,
@@ -264,7 +251,7 @@ export async function createTransfer(
 }
 
 export async function validateTransfer(
-    context: Context | Connections,
+    context: Context,
     transfer: Transfer,
 ): Promise<ValidationResult> {
     const { tx } = transfer
@@ -275,15 +262,13 @@ export async function validateTransfer(
         bridgeHub,
         assetHub,
         destParachain: destParachainApi,
-    } = context instanceof Context
-        ? {
-              ethereum: context.ethereum(),
-              gateway: context.gateway(),
-              bridgeHub: await context.bridgeHub(),
-              assetHub: await context.assetHub(),
-              destParachain: await context.parachain(destinationParaId),
-          }
-        : context
+    } = {
+        ethereum: context.ethereum(),
+        gateway: context.gateway(),
+        bridgeHub: await context.bridgeHub(),
+        assetHub: await context.assetHub(),
+        destParachain: await context.parachain(destinationParaId),
+    }
 
     const {
         totalValue,
