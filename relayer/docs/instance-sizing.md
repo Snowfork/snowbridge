@@ -88,6 +88,8 @@ Key findings:
 - **8 GB RAM is sufficient** - actual usage is ~2-3 GB with headroom for spikes
 - Estimated monthly cost: ~$70 (vs ~$140 for m6a.xlarge)
 
+**Storage:** 50 GB gp3 EBS volume. Actual usage is well under 10 GB (Docker image, beacon state cache, SQLite datastores), but 50 GB provides comfortable headroom at ~$4/mo.
+
 **Avoid:**
 - Burstable instances (t3.*, t4g.*) - CPU throttling causes 7x slowdown
 - Over-provisioned instances (m6a.xlarge) - extra resources unused
