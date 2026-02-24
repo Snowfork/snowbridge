@@ -14,7 +14,7 @@ const registry = {
             "1002": "wss://bridge-hub-westend-rpc.n.dwellir.com",
         },
         gatewayContract: "0x9ed8b47bc3417e3bd0507adc06e56e2fa360a4e9",
-        beefyContract: "0xa04460b1d8bbef33f54edb2c3115e3e4d41237a6",
+        beefyContract: "0x2bc7ec7fe8ec8bdde511003f4fe82bc86b69894a",
         assetHubParaId: 1000,
         bridgeHubParaId: 1002,
         v2_parachains: [1000],
