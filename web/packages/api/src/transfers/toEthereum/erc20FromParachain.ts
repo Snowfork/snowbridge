@@ -7,7 +7,6 @@ import { DOT_LOCATION, isRelaychainLocation, isParachainNative } from "../../xcm
 import { buildExportXcm } from "../../xcmbuilders/toEthereum/erc20FromAH"
 import {
     buildResultXcmAssetHubERC20TransferFromParachain,
-    buildParachainERC20ReceivedXcmOnDestination,
     buildTransferXcmFromParachain,
 } from "../../xcmbuilders/toEthereum/erc20FromParachain"
 import { buildTransferXcmFromParachainWithDOTAsFee } from "../../xcmbuilders/toEthereum/erc20FromParachainWithDotAsFee"
@@ -56,7 +55,7 @@ export class ERC20FromParachain implements TransferInterface {
         const sourceParachainImpl = await paraImplementation(parachain)
         const { sourceAssetMetadata } = resolveInputs(registry, tokenAddress, source.sourceParaId)
 
-        let forwardXcmToAH: any, forwardedXcmToBH: any, returnToSenderXcm: any, localXcm: any
+        let forwardXcmToAH: any, forwardedXcmToBH: any, localXcm: any
 
         forwardXcmToAH = buildResultXcmAssetHubERC20TransferFromParachain(
             assetHub.registry,
@@ -74,18 +73,8 @@ export class ERC20FromParachain implements TransferInterface {
             DOT_LOCATION,
         )
 
-        returnToSenderXcm = buildParachainERC20ReceivedXcmOnDestination(
-            parachain.registry,
-            registry.ethChainId,
-            "0x0000000000000000000000000000000000000000",
-            1n,
-            1n,
-            "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "0x0000000000000000000000000000000000000000000000000000000000000000",
-        )
-
         localXcm = buildTransferXcmFromParachain(
-            assetHub.registry,
+            parachain.registry,
             registry.environment,
             registry.ethChainId,
             registry.assetHubParaId,
@@ -118,7 +107,6 @@ export class ERC20FromParachain implements TransferInterface {
                 localXcm,
                 forwardXcmToAH,
                 forwardedXcmToBH,
-                returnToSenderXcm,
             },
             options,
         )
@@ -153,10 +141,11 @@ export class ERC20FromParachain implements TransferInterface {
         const { tokenErcMetadata, sourceParachain, ahAssetMetadata, sourceAssetMetadata } =
             resolveInputs(registry, tokenAddress, sourceParachainImpl.parachainId)
 
-        let messageId: string | undefined = await buildMessageId(
-            parachain,
+        const accountNonce = await sourceParachainImpl.accountNonce(sourceAccountHex)
+        let messageId: string | undefined = buildMessageId(
             sourceParachainImpl.parachainId,
             sourceAccountHex,
+            accountNonce,
             tokenAddress,
             beneficiaryAccount,
             amount,

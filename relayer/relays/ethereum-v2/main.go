@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -625,10 +626,8 @@ func (r *Relay) isMessageProcessed(eventNonce uint64) (bool, error) {
 	}
 	// Check the nonce again in case another relayer processed the message while this relayer downloading beacon state
 
-	for _, paraNonce := range paraNonces {
-		if eventNonce == paraNonce {
-			return false, nil
-		}
+	if slices.Contains(paraNonces, eventNonce) {
+		return false, nil
 	}
 
 	return true, nil

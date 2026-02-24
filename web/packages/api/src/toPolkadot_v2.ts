@@ -15,7 +15,7 @@ import {
     IGatewayV1__factory as IGateway__factory,
     WETH9__factory,
 } from "@snowbridge/contract-types"
-import { ETHER_TOKEN_ADDRESS, validateAccount } from "./assets_v2"
+import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
 import { Asset, AssetRegistry, ERC20Metadata, Parachain } from "@snowbridge/base-types"
 import { getOperatingStatus, OperationStatus } from "./status"
 import { ApiPromise } from "@polkadot/api"
@@ -31,7 +31,6 @@ import {
 import { Result } from "@polkadot/types"
 import { XcmDryRunApiError, XcmDryRunEffects } from "@polkadot/types/interfaces"
 import { paraImplementation } from "./parachains"
-import { ParachainBase } from "./parachains/parachainBase"
 import { Context } from "./index"
 
 export type Transfer = {
@@ -334,6 +333,7 @@ export async function validateTransfer(
                 "The Snowbridge gateway contract needs to approved as a spender for this token and amount.",
         })
     }
+
     if (tokenBalance.balance < amount) {
         logs.push({
             kind: ValidationKind.Error,
@@ -383,7 +383,7 @@ export async function validateTransfer(
     }
 
     // Check if asset can be received on asset hub (dry run)
-    const ahParachain = registry.parachains[registry.assetHubParaId]
+    const ahParachain = registry.parachains[`polkadot_${registry.assetHubParaId}`]
     let dryRunAhSuccess, forwardedDestination, assetHubDryRunError
     if (!ahParachain.features.hasDryRunApi) {
         logs.push({
@@ -413,8 +413,7 @@ export async function validateTransfer(
         // Check if sovereign account balance for token is at 0 and that consumers is maxxed out.
         if (!ahAssetMetadata.isSufficient && !dryRunAhSuccess) {
             const sovereignAccountId = paraIdToSovereignAccount("sibl", destinationParaId)
-            const { accountMaxConsumers, accountExists } = await validateAccount(
-                assetHubImpl,
+            const { accountMaxConsumers, accountExists } = await assetHubImpl.validateAccount(
                 sovereignAccountId,
                 registry.ethChainId,
                 tokenAddress,
@@ -489,13 +488,13 @@ export async function validateTransfer(
             ) {
                 const destParachainImpl = await paraImplementation(destParachainApi)
                 // Check if the account is created
-                const { accountMaxConsumers, accountExists } = await validateAccount(
-                    destParachainImpl,
-                    beneficiaryAddressHex,
-                    registry.ethChainId,
-                    tokenAddress,
-                    destAssetMetadata,
-                )
+                const { accountMaxConsumers, accountExists } =
+                    await destParachainImpl.validateAccount(
+                        beneficiaryAddressHex,
+                        registry.ethChainId,
+                        tokenAddress,
+                        destAssetMetadata,
+                    )
                 if (accountMaxConsumers) {
                     logs.push({
                         kind: ValidationKind.Error,
@@ -514,8 +513,7 @@ export async function validateTransfer(
             }
         }
     } else if (!ahAssetMetadata.isSufficient && !dryRunAhSuccess) {
-        const { accountMaxConsumers, accountExists } = await validateAccount(
-            assetHubImpl,
+        const { accountMaxConsumers, accountExists } = await assetHubImpl.validateAccount(
             beneficiaryAddressHex,
             registry.ethChainId,
             tokenAddress,
@@ -628,16 +626,20 @@ export function resolveInputs(
     destinationParaId: number,
 ) {
     const tokenErcMetadata =
-        registry.ethereumChains[registry.ethChainId.toString()].assets[tokenAddress.toLowerCase()]
+        registry.ethereumChains[`ethereum_${registry.ethChainId}`].assets[
+            tokenAddress.toLowerCase()
+        ]
     if (!tokenErcMetadata) {
         throw Error(`No token ${tokenAddress} registered on ethereum chain ${registry.ethChainId}.`)
     }
-    const destParachain = registry.parachains[destinationParaId.toString()]
+    const destParachain = registry.parachains[`polkadot_${destinationParaId}`]
     if (!destParachain) {
         throw Error(`Could not find ${destinationParaId} in the asset registry.`)
     }
     const ahAssetMetadata =
-        registry.parachains[registry.assetHubParaId].assets[tokenAddress.toLowerCase()]
+        registry.parachains[`polkadot_${registry.assetHubParaId}`].assets[
+            tokenAddress.toLowerCase()
+        ]
     if (!ahAssetMetadata) {
         throw Error(`Token ${tokenAddress} not registered on asset hub.`)
     }

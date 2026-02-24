@@ -21,42 +21,6 @@ export const queryByGraphQL = async (graphqlApiUrl: string, query: string) => {
 }
 
 /**
- * Query the recent synced blockes on multiple chains
-
-curl -H 'Content-Type: application/json' \
--X POST -d \
-'{ "query": "query { latestBlocks { height name } }" }' \
-$graphqlApiUrl --no-progress-meter | jq "."
-
-{
-  "data": {
-    "latestBlocks": [
-      {
-        "height": 8245566,
-        "name": "assethub"
-      },
-      {
-        "height": 4561260,
-        "name": "bridgehub"
-      },
-      {
-        "height": 21878012,
-        "name": "ethereum"
-      }
-    ]
-  }
-}
-**/
-export const fetchLatestBlocksSynced = async (graphqlApiUrl: string, includePKBridge: boolean) => {
-    let query = `query { latestBlocks(withPKBridge: ${includePKBridge}) {
-                    height
-                    name
-                }}`
-    let result = await queryByGraphQL(graphqlApiUrl, query)
-    return result && result.latestBlocks
-}
-
-/**
  * Query messages processed on parachains.
 
 ```
@@ -108,24 +72,23 @@ export const fetchInterParachainMessageById = async (graphqlApiUrl: string, id: 
 
 curl -H 'Content-Type: application/json' \
 -X POST -d \
-'{ "query": "query { latestBlocksOfParachain(paraid: $paraid) { height name paraid } }" }' \
+'{ "query": "query { latestBlockOnChain(id: $id) { height name } }" }' \
 $graphqlApiUrl --no-progress-meter | jq "."
 
 {
   "data": {
-    "latestBlocksOfParachain":  {
+    "latestBlockOnChain":  {
         "height": 8245566,
         "name": "hydration"
     }
   }
 }
 **/
-export const fetchSyncStatusOfParachain = async (graphqlApiUrl: string, paraid: number) => {
-    let query = `query { latestBlocksOfParachain(paraid: ${paraid}) {
+export const fetchLatestBlockFromIndexer = async (graphqlApiUrl: string, id: string) => {
+    let query = `query { latestBlockOnChain(id: "${id}") {
                     height
                     name
-                    paraid
                 }}`
     let result = await queryByGraphQL(graphqlApiUrl, query)
-    return result && result.latestBlocksOfParachain && result.latestBlocksOfParachain[0]
+    return result && result.latestBlockOnChain && result.latestBlockOnChain[0]
 }

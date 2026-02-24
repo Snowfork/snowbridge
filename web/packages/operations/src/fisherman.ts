@@ -6,7 +6,7 @@ import { readFile, writeFile } from "fs/promises"
 import { ApiPromise } from "@polkadot/api"
 import { sendForkVotingAlarm, sendFutureBlockVotingAlarm } from "./alarm"
 import { pino, type Logger } from "pino"
-import { environmentFor } from "@snowbridge/registry"
+import { bridgeInfoFor } from "@snowbridge/registry"
 
 const CheckpointFilepath = `checkpoint.json`
 const CheckpointInterval = process.env["FISHERMAN_CHECKPOINT_INTERVAL"] || "5000" // blocks
@@ -32,7 +32,7 @@ export const run = async (): Promise<void> => {
     if (process.env.NODE_ENV !== undefined) {
         env = process.env.NODE_ENV
     }
-    const snowbridgeEnv = environmentFor(env)
+    const { environment: snowbridgeEnv } = bridgeInfoFor(env)
     if (snowbridgeEnv === undefined) {
         throw Error(`Unknown environment '${env}'`)
     }

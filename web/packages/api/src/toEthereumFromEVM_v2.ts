@@ -129,7 +129,7 @@ export async function createTransferEvm(
     if (!sourceParachain.xcDOT) {
         throw Error(`Parachain ${sourceParachainImpl.parachainId} does not support XC20 DOT.`)
     }
-    const ethChain = registry.ethereumChains[sourceParachain.info.evmChainId.toString()]
+    const ethChain = registry.ethereumChains[`ethereum_${sourceParachain.info.evmChainId}`]
     if (!ethChain) {
         throw Error(
             `Cannot find eth chain ${sourceParachain.info.evmChainId} for parachain ${sourceParachainImpl.parachainId}.`,
@@ -148,10 +148,11 @@ export async function createTransferEvm(
     const xcTokenAddress = ethChain.xcTokenMap[tokenAddress]
     const contract = new Contract(ethChain.precompile, PALLET_XCM_PRECOMPILE)
 
-    const messageId = await buildMessageId(
-        parachain,
+    const accountNonce = await sourceParachainImpl.accountNonce(sourceAccountHex)
+    const messageId = buildMessageId(
         sourceParachainImpl.parachainId,
         sourceAccountHex,
+        accountNonce,
         tokenAddress,
         beneficiaryAccount,
         amount,
@@ -256,7 +257,7 @@ export async function validateTransferEvm(
                   gateway: context.gateway(),
                   bridgeHub: await context.bridgeHub(),
                   assetHub: await context.assetHub(),
-                  sourceEthChain: context.ethChain(ethChain?.chainId!),
+                  sourceEthChain: context.ethChain(ethChain?.id!),
               }
             : context
     const { tx } = transfer
@@ -271,7 +272,7 @@ export async function validateTransferEvm(
         sourceAssetMetadata.decimals === source.info.tokenDecimals &&
         sourceAssetMetadata.symbol == source.info.tokenSymbols
     const [nativeBalance, tokenBalance] = await Promise.all([
-        sourceParachainImpl.getNativeBalance(sourceAccountHex),
+        sourceParachainImpl.getNativeBalance(sourceAccountHex, true),
         sourceParachainImpl.getTokenBalance(sourceAccountHex, registry.ethChainId, tokenAddress),
     ])
 

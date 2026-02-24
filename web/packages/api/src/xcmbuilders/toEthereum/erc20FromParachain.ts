@@ -14,64 +14,6 @@ import {
 import { Asset } from "@snowbridge/base-types"
 import { DeliveryFee } from "../../toEthereum_v2"
 
-export function buildParachainERC20ReceivedXcmOnDestination(
-    registry: Registry,
-    ethChainId: number,
-    tokenAddress: string,
-    transferAmount: bigint,
-    feeInDot: bigint,
-    beneficiary: string,
-    topic: string,
-) {
-    let beneficiaryLocation = accountToLocation(beneficiary)
-    return registry.createType("XcmVersionedXcm", {
-        v5: [
-            {
-                reserveAssetDeposited: [
-                    {
-                        id: DOT_LOCATION,
-                        fun: {
-                            Fungible: feeInDot,
-                        },
-                    },
-                    {
-                        id: erc20Location(ethChainId, tokenAddress),
-                        fun: {
-                            Fungible: transferAmount,
-                        },
-                    },
-                ],
-            },
-            { clearOrigin: null },
-            {
-                buyExecution: {
-                    fees: {
-                        id: DOT_LOCATION,
-                        fun: {
-                            Fungible: feeInDot,
-                        },
-                    },
-                    weightLimit: "Unlimited",
-                },
-            },
-            {
-                depositAsset: {
-                    assets: {
-                        wild: {
-                            allCounted: 2,
-                        },
-                    },
-                    beneficiary: {
-                        parents: 0,
-                        interior: { x1: [beneficiaryLocation] },
-                    },
-                },
-            },
-            { setTopic: topic },
-        ],
-    })
-}
-
 function buildAssetHubXcmFromParachain(
     ethChainId: number,
     sourceAccount: string,
@@ -100,44 +42,6 @@ function buildAssetHubXcmFromParachain(
             throw Error(`Could not parse source address ${sourceAccount}`)
     }
     return [
-        // Error Handling, return everything to sender on source parachain
-        {
-            setAppendix: [
-                {
-                    depositReserveAsset: {
-                        assets: {
-                            wild: "All",
-                        },
-                        dest: { parents: 1, interior: { x1: [{ parachain: sourceParachainId }] } },
-                        xcm: [
-                            {
-                                buyExecution: {
-                                    fees: {
-                                        id: feeAssetId,
-                                        fun: {
-                                            fungible: destinationFee,
-                                        },
-                                    },
-                                    weightLimit: "Unlimited",
-                                },
-                            },
-                            {
-                                depositAsset: {
-                                    assets: {
-                                        wild: "All",
-                                    },
-                                    beneficiary: {
-                                        parents: 0,
-                                        interior: { x1: [sourceAccountLocation] },
-                                    },
-                                },
-                            },
-                            { setTopic: topic },
-                        ],
-                    },
-                },
-            ],
-        },
         // Initiate the bridged transfer
         {
             initiateReserveWithdraw: {
@@ -288,7 +192,7 @@ export function buildTransferXcmFromParachain(
     let tokenLocation = erc20Location(ethChainId, asset.token)
 
     let localDOTFeeAmount: bigint =
-        fee.localExecutionFeeDOT! + fee.localDeliveryFeeDOT! + fee.returnToSenderExecutionFeeDOT
+        (fee.localExecutionFeeDOT ?? 0n) + (fee.localDeliveryFeeDOT ?? 0n)
     let totalDOTFeeAmount: bigint = fee.totalFeeInDot!
     let remoteEtherFeeAmount: bigint = fee.ethereumExecutionFee!
 

@@ -18,17 +18,19 @@ import { FeeInfo, ValidationLog } from "./toPolkadot_v2"
 import { ApiPromise } from "@polkadot/api"
 import { accountToLocation, DOT_LOCATION, erc20Location } from "./xcmBuilder"
 import { Codec } from "@polkadot/types/types"
-import { ETHER_TOKEN_ADDRESS, swapAsset1ForAsset2 } from "./assets_v2"
+import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
 import { padFeeByPercentage } from "./utils"
 import { Context } from "./index"
 export { ValidationKind } from "./toPolkadot_v2"
+import { ParachainBase } from "./parachains/parachainBase"
 
 export type DeliveryFee = {
     feeAsset: any
     assetHubDeliveryFeeEther: bigint
     assetHubExecutionFeeEther: bigint
     destinationDeliveryFeeEther: bigint
-    destinationExecutionFeeEther: bigint
+    destinationExecutionFeeEther?: bigint
+    destinationExecutionFeeDOT?: bigint
     relayerFee: bigint
     extrinsicFeeDot: bigint // Fee for submitting to BridgeHub in DOT (part of relayerFee)
     extrinsicFeeEther: bigint // Fee for submitting to BridgeHub in Ether (part of relayerFee)
@@ -63,6 +65,7 @@ export type Transfer = {
         claimer: any
         topic: string
         l2AdapterAddress?: string
+        totalInputAmount: bigint
     }
     tx: ContractTransaction
 }
@@ -72,6 +75,7 @@ export type ValidationResult = {
     success: boolean
     data: {
         etherBalance: bigint
+        totalInputAmount?: bigint
         tokenBalance: {
             balance: bigint
             gatewayAllowance: bigint
@@ -132,7 +136,7 @@ export function createL2TransferImplementation(
     registry: AssetRegistry,
     l2TokenAddress: string,
 ): L2TransferInterface {
-    const assets = registry.ethereumChains[l2ChainId].assets
+    const assets = registry.ethereumChains[`ethereum_l2_${l2ChainId}`].assets
     const tokenMetadata = assets[l2TokenAddress]
     if (!tokenMetadata) {
         throw Error(`No token ${l2TokenAddress} registered on ethereum chain ${l2ChainId}.`)
@@ -149,16 +153,20 @@ export function createL2TransferImplementation(
 
 function resolveInputs(registry: AssetRegistry, tokenAddress: string, destinationParaId: number) {
     const tokenErcMetadata =
-        registry.ethereumChains[registry.ethChainId.toString()].assets[tokenAddress.toLowerCase()]
+        registry.ethereumChains[`ethereum_${registry.ethChainId}`].assets[
+            tokenAddress.toLowerCase()
+        ]
     if (!tokenErcMetadata) {
         throw Error(`No token ${tokenAddress} registered on ethereum chain ${registry.ethChainId}.`)
     }
-    const destParachain = registry.parachains[destinationParaId.toString()]
+    const destParachain = registry.parachains[`polkadot_${destinationParaId}`]
     if (!destParachain) {
         throw Error(`Could not find ${destinationParaId} in the asset registry.`)
     }
     const ahAssetMetadata =
-        registry.parachains[registry.assetHubParaId].assets[tokenAddress.toLowerCase()]
+        registry.parachains[`polkadot_${registry.assetHubParaId}`].assets[
+            tokenAddress.toLowerCase()
+        ]
     if (!ahAssetMetadata) {
         throw Error(`Token ${tokenAddress} not registered on asset hub.`)
     }
@@ -266,7 +274,7 @@ export async function sendRegistration(
 }
 
 export async function inboundMessageExtrinsicFee(
-    assetHub: ApiPromise,
+    assetHub: ParachainBase,
     ethChainId: number,
 ): Promise<{ extrinsicFeeDot: bigint; extrinsicFeeEther: bigint }> {
     // Hardcoded because the EthereumInboundQueueV2::submit() extrinsic
@@ -277,8 +285,7 @@ export async function inboundMessageExtrinsicFee(
     const extrinsicFeeDot = 250_000_000n
 
     const etherLocation = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
-    const extrinsicFeeEther = await swapAsset1ForAsset2(
-        assetHub,
+    const extrinsicFeeEther = await assetHub.swapAsset1ForAsset2(
         DOT_LOCATION,
         etherLocation,
         extrinsicFeeDot,
@@ -288,7 +295,7 @@ export async function inboundMessageExtrinsicFee(
 }
 
 export async function calculateRelayerFee(
-    assetHub: ApiPromise,
+    assetHub: ParachainBase,
     ethChainId: number,
     overrideRelayerFee: undefined | bigint,
     deliveryFeeInEther: bigint,
@@ -317,11 +324,14 @@ export async function buildSwapCallData(
     amountOut: bigint,
     amountInMaximum: bigint,
 ): Promise<string> {
-    let tokenIn = registry.ethereumChains?.[l2ChainId]?.assets[l2TokenAddress]?.swapTokenAddress
+    let tokenIn =
+        registry.ethereumChains?.[`ethereum_l2_${l2ChainId}`]?.assets[l2TokenAddress]
+            ?.swapTokenAddress
     if (!tokenIn) {
         throw new Error("Token is not registered on Ethereum")
     }
-    let swapFee = registry.ethereumChains?.[l2ChainId]?.assets[l2TokenAddress]?.swapFee
+    let swapFee =
+        registry.ethereumChains?.[`ethereum_l2_${l2ChainId}`]?.assets[l2TokenAddress]?.swapFee
     let swapCalldata: string
     if (registry.environment === "polkadot_mainnet") {
         const l1SwapRouter = context.l1SwapRouter()

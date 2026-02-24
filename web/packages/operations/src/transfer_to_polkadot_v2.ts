@@ -1,11 +1,16 @@
 import { Keyring } from "@polkadot/keyring"
-import { Context, toPolkadotSnowbridgeV2, toPolkadotV2 } from "@snowbridge/api"
+import { Context, toPolkadotSnowbridgeV2, toPolkadotV2, xcmBuilder } from "@snowbridge/api"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { formatEther, Wallet } from "ethers"
-import { assetRegistryFor, environmentFor } from "@snowbridge/registry"
+import { bridgeInfoFor } from "@snowbridge/registry"
 import { WETH9__factory } from "@snowbridge/contract-types"
 
-export const transferToPolkadot = async (destParaId: number, symbol: string, amount: bigint) => {
+export const transferToPolkadot = async (
+    destParaId: number,
+    symbol: string,
+    amount: bigint,
+    feeAsset?: string,
+) => {
     await cryptoWaitReady()
 
     let env = "local_e2e"
@@ -14,7 +19,8 @@ export const transferToPolkadot = async (destParaId: number, symbol: string, amo
     }
     console.log(`Using environment '${env}'`)
 
-    const context = new Context(environmentFor(env))
+    const { registry, environment } = bridgeInfoFor(env)
+    const context = new Context(environment)
 
     const polkadot_keyring = new Keyring({ type: "sr25519" })
 
@@ -28,9 +34,7 @@ export const transferToPolkadot = async (destParaId: number, symbol: string, amo
 
     console.log("eth", ETHEREUM_ACCOUNT_PUBLIC, "sub", POLKADOT_ACCOUNT_PUBLIC)
 
-    const registry = assetRegistryFor(env)
-
-    const assets = registry.ethereumChains[registry.ethChainId].assets
+    const assets = registry.ethereumChains[`ethereum_${registry.ethChainId}`].assets
     const TOKEN_CONTRACT = Object.keys(assets)
         .map((t) => assets[t])
         .find((asset) => asset.symbol.toLowerCase().startsWith(symbol.toLowerCase()))?.token
@@ -38,8 +42,6 @@ export const transferToPolkadot = async (destParaId: number, symbol: string, amo
         console.error("no token contract exists, check it and rebuild asset registry.")
         throw Error(`No token found for ${symbol}`)
     }
-
-    const relayerFee = 100_000_000_000_000n // 0.000100000000000000 ETH (~ $.5)
 
     console.log("TOKEN_CONTRACT", TOKEN_CONTRACT)
     if (symbol.toLowerCase().startsWith("weth")) {
@@ -65,7 +67,11 @@ export const transferToPolkadot = async (destParaId: number, symbol: string, amo
             TOKEN_CONTRACT,
         )
         // Step 1. Get the delivery fee for the transaction
-        let fee = await transferImpl.getDeliveryFee(context, registry, TOKEN_CONTRACT, destParaId)
+        const feeAssetLocation =
+            feeAsset?.toLowerCase() === "dot" ? xcmBuilder.DOT_LOCATION : undefined
+        let fee = await transferImpl.getDeliveryFee(context, registry, TOKEN_CONTRACT, destParaId, {
+            feeAsset: feeAssetLocation,
+        })
 
         console.log("fee: ", fee)
         // Step 2. Create a transfer tx

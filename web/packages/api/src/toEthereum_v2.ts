@@ -1,7 +1,7 @@
 import { ApiPromise } from "@polkadot/api"
 import { AddressOrPair, SignerOptions, SubmittableExtrinsic } from "@polkadot/api/types"
-import { Codec, ISubmittableResult } from "@polkadot/types/types"
-import { BN, hexToU8a, isHex, stringToU8a, u8aToHex } from "@polkadot/util"
+import { ISubmittableResult } from "@polkadot/types/types"
+import { hexToU8a, isHex, stringToU8a, u8aToHex } from "@polkadot/util"
 import { blake2AsHex, decodeAddress, xxhashAsHex } from "@polkadot/util-crypto"
 import {
     bridgeLocation,
@@ -19,7 +19,6 @@ import {
     HERE_LOCATION,
     buildAssetHubERC20TransferFromParachainWithNativeFee,
 } from "./xcmBuilder"
-import { getAssetHubConversionPalletSwap } from "./assets_v2"
 import { getOperatingStatus, OperationStatus } from "./status"
 import {
     Asset,
@@ -38,7 +37,7 @@ import {
 import { Result } from "@polkadot/types"
 import { FeeData } from "ethers"
 import { paraImplementation } from "./parachains"
-import { padFeeByPercentage } from "./utils"
+import { padFeeByPercentage, u32ToLeBytes } from "./utils"
 import { Context } from "./index"
 import { ParachainBase } from "./parachains/parachainBase"
 
@@ -140,10 +139,11 @@ export async function createTransfer(
             )
         }
     } else {
-        messageId = await buildMessageId(
-            parachain,
+        const accountNonce = await sourceParachainImpl.accountNonce(sourceAccountHex)
+        messageId = buildMessageId(
             sourceParachainImpl.parachainId,
             sourceAccountHex,
+            accountNonce,
             tokenAddress,
             beneficiaryAccount,
             amount,
@@ -220,15 +220,15 @@ export async function getDeliveryFee(
     const feePadPercentage = options?.padPercentage ?? 33n
     const feeSlippagePadPercentage = options?.slippagePadPercentage ?? 20n
     const feeStorageKey = xxhashAsHex(":BridgeHubEthereumBaseFee:", 128, true)
-    const feeStorageItem = await assetHub.rpc.state.getStorage(feeStorageKey)
-    let leFee = new BN((feeStorageItem as Codec).toHex().replace("0x", ""), "hex", "le")
+    const assetHubImpl = await paraImplementation(assetHub)
+    const snowbridgeBaseFee = await assetHubImpl.getDeliveryFeeFromStorage(feeStorageKey)
 
     let snowbridgeDeliveryFeeDOT = 0n
-    if (leFee.eqn(0)) {
+    if (snowbridgeBaseFee === 0n) {
         console.warn("Asset Hub onchain BridgeHubEthereumBaseFee not set. Using default fee.")
         snowbridgeDeliveryFeeDOT = options?.defaultFee ?? 3_833_568_200_000n
     } else {
-        snowbridgeDeliveryFeeDOT = BigInt(leFee.toString())
+        snowbridgeDeliveryFeeDOT = snowbridgeBaseFee
     }
 
     const { sourceAssetMetadata, sourceParachain } = resolveInputs(
@@ -314,7 +314,6 @@ export async function getDeliveryFee(
     let assetHubExecutionFeeDOT = 0n
     let returnToSenderExecutionFeeDOT = 0n
     let returnToSenderDeliveryFeeDOT = 0n
-    const assetHubImpl = await paraImplementation(assetHub)
     const bridgeHubDeliveryFeeDOT = await assetHubImpl.calculateDeliveryFeeInDOT(
         registry.bridgeHubParaId,
         forwardedXcm,
@@ -367,7 +366,7 @@ export async function getDeliveryFee(
     let totalFeeInNative: bigint | undefined = undefined
     let assetHubExecutionFeeNative: bigint | undefined = undefined
     let returnToSenderExecutionFeeNative: bigint | undefined = undefined
-    if (!registry.parachains[parachain].features.hasDotBalance) {
+    if (!registry.parachains[`polkadot_${parachain}`].features.hasDotBalance) {
         // padding the bridging fee and bridge hub delivery by the slippage fee to make sure the trade goes through.
         totalFeeInDot =
             padFeeByPercentage(
@@ -384,15 +383,17 @@ export async function getDeliveryFee(
             assetHubExecutionFeeNativeRes,
             returnToSenderExecutionFeeNativeRes,
         ] = await Promise.all([
-            getAssetHubConversionPalletSwap(assetHub, nativeLocation, DOT_LOCATION, totalFeeInDot),
-            getAssetHubConversionPalletSwap(
-                assetHub,
+            assetHubImpl.getAssetHubConversionPalletSwap(
+                nativeLocation,
+                DOT_LOCATION,
+                totalFeeInDot,
+            ),
+            assetHubImpl.getAssetHubConversionPalletSwap(
                 nativeLocation,
                 DOT_LOCATION,
                 assetHubExecutionFeeDOT,
             ),
-            getAssetHubConversionPalletSwap(
-                assetHub,
+            assetHubImpl.getAssetHubConversionPalletSwap(
                 nativeLocation,
                 DOT_LOCATION,
                 returnToSenderExecutionFeeDOT,
@@ -489,7 +490,7 @@ export async function validateTransfer(
 
     const logs: ValidationLog[] = []
     const sourceParachainImpl = await paraImplementation(sourceParachain)
-    const nativeBalance = await sourceParachainImpl.getNativeBalance(sourceAccountHex)
+    const nativeBalance = await sourceParachainImpl.getNativeBalance(sourceAccountHex, true)
     let dotBalance: bigint | undefined = undefined
     if (source.features.hasDotBalance) {
         dotBalance = await sourceParachainImpl.getDotBalance(sourceAccountHex)
@@ -502,14 +503,14 @@ export async function validateTransfer(
         transfer.computed.ahAssetMetadata.location?.parents == DOT_LOCATION.parents &&
         transfer.computed.ahAssetMetadata.location?.interior == DOT_LOCATION.interior
     ) {
-        tokenBalance = await sourceParachainImpl.getNativeBalance(sourceAccountHex)
+        tokenBalance = await sourceParachainImpl.getNativeBalance(sourceAccountHex, true)
         isNativeBalance = true
     } else {
         isNativeBalance =
             sourceAssetMetadata.decimals === source.info.tokenDecimals &&
             sourceAssetMetadata.symbol == source.info.tokenSymbols
         if (isNativeBalance) {
-            tokenBalance = await sourceParachainImpl.getNativeBalance(sourceAccountHex)
+            tokenBalance = await sourceParachainImpl.getNativeBalance(sourceAccountHex, true)
         } else {
             tokenBalance = await sourceParachainImpl.getTokenBalance(
                 sourceAccountHex,
@@ -868,16 +869,20 @@ export async function signAndSend(
 
 export function resolveInputs(registry: AssetRegistry, tokenAddress: string, sourceParaId: number) {
     const tokenErcMetadata =
-        registry.ethereumChains[registry.ethChainId.toString()].assets[tokenAddress.toLowerCase()]
+        registry.ethereumChains[`ethereum_${registry.ethChainId}`].assets[
+            tokenAddress.toLowerCase()
+        ]
     if (!tokenErcMetadata) {
         throw Error(`No token ${tokenAddress} registered on ethereum chain ${registry.ethChainId}.`)
     }
-    const sourceParachain = registry.parachains[sourceParaId.toString()]
+    const sourceParachain = registry.parachains[`polkadot_${sourceParaId}`]
     if (!sourceParachain) {
         throw Error(`Could not find ${sourceParaId} in the asset registry.`)
     }
     const ahAssetMetadata =
-        registry.parachains[registry.assetHubParaId].assets[tokenAddress.toLowerCase()]
+        registry.parachains[`polkadot_${registry.assetHubParaId}`].assets[
+            tokenAddress.toLowerCase()
+        ]
     if (!ahAssetMetadata) {
         throw Error(`Token ${tokenAddress} not registered on asset hub.`)
     }
@@ -1141,22 +1146,19 @@ export async function dryRunAssetHub(
     }
 }
 
-export async function buildMessageId(
-    parachain: ApiPromise,
+export function buildMessageId(
     sourceParaId: number,
     sourceAccountHex: string,
+    accountNonce: number,
     tokenAddress: string,
     beneficiaryAccount: string,
     amount: bigint,
     timestamp?: number,
-): Promise<string> {
-    const [accountNextId] = await Promise.all([
-        parachain.rpc.system.accountNextIndex(sourceAccountHex),
-    ])
+): string {
     const entropy = new Uint8Array([
         ...stringToU8a(sourceParaId.toString()),
         ...hexToU8a(sourceAccountHex),
-        ...accountNextId.toU8a(),
+        ...u32ToLeBytes(accountNonce),
         ...hexToU8a(tokenAddress),
         ...stringToU8a(beneficiaryAccount),
         ...stringToU8a(amount.toString()),

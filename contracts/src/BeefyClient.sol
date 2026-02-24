@@ -187,7 +187,7 @@ contract BeefyClient {
     /**
      * @dev Fiat-Shamir domain separator ID
      */
-    bytes public constant FIAT_SHAMIR_DOMAIN_ID = bytes("SNOWBRIDGE-FIAT-SHAMIR-v1");
+    bytes public constant FIAT_SHAMIR_DOMAIN_ID = bytes("SNOWBRIDGE-FIAT-SHAMIR-V1");
 
     /**
      * @dev Beefy payload id for MMR Root payload items:
@@ -463,6 +463,14 @@ contract BeefyClient {
             revert InvalidBitfieldLength();
         }
         return Bitfield.createBitfield(bitsToSet, length);
+    }
+
+    /**
+     * @dev Compute the hash of a commitment
+     * @param commitment the commitment to hash
+     */
+    function computeCommitmentHash(Commitment calldata commitment) external pure returns (bytes32) {
+        return keccak256(encodeCommitment(commitment));
     }
 
     /**
@@ -766,14 +774,12 @@ contract BeefyClient {
         pure
         returns (bytes32)
     {
-        if (commitment.payload.length != 1) {
-            revert CommitmentNotRelevant();
+        for (uint256 i = 0; i < commitment.payload.length; i++) {
+            if (commitment.payload[i].payloadID == MMR_ROOT_ID) {
+                return bytes32(commitment.payload[i].data);
+            }
         }
-        PayloadItem memory payload = commitment.payload[0];
-        if (payload.payloadID != MMR_ROOT_ID || payload.data.length != 32) {
-            revert CommitmentNotRelevant();
-        }
-        return bytes32(payload.data);
+        revert CommitmentNotRelevant();
     }
 
     function encodeCommitment(Commitment calldata commitment)

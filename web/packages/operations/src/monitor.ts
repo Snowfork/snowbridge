@@ -2,8 +2,8 @@ import { u8aToHex } from "@polkadot/util"
 import { blake2AsU8a } from "@polkadot/util-crypto"
 import { Context, status, utils, subsquidV2 } from "@snowbridge/api"
 import { sendMetrics } from "./alarm"
-import { environmentFor } from "@snowbridge/registry"
 import { Environment } from "../../base-types/dist"
+import { bridgeInfoFor } from "@snowbridge/registry"
 
 export const monitorParams: {
     [id: string]: {
@@ -15,7 +15,7 @@ export const monitorParams: {
             type: "substrate" | "ethereum"
             balance?: bigint
         }[]
-        TO_MONITOR_PARACHAINS?: number[]
+        TO_MONITOR_CHAINS?: { id: string; name?: string; type: "substrate" | "ethereum" }[]
     }
 } = {
     local_e2e: {
@@ -146,7 +146,20 @@ export const monitorParams: {
                 type: "ethereum",
             },
         ],
-        TO_MONITOR_PARACHAINS: [2034, 2043, 3369], // Hydration, OriginTrail, Mythos
+        TO_MONITOR_CHAINS: [
+            { id: "1000", name: "AssetHub", type: "substrate" },
+            { id: "kusama_1000", name: "AssetHub on Westend", type: "substrate" },
+            { id: "1002", name: "BridgeHub", type: "substrate" },
+            { id: "2034", name: "Hydration", type: "substrate" },
+            { id: "2043", name: "Neuroweb", type: "substrate" },
+            { id: "3369", name: "Mythos", type: "substrate" },
+            { id: "2030", name: "Bifrost", type: "substrate" },
+            { id: "2000", name: "Acala", type: "substrate" },
+            { id: "1", name: "Ethereum Mainnet", type: "ethereum" },
+            { id: "10", name: "Optimism", type: "ethereum" },
+            { id: "8453", name: "Base", type: "ethereum" },
+            { id: "42161", name: "Arbitrum", type: "ethereum" },
+        ],
     },
     westend_sepolia: {
         PRIMARY_GOVERNANCE_CHANNEL_ID:
@@ -235,7 +248,7 @@ export const monitor = async (): Promise<status.AllMetrics> => {
     if (process.env.NODE_ENV !== undefined) {
         env = process.env.NODE_ENV
     }
-    const snowbridgeEnv = environmentFor(env)
+    const { environment: snowbridgeEnv } = bridgeInfoFor(env)
     if (snowbridgeEnv === undefined) {
         throw Error(`Unknown environment '${env}'`)
     }
@@ -374,50 +387,41 @@ const fetchBalances = async (context: Context, env: Environment) => {
 }
 
 export const fetchIndexerStatus = async (context: Context, env: Environment) => {
-    const [assetHub, bridgeHub, ethereum] = await Promise.all([
-        context.assetHub(),
-        context.bridgeHub(),
-        context.ethereum(),
-    ])
-
     let indexerInfos: status.IndexerServiceStatusInfo[] = []
-    const latestBlockOfAH = (await assetHub.query.system.number()).toPrimitive() as number
-    const latestBlockOfBH = (await bridgeHub.query.system.number()).toPrimitive() as number
-    const latestBlockOfEth = await ethereum.getBlockNumber()
-
-    const chains = await subsquidV2.fetchLatestBlocksSynced(
-        context.graphqlApiUrl(),
-        env.name == "polkadot_mainnet",
-    )
-    for (let chain of chains) {
-        let info: status.IndexerServiceStatusInfo = {
-            chain: chain.name,
-            latency: 0,
-        }
-        if (chain.name == "assethub") {
-            info.latency = latestBlockOfAH - chain.height
-        } else if (chain.name == "bridgehub") {
-            info.latency = latestBlockOfBH - chain.height
-        } else if (chain.name == "ethereum") {
-            info.latency = latestBlockOfEth - chain.height
-        }
-        indexerInfos.push(info)
-    }
-    let monitorChains = monitorParams[env.name].TO_MONITOR_PARACHAINS
+    // Allow runtime override of monitored parachains without changing defaults.
+    let monitorChains = monitorParams[env.name].TO_MONITOR_CHAINS
     if (monitorChains && monitorChains.length) {
-        for (const paraid of monitorChains) {
-            let chain = await context.parachain(paraid)
-            let latestBlock = (await chain.query.system.number()).toPrimitive() as number
-            let status = await subsquidV2.fetchSyncStatusOfParachain(
-                context.graphqlApiUrl(),
-                paraid,
-            )
-            let info: status.IndexerServiceStatusInfo = {
-                chain: status.name,
-                paraid: status.paraid,
-                latency: latestBlock - status.height,
+        for (const chain of monitorChains) {
+            try {
+                let latestBlock = 0
+                if (chain.type === "substrate") {
+                    if (chain.id.toString().startsWith("kusama")) {
+                        latestBlock = (
+                            await (
+                                await context.kusamaParachain(Number(chain.id.split("_")[1]))
+                            ).query.system.number()
+                        ).toPrimitive() as number
+                    } else {
+                        latestBlock = (
+                            await (await context.parachain(Number(chain.id))).query.system.number()
+                        ).toPrimitive() as number
+                    }
+                } else if (chain.type === "ethereum") {
+                    latestBlock = await context.ethChain(Number(chain.id)).getBlockNumber()
+                }
+                const status = await subsquidV2.fetchLatestBlockFromIndexer(
+                    context.graphqlApiUrl(),
+                    chain.id.toString(),
+                )
+                const info: status.IndexerServiceStatusInfo = {
+                    chain: status.name,
+                    id: status.paraid,
+                    latency: latestBlock - status.height,
+                }
+                indexerInfos.push(info)
+            } catch (e) {
+                console.error(`Failed to fetch indexer status for chain ${chain.id}:`, e)
             }
-            indexerInfos.push(info)
         }
     }
     return indexerInfos
