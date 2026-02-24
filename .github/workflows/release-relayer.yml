@@ -1,12 +1,12 @@
 name: release-relayer
 
 on:
-  push:
-    paths:
-      - "relayer/**"
-    branches:
-      - main
   workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Custom image tag (e.g. test-v1). If empty, auto-increments the semver patch version."
+        required: false
+        type: string
 
 env:
   REGISTRY: ghcr.io
@@ -22,7 +22,7 @@ jobs:
           fetch-depth: 2
 
       - name: Setup go
-        uses: actions/checkout@v4
+        uses: actions/setup-go@v5
         with:
           go-version: "^1.23"
 
@@ -60,11 +60,13 @@ jobs:
         run: CGO_ENABLED=1 GOOS=linux GOARCH=amd64 mage build
 
       - name: Configure Git
+        if: ${{ !inputs.image_tag }}
         run: |
           git config --global user.name 'github-actions'
           git config --global user.email 'github-actions@github.com'
 
       - name: Determine new version
+        if: ${{ !inputs.image_tag }}
         id: new_version
         run: |
           # Get the most recent tag in the format relayer-v<version>
@@ -78,12 +80,13 @@ jobs:
           else
           new_version=$(npx semver $current_version -i patch)
           fi
-            
+
           echo "New version: $new_version"
           echo "version=$new_version" >> $GITHUB_OUTPUT
           echo "from_tag=$current_tag" >> $GITHUB_OUTPUT
 
       - name: Create new tag
+        if: ${{ !inputs.image_tag }}
         id: create_tag
         run: |
           tag_name="relayer-v${{ steps.new_version.outputs.version }}"
@@ -92,10 +95,12 @@ jobs:
           git tag $tag_name
 
       - name: Push new tag
+        if: ${{ !inputs.image_tag }}
         run: |
           git push origin --tags
 
       - name: "Build Changelog"
+        if: ${{ !inputs.image_tag }}
         id: build_changelog
         uses: mikepenz/release-changelog-builder-action@v4
         with:
@@ -113,6 +118,7 @@ jobs:
           toTag: ${{ steps.create_tag.outputs.tag }}
 
       - name: Create a GitHub Release
+        if: ${{ !inputs.image_tag }}
         id: create_release
         uses: actions/create-release@v1
         env:
@@ -126,6 +132,7 @@ jobs:
           prerelease: false
 
       - name: Upload Release Asset
+        if: ${{ !inputs.image_tag }}
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -134,6 +141,15 @@ jobs:
           asset_path: ./relayer/build/snowbridge-relay
           asset_name: snowbridge-relay
           asset_content_type: application/octet-stream
+
+      - name: Determine image tag
+        id: image_tag
+        run: |
+          if [ -n "${{ inputs.image_tag }}" ]; then
+            echo "tag=${{ inputs.image_tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${{ steps.create_tag.outputs.tag }}" >> $GITHUB_OUTPUT
+          fi
 
       - name: Log in to the Container registry
         uses: docker/login-action@v3
@@ -147,4 +163,4 @@ jobs:
         with:
           context: ./relayer
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.create_tag.outputs.tag }}
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.image_tag.outputs.tag }}
