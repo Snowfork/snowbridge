@@ -1040,10 +1040,12 @@ contract GatewayV1Test is Test {
         IGatewayV1(address(gateway))
             .quoteSendTokenFee(address(token), destPara, maxDestinationFee + 1);
 
+        uint256 fee = IGatewayV1(address(gateway)).quoteSendTokenFee(address(token), destPara, 1);
+
         vm.expectRevert(IGatewayBase.InvalidDestinationFee.selector);
         IGatewayV1(address(gateway))
         .sendToken{
-            value: 0.1 ether
+            value: fee
         }(address(token), destPara, recipientAddress32(), maxDestinationFee + 1, 1);
     }
 
