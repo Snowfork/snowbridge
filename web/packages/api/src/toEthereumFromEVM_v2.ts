@@ -98,7 +98,7 @@ export type TransferEvm = {
 }
 
 export async function createTransferEvm(
-    source: { sourceParaId: number; context: Context } | { parachain: ApiPromise },
+    source: { sourceParaId: number; context: Context },
     registry: AssetRegistry,
     sourceAccount: string,
     beneficiaryAccount: string,
@@ -116,10 +116,7 @@ export async function createTransferEvm(
         throw Error(`Source address ${sourceAccountHex} is not a 20 byte address.`)
     }
 
-    const { parachain } =
-        "sourceParaId" in source
-            ? { parachain: await source.context.parachain(source.sourceParaId) }
-            : source
+    const parachain = await source.context.parachain(source.sourceParaId)
     const sourceParachainImpl = await paraImplementation(parachain)
     const { tokenErcMetadata, sourceParachain, ahAssetMetadata, sourceAssetMetadata } =
         resolveInputs(registry, tokenAddress, sourceParachainImpl.parachainId)
@@ -229,15 +226,7 @@ export type ValidationResultEvm = {
 }
 
 export async function validateTransferEvm(
-    context:
-        | Context
-        | {
-              sourceParachain: ApiPromise
-              sourceEthChain: AbstractProvider
-              assetHub: ApiPromise
-              gateway: IGateway
-              bridgeHub: ApiPromise
-          },
+    context: Context,
     transfer: TransferEvm,
 ): Promise<ValidationResultEvm> {
     const { registry, fee, tokenAddress, amount, beneficiaryAccount } = transfer.input
@@ -250,16 +239,11 @@ export async function validateTransferEvm(
         ethChain,
     } = transfer.computed
 
-    const { sourceParachain, gateway, bridgeHub, assetHub, sourceEthChain } =
-        context instanceof Context
-            ? {
-                  sourceParachain: await context.parachain(sourceParaId),
-                  gateway: context.gateway(),
-                  bridgeHub: await context.bridgeHub(),
-                  assetHub: await context.assetHub(),
-                  sourceEthChain: context.ethChain(ethChain?.id!),
-              }
-            : context
+    const sourceParachain = await context.parachain(sourceParaId)
+    const gateway = context.gateway()
+    const bridgeHub = await context.bridgeHub()
+    const assetHub = await context.assetHub()
+    const sourceEthChain = context.ethChain(ethChain?.id!)
     const { tx } = transfer
 
     const sourceParachainImpl = await paraImplementation(sourceParachain)
@@ -491,13 +475,10 @@ export type MessageReceiptEvm = {
 }
 
 export async function getMessageReceipt(
-    source: { sourceParaId: number; context: Context } | { sourceParachain: ApiPromise },
+    source: { sourceParaId: number; context: Context },
     receipt: TransactionReceipt,
 ): Promise<MessageReceiptEvm> {
-    const { sourceParachain } =
-        "sourceParaId" in source
-            ? { sourceParachain: await source.context.parachain(source.sourceParaId) }
-            : source
+    const sourceParachain = await source.context.parachain(source.sourceParaId)
     const blockHash = await sourceParachain.rpc.chain.getBlockHash(receipt.blockNumber)
     const events = await (await sourceParachain.at(blockHash)).query.system.events<EventRecord[]>()
     let success = false

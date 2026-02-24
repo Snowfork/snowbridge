@@ -97,11 +97,7 @@ export const transferToPolkadot = async (
     {
         // Step 1. Get the delivery fee for the transaction
         const fee = await toPolkadotV2.getDeliveryFee(
-            {
-                gateway: context.gateway(),
-                assetHub: await context.assetHub(),
-                destination: await context.parachain(destinationChainId),
-            },
+            context,
             registry,
             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
             TOKEN_CONTRACT!,
@@ -122,16 +118,7 @@ export const transferToPolkadot = async (
 
         // Step 3. Validate the transaction.
         const validation = await toPolkadotV2.validateTransfer(
-            {
-                ethereum: context.ethereum(),
-                gateway: context.gateway(),
-                bridgeHub: await context.bridgeHub(),
-                assetHub: await context.assetHub(),
-                destParachain:
-                    destinationChainId !== 1000
-                        ? await context.parachain(destinationChainId)
-                        : undefined,
-            },
+            context,
             transfer,
         )
         console.log("validation result", validation)
