@@ -1,6 +1,19 @@
 // import '@polkadot/api-augment/polkadot'
 import { ApiPromise, HttpProvider, WsProvider } from "@polkadot/api"
-import { BeefyClient, IGatewayV1, IGatewayV2, ISwapQuoter } from "./contracts"
+import {
+    BeefyClient,
+    BEEFY_CLIENT_ABI,
+    IGatewayV1,
+    IGATEWAY_V1_ABI,
+    IGatewayV2,
+    IGATEWAY_V2_ABI,
+    ISwapQuoter,
+    SNOWBRIDGE_L1_ADAPTOR_ABI,
+    SNOWBRIDGE_L2_ADAPTOR_ABI,
+    SWAP_LEGACY_ROUTER_ABI,
+    SWAP_QUOTER_ABI,
+    SWAP_ROUTER_ABI,
+} from "./contracts"
 import { type EthereumProvider } from "./EthereumProvider"
 import { BridgeInfo, Environment } from "@snowbridge/base-types"
 
@@ -236,8 +249,9 @@ export class Context<EConnection, EContract, EAbi, EInterface> {
         if (this.#gateway) {
             return this.#gateway
         }
-        this.#gateway = this.ethereumProvider.connectGatewayV1(
+        this.#gateway = this.ethereumProvider.connectContract<EContract & IGatewayV1>(
             this.environment.gatewayContract,
+            IGATEWAY_V1_ABI as EAbi,
             this.ethereum(),
         )
         return this.#gateway!
@@ -247,8 +261,9 @@ export class Context<EConnection, EContract, EAbi, EInterface> {
         if (this.#gatewayV2) {
             return this.#gatewayV2
         }
-        this.#gatewayV2 = this.ethereumProvider.connectGatewayV2(
+        this.#gatewayV2 = this.ethereumProvider.connectContract<EContract & IGatewayV2>(
             this.environment.gatewayContract,
+            IGATEWAY_V2_ABI as EAbi,
             this.ethereum(),
         )
         return this.#gatewayV2!
@@ -258,8 +273,9 @@ export class Context<EConnection, EContract, EAbi, EInterface> {
         if (this.#beefyClient) {
             return this.#beefyClient
         }
-        this.#beefyClient = this.ethereumProvider.connectBeefyClient(
+        this.#beefyClient = this.ethereumProvider.connectContract<EContract & BeefyClient>(
             this.environment.beefyContract,
+            BEEFY_CLIENT_ABI as EAbi,
             this.ethereum(),
         )
         return this.#beefyClient!
@@ -310,8 +326,9 @@ export class Context<EConnection, EContract, EAbi, EInterface> {
         if (this.#l1Adapter) {
             return this.#l1Adapter
         }
-        this.#l1Adapter = this.ethereumProvider.connectL1Adapter(
-            this.environment.l2Bridge.l1AdapterAddress as string,
+        this.#l1Adapter = this.ethereumProvider.connectContract<EContract>(
+            this.environment.l2Bridge.l1AdapterAddress,
+            SNOWBRIDGE_L1_ADAPTOR_ABI as EAbi,
             this.ethereum(),
         )
         return this.#l1Adapter!
@@ -324,18 +341,12 @@ export class Context<EConnection, EContract, EAbi, EInterface> {
         if (this.#l1SwapQuoter) {
             return this.#l1SwapQuoter
         }
-        this.#l1SwapQuoter = this.ethereumProvider.connectL1SwapQuoter(
-            this.environment.l2Bridge.l1SwapQuoterAddress as string,
+        this.#l1SwapQuoter = this.ethereumProvider.connectContract<EContract & ISwapQuoter>(
+            this.environment.l2Bridge.l1SwapQuoterAddress,
+            SWAP_QUOTER_ABI as EAbi,
             this.ethereum(),
         )
         return this.#l1SwapQuoter!
-    }
-
-    l1SwapRouterAddress(): string {
-        if (!this.environment.l2Bridge) {
-            throw new Error("L2 bridge configuration is missing.")
-        }
-        return this.environment.l2Bridge.l1SwapRouterAddress as string
     }
 
     l1SwapRouter(): EContract {
@@ -345,8 +356,9 @@ export class Context<EConnection, EContract, EAbi, EInterface> {
         if (this.#l1SwapRouter) {
             return this.#l1SwapRouter
         }
-        this.#l1SwapRouter = this.ethereumProvider.connectL1SwapRouter(
-            this.l1SwapRouterAddress(),
+        this.#l1SwapRouter = this.ethereumProvider.connectContract<EContract>(
+            this.environment.l2Bridge.l1SwapRouterAddress,
+            SWAP_ROUTER_ABI as EAbi,
             this.ethereum(),
         )
         return this.#l1SwapRouter!
@@ -359,25 +371,12 @@ export class Context<EConnection, EContract, EAbi, EInterface> {
         if (this.#l1LegacySwapRouter) {
             return this.#l1LegacySwapRouter
         }
-        this.#l1LegacySwapRouter = this.ethereumProvider.connectL1LegacySwapRouter(
-            this.environment.l2Bridge.l1SwapRouterAddress as string,
+        this.#l1LegacySwapRouter = this.ethereumProvider.connectContract<EContract>(
+            this.environment.l2Bridge.l1SwapRouterAddress,
+            SWAP_LEGACY_ROUTER_ABI as EAbi,
             this.ethereum(),
         )
         return this.#l1LegacySwapRouter!
-    }
-
-    l1HandlerAddress(): string {
-        if (!this.environment.l2Bridge) {
-            throw new Error("L2 bridge configuration is missing.")
-        }
-        return this.environment.l2Bridge.l1HandlerAddress as string
-    }
-
-    l1FeeTokenAddress(): string {
-        if (!this.environment.l2Bridge) {
-            throw new Error("L2 bridge configuration is missing.")
-        }
-        return this.environment.l2Bridge.l1FeeTokenAddress as string
     }
 
     l2Adapter(l2ChainId: number): EContract {
@@ -387,29 +386,13 @@ export class Context<EConnection, EContract, EAbi, EInterface> {
         if (this.#l2Adapters[l2ChainId]) {
             return this.#l2Adapters[l2ChainId]
         }
-        const adapter = this.ethereumProvider.connectL2Adapter(
-            this.environment.l2Bridge.l2Chains[l2ChainId].adapterAddress as string,
+        const adapter = this.ethereumProvider.connectContract<EContract>(
+            this.environment.l2Bridge.l2Chains[l2ChainId].adapterAddress,
+            SNOWBRIDGE_L2_ADAPTOR_ABI as EAbi,
             this.ethChain(l2ChainId),
         )
         this.#l2Adapters[l2ChainId] = adapter
         return adapter
-    }
-
-    l2FeeTokenAddress(l2ChainId: number): string {
-        if (!this.environment.l2Bridge) {
-            throw new Error("L2 bridge configuration is missing.")
-        }
-        if (!this.environment.l2Bridge.l2Chains[l2ChainId]) {
-            throw new Error("L2 chain configuration is missing.")
-        }
-        return this.environment.l2Bridge.l2Chains[l2ChainId].feeTokenAddress as string
-    }
-
-    acrossApiUrl(): string {
-        if (!this.environment.l2Bridge) {
-            throw new Error("L2 bridge configuration is missing.")
-        }
-        return this.environment.l2Bridge.acrossAPIUrl as string
     }
 }
 
