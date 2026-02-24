@@ -1,5 +1,5 @@
 import { Keyring } from "@polkadot/keyring"
-import { Context, toPolkadotV2 } from "@snowbridge/api"
+import { createApi, toPolkadotV2 } from "@snowbridge/api"
 import { formatEther, Wallet } from "ethers"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { bridgeInfoFor } from "@snowbridge/registry"
@@ -18,8 +18,9 @@ export const transferToPolkadot = async (
     }
     console.log(`Using environment '${env}'`)
 
-    const { registry, environment } = bridgeInfoFor(env)
-    const context = new Context(environment)
+    const info = bridgeInfoFor(env)
+    const { registry } = info
+    const context = createApi({ info }).context
 
     const ETHEREUM_ACCOUNT = new Wallet(
         process.env.ETHEREUM_KEY ?? "Your Key Goes Here",
