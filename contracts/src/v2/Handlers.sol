@@ -19,8 +19,7 @@ import {
     UnlockNativeTokenParams,
     RegisterForeignTokenParams,
     MintForeignTokenParams,
-    CallContractParams,
-    DelegateCallContractParams
+    CallContractParams
 } from "./Types.sol";
 
 library HandlersV2 {
@@ -74,7 +73,7 @@ library HandlersV2 {
     }
 
     function delegateCallContract(bytes32 origin, address executor, bytes calldata data) external {
-        DelegateCallContractParams memory params = abi.decode(data, (DelegateCallContractParams));
+        CallContractParams memory params = abi.decode(data, (CallContractParams));
         address agent = Functions.ensureAgent(origin);
         bytes memory call =
             abi.encodeCall(AgentExecutor.delegateCallContract, (params.target, params.data));

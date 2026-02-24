@@ -38,7 +38,6 @@ import {
     UnlockNativeTokenParams,
     RegisterForeignTokenParams,
     MintForeignTokenParams,
-    DelegateCallContractParams,
     CallContractParams,
     Payload,
     Asset,
@@ -323,8 +322,8 @@ contract GatewayV2Test is Test {
 
     function makeDelegateCallContractCommand() public view returns (CommandV2[] memory) {
         bytes memory data = abi.encodeWithSignature("sayHello(string)", "World");
-        DelegateCallContractParams memory params =
-            DelegateCallContractParams({target: address(helloWorld), data: data});
+        CallContractParams memory params =
+            CallContractParams({target: address(helloWorld), data: data, value: 0});
         bytes memory payload = abi.encode(params);
 
         CommandV2[] memory commands = new CommandV2[](1);
@@ -340,8 +339,8 @@ contract GatewayV2Test is Test {
     {
         bytes memory data =
             abi.encodeWithSignature("callV1HandleUnlockNativeToken(bytes)", v1Payload);
-        DelegateCallContractParams memory params =
-            DelegateCallContractParams({target: address(helloWorld), data: data});
+        CallContractParams memory params =
+            CallContractParams({target: address(helloWorld), data: data, value: 0});
         bytes memory payload = abi.encode(params);
 
         CommandV2[] memory commands = new CommandV2[](1);
@@ -358,8 +357,8 @@ contract GatewayV2Test is Test {
         bytes memory data = abi.encodeWithSignature(
             "delegateCallV1HandleUnlockNativeToken(address,bytes)", address(gatewayLogic), bytes("")
         );
-        DelegateCallContractParams memory params =
-            DelegateCallContractParams({target: address(helloWorld), data: data});
+        CallContractParams memory params =
+            CallContractParams({target: address(helloWorld), data: data, value: 0});
         bytes memory payload = abi.encode(params);
 
         CommandV2[] memory commands = new CommandV2[](1);
@@ -375,8 +374,8 @@ contract GatewayV2Test is Test {
         bytes memory data = abi.encodeWithSignature(
             "callV2DispatchUnlockNativeToken(bytes,bytes32)", v2Payload, origin
         );
-        DelegateCallContractParams memory params =
-            DelegateCallContractParams({target: address(helloWorld), data: data});
+        CallContractParams memory params =
+            CallContractParams({target: address(helloWorld), data: data, value: 0});
         bytes memory payload = abi.encode(params);
 
         CommandV2[] memory commands = new CommandV2[](1);
@@ -395,8 +394,8 @@ contract GatewayV2Test is Test {
             v2Payload,
             origin
         );
-        DelegateCallContractParams memory params =
-            DelegateCallContractParams({target: address(helloWorld), data: data});
+        CallContractParams memory params =
+            CallContractParams({target: address(helloWorld), data: data, value: 0});
         bytes memory payload = abi.encode(params);
 
         CommandV2[] memory commands = new CommandV2[](1);
@@ -1208,8 +1207,8 @@ contract GatewayV2Test is Test {
     }
 
     function testDelegateCallContractAgentDoesNotExistReturnsFalse() public {
-        DelegateCallContractParams memory p =
-            DelegateCallContractParams({target: address(0xdead), data: ""});
+        CallContractParams memory p =
+            CallContractParams({target: address(0xdead), data: "", value: 0});
         bytes memory payload = abi.encode(p);
 
         // origin corresponds to agent id; use a non-existent id

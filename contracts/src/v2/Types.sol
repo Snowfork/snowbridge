@@ -187,14 +187,6 @@ struct CallContractParams {
     uint256 value;
 }
 
-// Payload for DelegateCallContractParams instruction
-struct DelegateCallContractParams {
-    // target contract
-    address target;
-    // Delegatecall data
-    bytes data;
-}
-
 enum Network {
     Polkadot
 }
