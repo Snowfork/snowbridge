@@ -339,15 +339,20 @@ export async function buildSwapCallData(
     }
     let swapFee =
         registry.ethereumChains?.[`ethereum_l2_${l2ChainId}`]?.assets[l2TokenAddress]?.swapFee
+    const l1FeeTokenAddress = context.environment.l2Bridge?.l1FeeTokenAddress
+    const l1HandlerAddress = context.environment.l2Bridge?.l1HandlerAddress
+    if (!l1FeeTokenAddress || !l1HandlerAddress) {
+        throw new Error("L2 bridge configuration is missing.")
+    }
     let swapCalldata: string
     if (registry.environment === "polkadot_mainnet") {
         const l1SwapRouter = context.l1SwapRouter()
         swapCalldata = l1SwapRouter.interface.encodeFunctionData("exactOutputSingle", [
             {
                 tokenIn: tokenIn,
-                tokenOut: context.l1FeeTokenAddress(),
+                tokenOut: l1FeeTokenAddress,
                 fee: swapFee ?? 500, // Stable default to 0.05% pool fee
-                recipient: context.l1HandlerAddress(),
+                recipient: l1HandlerAddress,
                 deadline: Math.floor(Date.now() / 1000) + 600, // 10 minutes from now
                 amountOut: amountOut,
                 amountInMaximum: amountInMaximum,
@@ -363,9 +368,9 @@ export async function buildSwapCallData(
         swapCalldata = l1SwapRouter.interface.encodeFunctionData("exactOutputSingle", [
             {
                 tokenIn: tokenIn,
-                tokenOut: context.l1FeeTokenAddress(),
+                tokenOut: l1FeeTokenAddress,
                 fee: swapFee ?? 500, // Stable default to 0.05% pool fee
-                recipient: context.l1HandlerAddress(),
+                recipient: l1HandlerAddress,
                 amountOut: amountOut,
                 amountInMaximum: amountInMaximum,
                 sqrtPriceLimitX96: 0n, // No price limit should be fine as we protect the swap using amountInMaximum

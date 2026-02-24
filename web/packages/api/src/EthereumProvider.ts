@@ -6,37 +6,18 @@ import {
     JsonRpcProvider,
     WebSocketProvider,
 } from "ethers"
-import {
-    BeefyClient,
-    BEEFY_CLIENT_ABI,
-    IGatewayV1,
-    IGATEWAY_V1_ABI,
-    IGatewayV2,
-    IGATEWAY_V2_ABI,
-    SWAP_LEGACY_ROUTER_ABI,
-    ISwapQuoter,
-    SWAP_QUOTER_ABI,
-    SWAP_ROUTER_ABI,
-    SNOWBRIDGE_L1_ADAPTOR_ABI,
-    SNOWBRIDGE_L2_ADAPTOR_ABI,
-    IERC20,
-    IERC20_ABI,
-} from "./contracts"
+import { IERC20, IERC20_ABI } from "./contracts"
+import { Context } from "./"
 
 export interface EthereumProvider<Connection, Contract, Abi, Interface> {
     createProvider(url: string): Connection
     destroyProvider(provider: Connection): void
     destroyContract(contract: Contract): Promise<void>
-    createInterface(abi: Abi): Interface
-    connectContract<T extends Contract>(address: string, abi: Abi, provider: Connection): T
-    connectGatewayV1(address: string, provider: Connection): Contract & IGatewayV1
-    connectGatewayV2(address: string, provider: Connection): Contract & IGatewayV2
-    connectBeefyClient(address: string, provider: Connection): Contract & BeefyClient
-    connectL1Adapter(address: string, provider: Connection): Contract
-    connectL1SwapQuoter(address: string, provider: Connection): Contract & ISwapQuoter
-    connectL1SwapRouter(address: string, provider: Connection): Contract
-    connectL1LegacySwapRouter(address: string, provider: Connection): Contract
-    connectL2Adapter(address: string, provider: Connection): Contract
+    connectContract<T extends Contract>(
+        address: string,
+        abi: Abi,
+        provider: Connection,
+    ): Contract & T
     erc20Balance(
         provider: Connection,
         tokenAddress: string,
@@ -63,48 +44,12 @@ export class EthersEthereumProvider
         await contract.removeAllListeners()
     }
 
-    createInterface(abi: unknown): Interface {
-        return new Interface(abi as any)
-    }
-
     connectContract<T extends Contract>(
         address: string,
         abi: InterfaceAbi,
         provider: AbstractProvider,
-    ): T {
+    ): Contract & T {
         return new Contract(address, abi, provider) as T
-    }
-
-    connectGatewayV1(address: string, provider: AbstractProvider): Contract & IGatewayV1 {
-        return this.connectContract<Contract & IGatewayV1>(address, IGATEWAY_V1_ABI, provider)
-    }
-
-    connectGatewayV2(address: string, provider: AbstractProvider): Contract & IGatewayV2 {
-        return this.connectContract<Contract & IGatewayV2>(address, IGATEWAY_V2_ABI, provider)
-    }
-
-    connectBeefyClient(address: string, provider: AbstractProvider): Contract & BeefyClient {
-        return this.connectContract<Contract & BeefyClient>(address, BEEFY_CLIENT_ABI, provider)
-    }
-
-    connectL1Adapter(address: string, provider: AbstractProvider): Contract {
-        return this.connectContract<Contract>(address, SNOWBRIDGE_L1_ADAPTOR_ABI, provider)
-    }
-
-    connectL1SwapQuoter(address: string, provider: AbstractProvider): Contract & ISwapQuoter {
-        return this.connectContract<Contract & ISwapQuoter>(address, SWAP_QUOTER_ABI, provider)
-    }
-
-    connectL1SwapRouter(address: string, provider: AbstractProvider): Contract {
-        return this.connectContract<Contract>(address, SWAP_ROUTER_ABI, provider)
-    }
-
-    connectL1LegacySwapRouter(address: string, provider: AbstractProvider): Contract {
-        return this.connectContract<Contract>(address, SWAP_LEGACY_ROUTER_ABI, provider)
-    }
-
-    connectL2Adapter(address: string, provider: AbstractProvider): Contract {
-        return this.connectContract<Contract>(address, SNOWBRIDGE_L2_ADAPTOR_ABI, provider)
     }
 
     async erc20Balance(
@@ -129,9 +74,4 @@ export class EthersEthereumProvider
     }
 }
 
-export type EthersContext = import("./index").Context<
-    AbstractProvider,
-    Contract,
-    InterfaceAbi,
-    Interface
->
+export type EthersContext = Context<AbstractProvider, Contract, InterfaceAbi, Interface>

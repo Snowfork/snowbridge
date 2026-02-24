@@ -993,16 +993,23 @@ export async function buildL2Call(
     if (!l2TokenAddress) {
         throw new Error("L2 token address not found")
     }
+    const acrossApiUrl = context.environment.l2Bridge?.acrossAPIUrl
+    if (!acrossApiUrl) {
+        throw new Error("L2 bridge configuration is missing.")
+    }
     const l1Adapter = context.l1Adapter()
     let l1AdapterAddress = await l1Adapter.getAddress()
     let l2BridgeFeeInL1Token: bigint
     let l2Call: ContractCall
     if (tokenAddress === ETHER_TOKEN_ADDRESS) {
-        let l1FeeTokenAddress = context.l1FeeTokenAddress()
-        let l2FeeTokenAddress = context.l2FeeTokenAddress(l2ChainId)
+        const l1FeeTokenAddress = context.environment.l2Bridge?.l1FeeTokenAddress
+        const l2FeeTokenAddress = context.environment.l2Bridge?.l2Chains[l2ChainId]?.feeTokenAddress
+        if (!l1FeeTokenAddress || !l2FeeTokenAddress) {
+            throw new Error("L2 chain configuration is missing.")
+        }
         l2BridgeFeeInL1Token = padFeeByPercentage(
             await estimateFees(
-                context.acrossApiUrl(),
+                acrossApiUrl,
                 l1FeeTokenAddress,
                 l2FeeTokenAddress,
                 registry.ethChainId,
@@ -1032,7 +1039,7 @@ export async function buildL2Call(
     } else {
         l2BridgeFeeInL1Token = padFeeByPercentage(
             await estimateFees(
-                context.acrossApiUrl(),
+                acrossApiUrl,
                 tokenAddress,
                 l2TokenAddress,
                 registry.ethChainId,

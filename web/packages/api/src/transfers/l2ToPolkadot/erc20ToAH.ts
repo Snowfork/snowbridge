@@ -124,7 +124,11 @@ export class ERC20ToAH implements TransferInterface {
         let bridgeFeeInL2Token = 0n,
             swapFeeInL1Token = 0n
         let totalFeeInWei = assetHubExecutionFeeEther + relayerFee
-        let l2FeeTokenAddress = context.l2FeeTokenAddress(l2ChainId)
+        const acrossApiUrl = context.environment.l2Bridge?.acrossAPIUrl
+        const l2FeeTokenAddress = context.environment.l2Bridge?.l2Chains[l2ChainId]?.feeTokenAddress
+        if (!acrossApiUrl || !l2FeeTokenAddress) {
+            throw new Error("L2 bridge configuration is missing.")
+        }
         if (l2TokenAddress == ETHER_TOKEN_ADDRESS || l2TokenAddress == l2FeeTokenAddress) {
             const l1FeeTokenAddress =
                 registry.ethereumChains?.[`ethereum_l2_${l2ChainId}`]?.assets[l2FeeTokenAddress]
@@ -133,7 +137,7 @@ export class ERC20ToAH implements TransferInterface {
                 throw new Error("Fee token is not registered on Ethereum")
             }
             bridgeFeeInL2Token = await estimateFees(
-                context.acrossApiUrl(),
+                acrossApiUrl,
                 l2FeeTokenAddress,
                 l1FeeTokenAddress,
                 l2ChainId,
@@ -150,9 +154,13 @@ export class ERC20ToAH implements TransferInterface {
                 registry.ethereumChains?.[`ethereum_l2_${l2ChainId}`]?.assets[l2TokenAddress]
                     ?.swapFee
             let swapQuoter = context.l1SwapQuoter()
+            const l1FeeTokenAddress = context.environment.l2Bridge?.l1FeeTokenAddress
+            if (!l1FeeTokenAddress) {
+                throw new Error("L2 bridge configuration is missing.")
+            }
             let params: QuoteExactOutputSingleParamsStruct = {
                 tokenIn: tokenAddress,
-                tokenOut: context.l1FeeTokenAddress(),
+                tokenOut: l1FeeTokenAddress,
                 amount: assetHubExecutionFeeEther + relayerFee,
                 fee: swapFee ?? 500, // 0.05% pool fee
                 sqrtPriceLimitX96: 0, // no price limit
@@ -164,7 +172,7 @@ export class ERC20ToAH implements TransferInterface {
                 options?.l2PadFeeByPercentage ?? 33n,
             )
             bridgeFeeInL2Token = await estimateFees(
-                context.acrossApiUrl(),
+                acrossApiUrl,
                 l2TokenAddress,
                 tokenAddress,
                 l2ChainId,
@@ -262,7 +270,11 @@ export class ERC20ToAH implements TransferInterface {
             executionFee: fee.assetHubExecutionFeeEther,
             relayerFee: fee.relayerFee,
         }
-        let l2FeeTokenAddress = context.l2FeeTokenAddress(l2ChainId)
+        const l2FeeTokenAddress = context.environment.l2Bridge?.l2Chains[l2ChainId]?.feeTokenAddress
+        const l1SwapRouterAddress = context.environment.l2Bridge?.l1SwapRouterAddress
+        if (!l2FeeTokenAddress || !l1SwapRouterAddress) {
+            throw new Error("L2 chain configuration is missing.")
+        }
         if (l2TokenAddress === ETHER_TOKEN_ADDRESS || l2TokenAddress === l2FeeTokenAddress) {
             value = fee.totalFeeInWei + amount
             depositParams = {
@@ -303,7 +315,7 @@ export class ERC20ToAH implements TransferInterface {
             )
             let swapParams: SwapParamsStruct = {
                 inputAmount: fee.swapFeeInL1Token!,
-                router: context.l1SwapRouterAddress(),
+                router: l1SwapRouterAddress,
                 callData: swapCalldata,
             }
             tx = await l2Adapter
