@@ -934,10 +934,6 @@ export type {
     AgentCreationInterface,
 } from "./registration/agent/agentInterface"
 
-export function createAgentCreationImplementation() {
-    return new CreateAgent()
-}
-
 export async function buildL2Call(
     context: EthersContext,
     registry: AssetRegistry,
