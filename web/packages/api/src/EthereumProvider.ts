@@ -2,9 +2,11 @@ import {
     AbstractProvider,
     Contract,
     ContractTransaction,
+    FeeData as EthersFeeData,
     Interface,
     InterfaceAbi,
     JsonRpcProvider,
+    parseUnits,
     TransactionReceipt,
     WebSocketProvider,
 } from "ethers"
@@ -20,6 +22,12 @@ export type GatewayV1OutboundMessageAccepted = {
 export type GatewayV2OutboundMessageAccepted = {
     nonce: bigint
     payload: string
+}
+
+export type FeeData = {
+    gasPrice: bigint | null
+    maxFeePerGas: bigint | null
+    maxPriorityFeePerGas: bigint | null
 }
 
 export interface EthereumProvider<Connection, Contract, Abi, Interface, Transaction> {
@@ -38,6 +46,9 @@ export interface EthereumProvider<Connection, Contract, Abi, Interface, Transact
         spender: string,
     ): Promise<{ balance: bigint; gatewayAllowance: bigint }>
     populateTransaction(contract: Contract, method: string, ...args: any[]): Promise<Transaction>
+    estimateGas(provider: Connection, tx: Transaction): Promise<bigint>
+    getFeeData(provider: Connection): Promise<FeeData>
+    parseUnits(value: string, decimals: number): bigint
     isContractAddress(provider: Connection, address: string): Promise<boolean>
     scanGatewayV1OutboundMessageAccepted(
         receipt: TransactionReceipt,
@@ -104,6 +115,23 @@ export class EthersEthereumProvider
         ...args: any[]
     ): Promise<ContractTransaction> {
         return await contract.getFunction(method).populateTransaction(...args)
+    }
+
+    async estimateGas(provider: AbstractProvider, tx: ContractTransaction): Promise<bigint> {
+        return await provider.estimateGas(tx)
+    }
+
+    async getFeeData(provider: AbstractProvider): Promise<FeeData> {
+        const feeData: EthersFeeData = await provider.getFeeData()
+        return {
+            gasPrice: feeData.gasPrice ?? null,
+            maxFeePerGas: feeData.maxFeePerGas ?? null,
+            maxPriorityFeePerGas: feeData.maxPriorityFeePerGas ?? null,
+        }
+    }
+
+    parseUnits(value: string, decimals: number): bigint {
+        return parseUnits(value, decimals)
     }
 
     async isContractAddress(provider: AbstractProvider, address: string): Promise<boolean> {

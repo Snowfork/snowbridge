@@ -400,8 +400,8 @@ export async function validateTransferEvm(
     let feeInfo: FeeInfo | undefined
     if (logs.length === 0) {
         const [estimatedGas, feeData] = await Promise.all([
-            sourceEthChain.estimateGas(tx),
-            sourceEthChain.getFeeData(),
+            context.ethereumProvider.estimateGas(sourceEthChain, tx),
+            context.ethereumProvider.getFeeData(sourceEthChain),
         ])
         const sourceExecutionFee = (feeData.gasPrice ?? 0n) * estimatedGas
         if (sourceExecutionFee === 0n) {

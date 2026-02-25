@@ -163,8 +163,8 @@ export class RegisterToken implements RegistrationInterface {
         let feeInfo: FeeInfo | undefined
         if (logs.length === 0 || !isTokenAlreadyRegistered) {
             const [estimatedGas, feeData] = await Promise.all([
-                ethereum.estimateGas(tx),
-                ethereum.getFeeData(),
+                context.ethereumProvider.estimateGas(ethereum, tx),
+                context.ethereumProvider.getFeeData(ethereum),
             ])
             const executionFee = (feeData.gasPrice ?? 0n) * estimatedGas
             if (executionFee === 0n) {

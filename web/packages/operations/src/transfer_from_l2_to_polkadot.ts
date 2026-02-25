@@ -1,5 +1,6 @@
 import { Keyring } from "@polkadot/keyring"
 import {
+    EthersContext,
     EthersEthereumProvider,
     createApi,
     toPolkadotSnowbridgeV2,
@@ -27,7 +28,10 @@ export const transferToPolkadot = async (
 
     const info = bridgeInfoFor(env)
     const { registry } = info
-    const context = createApi({ info, ethereumProvider: new EthersEthereumProvider() }).context
+    const context: EthersContext = createApi({
+        info,
+        ethereumProvider: new EthersEthereumProvider(),
+    }).context
 
     const polkadot_keyring = new Keyring({ type: "sr25519" })
 
@@ -125,12 +129,15 @@ export const transferToPolkadot = async (
             tx,
             computed: { totalValue },
         } = transfer
-        const estimatedGas = await context.ethChain(l2ChainId).estimateGas(tx)
-        const feeData = await context.ethChain(l2ChainId).getFeeData()
+        const estimatedGas = await context.ethereumProvider.estimateGas(
+            context.ethChain(l2ChainId),
+            tx,
+        )
+        const feeData = await context.ethereumProvider.getFeeData(context.ethChain(l2ChainId))
         const executionFee = (feeData.gasPrice ?? 0n) * estimatedGas
 
         console.log("tx:", tx)
-        console.log("feeData:", feeData.toJSON())
+        console.log("feeData:", feeData)
         console.log("gas:", estimatedGas)
         console.log("relayer fee:", formatEther(fee.relayerFee))
         console.log("execution cost:", formatEther(executionFee))
