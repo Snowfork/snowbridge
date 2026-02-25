@@ -1,5 +1,5 @@
 import { Keyring } from "@polkadot/keyring"
-import { EthersEthereumProvider, createApi, toPolkadotV2 } from "@snowbridge/api"
+import { EthersContext, EthersEthereumProvider, createApi, toPolkadotV2 } from "@snowbridge/api"
 import { formatEther, Wallet } from "ethers"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { bridgeInfoFor } from "@snowbridge/registry"
@@ -20,7 +20,10 @@ export const transferToPolkadot = async (
 
     const info = bridgeInfoFor(env)
     const { registry } = info
-    const context = createApi({ info, ethereumProvider: new EthersEthereumProvider() }).context
+    const context: EthersContext = createApi({
+        info,
+        ethereumProvider: new EthersEthereumProvider(),
+    }).context
 
     const ETHEREUM_ACCOUNT = new Wallet(
         process.env.ETHEREUM_KEY ?? "Your Key Goes Here",
@@ -132,12 +135,12 @@ export const transferToPolkadot = async (
             tx,
             computed: { totalValue },
         } = transfer
-        const estimatedGas = await context.ethereum().estimateGas(tx)
-        const feeData = await context.ethereum().getFeeData()
+        const estimatedGas = await context.ethereumProvider.estimateGas(context.ethereum(), tx)
+        const feeData = await context.ethereumProvider.getFeeData(context.ethereum())
         const executionFee = (feeData.gasPrice ?? 0n) * estimatedGas
 
         console.log("tx:", tx)
-        console.log("feeData:", feeData.toJSON())
+        console.log("feeData:", feeData)
         console.log("gas:", estimatedGas)
         console.log("delivery cost:", formatEther(fee.totalFeeInWei))
         console.log("execution cost:", formatEther(executionFee))

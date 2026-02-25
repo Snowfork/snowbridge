@@ -35,11 +35,11 @@ import {
     XcmDryRunEffects,
 } from "@polkadot/types/interfaces"
 import { Result } from "@polkadot/types"
-import { FeeData } from "ethers"
 import { paraImplementation } from "./parachains"
 import { padFeeByPercentage, u32ToLeBytes } from "./utils"
 import { EthersContext } from "./index"
 import { ParachainBase } from "./parachains/parachainBase"
+import type { FeeData } from "./EthereumProvider"
 
 export type Transfer = {
     input: {
