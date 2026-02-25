@@ -596,9 +596,7 @@ export class SnowbridgeApi<
                 ) as TransferFromTo<F, T>
             case "ethereum_l2->polkadot":
                 if (!tokenAddress) {
-                    throw new Error(
-                        "tokenAddress is required for ethereum_l2->polkadot transfers.",
-                    )
+                    throw new Error("tokenAddress is required for ethereum_l2->polkadot transfers.")
                 }
                 return withKind(
                     toPolkadotTransfers.createL2TransferImplementation(
@@ -610,7 +608,9 @@ export class SnowbridgeApi<
                     kind,
                 ) as TransferFromTo<F, T>
             default:
-                throw new Error(`No implementation for route ${from.kind}:${from.id} -> ${to.kind}:${to.id}.`)
+                throw new Error(
+                    `No implementation for route ${from.kind}:${from.id} -> ${to.kind}:${to.id}.`,
+                )
         }
     }
 }

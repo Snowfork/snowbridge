@@ -1,10 +1,5 @@
 import { Keyring } from "@polkadot/keyring"
-import {
-    EthersEthereumProvider,
-    createApi,
-    toEthereumSnowbridgeV2,
-    toEthereumV2,
-} from "@snowbridge/api"
+import { EthersEthereumProvider, createApi, toEthereumSnowbridgeV2 } from "@snowbridge/api"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { formatUnits, Wallet } from "ethers"
 import { bridgeInfoFor } from "@snowbridge/registry"
@@ -29,7 +24,8 @@ export const transferToEthereum = async (
 
     const info = bridgeInfoFor(env)
     const { registry } = info
-    const context = createApi({ info, ethereumProvider: new EthersEthereumProvider() }).context
+    const api = createApi({ info, ethereumProvider: new EthersEthereumProvider() })
+    const context = api.context
 
     const polkadot_keyring = new Keyring({ type: "sr25519" })
 
@@ -56,13 +52,13 @@ export const transferToEthereum = async (
     console.log("Asset Hub to Ethereum")
     {
         // Step 0. Create a transfer implementation
-        const transferImpl = await toEthereumSnowbridgeV2.createTransferImplementation(
-            sourceParaId,
-            registry,
+        const transferImpl = api.transfer(
+            { kind: "polkadot", id: sourceParaId },
+            { kind: "ethereum", id: registry.ethChainId },
             TOKEN_CONTRACT,
         )
         // Step 1. Get the delivery fee for the transaction
-        let fee: toEthereumV2.DeliveryFee = await transferImpl.getDeliveryFee(
+        let fee = await transferImpl.getDeliveryFee(
             { sourceParaId, context },
             registry,
             TOKEN_CONTRACT,
@@ -107,7 +103,7 @@ export const transferToEthereum = async (
         console.log("validation result", validation)
 
         // Step 5. Check validation logs for errors
-        if (validation.logs.find((l) => l.kind == toEthereumSnowbridgeV2.ValidationKind.Error)) {
+        if (!validation.success) {
             throw Error(`validation has one of more errors.`)
         }
         if (process.env["DRY_RUN"] != "true") {

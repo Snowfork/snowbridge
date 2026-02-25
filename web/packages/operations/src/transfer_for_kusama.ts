@@ -1,6 +1,6 @@
 import "dotenv/config"
 import { Keyring } from "@polkadot/keyring"
-import { EthersEthereumProvider, createApi, forKusama } from "@snowbridge/api"
+import { EthersEthereumProvider, createApi } from "@snowbridge/api"
 import { Direction } from "@snowbridge/api/dist/forKusama"
 import { bridgeInfoFor } from "@snowbridge/registry"
 
@@ -20,7 +20,8 @@ export const transferForKusama = async (
         throw Error(`Unknown environment '${env}'`)
     }
 
-    const context = createApi({ info, ethereumProvider: new EthersEthereumProvider() }).context
+    const api = createApi({ info, ethereumProvider: new EthersEthereumProvider() })
+    const context = api.context
 
     const [polkadotAssetHub, kusamaAssetHub] = await Promise.all([
         context.assetHub(),
@@ -82,8 +83,19 @@ export const transferForKusama = async (
 
     console.log(transferName)
     {
+        const transferImpl =
+            direction == Direction.ToPolkadot
+                ? api.transfer(
+                      { kind: "kusama", id: registry.kusama!.assetHubParaId },
+                      { kind: "polkadot", id: registry.assetHubParaId },
+                  )
+                : api.transfer(
+                      { kind: "polkadot", id: registry.assetHubParaId },
+                      { kind: "kusama", id: registry.kusama!.assetHubParaId },
+                  )
+
         // Step 1. Get the delivery fee for the transaction
-        const fee = await forKusama.getDeliveryFee(
+        const fee = await transferImpl.getDeliveryFee(
             sourceAssetHub,
             destAssetHub,
             direction,
@@ -92,7 +104,7 @@ export const transferForKusama = async (
         )
 
         // Step 2. Create a transfer tx
-        const transfer = await forKusama.createTransfer(
+        const transfer = await transferImpl.createTransfer(
             sourceAssetHub,
             direction,
             registry,
@@ -104,20 +116,20 @@ export const transferForKusama = async (
         )
 
         // Step 3. Validate
-        const validation = await forKusama.validateTransfer(
+        const validation = await transferImpl.validateTransfer(
             { sourceAssetHub, destAssetHub },
             direction,
             transfer,
         )
 
         // Step 4. Check validation logs for errors
-        if (validation.logs.find((l) => l.kind == forKusama.ValidationKind.Error)) {
+        if (!validation.success) {
             console.error("validation errors", validation.logs)
             throw Error(`validation has one of more errors.`)
         }
 
         // Step 5. Submit transaction and get receipt for tracking
-        const response = await forKusama.signAndSend(sourceAssetHub, transfer, SOURCE_ACCOUNT, {
+        const response = await transferImpl.signAndSend(sourceAssetHub, transfer, SOURCE_ACCOUNT, {
             withSignedTransaction: true,
         })
         if (!response) {
