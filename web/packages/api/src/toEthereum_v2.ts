@@ -40,6 +40,7 @@ import { padFeeByPercentage, u32ToLeBytes } from "./utils"
 import { EthersContext } from "./index"
 import { ParachainBase } from "./parachains/parachainBase"
 import type { FeeData } from "./EthereumProvider"
+import { TransferInterface as ToEthereumTransferInterface } from "./transfers/toEthereum/transferInterface"
 
 export type Transfer = {
     input: {
@@ -89,6 +90,81 @@ export type FeeInfo = {
     feeData: FeeData
     executionFee: bigint
     totalTxCost: bigint
+}
+
+export class V1ToEthereumAdapter implements ToEthereumTransferInterface {
+    async getDeliveryFee(
+        source: { sourceParaId: number; context: EthersContext },
+        registry: AssetRegistry,
+        tokenAddress: string,
+        options?: {
+            padPercentage?: bigint
+            slippagePadPercentage?: bigint
+            defaultFee?: bigint
+            feeTokenLocation?: any
+            claimerLocation?: any
+            contractCall?: ContractCall
+        },
+    ): Promise<DeliveryFee> {
+        if (options?.feeTokenLocation !== undefined) {
+            throw new Error("v1 toEthereum adapter does not support options.feeTokenLocation.")
+        }
+        if (options?.claimerLocation !== undefined) {
+            throw new Error("v1 toEthereum adapter does not support options.claimerLocation.")
+        }
+        if (options?.contractCall !== undefined) {
+            throw new Error("v1 toEthereum adapter does not support options.contractCall.")
+        }
+
+        return getDeliveryFee(source.context, source.sourceParaId, registry, tokenAddress, {
+            padPercentage: options?.padPercentage,
+            slippagePadPercentage: options?.slippagePadPercentage,
+            defaultFee: options?.defaultFee,
+        })
+    }
+
+    async createTransfer(
+        source: { sourceParaId: number; context: EthersContext },
+        registry: AssetRegistry,
+        sourceAccount: string,
+        beneficiaryAccount: string,
+        tokenAddress: string,
+        amount: bigint,
+        fee: DeliveryFee,
+        options?: {
+            claimerLocation?: any
+            contractCall?: ContractCall
+        },
+    ): Promise<Transfer> {
+        if (options?.claimerLocation !== undefined) {
+            throw new Error("v1 toEthereum adapter does not support options.claimerLocation.")
+        }
+        if (options?.contractCall !== undefined) {
+            throw new Error("v1 toEthereum adapter does not support options.contractCall.")
+        }
+
+        return createTransfer(
+            source,
+            registry,
+            sourceAccount,
+            beneficiaryAccount,
+            tokenAddress,
+            amount,
+            fee,
+        )
+    }
+
+    async validateTransfer(context: EthersContext, transfer: Transfer): Promise<ValidationResult> {
+        return validateTransfer(context, transfer)
+    }
+}
+
+export function createTransferImplementationV1(
+    _sourceParaId: number,
+    _registry: AssetRegistry,
+    _tokenAddress: string,
+): ToEthereumTransferInterface {
+    return new V1ToEthereumAdapter()
 }
 
 export async function createTransfer(
