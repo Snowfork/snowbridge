@@ -56,6 +56,10 @@ func (m *Writer) GetLastFinalizedHeaderState() (state.FinalizedHeader, error) {
 	return m.LastFinalizedState, nil
 }
 
+func (m *Writer) GetLastFinalizedHeaderStateAtBestBlock() (state.FinalizedHeader, error) {
+	return m.LastFinalizedState, nil
+}
+
 func (m *Writer) GetFinalizedStateByStorageKey(key string) (scale.BeaconState, error) {
 	return scale.BeaconState{}, nil
 }

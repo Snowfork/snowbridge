@@ -10,45 +10,54 @@ import (
 
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/cache"
+	beaconerrors "github.com/snowfork/snowbridge/relayer/relays/beacon/errors"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/api"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/protocol"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/state"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/store"
 	"github.com/snowfork/snowbridge/relayer/relays/util"
 
 	"github.com/ethereum/go-ethereum/common"
 	ssz "github.com/ferranbt/fastssz"
-	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
+)
+
+const (
+	// stateServiceErrorThreshold is the duration after which continuous errors
+	// from the beacon state service should trigger a relayer restart
+	stateServiceErrorThreshold = 3 * time.Minute
 )
 
 var (
 	ErrCommitteeUpdateHeaderInDifferentSyncPeriod = errors.New("sync committee in different sync period")
-	ErrBeaconStateUnavailable                     = errors.New("beacon state object not available yet")
 	ErrSyncCommitteeNotSuperMajority              = errors.New("update received was not signed by supermajority")
+	ErrNewerFinalizedHeaderAvailable              = errors.New("newer finalized header available, abandoning current request")
 )
 
+// StateServiceClient is an interface for the beacon state service HTTP client
+type StateServiceClient interface {
+	GetBlockRootProof(slot uint64) (*scale.BlockRootProof, error)
+	GetFinalizedHeaderProof(slot uint64) ([]types.H256, error)
+	GetSyncCommitteeProof(slot uint64, period string) (*scale.SyncCommitteeProof, error)
+	Health() error
+}
+
 type Syncer struct {
-	Client   api.BeaconAPI
-	store    store.BeaconStore
-	protocol *protocol.Protocol
+	Client       api.BeaconAPI
+	protocol     *protocol.Protocol
+	stateService StateServiceClient
 }
 
-func New(client api.BeaconAPI, store store.BeaconStore, protocol *protocol.Protocol) *Syncer {
+// New creates a Syncer with an optional beacon state service client.
+// When stateService is provided, it handles all beacon state fetching with internal fallback logic
+// (state service cache -> beacon API -> persistent store).
+// When stateService is nil, the syncer falls back directly to the beacon API.
+func New(client api.BeaconAPI, protocol *protocol.Protocol, stateService StateServiceClient) *Syncer {
 	return &Syncer{
-		Client:   client,
-		store:    store,
-		protocol: protocol,
+		Client:       client,
+		protocol:     protocol,
+		stateService: stateService,
 	}
-}
-
-type finalizedUpdateContainer struct {
-	AttestedSlot        uint64
-	AttestedState       state.BeaconState
-	FinalizedState      state.BeaconState
-	FinalizedHeader     api.BeaconHeader
-	FinalizedCheckPoint state.Checkpoint
 }
 
 func (s *Syncer) GetCheckpoint() (scale.BeaconCheckpoint, error) {
@@ -168,42 +177,25 @@ func (s *Syncer) GetCheckpointAtSlot(slot uint64) (scale.BeaconCheckpoint, error
 		return scale.BeaconCheckpoint{}, fmt.Errorf("get genesis: %w", err)
 	}
 
-	finalizedState, err := s.getBeaconStateAtSlot(slot)
-
-	blockRootsProof, err := s.GetBlockRootsFromState(finalizedState)
+	// Get block roots proof
+	blockRootsProof, err := s.GetBlockRoots(slot)
 	if err != nil {
 		return scale.BeaconCheckpoint{}, fmt.Errorf("fetch block roots: %w", err)
 	}
 
-	syncCommittee := finalizedState.GetCurrentSyncCommittee()
+	// Get sync committee proof with pubkeys
+	syncCommitteeProof, err := s.getSyncCommitteeProof(slot, "current")
 	if err != nil {
-		return scale.BeaconCheckpoint{}, fmt.Errorf("convert sync committee to scale: %w", err)
-	}
-
-	stateTree, err := finalizedState.GetTree()
-	if err != nil {
-		return scale.BeaconCheckpoint{}, fmt.Errorf("get state tree: %w", err)
-	}
-
-	_ = stateTree.Hash() // necessary to populate the proof tree values
-
-	proof, err := stateTree.Prove(s.protocol.CurrentSyncCommitteeGeneralizedIndex(uint64(checkpoint.Payload.FinalizedHeader.Slot)))
-	if err != nil {
-		return scale.BeaconCheckpoint{}, fmt.Errorf("get block roof proof: %w", err)
-	}
-
-	pubkeys, err := util.ByteArrayToPublicKeyArray(syncCommittee.PubKeys)
-	if err != nil {
-		return scale.BeaconCheckpoint{}, fmt.Errorf("bytes to pubkey array: %w", err)
+		return scale.BeaconCheckpoint{}, fmt.Errorf("fetch sync committee proof: %w", err)
 	}
 
 	return scale.BeaconCheckpoint{
 		Header: checkpoint.Payload.FinalizedHeader,
 		CurrentSyncCommittee: scale.SyncCommittee{
-			Pubkeys:         pubkeys,
-			AggregatePubkey: syncCommittee.AggregatePubKey,
+			Pubkeys:         syncCommitteeProof.Pubkeys,
+			AggregatePubkey: syncCommitteeProof.AggregatePubkey,
 		},
-		CurrentSyncCommitteeBranch: util.BytesBranchToScale(proof.Hashes),
+		CurrentSyncCommitteeBranch: syncCommitteeProof.Proof,
 		ValidatorsRoot:             types.H256(genesis.ValidatorsRoot),
 		BlockRootsRoot:             blockRootsProof.Leaf,
 		BlockRootsBranch:           blockRootsProof.Proof,
@@ -258,6 +250,14 @@ func (s *Syncer) GetSyncCommitteePeriodUpdateFromEndpoint(from uint64) (scale.Up
 		return scale.Update{}, fmt.Errorf("convert sync aggregate to scale: %w", err)
 	}
 
+	superMajority, err := s.protocol.SyncCommitteeSuperMajority(committeeUpdate.SyncAggregate.SyncCommitteeBits)
+	if err != nil {
+		return scale.Update{}, fmt.Errorf("compute sync committee supermajority: %w", err)
+	}
+	if !superMajority {
+		return scale.Update{}, ErrSyncCommitteeNotSuperMajority
+	}
+
 	signatureSlot, err := strconv.ParseUint(committeeUpdate.SignatureSlot, 10, 64)
 	if err != nil {
 		return scale.Update{}, fmt.Errorf("parse signature slot as int: %w", err)
@@ -303,98 +303,160 @@ func (s *Syncer) GetSyncCommitteePeriodUpdateFromEndpoint(from uint64) (scale.Up
 	return syncCommitteePeriodUpdate, nil
 }
 
-func (s *Syncer) GetBlockRoots(slot uint64) (scale.BlockRootProof, error) {
-	var blockRootProof scale.BlockRootProof
-	var beaconState state.BeaconState
-	var blockRootsContainer state.BlockRootsContainer
+// retryWithBackoff executes fetchFn with retry logic and backoff for proof not ready errors.
+// Returns ErrNewerFinalizedHeaderAvailable if a newer finalized slot is available.
+// Triggers a relayer restart if:
+//   - "proof not ready" errors persist for more than stateServiceErrorThreshold (3 minutes)
+//   - any other error occurs (immediate restart)
+func (s *Syncer) retryWithBackoff(slot uint64, proofType string, fetchFn func() error) error {
+	const maxRetries = 10
+	startTime := time.Now()
 
-	data, err := s.getBeaconState(slot)
-	if err != nil {
-		return blockRootProof, fmt.Errorf("fetch beacon state: %w", err)
+	for i := 0; i < maxRetries; i++ {
+		err := fetchFn()
+		if err == nil {
+			return nil
+		}
+
+		// Check if it's a "not ready" error that we should retry
+		if errors.Is(err, beaconerrors.ErrProofNotReady) {
+			// Check if a newer finalized slot is available before retrying
+			if newerSlot, hasNewer := s.checkForNewerFinalizedSlot(slot); hasNewer {
+				log.WithFields(log.Fields{
+					"requestedSlot": slot,
+					"newerSlot":     newerSlot,
+					"proofType":     proofType,
+				}).Info("newer finalized header available, abandoning current request")
+				return ErrNewerFinalizedHeaderAvailable
+			}
+
+			// Check if we've been waiting too long - trigger restart
+			if time.Since(startTime) > stateServiceErrorThreshold {
+				log.WithFields(log.Fields{
+					"slot":      slot,
+					"proofType": proofType,
+					"waitTime":  time.Since(startTime),
+				}).Fatal("beacon state service proof not ready for over 3 minutes, restarting relayer")
+			}
+
+			waitTime := time.Duration(5*(i+1)) * time.Second
+			if waitTime > 30*time.Second {
+				waitTime = 30 * time.Second
+			}
+			log.WithFields(log.Fields{
+				"slot":      slot,
+				"proofType": proofType,
+				"attempt":   i + 1,
+				"wait":      waitTime,
+			}).Info("proof not ready, retrying...")
+			time.Sleep(waitTime)
+			continue
+		}
+
+		// Actual error, restart immediately
+		log.WithError(err).WithFields(log.Fields{
+			"slot":      slot,
+			"proofType": proofType,
+		}).Fatal("beacon state service returned error, restarting relayer")
 	}
 
-	forkVersion := s.protocol.ForkVersion(slot)
-
-	blockRootsContainer = &state.BlockRootsContainerMainnet{}
-	if forkVersion == protocol.Fulu {
-		beaconState = &state.BeaconStateFulu{}
-	} else if forkVersion == protocol.Electra {
-		beaconState = &state.BeaconStateElectra{}
-	} else {
-		beaconState = &state.BeaconStateDenebMainnet{}
-	}
-
-	err = beaconState.UnmarshalSSZ(data)
-	if err != nil {
-		return blockRootProof, fmt.Errorf("unmarshal beacon state: %w", err)
-	}
-
-	stateTree, err := beaconState.GetTree()
-	if err != nil {
-		return blockRootProof, fmt.Errorf("get state tree: %w", err)
-	}
-
-	_ = stateTree.Hash() // necessary to populate the proof tree values
-
-	proof, err := stateTree.Prove(s.protocol.BlockRootGeneralizedIndex(slot))
-	if err != nil {
-		return scale.BlockRootProof{}, fmt.Errorf("get block roof proof: %w", err)
-	}
-
-	scaleBlockRootProof := []types.H256{}
-	for _, proofItem := range proof.Hashes {
-		scaleBlockRootProof = append(scaleBlockRootProof, types.NewH256(proofItem))
-	}
-
-	blockRootsContainer.SetBlockRoots(beaconState.GetBlockRoots())
-
-	tree, err := blockRootsContainer.GetTree()
-	if err != nil {
-		return blockRootProof, fmt.Errorf("convert block roots to tree: %w", err)
-	}
-
-	return scale.BlockRootProof{
-		Leaf:  types.NewH256(proof.Leaf),
-		Proof: scaleBlockRootProof,
-		Tree:  tree,
-	}, nil
+	// Should not reach here, but if retries exhausted, restart
+	log.WithFields(log.Fields{
+		"slot":      slot,
+		"proofType": proofType,
+	}).Fatal("beacon state service retries exhausted, restarting relayer")
+	return nil // unreachable
 }
 
-func (s *Syncer) GetBlockRootsFromState(beaconState state.BeaconState) (scale.BlockRootProof, error) {
-	var blockRootProof scale.BlockRootProof
-	var blockRootsContainer state.BlockRootsContainer
+func (s *Syncer) GetBlockRoots(slot uint64) (scale.BlockRootProof, error) {
+	if s.stateService == nil {
+		return scale.BlockRootProof{}, fmt.Errorf("state service is required but not configured")
+	}
 
-	blockRootsContainer = &state.BlockRootsContainerMainnet{}
+	var result *scale.BlockRootProof
+	err := s.retryWithBackoff(slot, "block root proof", func() error {
+		proof, err := s.stateService.GetBlockRootProof(slot)
+		if err != nil {
+			return err
+		}
+		log.WithField("slot", slot).Debug("got block root proof from state service")
+		result = proof
+		return nil
+	})
 
-	stateTree, err := beaconState.GetTree()
 	if err != nil {
-		return blockRootProof, fmt.Errorf("get state tree: %w", err)
+		return scale.BlockRootProof{}, err
+	}
+	return *result, nil
+}
+
+// getSyncCommitteeProof fetches sync committee proof with pubkeys from state service with retry logic
+func (s *Syncer) getSyncCommitteeProof(slot uint64, period string) (*scale.SyncCommitteeProof, error) {
+	if s.stateService == nil {
+		return nil, fmt.Errorf("state service is required but not configured")
 	}
 
-	_ = stateTree.Hash() // necessary to populate the proof tree values
+	var result *scale.SyncCommitteeProof
+	err := s.retryWithBackoff(slot, "sync committee proof", func() error {
+		proof, err := s.stateService.GetSyncCommitteeProof(slot, period)
+		if err != nil {
+			return err
+		}
+		log.WithFields(log.Fields{"slot": slot, "period": period}).Debug("got sync committee proof from state service")
+		result = proof
+		return nil
+	})
 
-	proof, err := stateTree.Prove(s.protocol.BlockRootGeneralizedIndex(beaconState.GetSlot()))
 	if err != nil {
-		return scale.BlockRootProof{}, fmt.Errorf("get block roof proof: %w", err)
+		return nil, err
+	}
+	return result, nil
+}
+
+// getFinalizedHeaderProof fetches finalized header proof from state service with retry logic
+func (s *Syncer) getFinalizedHeaderProof(slot uint64) ([]types.H256, error) {
+	if s.stateService == nil {
+		return nil, fmt.Errorf("state service is required but not configured")
 	}
 
-	scaleBlockRootProof := []types.H256{}
-	for _, proofItem := range proof.Hashes {
-		scaleBlockRootProof = append(scaleBlockRootProof, types.NewH256(proofItem))
-	}
+	var result []types.H256
+	err := s.retryWithBackoff(slot, "finalized header proof", func() error {
+		proof, err := s.stateService.GetFinalizedHeaderProof(slot)
+		if err != nil {
+			return err
+		}
+		log.WithField("slot", slot).Debug("got finalized header proof from state service")
+		result = proof
+		return nil
+	})
 
-	blockRootsContainer.SetBlockRoots(beaconState.GetBlockRoots())
-
-	tree, err := blockRootsContainer.GetTree()
 	if err != nil {
-		return blockRootProof, fmt.Errorf("convert block roots to tree: %w", err)
+		return nil, err
+	}
+	return result, nil
+}
+
+// checkForNewerFinalizedSlot checks if a newer finalized slot is available than the one being requested.
+// Returns the newer slot and true if a newer one exists, otherwise returns 0 and false.
+func (s *Syncer) checkForNewerFinalizedSlot(requestedSlot uint64) (uint64, bool) {
+	finalizedUpdate, err := s.Client.GetLatestFinalizedUpdate()
+	if err != nil {
+		// If we can't check, assume no newer slot is available
+		log.WithError(err).Debug("failed to check for newer finalized slot")
+		return 0, false
 	}
 
-	return scale.BlockRootProof{
-		Leaf:  types.NewH256(proof.Leaf),
-		Proof: scaleBlockRootProof,
-		Tree:  tree,
-	}, nil
+	currentFinalizedSlot, err := strconv.ParseUint(finalizedUpdate.Data.FinalizedHeader.Beacon.Slot, 10, 64)
+	if err != nil {
+		log.WithError(err).Debug("failed to parse current finalized slot")
+		return 0, false
+	}
+
+	if currentFinalizedSlot > requestedSlot {
+		return currentFinalizedSlot, true
+	}
+
+	return 0, false
 }
 
 func (s *Syncer) GetFinalizedHeader() (scale.BeaconHeader, error) {
@@ -447,12 +509,7 @@ func (s *Syncer) GetFinalizedUpdate() (scale.Update, error) {
 		return scale.Update{}, fmt.Errorf("parse signature slot as int: %w", err)
 	}
 
-	signatureBlock, err := s.Client.GetBeaconBlockBySlot(signatureSlot)
-	if err != nil {
-		return scale.Update{}, fmt.Errorf("get signature block: %w", err)
-	}
-
-	superMajority, err := s.protocol.SyncCommitteeSuperMajority(signatureBlock.Data.Message.Body.SyncAggregate.SyncCommitteeBits)
+	superMajority, err := s.protocol.SyncCommitteeSuperMajority(finalizedUpdate.Data.SyncAggregate.SyncCommitteeBits)
 	if err != nil {
 		return scale.Update{}, fmt.Errorf("compute sync committee supermajority: %d err: %w", signatureSlot, err)
 	}
@@ -513,7 +570,7 @@ func (s *Syncer) FindBeaconHeaderWithBlockIncluded(slot uint64) (state.BeaconBlo
 	}
 
 	if err != nil || header.Slot == 0 {
-		log.WithFields(logrus.Fields{
+		log.WithFields(log.Fields{
 			"start": startSlot,
 			"end":   slot,
 		}).WithError(err).Error("matching block included not found")
@@ -622,16 +679,6 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash, checkpoint *cache.Proof)
 		ExecutionHeader: versionedExecutionPayloadHeader,
 		ExecutionBranch: executionHeaderBranch,
 	}, nil
-}
-
-func (s *Syncer) getBeaconStateAtSlot(slot uint64) (state.BeaconState, error) {
-	var beaconState state.BeaconState
-	beaconData, err := s.getBeaconState(slot)
-	if err != nil {
-		return beaconState, fmt.Errorf("fetch beacon state: %w", err)
-	}
-
-	return s.UnmarshalBeaconState(slot, beaconData)
 }
 
 func (s *Syncer) UnmarshalBeaconState(slot uint64, data []byte) (state.BeaconState, error) {
@@ -756,71 +803,54 @@ func (s *Syncer) GetFinalizedUpdateWithSyncCommittee(syncCommitteePeriod uint64)
 }
 
 func (s *Syncer) GetFinalizedUpdateAtAttestedSlot(minSlot, maxSlot uint64, fetchNextSyncCommittee bool) (scale.Update, error) {
-	var update scale.Update
+	if s.stateService == nil {
+		return scale.Update{}, fmt.Errorf("state service is required but not configured")
+	}
 
+	return s.getFinalizedUpdateFromStateService(minSlot, maxSlot, fetchNextSyncCommittee)
+}
+
+// getFinalizedUpdateFromStateService gets finalized update using proofs from state service
+// This path never handles raw beacon state data
+func (s *Syncer) getFinalizedUpdateFromStateService(minSlot, maxSlot uint64, fetchNextSyncCommittee bool) (scale.Update, error) {
 	attestedSlot, err := s.FindValidAttestedHeader(minSlot, maxSlot)
 	if err != nil {
 		return scale.Update{}, fmt.Errorf("cannot find blocks at boundaries: %w", err)
 	}
 
-	// Try getting beacon data from the API first
-	data, err := s.getBeaconDataFromClient(attestedSlot)
+	// Get finalized header from light client API
+	finalizedUpdate, err := s.Client.GetLatestFinalizedUpdate()
 	if err != nil {
-		log.WithError(err).Warn("unable to fetch beacon data from API, trying beacon store")
-		// If it fails, using the beacon store and look for a relevant finalized update
-		for {
-			if minSlot > maxSlot {
-				return update, fmt.Errorf("find beacon state store options exhausted: %w", err)
-			}
-
-			data, err = s.getBestMatchBeaconDataFromStore(minSlot, maxSlot)
-			if err != nil {
-				return update, fmt.Errorf("fetch beacon data from api and data store failure: %w", err)
-			}
-
-			err = s.ValidatePair(data.FinalizedHeader.Slot, data.AttestedSlot, data.AttestedState)
-			if err != nil {
-				minSlot = data.FinalizedHeader.Slot + 1
-				log.WithError(err).WithField("minSlot", minSlot).Warn("pair retrieved from database invalid")
-				continue
-			}
-
-			// The datastore may not have found the attested slot we wanted, but provided another valid one
-			attestedSlot = data.AttestedSlot
-			break
-		}
+		return scale.Update{}, fmt.Errorf("get finalized update from API: %w", err)
 	}
 
-	log.WithFields(log.Fields{"finalizedSlot": data.FinalizedHeader.Slot, "attestedSlot": data.AttestedSlot}).Info("found slot pair for finalized update")
-	// Finalized header proof
-	stateTree, err := data.AttestedState.GetTree()
+	finalizedSlot, err := util.ToUint64(finalizedUpdate.Data.FinalizedHeader.Beacon.Slot)
 	if err != nil {
-		return update, fmt.Errorf("get state tree: %w", err)
+		return scale.Update{}, fmt.Errorf("parse finalized slot: %w", err)
 	}
-	_ = stateTree.Hash() // necessary to populate the proof tree values
-	finalizedHeaderProof, err := stateTree.Prove(s.protocol.FinalizedCheckpointGeneralizedIndex(attestedSlot))
+
+	log.WithFields(log.Fields{"finalizedSlot": finalizedSlot, "attestedSlot": attestedSlot}).Info("found slot pair for finalized update")
+
+	// Get proofs from state service
+	finalityProof, err := s.getFinalizedHeaderProof(attestedSlot)
 	if err != nil {
-		return update, fmt.Errorf("get finalized header proof: %w", err)
+		return scale.Update{}, fmt.Errorf("get finalized header proof: %w", err)
 	}
 
 	var nextSyncCommitteeScale scale.OptionNextSyncCommitteeUpdatePayload
 	if fetchNextSyncCommittee {
-		nextSyncCommitteeProof, err := stateTree.Prove(s.protocol.NextSyncCommitteeGeneralizedIndex(attestedSlot))
+		syncCommitteeProof, err := s.getSyncCommitteeProof(attestedSlot, "next")
 		if err != nil {
-			return update, fmt.Errorf("get finalized header proof: %w", err)
+			return scale.Update{}, fmt.Errorf("get next sync committee proof: %w", err)
 		}
-
-		nextSyncCommittee := data.AttestedState.GetNextSyncCommittee()
-
-		syncCommitteePubKeys, err := util.ByteArrayToPublicKeyArray(nextSyncCommittee.PubKeys)
 		nextSyncCommitteeScale = scale.OptionNextSyncCommitteeUpdatePayload{
 			HasValue: true,
 			Value: scale.NextSyncCommitteeUpdatePayload{
 				NextSyncCommittee: scale.SyncCommittee{
-					Pubkeys:         syncCommitteePubKeys,
-					AggregatePubkey: nextSyncCommittee.AggregatePubKey,
+					Pubkeys:         syncCommitteeProof.Pubkeys,
+					AggregatePubkey: syncCommitteeProof.AggregatePubkey,
 				},
-				NextSyncCommitteeBranch: util.BytesBranchToScale(nextSyncCommitteeProof.Hashes),
+				NextSyncCommitteeBranch: syncCommitteeProof.Proof,
 			},
 		}
 	} else {
@@ -829,48 +859,66 @@ func (s *Syncer) GetFinalizedUpdateAtAttestedSlot(minSlot, maxSlot uint64, fetch
 		}
 	}
 
-	blockRootsProof, err := s.GetBlockRootsFromState(data.FinalizedState)
+	blockRootsProof, err := s.GetBlockRoots(finalizedSlot)
 	if err != nil {
 		return scale.Update{}, fmt.Errorf("fetch block roots: %w", err)
 	}
 
-	// Get the header at the slot
+	// Get headers from beacon API
 	header, err := s.Client.GetHeaderBySlot(attestedSlot)
 	if err != nil {
-		return update, fmt.Errorf("fetch header at slot: %w", err)
+		return scale.Update{}, fmt.Errorf("fetch header at slot: %w", err)
+	}
+
+	finalizedHeader, err := s.Client.GetHeaderBySlot(finalizedSlot)
+	if err != nil {
+		return scale.Update{}, fmt.Errorf("fetch finalized header at slot: %w", err)
 	}
 
 	// Get the next block for the sync aggregate
 	nextHeader, err := s.FindBeaconHeaderWithBlockIncluded(attestedSlot + 1)
 	if err != nil {
-		return update, fmt.Errorf("fetch block: %w", err)
+		return scale.Update{}, fmt.Errorf("fetch block: %w", err)
 	}
 
 	nextBlock, err := s.Client.GetBeaconBlockBySlot(nextHeader.Slot)
 	if err != nil {
-		return update, fmt.Errorf("fetch block: %w", err)
+		return scale.Update{}, fmt.Errorf("fetch block: %w", err)
 	}
 
 	nextBlockSlot, err := util.ToUint64(nextBlock.Data.Message.Slot)
 	if err != nil {
-		return update, fmt.Errorf("parse next block slot: %w", err)
+		return scale.Update{}, fmt.Errorf("parse next block slot: %w", err)
 	}
 
 	scaleHeader, err := header.ToScale()
 	if err != nil {
-		return update, fmt.Errorf("convert header to scale: %w", err)
+		return scale.Update{}, fmt.Errorf("convert header to scale: %w", err)
 	}
 
-	scaleFinalizedHeader, err := data.FinalizedHeader.ToScale()
+	scaleFinalizedHeader, err := finalizedHeader.ToScale()
 	if err != nil {
-		return update, fmt.Errorf("convert finalized header to scale: %w", err)
+		return scale.Update{}, fmt.Errorf("convert finalized header to scale: %w", err)
 	}
 
 	syncAggregate := nextBlock.Data.Message.Body.SyncAggregate
-
 	scaleSyncAggregate, err := syncAggregate.ToScale()
 	if err != nil {
-		return update, fmt.Errorf("convert sync aggregate to scale: %w", err)
+		return scale.Update{}, fmt.Errorf("convert sync aggregate to scale: %w", err)
+	}
+
+	superMajority, err := s.protocol.SyncCommitteeSuperMajority(syncAggregate.SyncCommitteeBits)
+	if err != nil {
+		return scale.Update{}, fmt.Errorf("compute sync committee supermajority: %w", err)
+	}
+	if !superMajority {
+		return scale.Update{}, ErrSyncCommitteeNotSuperMajority
+	}
+
+	// Get finalized block root from beacon API
+	finalizedBlockRoot, err := s.Client.GetBeaconBlockRoot(finalizedSlot)
+	if err != nil {
+		return scale.Update{}, fmt.Errorf("get finalized block root: %w", err)
 	}
 
 	payload := scale.UpdatePayload{
@@ -879,14 +927,14 @@ func (s *Syncer) GetFinalizedUpdateAtAttestedSlot(minSlot, maxSlot uint64, fetch
 		SignatureSlot:           types.U64(nextBlockSlot),
 		NextSyncCommitteeUpdate: nextSyncCommitteeScale,
 		FinalizedHeader:         scaleFinalizedHeader,
-		FinalityBranch:          util.BytesBranchToScale(finalizedHeaderProof.Hashes),
+		FinalityBranch:          finalityProof,
 		BlockRootsRoot:          blockRootsProof.Leaf,
 		BlockRootsBranch:        blockRootsProof.Proof,
 	}
 
 	return scale.Update{
 		Payload:                  payload,
-		FinalizedHeaderBlockRoot: common.BytesToHash(data.FinalizedCheckPoint.Root),
+		FinalizedHeaderBlockRoot: finalizedBlockRoot,
 		BlockRootsTree:           blockRootsProof.Tree,
 	}, nil
 }
@@ -923,78 +971,4 @@ func (s *Syncer) getExecutionHeaderBranch(block state.BeaconBlock) ([]types.H256
 	proof, err := tree.Prove(s.protocol.ExecutionPayloadGeneralizedIndex(block.GetBeaconSlot()))
 
 	return util.BytesBranchToScale(proof.Hashes), nil
-}
-
-// Get the attested and finalized beacon states from the Beacon API.
-func (s *Syncer) getBeaconDataFromClient(attestedSlot uint64) (finalizedUpdateContainer, error) {
-	var response finalizedUpdateContainer
-	var err error
-
-	response.AttestedSlot = attestedSlot
-	// Get the beacon data first since it is mostly likely to fail
-	response.AttestedState, err = s.getBeaconStateAtSlot(attestedSlot)
-	if err != nil {
-		return response, fmt.Errorf("fetch attested header beacon state at slot %d: %w", attestedSlot, err)
-	}
-
-	response.FinalizedCheckPoint = *response.AttestedState.GetFinalizedCheckpoint()
-
-	// Get the finalized header at the given slot state
-	response.FinalizedHeader, err = s.Client.GetHeaderByBlockRoot(common.BytesToHash(response.FinalizedCheckPoint.Root))
-	if err != nil {
-		return response, fmt.Errorf("fetch header: %w", err)
-	}
-
-	response.FinalizedState, err = s.getBeaconStateAtSlot(response.FinalizedHeader.Slot)
-	if err != nil {
-		return response, fmt.Errorf("fetch attested header beacon state at slot %d: %w", attestedSlot, err)
-	}
-
-	return response, nil
-}
-
-func (s *Syncer) getBestMatchBeaconDataFromStore(minSlot, maxSlot uint64) (finalizedUpdateContainer, error) {
-	var response finalizedUpdateContainer
-	var err error
-
-	data, err := s.store.FindBeaconStateWithinRange(minSlot, maxSlot)
-	if err != nil {
-		return finalizedUpdateContainer{}, err
-	}
-
-	response.AttestedSlot = data.AttestedSlot
-	response.AttestedState, err = s.UnmarshalBeaconState(data.AttestedSlot, data.AttestedBeaconState)
-	if err != nil {
-		return finalizedUpdateContainer{}, err
-	}
-	response.FinalizedState, err = s.UnmarshalBeaconState(data.FinalizedSlot, data.FinalizedBeaconState)
-	if err != nil {
-		return finalizedUpdateContainer{}, err
-	}
-
-	response.FinalizedCheckPoint = *response.AttestedState.GetFinalizedCheckpoint()
-
-	response.FinalizedHeader, err = s.Client.GetHeaderByBlockRoot(common.BytesToHash(response.FinalizedCheckPoint.Root))
-	if err != nil {
-		return response, fmt.Errorf("fetch header: %w", err)
-	}
-
-	if response.FinalizedHeader.Slot != response.FinalizedState.GetSlot() {
-		return response, fmt.Errorf("finalized slot in state does not match attested finalized state: %w", err)
-	}
-
-	return response, nil
-}
-
-func (s *Syncer) getBeaconState(slot uint64) ([]byte, error) {
-	data, apiErr := s.Client.GetBeaconState(strconv.FormatUint(slot, 10))
-	if apiErr != nil {
-		var storeErr error
-		data, storeErr = s.store.GetBeaconStateData(slot)
-		if storeErr != nil {
-			log.WithFields(log.Fields{"apiError": apiErr, "storeErr": storeErr}).Warn("fetch beacon state from api and store failed")
-			return nil, ErrBeaconStateUnavailable
-		}
-	}
-	return data, nil
 }

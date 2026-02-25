@@ -1,0 +1,41 @@
+{
+  "source": {
+    "ethereum": {
+      "endpoint": "${ETHEREUM_ENDPOINT}",
+      "heartbeat-secs": 600
+    },
+    "polkadot": {
+      "endpoint": "${POLKADOT_ENDPOINT}",
+      "heartbeat-secs": 45
+    },
+    "parachain": {
+      "endpoint": "${BRIDGEHUB_ENDPOINT}",
+      "heartbeat-secs": 45
+    },
+    "contracts": {
+      "BeefyClient": "${BEEFY_CLIENT_CONTRACT}",
+      "Gateway": "${GATEWAY_CONTRACT}"
+    }
+  },
+  "sink": {
+    "ethereum": {
+      "endpoint": "${FLASHBOTS_ENDPOINT}",
+      "pending-tx-timeout-secs": 240
+    },
+    "contracts": {
+      "Gateway": "${GATEWAY_CONTRACT}"
+    },
+    "fees": {
+      "base-delivery-gas": 100000,
+      "base-unlock-gas": 60000,
+      "base-mint-gas": 60000,
+      "fee-ratio-numerator": 1,
+      "fee-ratio-denominator": 1
+    }
+  },
+  "reward-address": "${REWARD_ADDRESS}",
+  "ofac": {
+    "enabled": ${OFAC_ENABLED},
+    "apiKey": "${CHAINALYSIS_API_KEY}"
+  }
+}

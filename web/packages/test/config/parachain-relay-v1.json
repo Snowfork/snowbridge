@@ -24,11 +24,6 @@
       "Gateway": null
     }
   },
-  "schedule": {
-    "id": 0,
-    "totalRelayerCount": 1,
-    "sleepInterval": 45
-  },
   "ofac": {
     "enabled": false,
     "apiKey": ""

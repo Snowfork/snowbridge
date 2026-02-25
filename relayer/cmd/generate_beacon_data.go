@@ -13,7 +13,7 @@ import (
 
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
-	"github.com/snowfork/snowbridge/relayer/cmd/run/execution"
+	ethereumv2 "github.com/snowfork/snowbridge/relayer/cmd/run/ethereum-v2"
 	"github.com/snowfork/snowbridge/relayer/contracts"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/cache"
 	beaconConf "github.com/snowfork/snowbridge/relayer/relays/beacon/config"
@@ -23,7 +23,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/protocol"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/store"
-	executionConf "github.com/snowfork/snowbridge/relayer/relays/execution"
+	executionConf "github.com/snowfork/snowbridge/relayer/relays/ethereum-v2"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/cbroglie/mustache"
@@ -142,8 +142,8 @@ func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 		store.Connect()
 		defer store.Close()
 
-		client := api.NewBeaconClient(conf.Source.Beacon.Endpoint, conf.Source.Beacon.StateEndpoint)
-		s := syncer.New(client, &store, p)
+		client := api.NewBeaconClient(conf.Source.Beacon.Endpoint)
+		s := syncer.New(client, p, nil)
 
 		var checkPointScale scale.BeaconCheckpoint
 		if finalizedSlot == 0 {
@@ -220,8 +220,8 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 		defer store.Close()
 
 		log.WithFields(log.Fields{"endpoint": conf.Source.Beacon.Endpoint}).Info("connecting to beacon API")
-		client := api.NewBeaconClient(conf.Source.Beacon.Endpoint, conf.Source.Beacon.StateEndpoint)
-		s := syncer.New(client, &store, p)
+		client := api.NewBeaconClient(conf.Source.Beacon.Endpoint)
+		s := syncer.New(client, p, nil)
 
 		viper.SetConfigFile("/tmp/snowbridge-v2/execution-relay-v1.json")
 
@@ -230,7 +230,7 @@ func generateBeaconTestFixture(cmd *cobra.Command, _ []string) error {
 		}
 
 		var executionConfig executionConf.Config
-		err = viper.Unmarshal(&executionConfig, viper.DecodeHook(execution.HexHookFunc()))
+		err = viper.Unmarshal(&executionConfig, viper.DecodeHook(ethereumv2.HexHookFunc()))
 		if err != nil {
 			return fmt.Errorf("unable to parse execution relay config: %w", err)
 		}
@@ -575,8 +575,8 @@ func generateExecutionUpdate(cmd *cobra.Command, _ []string) error {
 		defer store.Close()
 
 		// generate executionUpdate
-		client := api.NewBeaconClient(conf.Source.Beacon.Endpoint, conf.Source.Beacon.StateEndpoint)
-		s := syncer.New(client, &store, p)
+		client := api.NewBeaconClient(conf.Source.Beacon.Endpoint)
+		s := syncer.New(client, p, nil)
 		blockRoot, err := s.Client.GetBeaconBlockRoot(uint64(beaconSlot))
 		if err != nil {
 			return fmt.Errorf("fetch block: %w", err)
@@ -777,8 +777,8 @@ func generateInboundFixture(cmd *cobra.Command, _ []string) error {
 		defer store.Close()
 
 		log.WithFields(log.Fields{"endpoint": beaconConf.Source.Beacon.Endpoint}).Info("connecting to beacon API")
-		client := api.NewBeaconClient(beaconConf.Source.Beacon.Endpoint, beaconConf.Source.Beacon.StateEndpoint)
-		s := syncer.New(client, &store, p)
+		client := api.NewBeaconClient(beaconConf.Source.Beacon.Endpoint)
+		s := syncer.New(client, p, nil)
 
 		viper.SetConfigFile(executionConfig)
 
@@ -787,7 +787,7 @@ func generateInboundFixture(cmd *cobra.Command, _ []string) error {
 		}
 
 		var executionConf executionConf.Config
-		err = viper.Unmarshal(&executionConf, viper.DecodeHook(execution.HexHookFunc()))
+		err = viper.Unmarshal(&executionConf, viper.DecodeHook(ethereumv2.HexHookFunc()))
 		if err != nil {
 			return fmt.Errorf("unable to parse execution relay config: %w", err)
 		}
@@ -953,8 +953,8 @@ func generateDeliveryProofFixture(cmd *cobra.Command, _ []string) error {
 		defer store.Close()
 
 		log.WithFields(log.Fields{"endpoint": beaconConf.Source.Beacon.Endpoint}).Info("connecting to beacon API")
-		client := api.NewBeaconClient(beaconConf.Source.Beacon.Endpoint, beaconConf.Source.Beacon.StateEndpoint)
-		s := syncer.New(client, &store, p)
+		client := api.NewBeaconClient(beaconConf.Source.Beacon.Endpoint)
+		s := syncer.New(client, p, nil)
 
 		viper.SetConfigFile(executionConfig)
 
@@ -963,7 +963,7 @@ func generateDeliveryProofFixture(cmd *cobra.Command, _ []string) error {
 		}
 
 		var executionConf executionConf.Config
-		err = viper.Unmarshal(&executionConf, viper.DecodeHook(execution.HexHookFunc()))
+		err = viper.Unmarshal(&executionConf, viper.DecodeHook(ethereumv2.HexHookFunc()))
 		if err != nil {
 			return fmt.Errorf("unable to parse execution relay config: %w", err)
 		}

@@ -1,24 +1,279 @@
-version: "3"
+x-logging: &awslogs
+  driver: awslogs
+  options:
+    awslogs-region: ${AWS_REGION}
+    awslogs-group: snowbridge/${ENVIRONMENT:-prod}
+    awslogs-create-group: "true"
+
+x-image: &image
+  image: ghcr.io/snowfork/snowbridge-relay:${IMAGE_TAG:-latest}
+  platform: linux/amd64
 
 services:
-  execution-assethub:
-    platform: linux/amd64
-    image: ghcr.io/snowfork/snowbridge-relay
-    build:
-      context: .
-    command: run execution --config /config/execution-relay-asset-hub-0.json --substrate.private-key ${EXECUTION_RELAY_ASSETHUB_SUB_KEY}
+  beacon-state-service:
+    <<: *image
+    command: run beacon-state-service --config /config/beacon-state-service.json
     volumes:
-      - ${CONFIG_DIR}:/config
-    env_file:
-      - .env
+      - beacon-state-data:/data
+    ports:
+      - "8080:8080"
+    environment:
+      - BEACON_ENDPOINT=${BEACON_ENDPOINT}
+      - FORK_DENEB=${FORK_DENEB}
+      - FORK_ELECTRA=${FORK_ELECTRA}
+      - FORK_FULU=${FORK_FULU}
     restart: on-failure
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    logging:
+      <<: *awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: snowbridge/${ENVIRONMENT:-prod}
+        awslogs-stream: beacon-state-service
+        awslogs-create-group: "true"
 
-  parachain-assethub:
-    platform: linux/amd64
-    image: ghcr.io/snowfork/snowbridge-relay
-    command: run parachain --config /config/parachain-relay-asset-hub-0.json --ethereum.private-key ${PARACHAIN_RELAY_ASSETHUB_ETH_KEY}
+  beacon:
+    <<: *image
+    command: >
+      run beacon
+      --config /config/beacon.json
+      --substrate.private-key-id ${BEACON_RELAY_SUBSTRATE_KEY_ID}
     volumes:
-      - ${CONFIG_DIR}:/config
-    env_file:
-      - .env
+      - beacon-data:/data
+    environment:
+      - AWS_REGION=${AWS_REGION}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - BEACON_ENDPOINT=${BEACON_ENDPOINT}
+      - BRIDGEHUB_ENDPOINT=${BRIDGEHUB_ENDPOINT}
+      - FORK_DENEB=${FORK_DENEB}
+      - FORK_ELECTRA=${FORK_ELECTRA}
+      - FORK_FULU=${FORK_FULU}
+      - MAX_WATCHED_EXTRINSICS=${MAX_WATCHED_EXTRINSICS:-200}
     restart: on-failure
+    depends_on:
+      beacon-state-service:
+        condition: service_healthy
+    logging:
+      <<: *awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: snowbridge/${ENVIRONMENT:-prod}
+        awslogs-stream: beacon-relay
+        awslogs-create-group: "true"
+
+  ethereum-v2:
+    <<: *image
+    command: >
+      run ethereum-v2
+      --config /config/ethereum-v2.json
+      --substrate.private-key-id ${ETHEREUM_V2_RELAY_SUBSTRATE_KEY_ID}
+    environment:
+      - AWS_REGION=${AWS_REGION}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - BEACON_ENDPOINT=${BEACON_ENDPOINT}
+      - ETHEREUM_ENDPOINT=${ETHEREUM_ENDPOINT}
+      - BRIDGEHUB_ENDPOINT=${BRIDGEHUB_ENDPOINT}
+      - ASSETHUB_ENDPOINT=${ASSETHUB_ENDPOINT}
+      - FORK_DENEB=${FORK_DENEB}
+      - FORK_ELECTRA=${FORK_ELECTRA}
+      - FORK_FULU=${FORK_FULU}
+      - GATEWAY_CONTRACT=${GATEWAY_CONTRACT}
+      - MAX_WATCHED_EXTRINSICS=${MAX_WATCHED_EXTRINSICS:-200}
+      - CHAINALYSIS_API_KEY=${CHAINALYSIS_API_KEY}
+      - OFAC_ENABLED=${OFAC_ENABLED:-false}
+    restart: on-failure
+    depends_on:
+      beacon-state-service:
+        condition: service_healthy
+    logging:
+      <<: *awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: snowbridge/${ENVIRONMENT:-prod}
+        awslogs-stream: ethereum-v2-relay
+        awslogs-create-group: "true"
+
+  ethereum:
+    <<: *image
+    command: >
+      run ethereum
+      --config /config/ethereum.json
+      --substrate.private-key-id ${ETHEREUM_RELAY_SUBSTRATE_KEY_ID}
+    environment:
+      - AWS_REGION=${AWS_REGION}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - BEACON_ENDPOINT=${BEACON_ENDPOINT}
+      - ETHEREUM_ENDPOINT=${ETHEREUM_ENDPOINT}
+      - BRIDGEHUB_ENDPOINT=${BRIDGEHUB_ENDPOINT}
+      - FORK_DENEB=${FORK_DENEB}
+      - FORK_ELECTRA=${FORK_ELECTRA}
+      - FORK_FULU=${FORK_FULU}
+      - GATEWAY_CONTRACT=${GATEWAY_CONTRACT}
+      - CHANNEL_ID=${CHANNEL_ID}
+      - SS58_PREFIX=${SS58_PREFIX:-0}
+      - MAX_WATCHED_EXTRINSICS=${MAX_WATCHED_EXTRINSICS:-200}
+      - CHAINALYSIS_API_KEY=${CHAINALYSIS_API_KEY}
+      - OFAC_ENABLED=${OFAC_ENABLED:-false}
+    restart: on-failure
+    depends_on:
+      beacon-state-service:
+        condition: service_healthy
+    logging:
+      <<: *awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: snowbridge/${ENVIRONMENT:-prod}
+        awslogs-stream: ethereum-relay
+        awslogs-create-group: "true"
+
+  beefy:
+    <<: *image
+    profiles:
+      - expensive
+    command: >
+      run beefy
+      --config /config/beefy.json
+      --ethereum.private-key-id ${BEEFY_RELAY_ETHEREUM_KEY_ID}
+    environment:
+      - AWS_REGION=${AWS_REGION}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - POLKADOT_ENDPOINT=${POLKADOT_ENDPOINT}
+      - BRIDGEHUB_ENDPOINT=${BRIDGEHUB_ENDPOINT}
+      - ETHEREUM_ENDPOINT=${ETHEREUM_ENDPOINT}
+      - GATEWAY_CONTRACT=${GATEWAY_CONTRACT}
+      - BEEFY_CLIENT_CONTRACT=${BEEFY_CLIENT_CONTRACT}
+    restart: on-failure
+    logging:
+      <<: *awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: snowbridge/${ENVIRONMENT:-prod}
+        awslogs-stream: beefy-relay
+        awslogs-create-group: "true"
+
+  parachain-v2:
+    <<: *image
+    command: >
+      run parachain-v2
+      --config /config/parachain-v2.json
+      --ethereum.private-key-id ${PARACHAIN_V2_RELAY_ETHEREUM_KEY_ID}
+    environment:
+      - AWS_REGION=${AWS_REGION}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - ETHEREUM_ENDPOINT=${ETHEREUM_ENDPOINT}
+      - POLKADOT_ENDPOINT=${POLKADOT_ENDPOINT}
+      - BRIDGEHUB_ENDPOINT=${BRIDGEHUB_ENDPOINT}
+      - FLASHBOTS_ENDPOINT=${FLASHBOTS_ENDPOINT}
+      - GATEWAY_CONTRACT=${GATEWAY_CONTRACT}
+      - BEEFY_CLIENT_CONTRACT=${BEEFY_CLIENT_CONTRACT}
+      - REWARD_ADDRESS=${REWARD_ADDRESS}
+      - CHAINALYSIS_API_KEY=${CHAINALYSIS_API_KEY}
+      - OFAC_ENABLED=${OFAC_ENABLED:-false}
+    restart: on-failure
+    logging:
+      <<: *awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: snowbridge/${ENVIRONMENT:-prod}
+        awslogs-stream: parachain-v2-relay
+        awslogs-create-group: "true"
+
+  reward:
+    <<: *image
+    command: >
+      run reward
+      --config /config/reward.json
+      --substrate.private-key-id ${REWARD_RELAY_SUBSTRATE_KEY_ID}
+    environment:
+      - AWS_REGION=${AWS_REGION}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - BEACON_ENDPOINT=${BEACON_ENDPOINT}
+      - ETHEREUM_ENDPOINT=${ETHEREUM_ENDPOINT}
+      - BRIDGEHUB_ENDPOINT=${BRIDGEHUB_ENDPOINT}
+      - FORK_DENEB=${FORK_DENEB}
+      - FORK_ELECTRA=${FORK_ELECTRA}
+      - FORK_FULU=${FORK_FULU}
+      - GATEWAY_CONTRACT=${GATEWAY_CONTRACT}
+      - MAX_WATCHED_EXTRINSICS=${MAX_WATCHED_EXTRINSICS:-200}
+      - REWARD_ADDRESS=${REWARD_ADDRESS}
+    restart: on-failure
+    depends_on:
+      beacon-state-service:
+        condition: service_healthy
+    logging:
+      <<: *awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: snowbridge/${ENVIRONMENT:-prod}
+        awslogs-stream: reward-relay
+        awslogs-create-group: "true"
+
+  parachain:
+    <<: *image
+    command: >
+      run parachain
+      --config /config/parachain.json
+      --ethereum.private-key-id ${PARACHAIN_RELAY_ETHEREUM_KEY_ID}
+    environment:
+      - AWS_REGION=${AWS_REGION}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - ETHEREUM_ENDPOINT=${ETHEREUM_ENDPOINT}
+      - POLKADOT_ENDPOINT=${POLKADOT_ENDPOINT}
+      - BRIDGEHUB_ENDPOINT=${BRIDGEHUB_ENDPOINT}
+      - FLASHBOTS_ENDPOINT=${FLASHBOTS_ENDPOINT}
+      - GATEWAY_CONTRACT=${GATEWAY_CONTRACT}
+      - BEEFY_CLIENT_CONTRACT=${BEEFY_CLIENT_CONTRACT}
+      - CHANNEL_ID=${CHANNEL_ID}
+      - CHAINALYSIS_API_KEY=${CHAINALYSIS_API_KEY}
+      - OFAC_ENABLED=${OFAC_ENABLED:-false}
+    restart: on-failure
+    logging:
+      <<: *awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: snowbridge/${ENVIRONMENT:-prod}
+        awslogs-stream: parachain-relay
+        awslogs-create-group: "true"
+
+  beefy-on-demand:
+    <<: *image
+    profiles:
+      - expensive
+    command: >
+      run beefy
+      --config /config/beefy.json
+      --ethereum.private-key-id ${BEEFY_ON_DEMAND_RELAY_ETHEREUM_KEY_ID}
+      --on-demand
+    environment:
+      - AWS_REGION=${AWS_REGION}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - POLKADOT_ENDPOINT=${POLKADOT_ENDPOINT}
+      - BRIDGEHUB_ENDPOINT=${BRIDGEHUB_ENDPOINT}
+      - ETHEREUM_ENDPOINT=${ETHEREUM_ENDPOINT}
+      - GATEWAY_CONTRACT=${GATEWAY_CONTRACT}
+      - BEEFY_CLIENT_CONTRACT=${BEEFY_CLIENT_CONTRACT}
+    restart: on-failure
+    logging:
+      <<: *awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: snowbridge/${ENVIRONMENT:-prod}
+        awslogs-stream: beefy-on-demand-relay
+        awslogs-create-group: "true"
+
+volumes:
+  beacon-state-data:
+  beacon-data:

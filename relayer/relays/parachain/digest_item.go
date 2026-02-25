@@ -1,4 +1,4 @@
-package parachain
+package parachainv1
 
 import (
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
@@ -8,8 +8,8 @@ func ExtractCommitmentFromDigest(digest types.Digest) (*types.H256, error) {
 	for _, digestItem := range digest {
 		if digestItem.IsOther {
 			digestItemRawBytes := digestItem.AsOther
-			// Prefix 1 reserved for snowbridge V2
-			if digestItemRawBytes[0] == 1 {
+			// Prefix 0 reserved for snowbridge
+			if digestItemRawBytes[0] == 0 {
 				var commitment types.H256
 				err := types.DecodeFromBytes(digestItemRawBytes[1:], &commitment)
 				if err != nil {

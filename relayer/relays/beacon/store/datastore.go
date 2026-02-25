@@ -209,9 +209,24 @@ func (s *Store) ListBeaconStates() ([]BeaconState, error) {
 	return response, nil
 }
 
+// GetLatestTimestamp returns the timestamp of the most recently saved beacon state entry.
+// Returns zero time if no entries exist.
+func (s *Store) GetLatestTimestamp() (time.Time, error) {
+	query := `SELECT timestamp FROM beacon_state ORDER BY timestamp DESC LIMIT 1`
+	var timestamp int64
+	err := s.db.QueryRow(query).Scan(&timestamp)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return time.Time{}, nil
+		}
+		return time.Time{}, fmt.Errorf("query latest timestamp: %w", err)
+	}
+	return time.Unix(timestamp, 0), nil
+}
+
 func (s *Store) DeleteStateFile(filename string) error {
 	err := os.Remove(s.stateFileLocation(filename))
-	if err != nil {
+	if err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("remove file: %w", err)
 	}
 
@@ -330,7 +345,7 @@ func (s *Store) storeUpdate(attestedSlot, finalizedSlot, attestedSyncPeriod, fin
 	attestedStateFileName := fmt.Sprintf(BeaconStateFilename, attestedSlot)
 	finalizedStateFileName := fmt.Sprintf(BeaconStateFilename, finalizedSlot)
 
-	insertStmt := `INSERT INTO beacon_state (attested_slot, finalized_slot,  attested_sync_period, finalized_sync_period, attested_state_filename, finalized_state_filename) VALUES (?, ?, ?, ?, ?, ?)`
+	insertStmt := `INSERT OR IGNORE INTO beacon_state (attested_slot, finalized_slot,  attested_sync_period, finalized_sync_period, attested_state_filename, finalized_state_filename) VALUES (?, ?, ?, ?, ?, ?)`
 	stmt, err := s.db.Prepare(insertStmt)
 	if err != nil {
 		return err

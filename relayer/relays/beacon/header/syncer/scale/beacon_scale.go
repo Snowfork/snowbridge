@@ -17,6 +17,13 @@ type BlockRootProof struct {
 	Tree  *ssz.Node
 }
 
+// SyncCommitteeProof contains the sync committee data and merkle proof
+type SyncCommitteeProof struct {
+	Pubkeys         [][48]byte
+	AggregatePubkey [48]byte
+	Proof           []types.H256
+}
+
 type BeaconCheckpoint struct {
 	Header                     BeaconHeader
 	CurrentSyncCommittee       SyncCommittee
