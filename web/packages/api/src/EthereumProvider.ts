@@ -4,6 +4,7 @@ import {
     ContractTransaction,
     Interface,
     InterfaceAbi,
+    isAddress,
     JsonRpcProvider,
     WebSocketProvider,
 } from "ethers"
@@ -30,6 +31,7 @@ export interface EthereumProvider<Connection, Contract, Abi, Interface, Transact
         method: string,
         ...args: any[]
     ): Promise<Transaction>
+    isContractAddress(provider: Connection, address: string): Promise<boolean>
 }
 
 export class EthersEthereumProvider
@@ -86,6 +88,18 @@ export class EthersEthereumProvider
         ...args: any[]
     ): Promise<ContractTransaction> {
         return await contract.getFunction(method).populateTransaction(...args)
+    }
+
+    async isContractAddress(provider: AbstractProvider, address: string): Promise<boolean> {
+        if (!isAddress(address)) {
+            return false
+        }
+        try {
+            const code = await provider.getCode(address)
+            return code !== "0x"
+        } catch {
+            return false
+        }
     }
 }
 
