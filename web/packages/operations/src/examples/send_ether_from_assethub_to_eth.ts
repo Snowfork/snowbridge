@@ -4,7 +4,7 @@ import {
     assetsV2,
     createApi,
     historyV2,
-    toEthereumV2,
+    toEthereumSnowbridgeV2,
 } from "@snowbridge/api"
 import { formatUnits, Wallet } from "ethers"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
@@ -20,7 +20,8 @@ import { bridgeInfoFor } from "@snowbridge/registry"
     const { registry } = info
 
     // Initialize the context which establishes and pool connections
-    const context = createApi({ info, ethereumProvider: new EthersEthereumProvider() }).context
+    const api = createApi({ info, ethereumProvider: new EthersEthereumProvider() })
+    const context = api.context
 
     // Initialize ethereum wallet.
     const ETHEREUM_ACCOUNT = new Wallet(
@@ -45,17 +46,21 @@ import { bridgeInfoFor } from "@snowbridge/registry"
     const SOURCE_PARACHAIN = 1000
 
     console.log("Asset Hub to Ethereum")
+    const transferImpl = api.transfer(
+        { kind: "polkadot", id: SOURCE_PARACHAIN },
+        { kind: "ethereum", id: registry.ethChainId },
+        TOKEN_CONTRACT,
+    )
     // Step 1. Get the delivery fee for the transaction
-    const fee = await toEthereumV2.getDeliveryFee(
-        context, // The context
-        SOURCE_PARACHAIN, // Source parachain Id
+    const fee = await transferImpl.getDeliveryFee(
+        { sourceParaId: SOURCE_PARACHAIN, context }, // The context + source parachain
         registry, // The asset registry
         TOKEN_CONTRACT, // The token being transferred
     )
 
     // Step 2. Create a transfer tx
     const amount = 15_000_000_000_000n // 0.000015 ETH
-    const transfer = await toEthereumV2.createTransfer(
+    const transfer = await transferImpl.createTransfer(
         { sourceParaId: SOURCE_PARACHAIN, context }, // The context and source parachain
         registry, // The asset registry
         POLKADOT_ACCOUNT_PUBLIC, // The source account
@@ -81,7 +86,7 @@ import { bridgeInfoFor } from "@snowbridge/registry"
     )
 
     // Step 4. Validate the transaction.
-    const validation = await toEthereumV2.validateTransfer(
+    const validation = await transferImpl.validateTransfer(
         context, // The context
         transfer,
     )
@@ -94,7 +99,7 @@ import { bridgeInfoFor } from "@snowbridge/registry"
     }
 
     // Step 6. Submit transaction and get receipt for tracking
-    const response = await toEthereumV2.signAndSend(
+    const response = await toEthereumSnowbridgeV2.signAndSend(
         context, // The context
         transfer,
         POLKADOT_ACCOUNT,

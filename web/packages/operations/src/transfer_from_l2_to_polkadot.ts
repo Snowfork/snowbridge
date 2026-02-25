@@ -1,11 +1,5 @@
 import { Keyring } from "@polkadot/keyring"
-import {
-    EthersContext,
-    EthersEthereumProvider,
-    createApi,
-    toPolkadotSnowbridgeV2,
-    toPolkadotV2,
-} from "@snowbridge/api"
+import { EthersContext, EthersEthereumProvider, createApi } from "@snowbridge/api"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { formatEther, Wallet } from "ethers"
 import { bridgeInfoFor } from "@snowbridge/registry"
@@ -28,10 +22,11 @@ export const transferToPolkadot = async (
 
     const info = bridgeInfoFor(env)
     const { registry } = info
-    const context: EthersContext = createApi({
+    const api = createApi({
         info,
         ethereumProvider: new EthersEthereumProvider(),
-    }).context
+    })
+    const context: EthersContext = api.context
 
     const polkadot_keyring = new Keyring({ type: "sr25519" })
 
@@ -85,10 +80,9 @@ export const transferToPolkadot = async (
     console.log("Ethereum to Polkadot")
     {
         // Step 0. Create a transfer implementation
-        const transferImpl = toPolkadotSnowbridgeV2.createL2TransferImplementation(
-            l2ChainId,
-            destParaId,
-            registry,
+        const transferImpl = api.transfer(
+            { kind: "ethereum_l2", id: l2ChainId },
+            { kind: "polkadot", id: destParaId },
             TOKEN_CONTRACT,
         )
         // Step 1. Get the delivery fee for the transaction
@@ -120,7 +114,7 @@ export const transferToPolkadot = async (
         console.log("validation result", validation)
 
         // Step 4. Check validation logs for errors
-        if (validation.logs.find((l) => l.kind == toPolkadotV2.ValidationKind.Error)) {
+        if (!validation.success) {
             throw Error(`validation has one of more errors.` + JSON.stringify(validation.logs))
         }
 

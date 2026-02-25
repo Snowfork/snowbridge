@@ -1,11 +1,6 @@
 import { AddressOrPair, SignerOptions } from "@polkadot/api/types"
 import { AssetRegistry } from "@snowbridge/base-types"
-import {
-    DeliveryFee,
-    MessageReceipt,
-    Transfer,
-    ValidationResult,
-} from "../../forInterParachain"
+import { DeliveryFee, MessageReceipt, Transfer, ValidationResult } from "../../forInterParachain"
 import { EthersContext } from "../../index"
 
 export interface TransferInterface {

@@ -4,7 +4,7 @@ import {
     assetsV2,
     createApi,
     historyV2,
-    toPolkadotV2,
+    toPolkadotSnowbridgeV2,
 } from "@snowbridge/api"
 import { formatEther, Wallet } from "ethers"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
@@ -20,7 +20,8 @@ import { bridgeInfoFor } from "@snowbridge/registry"
     const { registry } = info
 
     // Initialize the context which establishes and pool connections
-    const context = createApi({ info, ethereumProvider: new EthersEthereumProvider() }).context
+    const api = createApi({ info, ethereumProvider: new EthersEthereumProvider() })
+    const context = api.context
 
     // Initialize ethereum wallet.
     const ETHEREUM_ACCOUNT = new Wallet(
@@ -45,8 +46,13 @@ import { bridgeInfoFor } from "@snowbridge/registry"
     const DESTINATION_PARACHAIN = 1000
 
     console.log("# Ethereum to Asset Hub")
+    const transferImpl = api.transfer(
+        { kind: "ethereum", id: registry.ethChainId },
+        { kind: "polkadot", id: DESTINATION_PARACHAIN },
+        TOKEN_CONTRACT,
+    )
     // Step 1. Get the delivery fee for the transaction
-    const fee = await toPolkadotV2.getDeliveryFee(
+    const fee = await transferImpl.getDeliveryFee(
         context, // The context
         registry, // Asset registry
         TOKEN_CONTRACT, // The erc20 token contract address
@@ -55,19 +61,19 @@ import { bridgeInfoFor } from "@snowbridge/registry"
 
     // Step 2. Create a transfer tx.
     const amount = 15_000_000_000_000n // 0.000015 ETH
-    const transfer = await toPolkadotV2.createTransfer(
+    const transfer = await transferImpl.createTransfer(
         context, // The context
         registry, // Asset registry
+        DESTINATION_PARACHAIN, // Destination parachain
         ETHEREUM_ACCOUNT_PUBLIC, // Source account
         POLKADOT_ACCOUNT_PUBLIC, // Destination account
         TOKEN_CONTRACT, // The erc20 token contract address
-        DESTINATION_PARACHAIN, // Destination parachain
         amount, // Transfer Amount
         fee, // The delivery fee
     )
 
     // Step 3. Validate the transaction by dry-running on source and destination.
-    const validation = await toPolkadotV2.validateTransfer(
+    const validation = await transferImpl.validateTransfer(
         context, // The context
         transfer, // The transfer tx
     )
@@ -106,12 +112,14 @@ import { bridgeInfoFor } from "@snowbridge/registry"
     }
 
     // Step 6. Get the message receipt for tracking purposes
-    const message = await toPolkadotV2.getMessageReceipt(context, receipt)
+    const message = await toPolkadotSnowbridgeV2.getMessageReceipt(context, receipt)
     if (!message) {
         throw Error(`Transaction ${receipt.hash} did not emit a message.`)
     }
+    const messageId = transfer.computed.topic
     console.log(
-        `Success message with message id: ${message.messageId}
+        `Success message with message id: ${messageId}
+                nonce: ${message.nonce}
                 block number: ${message.blockNumber}
                 tx hash: ${message.txHash}`,
     )
@@ -120,7 +128,7 @@ import { bridgeInfoFor } from "@snowbridge/registry"
     while (true) {
         const status = await historyV2.toPolkadotTransferById(
             context.graphqlApiUrl(), // GraphQL endpoint to query
-            message.messageId,
+            messageId,
         )
         if (status !== undefined && status.status !== historyV2.TransferStatus.Pending) {
             console.dir(status, { depth: 100 })

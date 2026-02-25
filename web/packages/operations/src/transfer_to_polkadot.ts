@@ -1,5 +1,11 @@
 import { Keyring } from "@polkadot/keyring"
-import { EthersContext, EthersEthereumProvider, createApi, toPolkadotV2 } from "@snowbridge/api"
+import {
+    EthersContext,
+    EthersEthereumProvider,
+    createApi,
+    toPolkadotSnowbridgeV2,
+    toPolkadotV2,
+} from "@snowbridge/api"
 import { formatEther, Wallet } from "ethers"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { bridgeInfoFor } from "@snowbridge/registry"
@@ -20,10 +26,11 @@ export const transferToPolkadot = async (
 
     const info = bridgeInfoFor(env)
     const { registry } = info
-    const context: EthersContext = createApi({
+    const api = createApi({
         info,
         ethereumProvider: new EthersEthereumProvider(),
-    }).context
+    })
+    const context: EthersContext = api.context
 
     const ETHEREUM_ACCOUNT = new Wallet(
         process.env.ETHEREUM_KEY ?? "Your Key Goes Here",
@@ -99,8 +106,13 @@ export const transferToPolkadot = async (
 
     console.log("# Ethereum to Asset Hub")
     {
+        const transferImpl = api.transfer(
+            { kind: "ethereum", id: registry.ethChainId },
+            { kind: "polkadot", id: destinationChainId },
+            TOKEN_CONTRACT!,
+        )
         // Step 1. Get the delivery fee for the transaction
-        const fee = await toPolkadotV2.getDeliveryFee(
+        const fee = await transferImpl.getDeliveryFee(
             context,
             registry,
             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -109,20 +121,20 @@ export const transferToPolkadot = async (
         )
 
         // Step 2. Create a transfer tx
-        const transfer = await toPolkadotV2.createTransfer(
+        const transfer = await transferImpl.createTransfer(
             context,
             registry,
+            destinationChainId,
             ETHEREUM_ACCOUNT_PUBLIC,
             POLKADOT_ACCOUNT_PUBLIC,
             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
             TOKEN_CONTRACT!,
-            destinationChainId,
             amount,
             fee,
         )
 
         // Step 3. Validate the transaction.
-        const validation = await toPolkadotV2.validateTransfer(context, transfer)
+        const validation = await transferImpl.validateTransfer(context, transfer)
         console.log("validation result", validation)
 
         // Step 4. Check validation logs for errors
@@ -157,12 +169,12 @@ export const transferToPolkadot = async (
             }
 
             // Step 7. Get the message receipt for tracking purposes
-            const message = await toPolkadotV2.getMessageReceipt(context, receipt)
+            const message = await toPolkadotSnowbridgeV2.getMessageReceipt(context, receipt)
             if (!message) {
                 throw Error(`Transaction ${receipt.hash} did not emit a message.`)
             }
             console.log(
-                `Success message with message id: ${message.messageId}
+                `Success message with nonce: ${message.nonce}
                 block number: ${message.blockNumber}
                 tx hash: ${message.txHash}`,
             )
