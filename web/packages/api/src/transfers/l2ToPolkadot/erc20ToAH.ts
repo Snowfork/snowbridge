@@ -28,7 +28,6 @@ import {
     QuoteExactOutputSingleParamsStruct,
     SendParamsStruct,
     SwapParamsStruct,
-    ISwapQuoter,
 } from "../../contracts"
 import { estimateFees } from "../../across/api"
 import { ContractTransaction } from "ethers/lib.commonjs/contract/types"
