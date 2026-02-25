@@ -16,8 +16,8 @@ export const createAgent = async (agentId: string) => {
     console.log(`Using environment '${env}'`)
 
     const info = bridgeInfoFor(env)
-    const { registry } = info
-    const context = createApi({ info, ethereumProvider: new EthersEthereumProvider() }).context
+    const api = createApi({ info, ethereumProvider: new EthersEthereumProvider() })
+    const context = api.context
 
     const ETHEREUM_ACCOUNT = new Wallet(
         process.env.ETHEREUM_KEY ?? "Your Key Goes Here",
@@ -31,27 +31,22 @@ export const createAgent = async (agentId: string) => {
 
     console.log("Agent Creation on Snowbridge V2")
     {
-        // Step 0. Create an agent creation implementation
-        const agentCreationImpl = toEthereumSnowbridgeV2.createAgentCreationImplementation()
+        // Step 0. Create an agent implementation
+        const agentCreationImpl = api.createAgent()
 
         // Step 1. Create an agent creation tx
-        const creation = await agentCreationImpl.createAgentCreation(
-            context,
-            registry,
-            ETHEREUM_ACCOUNT_PUBLIC,
-            agentId,
-        )
+        const creation = await agentCreationImpl.rawTx(ETHEREUM_ACCOUNT_PUBLIC, agentId)
 
         // Step 2. Validate the transaction.
-        const validation = await agentCreationImpl.validateAgentCreation(context, creation)
+        const validation = await agentCreationImpl.validateTx(creation)
 
         // Check validation logs for errors
         const errorLogs = validation.logs.filter(
-            (l) => l.kind === toEthereumSnowbridgeV2.ValidationKind.Error,
+            (l: any) => l.kind === toEthereumSnowbridgeV2.ValidationKind.Error,
         )
         if (errorLogs.length > 0) {
             console.error("Validation failed with errors:")
-            errorLogs.forEach((log) => {
+            errorLogs.forEach((log: any) => {
                 console.error(`  [ERROR] ${log.message}`)
             })
             throw Error(`Validation has ${errorLogs.length} error(s).`)

@@ -158,7 +158,7 @@ export class RegisterToken implements RegistrationInterface {
             })
         }
 
-        const etherBalance = await ethereum.getBalance(sourceAccount)
+        const etherBalance = await context.ethereumProvider.getBalance(ethereum, sourceAccount)
 
         let feeInfo: FeeInfo | undefined
         if (logs.length === 0 || !isTokenAlreadyRegistered) {
