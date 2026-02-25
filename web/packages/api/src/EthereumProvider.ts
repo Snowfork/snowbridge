@@ -4,12 +4,23 @@ import {
     ContractTransaction,
     Interface,
     InterfaceAbi,
-    isAddress,
     JsonRpcProvider,
+    TransactionReceipt,
     WebSocketProvider,
 } from "ethers"
-import { IERC20, IERC20_ABI } from "./contracts"
+import { IERC20, IERC20_ABI, IGATEWAY_V1_ABI, IGATEWAY_V2_ABI } from "./contracts"
 import { Context } from "./"
+
+export type GatewayV1OutboundMessageAccepted = {
+    channelId: string
+    nonce: bigint
+    messageId: string
+}
+
+export type GatewayV2OutboundMessageAccepted = {
+    nonce: bigint
+    payload: string
+}
 
 export interface EthereumProvider<Connection, Contract, Abi, Interface, Transaction> {
     createProvider(url: string): Connection
@@ -26,18 +37,23 @@ export interface EthereumProvider<Connection, Contract, Abi, Interface, Transact
         owner: string,
         spender: string,
     ): Promise<{ balance: bigint; gatewayAllowance: bigint }>
-    populateTransaction(
-        contract: Contract,
-        method: string,
-        ...args: any[]
-    ): Promise<Transaction>
+    populateTransaction(contract: Contract, method: string, ...args: any[]): Promise<Transaction>
     isContractAddress(provider: Connection, address: string): Promise<boolean>
+    scanGatewayV1OutboundMessageAccepted(
+        receipt: TransactionReceipt,
+    ): GatewayV1OutboundMessageAccepted | null
+    scanGatewayV2OutboundMessageAccepted(
+        receipt: TransactionReceipt,
+    ): GatewayV2OutboundMessageAccepted | null
 }
 
 export class EthersEthereumProvider
     implements
         EthereumProvider<AbstractProvider, Contract, InterfaceAbi, Interface, ContractTransaction>
 {
+    static gatewayV1Interface = new Interface(IGATEWAY_V1_ABI)
+    static gatewayV2Interface = new Interface(IGATEWAY_V2_ABI)
+
     createProvider(url: string): AbstractProvider {
         if (url.startsWith("http")) {
             return new JsonRpcProvider(url)
@@ -91,7 +107,7 @@ export class EthersEthereumProvider
     }
 
     async isContractAddress(provider: AbstractProvider, address: string): Promise<boolean> {
-        if (!isAddress(address)) {
+        if (!/^0x[a-fA-F0-9]{40}$/.test(address)) {
             return false
         }
         try {
@@ -100,6 +116,51 @@ export class EthersEthereumProvider
         } catch {
             return false
         }
+    }
+
+    scanGatewayV1OutboundMessageAccepted(
+        receipt: TransactionReceipt,
+    ): GatewayV1OutboundMessageAccepted | null {
+        for (const log of receipt.logs) {
+            try {
+                const event = EthersEthereumProvider.gatewayV1Interface.parseLog({
+                    topics: [...log.topics],
+                    data: log.data,
+                })
+                if (event && event.name === "OutboundMessageAccepted") {
+                    return {
+                        channelId: String(event.args[0]),
+                        nonce: BigInt(event.args[1]),
+                        messageId: String(event.args[2]),
+                    }
+                }
+            } catch {
+                // Ignore logs that don't match the gateway ABI.
+            }
+        }
+        return null
+    }
+
+    scanGatewayV2OutboundMessageAccepted(
+        receipt: TransactionReceipt,
+    ): GatewayV2OutboundMessageAccepted | null {
+        for (const log of receipt.logs) {
+            try {
+                const event = EthersEthereumProvider.gatewayV2Interface.parseLog({
+                    topics: [...log.topics],
+                    data: log.data,
+                })
+                if (event && event.name === "OutboundMessageAccepted") {
+                    return {
+                        nonce: BigInt(event.args[0]),
+                        payload: event.args[1],
+                    }
+                }
+            } catch {
+                // Ignore logs that don't match the gateway ABI.
+            }
+        }
+        return null
     }
 }
 
