@@ -107,6 +107,7 @@ export const transferToPolkadot = async (
 
         // Step 2. Create a transfer tx
         const transfer = await toPolkadotV2.createTransfer(
+            context,
             registry,
             ETHEREUM_ACCOUNT_PUBLIC,
             POLKADOT_ACCOUNT_PUBLIC,

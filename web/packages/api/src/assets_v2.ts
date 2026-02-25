@@ -1,18 +1,6 @@
-import { AbstractProvider } from "ethers"
 import { AssetRegistry, Parachain } from "@snowbridge/base-types"
-import { EthersEthereumProvider } from "./EthereumProvider"
 
 export const ETHER_TOKEN_ADDRESS = "0x0000000000000000000000000000000000000000"
-const ethersEthereumProvider = new EthersEthereumProvider()
-
-export async function erc20Balance(
-    ethereum: AbstractProvider,
-    tokenAddress: string,
-    owner: string,
-    spender: string,
-) {
-    return ethersEthereumProvider.erc20Balance(ethereum, tokenAddress, owner, spender)
-}
 
 export function findL2TokenAddress(
     registry: AssetRegistry,

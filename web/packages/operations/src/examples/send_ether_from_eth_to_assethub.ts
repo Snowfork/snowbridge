@@ -56,6 +56,7 @@ import { bridgeInfoFor } from "@snowbridge/registry"
     // Step 2. Create a transfer tx.
     const amount = 15_000_000_000_000n // 0.000015 ETH
     const transfer = await toPolkadotV2.createTransfer(
+        context, // The context
         registry, // Asset registry
         ETHEREUM_ACCOUNT_PUBLIC, // Source account
         POLKADOT_ACCOUNT_PUBLIC, // Destination account

@@ -16,7 +16,7 @@ import {
 } from "../../xcmbuilders/toPolkadot/erc20ToAH"
 import { accountId32Location, DOT_LOCATION, erc20Location } from "../../xcmBuilder"
 import { paraImplementation } from "../../parachains"
-import { erc20Balance, ETHER_TOKEN_ADDRESS } from "../../assets_v2"
+import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
 import { beneficiaryMultiAddress, padFeeByPercentage } from "../../utils"
 import { FeeInfo, resolveInputs, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
 import { buildMessageId, Transfer, ValidationResult } from "../../toPolkadotSnowbridgeV2"
@@ -289,9 +289,15 @@ export class ERC20ToAH implements TransferInterface {
             if (l2TokenAddress === ETHER_TOKEN_ADDRESS) {
                 txOptions = { ...txOptions, value: value }
             }
-            tx = await l2Adapter
-                .getFunction("sendEtherAndCall")
-                .populateTransaction(depositParams, sendParams, sourceAccount, topic, txOptions)
+            tx = await context.ethereumProvider.populateTransaction(
+                l2Adapter,
+                "sendEtherAndCall",
+                depositParams,
+                sendParams,
+                sourceAccount,
+                topic,
+                txOptions,
+            )
         } else {
             value = fee.totalFeeInWei
             inputAmount = amount + fee.bridgeFeeInL2Token! + fee.swapFeeInL1Token!
@@ -318,11 +324,18 @@ export class ERC20ToAH implements TransferInterface {
                 router: l1SwapRouterAddress,
                 callData: swapCalldata,
             }
-            tx = await l2Adapter
-                .getFunction("sendTokenAndCall")
-                .populateTransaction(depositParams, swapParams, sendParams, sourceAccount, topic, {
+            tx = await context.ethereumProvider.populateTransaction(
+                l2Adapter,
+                "sendTokenAndCall",
+                depositParams,
+                swapParams,
+                sendParams,
+                sourceAccount,
+                topic,
+                {
                     from: sourceAccount,
-                })
+                },
+            )
         }
 
         return {
@@ -390,7 +403,7 @@ export class ERC20ToAH implements TransferInterface {
 
         let tokenBalance: { balance: bigint; gatewayAllowance: bigint }
         if (tokenAddress !== ETHER_TOKEN_ADDRESS) {
-            tokenBalance = await erc20Balance(
+            tokenBalance = await context.ethereumProvider.erc20Balance(
                 l2Chain,
                 l2TokenAddress!,
                 sourceAccount,
