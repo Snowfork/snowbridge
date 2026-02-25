@@ -1,7 +1,7 @@
 [profile.default]
 solc_version = "0.8.33"
 optimizer = true
-optimizer_runs = 20000
+optimizer_runs = 200
 via_ir = false
 test = 'test'
 script = 'scripts'
@@ -21,10 +21,15 @@ ignored_error_codes = [
 
 no_match_test = "testRegenerate*"
 
-# Production profile, ForkUpgrade tests cause stack too deep errors with via_ir enabled, so we exclude it here
+# Production profile: via_ir enabled for deployment contracts
 [profile.production]
-no_match_contract = "ForkUpgradeTest"
 via_ir = true
+optimizer_runs = 20000
+
+# Integration profile: for running fork tests (compile with lower optimization)
+# Usage: FOUNDRY_PROFILE=integration forge test --match-contract ForkUpgrade
+[profile.integration]
+test = 'integration'
 
 [fmt]
 number_underscore = "thousands"
