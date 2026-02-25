@@ -1,11 +1,5 @@
 import { MultiAddressStruct } from "./contracts"
-import {
-    AbstractProvider,
-    ContractTransaction,
-    FeeData,
-    parseUnits,
-    TransactionReceipt,
-} from "ethers"
+import { AbstractProvider, ContractTransaction, TransactionReceipt } from "ethers"
 import { beneficiaryMultiAddress, padFeeByPercentage, paraIdToSovereignAccount } from "./utils"
 import { IERC20, IERC20_ABI } from "./contracts"
 import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
@@ -25,6 +19,7 @@ import { Result } from "@polkadot/types"
 import { XcmDryRunApiError, XcmDryRunEffects } from "@polkadot/types/interfaces"
 import { paraImplementation } from "./parachains"
 import { EthersContext } from "./index"
+import type { FeeData } from "./EthereumProvider"
 
 export type Transfer = {
     input: {
@@ -329,8 +324,8 @@ export async function validateTransfer(
     let feeInfo: FeeInfo | undefined
     if (logs.length === 0) {
         const [estimatedGas, feeData] = await Promise.all([
-            ethereum.estimateGas(tx),
-            ethereum.getFeeData(),
+            context.ethereumProvider.estimateGas(ethereum, tx),
+            context.ethereumProvider.getFeeData(ethereum),
         ])
         const executionFee = (feeData.gasPrice ?? 0n) * estimatedGas
         if (executionFee === 0n) {
@@ -379,7 +374,7 @@ export async function validateTransfer(
         })
     } else {
         // build asset hub packet and dryRun
-        let result = await dryRunAssetHub(assetHub, transfer)
+        let result = await dryRunAssetHub(context, assetHub, transfer)
         dryRunAhSuccess = result.success
         assetHubDryRunError = result.errorMessage
         forwardedDestination = result.forwardedDestination
@@ -589,7 +584,7 @@ export function resolveInputs(
     return { tokenErcMetadata, destParachain, ahAssetMetadata, destAssetMetadata }
 }
 
-async function dryRunAssetHub(assetHub: ApiPromise, transfer: Transfer) {
+async function dryRunAssetHub(context: EthersContext, assetHub: ApiPromise, transfer: Transfer) {
     const { registry, amount, tokenAddress, beneficiaryAccount, destinationParaId } = transfer.input
     const { destinationFeeInDOT, destAssetMetadata } = transfer.computed
     const bridgeHubLocation = {
@@ -597,7 +592,10 @@ async function dryRunAssetHub(assetHub: ApiPromise, transfer: Transfer) {
     }
     let xcm: any
     //  taken from chopsticks and based on our exchange rate calculation.
-    const baseFee = parseUnits("0.1", transfer.input.registry.relaychain.tokenDecimals)
+    const baseFee = context.ethereumProvider.parseUnits(
+        "0.1",
+        transfer.input.registry.relaychain.tokenDecimals,
+    )
     const assetHubFee =
         baseFee +
         transfer.input.fee.destinationDeliveryFeeDOT +

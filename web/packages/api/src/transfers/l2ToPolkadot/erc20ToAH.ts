@@ -437,7 +437,7 @@ export class ERC20ToAH implements TransferInterface {
         if (logs.length === 0) {
             let estimatedGas: bigint
             try {
-                estimatedGas = await l2Chain.estimateGas(tx)
+                estimatedGas = await context.ethereumProvider.estimateGas(l2Chain, tx)
             } catch (e) {
                 l2BridgeDryRunError =
                     "Could not estimate gas for l2 transaction." + (e as Error).message
@@ -448,7 +448,7 @@ export class ERC20ToAH implements TransferInterface {
                 })
                 estimatedGas = 0n
             }
-            const feeData = await l2Chain.getFeeData()
+            const feeData = await context.ethereumProvider.getFeeData(l2Chain)
             const executionFee = (feeData.gasPrice ?? 0n) * estimatedGas
             if (executionFee === 0n) {
                 logs.push({

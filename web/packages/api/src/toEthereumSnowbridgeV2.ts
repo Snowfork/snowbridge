@@ -247,7 +247,7 @@ export const estimateEthereumExecutionFee = async (
 
     // Calculate execution cost on ethereum
     let ethereumChain = registry.ethereumChains[`ethereum_${registry.ethChainId}`]
-    let feeData = await ethereum.getFeeData()
+    let feeData = await context.ethereumProvider.getFeeData(ethereum)
     let ethereumExecutionFee =
         (feeData.gasPrice ?? 2_000_000_000n) *
         ((tokenErcMetadata.deliveryGas ?? 80_000n) +
