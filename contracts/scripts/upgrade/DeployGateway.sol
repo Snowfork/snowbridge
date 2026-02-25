@@ -34,6 +34,7 @@ contract DeployGateway is Script {
             gatewayLogic = new GatewaySepolia202602(address(beefyClient), address(executor));
         }
 
+        console.log("Snowbridge deployment stage: %s", vm.envString("SNOWBRIDGE_DEPLOY_STAGE"));
         console.log("Gateway contract address: %s", address(gatewayLogic));
         console.log("Gateway contract codehash:");
         console.logBytes32(address(gatewayLogic).codehash);

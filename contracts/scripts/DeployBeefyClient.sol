@@ -4,6 +4,7 @@ pragma solidity 0.8.33;
 
 import {Script} from "forge-std/Script.sol";
 import {BeefyClient} from "../src/BeefyClient.sol";
+import {console} from "forge-std/console.sol";
 
 contract DeployBeefyClient is Script {
     struct Config {
@@ -76,7 +77,7 @@ contract DeployBeefyClient is Script {
         vm.startBroadcast();
         Config memory config = readConfig();
 
-        new BeefyClient(
+        BeefyClient client = new BeefyClient(
             config.randaoCommitDelay,
             config.randaoCommitExpiration,
             config.minimumSignatures,
@@ -85,5 +86,7 @@ contract DeployBeefyClient is Script {
             config.current,
             config.next
         );
+
+        console.log("BeefyClient deployed at:", address(client));
     }
 }
