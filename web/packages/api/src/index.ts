@@ -537,15 +537,27 @@ export class SnowbridgeApi<
         switch (kind) {
             case "polkadot->polkadot":
                 return withKind(
-                    interParachainTransfers.createTransferImplementation(),
+                    new interParachainTransfers.InterParachainTransfer(
+                        this.info,
+                        this.context as any,
+                        route,
+                        from,
+                        to,
+                    ),
                     kind,
-                ) as TransferFromTo<F, T>
+                ) as unknown as TransferFromTo<F, T>
             case "kusama->polkadot":
             case "polkadot->kusama":
                 return withKind(
-                    kusamaTransfers.createTransferImplementation(),
+                    new kusamaTransfers.KusamaTransfer(
+                        this.info,
+                        this.context as any,
+                        route,
+                        from,
+                        to,
+                    ),
                     kind,
-                ) as TransferFromTo<F, T>
+                ) as unknown as TransferFromTo<F, T>
             case "polkadot->ethereum":
                 if (!tokenAddress) {
                     throw new Error("tokenAddress is required for polkadot->ethereum transfers.")
