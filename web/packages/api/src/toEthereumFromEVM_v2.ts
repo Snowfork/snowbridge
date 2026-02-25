@@ -8,6 +8,7 @@ import {
 import {
     Asset,
     AssetRegistry,
+    ContractCall,
     ERC20Metadata,
     EthereumChain,
     Parachain,
@@ -17,6 +18,7 @@ import { EventRecord } from "@polkadot/types/interfaces"
 import { Contract, ContractTransaction, TransactionReceipt } from "ethers"
 import { paraImplementation } from "./parachains"
 import {
+    getDeliveryFee as getDeliveryFeeV1,
     buildMessageId,
     createERC20SourceParachainTx,
     DeliveryFee,
@@ -29,6 +31,7 @@ import {
     ValidationReason,
 } from "./toEthereum_v2"
 import { EthersContext } from "./index"
+import { TransferInterface as ToEthereumEvmTransferInterface } from "./transfers/toEthereumEvm/transferInterface"
 
 const PALLET_XCM_PRECOMPILE = [
     {
@@ -93,6 +96,82 @@ export type TransferEvm = {
         xcTokenAddress?: string
     }
     tx: ContractTransaction
+}
+
+export class V1ToEthereumEvmAdapter implements ToEthereumEvmTransferInterface {
+    async getDeliveryFee(
+        source: { sourceParaId: number; context: EthersContext },
+        registry: AssetRegistry,
+        tokenAddress: string,
+        options?: {
+            padPercentage?: bigint
+            slippagePadPercentage?: bigint
+            defaultFee?: bigint
+            feeTokenLocation?: any
+            claimerLocation?: any
+            contractCall?: ContractCall
+        },
+    ): Promise<DeliveryFee> {
+        if (options?.feeTokenLocation !== undefined) {
+            throw new Error("v1 toEthereumEVM adapter does not support options.feeTokenLocation.")
+        }
+        if (options?.claimerLocation !== undefined) {
+            throw new Error("v1 toEthereumEVM adapter does not support options.claimerLocation.")
+        }
+        if (options?.contractCall !== undefined) {
+            throw new Error("v1 toEthereumEVM adapter does not support options.contractCall.")
+        }
+        return getDeliveryFeeV1(source.context, source.sourceParaId, registry, tokenAddress, {
+            padPercentage: options?.padPercentage,
+            slippagePadPercentage: options?.slippagePadPercentage,
+            defaultFee: options?.defaultFee,
+        })
+    }
+
+    async createTransfer(
+        source: { sourceParaId: number; context: EthersContext },
+        registry: AssetRegistry,
+        sourceAccount: string,
+        beneficiaryAccount: string,
+        tokenAddress: string,
+        amount: bigint,
+        fee: DeliveryFee,
+        options?: {
+            claimerLocation?: any
+            contractCall?: ContractCall
+        },
+    ): Promise<TransferEvm> {
+        if (options?.claimerLocation !== undefined) {
+            throw new Error("v1 toEthereumEVM adapter does not support options.claimerLocation.")
+        }
+        if (options?.contractCall !== undefined) {
+            throw new Error("v1 toEthereumEVM adapter does not support options.contractCall.")
+        }
+        return createTransferEvm(
+            source,
+            registry,
+            sourceAccount,
+            beneficiaryAccount,
+            tokenAddress,
+            amount,
+            fee,
+        )
+    }
+
+    async validateTransfer(
+        context: EthersContext,
+        transfer: TransferEvm,
+    ): Promise<ValidationResultEvm> {
+        return validateTransferEvm(context, transfer)
+    }
+}
+
+export function createTransferImplementationV1(
+    _sourceParaId: number,
+    _registry: AssetRegistry,
+    _tokenAddress: string,
+): ToEthereumEvmTransferInterface {
+    return new V1ToEthereumEvmAdapter()
 }
 
 export async function createTransferEvm(
