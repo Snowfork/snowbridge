@@ -15,7 +15,8 @@ import {
 import { accountId32Location, DOT_LOCATION, erc20Location, isDOT } from "../../xcmBuilder"
 import { paraImplementation } from "../../parachains"
 import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
-import { beneficiaryMultiAddress, padFeeByPercentage, paraIdToSovereignAccount } from "../../utils"
+import { beneficiaryMultiAddress } from "../../EthereumProvider"
+import { padFeeByPercentage, paraIdToSovereignAccount } from "../../utils"
 import { FeeInfo, resolveInputs, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
 import {
     buildAssetHubERC20ReceivedXcm,

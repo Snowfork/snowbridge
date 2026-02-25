@@ -1,6 +1,7 @@
 import { MultiAddressStruct } from "./contracts"
 import { AbstractProvider, ContractTransaction, TransactionReceipt } from "ethers"
-import { beneficiaryMultiAddress, padFeeByPercentage, paraIdToSovereignAccount } from "./utils"
+import { beneficiaryMultiAddress } from "./EthereumProvider"
+import { padFeeByPercentage, paraIdToSovereignAccount } from "./utils"
 import { IERC20, IERC20_ABI } from "./contracts"
 import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
 import { Asset, AssetRegistry, ERC20Metadata, Parachain } from "@snowbridge/base-types"

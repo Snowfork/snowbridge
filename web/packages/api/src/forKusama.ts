@@ -30,7 +30,8 @@ import {
     XcmDryRunEffects,
 } from "@polkadot/types/interfaces"
 import { Result } from "@polkadot/types"
-import { beneficiaryMultiAddress, padFeeByPercentage, u32ToLeBytes } from "./utils"
+import { beneficiaryMultiAddress } from "./EthereumProvider"
+import { padFeeByPercentage, u32ToLeBytes } from "./utils"
 import { paraImplementation } from "./parachains"
 
 export type Transfer = {

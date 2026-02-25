@@ -3,13 +3,12 @@ import { TransferInterface as L2TransferInterface } from "./transfers/l2ToPolkad
 import { ERC20ToAH } from "./transfers/toPolkadot/erc20ToAH"
 import { ERC20ToAH as ERC20FromL2ToAH } from "./transfers/l2ToPolkadot/erc20ToAH"
 import { RegisterToken } from "./registration/toPolkadot/registerToken"
-import { TokenRegistration } from "./registration/toPolkadot/registrationInterface"
 import { Asset, AssetRegistry, ERC20Metadata, Parachain } from "@snowbridge/base-types"
 import { PNAToAH } from "./transfers/toPolkadot/pnaToAH"
 import { ERC20ToParachain } from "./transfers/toPolkadot/erc20ToParachain"
 import { PNAToParachain } from "./transfers/toPolkadot/pnaToParachain"
 import { MultiAddressStruct } from "./contracts"
-import { AbiCoder, ContractTransaction, TransactionReceipt, Wallet } from "ethers"
+import { AbiCoder, ContractTransaction, TransactionReceipt } from "ethers"
 import { hexToU8a, stringToU8a } from "@polkadot/util"
 import { blake2AsHex } from "@polkadot/util-crypto"
 import { OperationStatus } from "./status"
@@ -20,6 +19,7 @@ import { Codec } from "@polkadot/types/types"
 import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
 import { padFeeByPercentage } from "./utils"
 import { EthersContext } from "./index"
+import { encodeAssetsArray as providerEncodeAssetsArray } from "./EthereumProvider"
 export { ValidationKind } from "./toPolkadot_v2"
 import { ParachainBase } from "./parachains/parachainBase"
 
@@ -212,7 +212,7 @@ export function encodeNativeAsset(tokenAddress: string, amount: bigint) {
 
 // Encode assets array as bytes[] for the gateway contract
 export function encodeAssetsArray(encodedAssets: string[]) {
-    return AbiCoder.defaultAbiCoder().encode(["bytes[]"], [encodedAssets])
+    return providerEncodeAssetsArray(encodedAssets)
 }
 
 export async function getMessageReceipt(
@@ -245,20 +245,6 @@ export function claimerLocationToBytes(claimerLocation: Codec) {
 
 export function createRegistrationImplementation() {
     return new RegisterToken()
-}
-
-export async function sendRegistration(
-    registration: TokenRegistration,
-    wallet: Wallet,
-): Promise<TransactionReceipt> {
-    const response = await wallet.sendTransaction(registration.tx)
-    const receipt = await response.wait(1)
-
-    if (!receipt) {
-        throw Error(`Transaction ${response.hash} not included.`)
-    }
-
-    return receipt
 }
 
 export async function inboundMessageExtrinsicFee(

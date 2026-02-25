@@ -10,7 +10,8 @@ import {
     buildDepositAllAssetsWithTopic,
 } from "./xcmBuilder"
 import { Asset, AssetRegistry, Parachain } from "@snowbridge/base-types"
-import { beneficiaryMultiAddress, padFeeByPercentage } from "./utils"
+import { beneficiaryMultiAddress } from "./EthereumProvider"
+import { padFeeByPercentage } from "./utils"
 import { paraImplementation } from "./parachains"
 import { EthersContext } from "."
 import { buildMessageId } from "./toEthereum_v2"

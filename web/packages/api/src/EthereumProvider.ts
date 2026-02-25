@@ -1,4 +1,5 @@
 import {
+    AbiCoder,
     AbstractProvider,
     Contract,
     ContractTransaction,
@@ -10,7 +11,10 @@ import {
     TransactionReceipt,
     WebSocketProvider,
 } from "ethers"
+import { isHex, u8aToHex } from "@polkadot/util"
+import { decodeAddress } from "@polkadot/util-crypto"
 import { IERC20, IERC20_ABI, IGATEWAY_V1_ABI, IGATEWAY_V2_ABI } from "./contracts"
+import { MultiAddressStruct } from "./contracts"
 import { Context } from "./"
 
 export type GatewayV1OutboundMessageAccepted = {
@@ -30,6 +34,46 @@ export type FeeData = {
     maxPriorityFeePerGas: bigint | null
 }
 
+export type EncodedMultiAddress = {
+    address: MultiAddressStruct
+    hexAddress: string
+}
+
+export const encodeAssetsArray = (encodedAssets: readonly string[]): string => {
+    return AbiCoder.defaultAbiCoder().encode(["bytes[]"], [encodedAssets])
+}
+
+export const beneficiaryMultiAddress = (beneficiary: string): EncodedMultiAddress => {
+    const abi = AbiCoder.defaultAbiCoder()
+
+    let address: MultiAddressStruct
+    let hexAddress: string
+    if (isHex(beneficiary)) {
+        hexAddress = beneficiary
+        if (beneficiary.length === 42) {
+            address = {
+                kind: 2,
+                data: abi.encode(["bytes20"], [hexAddress]),
+            }
+        } else if (beneficiary.length === 66) {
+            address = {
+                kind: 1,
+                data: abi.encode(["bytes32"], [hexAddress]),
+            }
+        } else {
+            throw new Error("Unknown Beneficiary address format.")
+        }
+    } else {
+        hexAddress = u8aToHex(decodeAddress(beneficiary))
+        address = {
+            kind: 1,
+            data: abi.encode(["bytes32"], [hexAddress]),
+        }
+    }
+
+    return { address, hexAddress }
+}
+
 export interface EthereumProvider<Connection, Contract, Abi, Interface, Transaction> {
     createProvider(url: string): Connection
     destroyProvider(provider: Connection): void
@@ -46,6 +90,10 @@ export interface EthereumProvider<Connection, Contract, Abi, Interface, Transact
         spender: string,
     ): Promise<{ balance: bigint; gatewayAllowance: bigint }>
     populateTransaction(contract: Contract, method: string, ...args: any[]): Promise<Transaction>
+    encodeFunctionData(abi: Abi, method: string, args: readonly unknown[]): string
+    decodeFunctionResult<T = unknown>(abi: Abi, method: string, data: string): T
+    encodeAssetsArray(encodedAssets: readonly string[]): string
+    beneficiaryMultiAddress(beneficiary: string): EncodedMultiAddress
     estimateGas(provider: Connection, tx: Transaction): Promise<bigint>
     getFeeData(provider: Connection): Promise<FeeData>
     parseUnits(value: string, decimals: number): bigint
@@ -115,6 +163,22 @@ export class EthersEthereumProvider
         ...args: any[]
     ): Promise<ContractTransaction> {
         return await contract.getFunction(method).populateTransaction(...args)
+    }
+
+    encodeFunctionData(abi: InterfaceAbi, method: string, args: readonly unknown[]): string {
+        return new Interface(abi).encodeFunctionData(method, args)
+    }
+
+    decodeFunctionResult<T = unknown>(abi: InterfaceAbi, method: string, data: string): T {
+        return new Interface(abi).decodeFunctionResult(method, data) as T
+    }
+
+    encodeAssetsArray(encodedAssets: readonly string[]): string {
+        return encodeAssetsArray(encodedAssets)
+    }
+
+    beneficiaryMultiAddress(beneficiary: string): EncodedMultiAddress {
+        return beneficiaryMultiAddress(beneficiary)
     }
 
     async estimateGas(provider: AbstractProvider, tx: ContractTransaction): Promise<bigint> {
