@@ -43,6 +43,13 @@ export const encodeAssetsArray = (encodedAssets: readonly string[]): string => {
     return AbiCoder.defaultAbiCoder().encode(["bytes[]"], [encodedAssets])
 }
 
+export const encodeNativeAsset = (tokenAddress: string, amount: bigint): string => {
+    return AbiCoder.defaultAbiCoder().encode(
+        ["uint8", "address", "uint128"],
+        [0, tokenAddress, amount],
+    )
+}
+
 export const beneficiaryMultiAddress = (beneficiary: string): EncodedMultiAddress => {
     const abi = AbiCoder.defaultAbiCoder()
 
@@ -92,6 +99,7 @@ export interface EthereumProvider<Connection, Contract, Abi, Interface, Transact
     populateTransaction(contract: Contract, method: string, ...args: any[]): Promise<Transaction>
     encodeFunctionData(abi: Abi, method: string, args: readonly unknown[]): string
     decodeFunctionResult<T = unknown>(abi: Abi, method: string, data: string): T
+    encodeNativeAsset(tokenAddress: string, amount: bigint): string
     encodeAssetsArray(encodedAssets: readonly string[]): string
     beneficiaryMultiAddress(beneficiary: string): EncodedMultiAddress
     estimateGas(provider: Connection, tx: Transaction): Promise<bigint>
@@ -171,6 +179,10 @@ export class EthersEthereumProvider
 
     decodeFunctionResult<T = unknown>(abi: InterfaceAbi, method: string, data: string): T {
         return new Interface(abi).decodeFunctionResult(method, data) as T
+    }
+
+    encodeNativeAsset(tokenAddress: string, amount: bigint): string {
+        return encodeNativeAsset(tokenAddress, amount)
     }
 
     encodeAssetsArray(encodedAssets: readonly string[]): string {

@@ -8,7 +8,7 @@ import { PNAToAH } from "./transfers/toPolkadot/pnaToAH"
 import { ERC20ToParachain } from "./transfers/toPolkadot/erc20ToParachain"
 import { PNAToParachain } from "./transfers/toPolkadot/pnaToParachain"
 import { MultiAddressStruct } from "./contracts"
-import { AbiCoder, ContractTransaction, TransactionReceipt } from "ethers"
+import { ContractTransaction, TransactionReceipt } from "ethers"
 import { hexToU8a, stringToU8a } from "@polkadot/util"
 import { blake2AsHex } from "@polkadot/util-crypto"
 import { OperationStatus } from "./status"
@@ -19,7 +19,10 @@ import { Codec } from "@polkadot/types/types"
 import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
 import { padFeeByPercentage } from "./utils"
 import { EthersContext } from "./index"
-import { encodeAssetsArray as providerEncodeAssetsArray } from "./EthereumProvider"
+import {
+    encodeAssetsArray as providerEncodeAssetsArray,
+    encodeNativeAsset as providerEncodeNativeAsset,
+} from "./EthereumProvider"
 export { ValidationKind } from "./toPolkadot_v2"
 import { ParachainBase } from "./parachains/parachainBase"
 
@@ -204,10 +207,7 @@ export function buildMessageId(
 // ERC20 asset: abi.encode(0, tokenAddress, amount)
 // 0 = AssetKind.NativeTokenERC20 from Solidity Types.sol
 export function encodeNativeAsset(tokenAddress: string, amount: bigint) {
-    return AbiCoder.defaultAbiCoder().encode(
-        ["uint8", "address", "uint128"],
-        [0, tokenAddress, amount],
-    )
+    return providerEncodeNativeAsset(tokenAddress, amount)
 }
 
 // Encode assets array as bytes[] for the gateway contract
