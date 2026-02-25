@@ -37,9 +37,15 @@ export * as addTip from "./addTip"
 export { EthersEthereumProvider } from "./EthereumProvider"
 export type { EthereumProvider, EthersContext } from "./EthereumProvider"
 
-export class Context<EConnection, EContract, EAbi, EInterface> {
+export class Context<EConnection, EContract, EAbi, EInterface, ETransaction> {
     readonly environment: Environment
-    readonly ethereumProvider: EthereumProvider<EConnection, EContract, EAbi, EInterface>
+    readonly ethereumProvider: EthereumProvider<
+        EConnection,
+        EContract,
+        EAbi,
+        EInterface,
+        ETransaction
+    >
 
     // Ethereum
     #ethChains: Record<string, EConnection>
@@ -62,7 +68,13 @@ export class Context<EConnection, EContract, EAbi, EInterface> {
 
     constructor(
         environment: Environment,
-        ethereumProvider: EthereumProvider<EConnection, EContract, EAbi, EInterface>,
+        ethereumProvider: EthereumProvider<
+            EConnection,
+            EContract,
+            EAbi,
+            EInterface,
+            ETransaction
+        >,
     ) {
         this.environment = environment
         this.ethereumProvider = ethereumProvider
@@ -396,20 +408,26 @@ export class Context<EConnection, EContract, EAbi, EInterface> {
     }
 }
 
-export type ApiOptions<EConnection, EContract, EAbi, EInterface> = {
+export type ApiOptions<EConnection, EContract, EAbi, EInterface, ETransaction> = {
     info: BridgeInfo
-    ethereumProvider: EthereumProvider<EConnection, EContract, EAbi, EInterface>
+    ethereumProvider: EthereumProvider<
+        EConnection,
+        EContract,
+        EAbi,
+        EInterface,
+        ETransaction
+    >
 }
 
-export class SnowbridgeApi<EConnection, EContract, EAbi, EInterface> {
-    readonly context: Context<EConnection, EContract, EAbi, EInterface>
-    constructor(options: ApiOptions<EConnection, EContract, EAbi, EInterface>) {
+export class SnowbridgeApi<EConnection, EContract, EAbi, EInterface, ETransaction> {
+    readonly context: Context<EConnection, EContract, EAbi, EInterface, ETransaction>
+    constructor(options: ApiOptions<EConnection, EContract, EAbi, EInterface, ETransaction>) {
         this.context = new Context(options.info.environment, options.ethereumProvider)
     }
 }
 
-export function createApi<EConnection, EContract, EAbi, EInterface>(
-    options: ApiOptions<EConnection, EContract, EAbi, EInterface>,
-): SnowbridgeApi<EConnection, EContract, EAbi, EInterface> {
+export function createApi<EConnection, EContract, EAbi, EInterface, ETransaction>(
+    options: ApiOptions<EConnection, EContract, EAbi, EInterface, ETransaction>,
+): SnowbridgeApi<EConnection, EContract, EAbi, EInterface, ETransaction> {
     return new SnowbridgeApi(options)
 }

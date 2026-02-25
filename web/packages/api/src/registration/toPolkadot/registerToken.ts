@@ -6,11 +6,9 @@ import {
     TokenRegistration,
     RegistrationValidationResult,
 } from "./registrationInterface"
-import { IGATEWAY_V2_ABI } from "../../contracts"
 import { EthersContext } from "../../index"
 import { ValidationKind } from "../../toPolkadotSnowbridgeV2"
 import { FeeInfo, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
-import { Contract, Interface } from "ethers"
 import { getOperatingStatus } from "../../status"
 import { DOT_LOCATION, erc20Location } from "../../xcmBuilder"
 import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
@@ -103,25 +101,24 @@ export class RegisterToken implements RegistrationInterface {
         tokenAddress: string,
         fee: RegistrationFee,
     ): Promise<TokenRegistration> {
-        const ifce = new Interface(IGATEWAY_V2_ABI)
-        const con = new Contract(registry.gatewayAddress, ifce)
+        const con = context.gatewayV2()
 
         const totalValue = fee.totalFeeInWei
 
         const network = 0
 
-        const tx = await con
-            .getFunction("v2_registerToken")
-            .populateTransaction(
-                tokenAddress,
-                network,
-                fee.assetHubExecutionFeeEther,
-                fee.relayerFee,
-                {
-                    value: totalValue,
-                    from: sourceAccount,
-                },
-            )
+        const tx = await context.ethereumProvider.populateTransaction(
+            con,
+            "v2_registerToken",
+            tokenAddress,
+            network,
+            fee.assetHubExecutionFeeEther,
+            fee.relayerFee,
+            {
+                value: totalValue,
+                from: sourceAccount,
+            },
+        )
 
         return {
             input: {

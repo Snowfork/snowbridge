@@ -1,6 +1,5 @@
 import { AssetRegistry } from "@snowbridge/base-types"
 import { TransferInterface } from "./transferInterface"
-import { IGATEWAY_V2_ABI } from "../../contracts"
 import { EthersContext } from "../../index"
 import {
     calculateRelayerFee,
@@ -16,9 +15,8 @@ import {
 } from "../../xcmbuilders/toPolkadot/erc20ToAH"
 import { accountId32Location, DOT_LOCATION, erc20Location } from "../../xcmBuilder"
 import { paraImplementation } from "../../parachains"
-import { erc20Balance, ETHER_TOKEN_ADDRESS } from "../../assets_v2"
+import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
 import { beneficiaryMultiAddress, padFeeByPercentage } from "../../utils"
-import { Contract, Interface } from "ethers"
 import { FeeInfo, resolveInputs, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
 import { buildMessageId, Transfer, ValidationResult } from "../../toPolkadotSnowbridgeV2"
 import { getOperatingStatus } from "../../status"
@@ -136,8 +134,7 @@ export class ERC20ToAH implements TransferInterface {
         } else {
             assets = [encodeNativeAsset(tokenAddress, amount)]
         }
-        const ifce = new Interface(IGATEWAY_V2_ABI)
-        const con = new Contract(registry.gatewayAddress, ifce)
+        const con = context.gatewayV2()
         const accountNonce = await ethereum.getTransactionCount(sourceAccount, "pending")
 
         const topic = buildMessageId(
@@ -154,19 +151,19 @@ export class ERC20ToAH implements TransferInterface {
         )
         let claimer = claimerFromBeneficiary(assetHub, beneficiaryAddressHex)
 
-        const tx = await con
-            .getFunction("v2_sendMessage")
-            .populateTransaction(
-                xcm,
-                assets,
-                claimerLocationToBytes(claimer),
-                fee.assetHubExecutionFeeEther,
-                fee.relayerFee,
-                {
-                    value,
-                    from: sourceAccount,
-                },
-            )
+        const tx = await context.ethereumProvider.populateTransaction(
+            con,
+            "v2_sendMessage",
+            xcm,
+            assets,
+            claimerLocationToBytes(claimer),
+            fee.assetHubExecutionFeeEther,
+            fee.relayerFee,
+            {
+                value,
+                from: sourceAccount,
+            },
+        )
 
         return {
             input: {
@@ -220,7 +217,7 @@ export class ERC20ToAH implements TransferInterface {
 
         let tokenBalance: { balance: bigint; gatewayAllowance: bigint }
         if (tokenAddress !== ETHER_TOKEN_ADDRESS) {
-            tokenBalance = await erc20Balance(
+            tokenBalance = await context.ethereumProvider.erc20Balance(
                 ethereum,
                 tokenAddress,
                 sourceAccount,

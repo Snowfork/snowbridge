@@ -1,6 +1,5 @@
 import { AssetRegistry } from "@snowbridge/base-types"
 import { TransferInterface } from "./transferInterface"
-import { IGATEWAY_V2_ABI } from "../../contracts"
 import { EthersContext } from "../../index"
 import {
     buildMessageId,
@@ -15,10 +14,9 @@ import {
 } from "../../toPolkadotSnowbridgeV2"
 import { accountId32Location, DOT_LOCATION, erc20Location } from "../../xcmBuilder"
 import { paraImplementation } from "../../parachains"
-import { erc20Balance, ETHER_TOKEN_ADDRESS } from "../../assets_v2"
+import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
 import { beneficiaryMultiAddress, padFeeByPercentage } from "../../utils"
 import { FeeInfo, resolveInputs, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
-import { Contract, Interface } from "ethers"
 import { buildAssetHubPNAReceivedXcm, sendMessageXCM } from "../../xcmbuilders/toPolkadot/pnaToAH"
 import { getOperatingStatus } from "../../status"
 import { hexToU8a } from "@polkadot/util"
@@ -136,8 +134,7 @@ export class PNAToAH implements TransferInterface {
             beneficiaryMultiAddress(beneficiaryAccount)
         let value = fee.assetHubExecutionFeeEther + fee.assetHubDeliveryFeeEther + fee.relayerFee
 
-        const ifce = new Interface(IGATEWAY_V2_ABI)
-        const con = new Contract(registry.gatewayAddress, ifce)
+        const con = context.gatewayV2()
 
         if (!ahAssetMetadata.foreignId) {
             throw Error("asset foreign ID not set in metadata")
@@ -159,19 +156,19 @@ export class PNAToAH implements TransferInterface {
         let assets = [encodeNativeAsset(tokenAddress, amount)]
         let claimer = claimerFromBeneficiary(assetHub, beneficiaryAddressHex)
 
-        const tx = await con
-            .getFunction("v2_sendMessage")
-            .populateTransaction(
-                xcm,
-                assets,
-                claimerLocationToBytes(claimer),
-                fee.assetHubExecutionFeeEther,
-                fee.relayerFee,
-                {
-                    value,
-                    from: sourceAccount,
-                },
-            )
+        const tx = await context.ethereumProvider.populateTransaction(
+            con,
+            "v2_sendMessage",
+            xcm,
+            assets,
+            claimerLocationToBytes(claimer),
+            fee.assetHubExecutionFeeEther,
+            fee.relayerFee,
+            {
+                value,
+                from: sourceAccount,
+            },
+        )
 
         return {
             input: {
@@ -225,7 +222,7 @@ export class PNAToAH implements TransferInterface {
 
         let tokenBalance: { balance: bigint; gatewayAllowance: bigint }
         if (tokenAddress !== ETHER_TOKEN_ADDRESS) {
-            tokenBalance = await erc20Balance(
+            tokenBalance = await context.ethereumProvider.erc20Balance(
                 ethereum,
                 tokenAddress,
                 sourceAccount,
