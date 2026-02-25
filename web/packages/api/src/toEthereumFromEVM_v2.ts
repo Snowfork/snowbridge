@@ -1,4 +1,3 @@
-import { ApiPromise } from "@polkadot/api"
 import { isHex, numberToHex, u8aToHex } from "@polkadot/util"
 import { decodeAddress } from "@polkadot/util-crypto"
 import {
@@ -14,9 +13,8 @@ import {
     Parachain,
 } from "@snowbridge/base-types"
 import { getOperatingStatus, OperationStatus } from "./status"
-import { IGatewayV1 as IGateway } from "./contracts"
 import { EventRecord } from "@polkadot/types/interfaces"
-import { AbstractProvider, Contract, ContractTransaction, TransactionReceipt } from "ethers"
+import { Contract, ContractTransaction, TransactionReceipt } from "ethers"
 import { paraImplementation } from "./parachains"
 import {
     buildMessageId,
