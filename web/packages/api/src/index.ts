@@ -15,7 +15,7 @@ import {
     SWAP_ROUTER_ABI,
 } from "./contracts"
 import { type EthereumProvider } from "./EthereumProvider"
-import { BridgeInfo, Environment } from "@snowbridge/base-types"
+import { BridgeInfo, ChainId, Environment } from "@snowbridge/base-types"
 import { CreateAgent } from "./registration/agent/createAgent"
 import type { AgentCreationInterface } from "./registration/agent/agentInterface"
 
@@ -480,6 +480,12 @@ export class SnowbridgeApi<
         EContractTransaction
     > {
         return new CreateAgent(this.context, this.info.registry)
+    }
+    transfer(
+        from: ChainId,
+        to: ChainId,
+    ) {
+
     }
 }
 

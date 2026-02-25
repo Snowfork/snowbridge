@@ -33,6 +33,7 @@ import { Result } from "@polkadot/types"
 import { beneficiaryMultiAddress } from "./EthereumProvider"
 import { padFeeByPercentage, u32ToLeBytes } from "./utils"
 import { paraImplementation } from "./parachains"
+import { TransferInterface as KusamaTransferInterface } from "./transfers/forKusama/transferInterface"
 
 export type Transfer = {
     input: {
@@ -535,6 +536,64 @@ export type MessageReceipt = {
     events: EventRecord[]
     dispatchError?: any
     messageId?: string
+}
+
+export class KusamaTransfer implements KusamaTransferInterface {
+    async getDeliveryFee(
+        sourceAssetHub: ApiPromise,
+        destAssetHub: ApiPromise,
+        direction: Direction,
+        registry: AssetRegistry,
+        tokenAddress: string,
+    ): Promise<DeliveryFee> {
+        return getDeliveryFee(sourceAssetHub, destAssetHub, direction, registry, tokenAddress)
+    }
+
+    async createTransfer(
+        parachain: ApiPromise,
+        direction: Direction,
+        registry: AssetRegistry,
+        sourceAccount: string,
+        beneficiaryAccount: string,
+        tokenAddress: string,
+        amount: bigint,
+        fee: DeliveryFee,
+    ): Promise<Transfer> {
+        return createTransfer(
+            parachain,
+            direction,
+            registry,
+            sourceAccount,
+            beneficiaryAccount,
+            tokenAddress,
+            amount,
+            fee,
+        )
+    }
+
+    async validateTransfer(
+        connections: {
+            sourceAssetHub: ApiPromise
+            destAssetHub: ApiPromise
+        },
+        direction: Direction,
+        transfer: Transfer,
+    ): Promise<ValidationResult> {
+        return validateTransfer(connections, direction, transfer)
+    }
+
+    async signAndSend(
+        parachain: ApiPromise,
+        transfer: Transfer,
+        account: AddressOrPair,
+        options: Partial<SignerOptions>,
+    ): Promise<MessageReceipt> {
+        return signAndSend(parachain, transfer, account, options)
+    }
+}
+
+export function createTransferImplementation(): KusamaTransferInterface {
+    return new KusamaTransfer()
 }
 
 export async function signAndSend(

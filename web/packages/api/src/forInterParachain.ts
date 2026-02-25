@@ -23,6 +23,7 @@ import {
     XcmDryRunEffects,
 } from "@polkadot/types/interfaces"
 import { u8aToHex } from "@polkadot/util"
+import { TransferInterface as InterParachainTransferInterface } from "./transfers/forInterParachain/transferInterface"
 
 export type Transfer = {
     input: {
@@ -390,6 +391,61 @@ export type MessageReceipt = {
     events: EventRecord[]
     dispatchError?: any
     messageId?: string
+}
+
+export class InterParachainTransfer implements InterParachainTransferInterface {
+    async getDeliveryFee(
+        connections: { context: EthersContext; sourceParaId: number; destinationParaId: number },
+        registry: AssetRegistry,
+        tokenAddress: string,
+        options?: {
+            padPercentage?: bigint
+        },
+    ): Promise<DeliveryFee> {
+        return getDeliveryFee(connections, registry, tokenAddress, options)
+    }
+
+    async createTransfer(
+        connections: { context: EthersContext; sourceParaId: number },
+        registry: AssetRegistry,
+        sourceAccount: string,
+        beneficiaryAccount: string,
+        destinationParaId: number,
+        tokenAddress: string,
+        amount: bigint,
+        fee: DeliveryFee,
+    ): Promise<Transfer> {
+        return createTransfer(
+            connections,
+            registry,
+            sourceAccount,
+            beneficiaryAccount,
+            destinationParaId,
+            tokenAddress,
+            amount,
+            fee,
+        )
+    }
+
+    async validateTransfer(
+        connections: { context: EthersContext; sourceParaId: number; destinationParaId: number },
+        transfer: Transfer,
+    ): Promise<ValidationResult> {
+        return validateTransfer(connections, transfer)
+    }
+
+    async signAndSend(
+        connections: { context: EthersContext; sourceParaId: number },
+        transfer: Transfer,
+        account: AddressOrPair,
+        options: Partial<SignerOptions>,
+    ): Promise<MessageReceipt> {
+        return signAndSend(connections, transfer, account, options)
+    }
+}
+
+export function createTransferImplementation(): InterParachainTransferInterface {
+    return new InterParachainTransfer()
 }
 
 export async function signAndSend(
