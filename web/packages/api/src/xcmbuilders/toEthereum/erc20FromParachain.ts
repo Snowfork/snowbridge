@@ -1,5 +1,5 @@
 import { Registry } from "@polkadot/types/types"
-import { beneficiaryMultiAddress } from "../../utils"
+import { beneficiaryMultiAddress } from "../../EthereumProvider"
 import {
     bridgeLocation,
     DOT_LOCATION,
