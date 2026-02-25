@@ -1,7 +1,7 @@
 import { Keyring } from "@polkadot/keyring"
 import { EthersEthereumProvider, createApi } from "@snowbridge/api"
 import { IGatewayV1__factory as IGateway__factory } from "@snowbridge/contract-types"
-import { Contract, ethers, LogDescription, Wallet } from "ethers"
+import { Contract, ethers, Wallet } from "ethers"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { bridgeInfoFor } from "@snowbridge/registry"
 
@@ -54,17 +54,7 @@ export const registerERC20 = async (tokenAddress: string) => {
             },
         }
     }
-    const events: LogDescription[] = []
-    receipt.logs.forEach((log) => {
-        let event = gateway.interface.parseLog({
-            topics: [...log.topics],
-            data: log.data,
-        })
-        if (event !== null) {
-            events.push(event)
-        }
-    })
-    const messageAccepted = events.find((log) => log.name === "OutboundMessageAccepted")
+    const messageAccepted = context.ethereumProvider.scanGatewayV1OutboundMessageAccepted(receipt)
     if (!messageAccepted) {
         throw Error(`Transaction ${receipt.hash} did not emit a message.`)
     }

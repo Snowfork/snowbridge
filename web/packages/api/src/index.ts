@@ -68,13 +68,7 @@ export class Context<EConnection, EContract, EAbi, EInterface, ETransaction> {
 
     constructor(
         environment: Environment,
-        ethereumProvider: EthereumProvider<
-            EConnection,
-            EContract,
-            EAbi,
-            EInterface,
-            ETransaction
-        >,
+        ethereumProvider: EthereumProvider<EConnection, EContract, EAbi, EInterface, ETransaction>,
     ) {
         this.environment = environment
         this.ethereumProvider = ethereumProvider
@@ -410,13 +404,7 @@ export class Context<EConnection, EContract, EAbi, EInterface, ETransaction> {
 
 export type ApiOptions<EConnection, EContract, EAbi, EInterface, ETransaction> = {
     info: BridgeInfo
-    ethereumProvider: EthereumProvider<
-        EConnection,
-        EContract,
-        EAbi,
-        EInterface,
-        ETransaction
-    >
+    ethereumProvider: EthereumProvider<EConnection, EContract, EAbi, EInterface, ETransaction>
 }
 
 export class SnowbridgeApi<EConnection, EContract, EAbi, EInterface, ETransaction> {

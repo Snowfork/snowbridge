@@ -17,9 +17,14 @@ export class CreateAgent implements AgentCreationInterface {
     ): Promise<AgentCreation> {
         const con = context.gatewayV2()
 
-        const tx = await context.ethereumProvider.populateTransaction(con, "v2_createAgent", agentId, {
-            from: sourceAccount,
-        })
+        const tx = await context.ethereumProvider.populateTransaction(
+            con,
+            "v2_createAgent",
+            agentId,
+            {
+                from: sourceAccount,
+            },
+        )
 
         return {
             input: {

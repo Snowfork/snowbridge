@@ -75,7 +75,7 @@ export const registerTokenV2 = async (tokenAddress: string) => {
             }
 
             // Step 6. Get the message receipt for tracking purposes
-            const message = await toPolkadotSnowbridgeV2.getMessageReceipt(receipt)
+            const message = await toPolkadotSnowbridgeV2.getMessageReceipt(context, receipt)
             if (!message) {
                 throw Error(`Transaction ${receipt.hash} did not emit a message.`)
             }
