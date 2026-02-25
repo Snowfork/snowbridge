@@ -9,7 +9,14 @@ import {
     buildERC20ToAssetHubFromParachain,
     buildDepositAllAssetsWithTopic,
 } from "./xcmBuilder"
-import { Asset, AssetRegistry, Parachain } from "@snowbridge/base-types"
+import {
+    Asset,
+    AssetRegistry,
+    BridgeInfo,
+    ChainId,
+    Parachain,
+    TransferRoute,
+} from "@snowbridge/base-types"
 import { beneficiaryMultiAddress } from "./EthereumProvider"
 import { padFeeByPercentage } from "./utils"
 import { paraImplementation } from "./parachains"
@@ -394,58 +401,86 @@ export type MessageReceipt = {
 }
 
 export class InterParachainTransfer implements InterParachainTransferInterface {
+    readonly info: BridgeInfo
+    readonly context: EthersContext
+    readonly route: TransferRoute
+    readonly from: ChainId
+    readonly to: ChainId
+
+    constructor(
+        info: BridgeInfo,
+        context: EthersContext,
+        route: TransferRoute,
+        from: ChainId,
+        to: ChainId,
+    ) {
+        this.info = info
+        this.context = context
+        this.route = route
+        this.from = from
+        this.to = to
+    }
+
     async getDeliveryFee(
-        connections: { context: EthersContext; sourceParaId: number; destinationParaId: number },
-        registry: AssetRegistry,
         tokenAddress: string,
         options?: {
             padPercentage?: bigint
         },
     ): Promise<DeliveryFee> {
-        return getDeliveryFee(connections, registry, tokenAddress, options)
+        return getDeliveryFee(
+            {
+                context: this.context,
+                sourceParaId: this.from.id,
+                destinationParaId: this.to.id,
+            },
+            this.info.registry,
+            tokenAddress,
+            options,
+        )
     }
 
     async createTransfer(
-        connections: { context: EthersContext; sourceParaId: number },
-        registry: AssetRegistry,
         sourceAccount: string,
         beneficiaryAccount: string,
-        destinationParaId: number,
         tokenAddress: string,
         amount: bigint,
         fee: DeliveryFee,
     ): Promise<Transfer> {
         return createTransfer(
-            connections,
-            registry,
+            { context: this.context, sourceParaId: this.from.id },
+            this.info.registry,
             sourceAccount,
             beneficiaryAccount,
-            destinationParaId,
+            this.to.id,
             tokenAddress,
             amount,
             fee,
         )
     }
 
-    async validateTransfer(
-        connections: { context: EthersContext; sourceParaId: number; destinationParaId: number },
-        transfer: Transfer,
-    ): Promise<ValidationResult> {
-        return validateTransfer(connections, transfer)
+    async validateTransfer(transfer: Transfer): Promise<ValidationResult> {
+        return validateTransfer(
+            {
+                context: this.context,
+                sourceParaId: this.from.id,
+                destinationParaId: this.to.id,
+            },
+            transfer,
+        )
     }
 
     async signAndSend(
-        connections: { context: EthersContext; sourceParaId: number },
         transfer: Transfer,
         account: AddressOrPair,
         options: Partial<SignerOptions>,
     ): Promise<MessageReceipt> {
-        return signAndSend(connections, transfer, account, options)
+        return signAndSend(
+            { context: this.context, sourceParaId: this.from.id },
+            transfer,
+            account,
+            options,
+        )
     }
-}
-
-export function createTransferImplementation(): InterParachainTransferInterface {
-    return new InterParachainTransfer()
 }
 
 export async function signAndSend(

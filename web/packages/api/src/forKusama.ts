@@ -22,7 +22,15 @@ import {
     buildTransferKusamaToPolkadotExportXCM,
     buildTransferPolkadotToKusamaExportXCM,
 } from "./xcmBuilderKusama"
-import { Asset, AssetRegistry, Parachain, AssetMap } from "@snowbridge/base-types"
+import {
+    Asset,
+    AssetRegistry,
+    AssetMap,
+    BridgeInfo,
+    ChainId,
+    Parachain,
+    TransferRoute,
+} from "@snowbridge/base-types"
 import {
     CallDryRunEffects,
     EventRecord,
@@ -34,6 +42,7 @@ import { beneficiaryMultiAddress } from "./EthereumProvider"
 import { padFeeByPercentage, u32ToLeBytes } from "./utils"
 import { paraImplementation } from "./parachains"
 import { TransferInterface as KusamaTransferInterface } from "./transfers/forKusama/transferInterface"
+import { EthersContext } from "."
 
 export type Transfer = {
     input: {
@@ -539,30 +548,64 @@ export type MessageReceipt = {
 }
 
 export class KusamaTransfer implements KusamaTransferInterface {
-    async getDeliveryFee(
-        sourceAssetHub: ApiPromise,
-        destAssetHub: ApiPromise,
-        direction: Direction,
-        registry: AssetRegistry,
-        tokenAddress: string,
-    ): Promise<DeliveryFee> {
-        return getDeliveryFee(sourceAssetHub, destAssetHub, direction, registry, tokenAddress)
+    readonly info: BridgeInfo
+    readonly context: EthersContext
+    readonly route: TransferRoute
+    readonly from: ChainId
+    readonly to: ChainId
+
+    constructor(
+        info: BridgeInfo,
+        context: EthersContext,
+        route: TransferRoute,
+        from: ChainId,
+        to: ChainId,
+    ) {
+        this.info = info
+        this.context = context
+        this.route = route
+        this.from = from
+        this.to = to
+    }
+
+    #direction() {
+        return this.from.kind === "kusama" ? Direction.ToPolkadot : Direction.ToKusama
+    }
+
+    async #connections() {
+        const [polkadotAssetHub, kusamaAssetHub] = await Promise.all([
+            this.context.assetHub(),
+            this.context.kusamaAssetHub(),
+        ])
+        if (this.#direction() === Direction.ToPolkadot) {
+            return { sourceAssetHub: kusamaAssetHub, destAssetHub: polkadotAssetHub }
+        }
+        return { sourceAssetHub: polkadotAssetHub, destAssetHub: kusamaAssetHub }
+    }
+
+    async getDeliveryFee(tokenAddress: string): Promise<DeliveryFee> {
+        const { sourceAssetHub, destAssetHub } = await this.#connections()
+        return getDeliveryFee(
+            sourceAssetHub,
+            destAssetHub,
+            this.#direction(),
+            this.info.registry,
+            tokenAddress,
+        )
     }
 
     async createTransfer(
-        parachain: ApiPromise,
-        direction: Direction,
-        registry: AssetRegistry,
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
         amount: bigint,
         fee: DeliveryFee,
     ): Promise<Transfer> {
+        const { sourceAssetHub } = await this.#connections()
         return createTransfer(
-            parachain,
-            direction,
-            registry,
+            sourceAssetHub,
+            this.#direction(),
+            this.info.registry,
             sourceAccount,
             beneficiaryAccount,
             tokenAddress,
@@ -571,29 +614,19 @@ export class KusamaTransfer implements KusamaTransferInterface {
         )
     }
 
-    async validateTransfer(
-        connections: {
-            sourceAssetHub: ApiPromise
-            destAssetHub: ApiPromise
-        },
-        direction: Direction,
-        transfer: Transfer,
-    ): Promise<ValidationResult> {
-        return validateTransfer(connections, direction, transfer)
+    async validateTransfer(transfer: Transfer): Promise<ValidationResult> {
+        const connections = await this.#connections()
+        return validateTransfer(connections, this.#direction(), transfer)
     }
 
     async signAndSend(
-        parachain: ApiPromise,
         transfer: Transfer,
         account: AddressOrPair,
         options: Partial<SignerOptions>,
     ): Promise<MessageReceipt> {
-        return signAndSend(parachain, transfer, account, options)
+        const { sourceAssetHub } = await this.#connections()
+        return signAndSend(sourceAssetHub, transfer, account, options)
     }
-}
-
-export function createTransferImplementation(): KusamaTransferInterface {
-    return new KusamaTransfer()
 }
 
 export async function signAndSend(

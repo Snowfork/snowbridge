@@ -23,15 +23,6 @@ export const transferForKusama = async (
     const api = createApi({ info, ethereumProvider: new EthersEthereumProvider() })
     const context = api.context
 
-    const [polkadotAssetHub, kusamaAssetHub] = await Promise.all([
-        context.assetHub(),
-        context.kusamaAssetHub(),
-    ])
-
-    if (!kusamaAssetHub) {
-        throw Error(`Kusama asset hub could not connect`)
-    }
-
     const polkadot_keyring = new Keyring({ type: "sr25519" })
 
     const SOURCE_ACCOUNT = process.env["SOURCE_SUBSTRATE_KEY"]
@@ -43,16 +34,6 @@ export const transferForKusama = async (
 
     const SOURCE_ACCOUNT_PUBLIC = SOURCE_ACCOUNT.address
     const DEST_ACCOUNT_PUBLIC = DEST_ACCOUNT.address
-
-    let sourceAssetHub
-    let destAssetHub
-    if (direction == Direction.ToPolkadot) {
-        sourceAssetHub = kusamaAssetHub
-        destAssetHub = polkadotAssetHub
-    } else {
-        sourceAssetHub = polkadotAssetHub
-        destAssetHub = kusamaAssetHub
-    }
 
     let tokenAddress
     if (tokenName == "ETH") {
@@ -95,19 +76,10 @@ export const transferForKusama = async (
                   )
 
         // Step 1. Get the delivery fee for the transaction
-        const fee = await transferImpl.getDeliveryFee(
-            sourceAssetHub,
-            destAssetHub,
-            direction,
-            registry,
-            tokenAddress,
-        )
+        const fee = await transferImpl.getDeliveryFee(tokenAddress)
 
         // Step 2. Create a transfer tx
         const transfer = await transferImpl.createTransfer(
-            sourceAssetHub,
-            direction,
-            registry,
             SOURCE_ACCOUNT_PUBLIC,
             DEST_ACCOUNT_PUBLIC,
             tokenAddress,
@@ -116,11 +88,7 @@ export const transferForKusama = async (
         )
 
         // Step 3. Validate
-        const validation = await transferImpl.validateTransfer(
-            { sourceAssetHub, destAssetHub },
-            direction,
-            transfer,
-        )
+        const validation = await transferImpl.validateTransfer(transfer)
 
         // Step 4. Check validation logs for errors
         if (!validation.success) {
@@ -129,7 +97,7 @@ export const transferForKusama = async (
         }
 
         // Step 5. Submit transaction and get receipt for tracking
-        const response = await transferImpl.signAndSend(sourceAssetHub, transfer, SOURCE_ACCOUNT, {
+        const response = await transferImpl.signAndSend(transfer, SOURCE_ACCOUNT, {
             withSignedTransaction: true,
         })
         if (!response) {
