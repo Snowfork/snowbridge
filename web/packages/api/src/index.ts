@@ -16,6 +16,8 @@ import {
 } from "./contracts"
 import { type EthereumProvider } from "./EthereumProvider"
 import { BridgeInfo, Environment } from "@snowbridge/base-types"
+import { CreateAgent } from "./registration/agent/createAgent"
+import type { AgentCreationInterface } from "./registration/agent/agentInterface"
 
 export * as toPolkadotV2 from "./toPolkadot_v2"
 export * as toEthereumV2 from "./toEthereum_v2"
@@ -37,14 +39,22 @@ export * as addTip from "./addTip"
 export { EthersEthereumProvider } from "./EthereumProvider"
 export type { EthereumProvider, EthersContext } from "./EthereumProvider"
 
-export class Context<EConnection, EContract, EAbi, EInterface, ETransaction> {
+export class Context<
+    EConnection,
+    EContract,
+    EAbi,
+    EInterface,
+    ETransactionReceipt,
+    EContractTransaction,
+> {
     readonly environment: Environment
     readonly ethereumProvider: EthereumProvider<
         EConnection,
         EContract,
         EAbi,
         EInterface,
-        ETransaction
+        ETransactionReceipt,
+        EContractTransaction
     >
 
     // Ethereum
@@ -68,7 +78,14 @@ export class Context<EConnection, EContract, EAbi, EInterface, ETransaction> {
 
     constructor(
         environment: Environment,
-        ethereumProvider: EthereumProvider<EConnection, EContract, EAbi, EInterface, ETransaction>,
+        ethereumProvider: EthereumProvider<
+            EConnection,
+            EContract,
+            EAbi,
+            EInterface,
+            ETransactionReceipt,
+            EContractTransaction
+        >,
     ) {
         this.environment = environment
         this.ethereumProvider = ethereumProvider
@@ -402,20 +419,93 @@ export class Context<EConnection, EContract, EAbi, EInterface, ETransaction> {
     }
 }
 
-export type ApiOptions<EConnection, EContract, EAbi, EInterface, ETransaction> = {
+export type ApiOptions<
+    EConnection,
+    EContract,
+    EAbi,
+    EInterface,
+    ETransactionReceipt,
+    EContractTransaction,
+> = {
     info: BridgeInfo
-    ethereumProvider: EthereumProvider<EConnection, EContract, EAbi, EInterface, ETransaction>
+    ethereumProvider: EthereumProvider<
+        EConnection,
+        EContract,
+        EAbi,
+        EInterface,
+        ETransactionReceipt,
+        EContractTransaction
+    >
 }
 
-export class SnowbridgeApi<EConnection, EContract, EAbi, EInterface, ETransaction> {
-    readonly context: Context<EConnection, EContract, EAbi, EInterface, ETransaction>
-    constructor(options: ApiOptions<EConnection, EContract, EAbi, EInterface, ETransaction>) {
+export class SnowbridgeApi<
+    EConnection,
+    EContract,
+    EAbi,
+    EInterface,
+    ETransactionReceipt,
+    EContractTransaction,
+> {
+    readonly info: BridgeInfo
+    readonly context: Context<
+        EConnection,
+        EContract,
+        EAbi,
+        EInterface,
+        ETransactionReceipt,
+        EContractTransaction
+    >
+    constructor(
+        options: ApiOptions<
+            EConnection,
+            EContract,
+            EAbi,
+            EInterface,
+            ETransactionReceipt,
+            EContractTransaction
+        >,
+    ) {
+        this.info = options.info
         this.context = new Context(options.info.environment, options.ethereumProvider)
+    }
+    createAgent(): AgentCreationInterface<
+        Context<
+            EConnection,
+            EContract,
+            EAbi,
+            EInterface,
+            ETransactionReceipt,
+            EContractTransaction
+        >,
+        EContractTransaction
+    > {
+        return new CreateAgent(this.context, this.info.registry)
     }
 }
 
-export function createApi<EConnection, EContract, EAbi, EInterface, ETransaction>(
-    options: ApiOptions<EConnection, EContract, EAbi, EInterface, ETransaction>,
-): SnowbridgeApi<EConnection, EContract, EAbi, EInterface, ETransaction> {
+export function createApi<
+    EConnection,
+    EContract,
+    EAbi,
+    EInterface,
+    ETransactionReceipt,
+    EContractTransaction,
+>(
+    options: ApiOptions<
+        EConnection,
+        EContract,
+        EAbi,
+        EInterface,
+        ETransactionReceipt,
+        EContractTransaction
+    >,
+): SnowbridgeApi<
+    EConnection,
+    EContract,
+    EAbi,
+    EInterface,
+    ETransactionReceipt,
+    EContractTransaction
+> {
     return new SnowbridgeApi(options)
 }

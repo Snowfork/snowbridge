@@ -1,5 +1,5 @@
 import { Registry } from "@polkadot/types/types"
-import { bnToU8a, hexToU8a, stringToU8a, u8aToHex } from "@polkadot/util"
+import { bnToU8a, stringToU8a, u8aToHex } from "@polkadot/util"
 import { blake2AsU8a, keccak256AsU8a } from "@polkadot/util-crypto"
 
 export const paraIdToSovereignAccount = (type: "para" | "sibl", paraId: number): string => {

@@ -1,11 +1,7 @@
-import { AssetRegistry } from "@snowbridge/base-types"
-import { EthersContext } from "../../index"
-import { ContractTransaction } from "ethers"
 import { FeeInfo, ValidationLog } from "../../toPolkadot_v2"
 
-export type AgentCreation = {
+export type AgentCreation<ContractTransaction> = {
     input: {
-        registry: AssetRegistry
         sourceAccount: string
         agentId: string
     }
@@ -15,7 +11,7 @@ export type AgentCreation = {
     tx: ContractTransaction
 }
 
-export type AgentCreationValidationResult = {
+export type AgentCreationValidationResult<ContractTransaction> = {
     logs: ValidationLog[]
     success: boolean
     data: {
@@ -24,19 +20,17 @@ export type AgentCreationValidationResult = {
         agentAlreadyExists: boolean
         agentAddress?: string
     }
-    creation: AgentCreation
+    creation: AgentCreation<ContractTransaction>
 }
 
-export interface AgentCreationInterface {
-    createAgentCreation(
-        context: EthersContext,
-        registry: AssetRegistry,
-        sourceAccount: string,
-        agentId: string,
-    ): Promise<AgentCreation>
+export interface AgentCreationInterface<Context, ContractTransaction> {
+    readonly context: Context
 
-    validateAgentCreation(
-        context: EthersContext,
-        creation: AgentCreation,
-    ): Promise<AgentCreationValidationResult>
+    rawTx(sourceAccount: string, agentId: string): Promise<AgentCreation<ContractTransaction>>
+
+    validateTx(
+        creation: AgentCreation<ContractTransaction>,
+    ): Promise<AgentCreationValidationResult<ContractTransaction>>
+
+    tx(creation: AgentCreation<ContractTransaction>): Promise<AgentCreation<ContractTransaction>>
 }

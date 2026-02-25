@@ -1,23 +1,52 @@
-import { AssetRegistry } from "@snowbridge/base-types"
 import {
     AgentCreationInterface,
     AgentCreation,
     AgentCreationValidationResult,
 } from "./agentInterface"
-import { EthersContext } from "../../index"
+import type { Context } from "../../index"
 import { ValidationKind } from "../../toPolkadotSnowbridgeV2"
 import { ValidationLog, ValidationReason } from "../../toPolkadot_v2"
+import { AssetRegistry } from "@snowbridge/base-types"
 
-export class CreateAgent implements AgentCreationInterface {
-    async createAgentCreation(
-        context: EthersContext,
-        registry: AssetRegistry,
+export class CreateAgent<
+    EConnection,
+    EContract,
+    EAbi,
+    EInterface,
+    ETransactionReceipt,
+    EContractTransaction,
+> implements
+        AgentCreationInterface<
+            Context<
+                EConnection,
+                EContract,
+                EAbi,
+                EInterface,
+                ETransactionReceipt,
+                EContractTransaction
+            >,
+            EContractTransaction
+        >
+{
+    constructor(
+        readonly context: Context<
+            EConnection,
+            EContract,
+            EAbi,
+            EInterface,
+            ETransactionReceipt,
+            EContractTransaction
+        >,
+        private readonly registry: AssetRegistry,
+    ) {}
+
+    async rawTx(
         sourceAccount: string,
         agentId: string,
-    ): Promise<AgentCreation> {
-        const con = context.gatewayV2()
+    ): Promise<AgentCreation<EContractTransaction>> {
+        const con = this.context.gatewayV2()
 
-        const tx = await context.ethereumProvider.populateTransaction(
+        const tx = await this.context.ethereumProvider.populateTransaction(
             con,
             "v2_createAgent",
             agentId,
@@ -28,25 +57,23 @@ export class CreateAgent implements AgentCreationInterface {
 
         return {
             input: {
-                registry,
                 sourceAccount,
                 agentId,
             },
             computed: {
-                gatewayAddress: registry.gatewayAddress,
+                gatewayAddress: this.registry.gatewayAddress,
             },
             tx,
         }
     }
 
-    async validateAgentCreation(
-        context: EthersContext,
-        creation: AgentCreation,
-    ): Promise<AgentCreationValidationResult> {
+    async validateTx(
+        creation: AgentCreation<EContractTransaction>,
+    ): Promise<AgentCreationValidationResult<EContractTransaction>> {
         const { tx } = creation
         const { sourceAccount, agentId } = creation.input
-        const ethereum = context.ethereum()
-        const gateway = context.gatewayV2()
+        const ethereum = this.context.ethereum()
+        const gateway = this.context.gatewayV2()
 
         const logs: ValidationLog[] = []
 
@@ -67,13 +94,13 @@ export class CreateAgent implements AgentCreationInterface {
             agentAlreadyExists = false
         }
 
-        const etherBalance = await ethereum.getBalance(sourceAccount)
+        const etherBalance = await this.context.ethereumProvider.getBalance(ethereum, sourceAccount)
 
         let feeInfo
         if (logs.length === 0 || !agentAlreadyExists) {
             const [estimatedGas, feeData] = await Promise.all([
-                context.ethereumProvider.estimateGas(ethereum, tx),
-                context.ethereumProvider.getFeeData(ethereum),
+                this.context.ethereumProvider.estimateGas(ethereum, tx),
+                this.context.ethereumProvider.getFeeData(ethereum),
             ])
             const executionFee = (feeData.gasPrice ?? 0n) * estimatedGas
             if (executionFee === 0n) {
@@ -111,5 +138,12 @@ export class CreateAgent implements AgentCreationInterface {
             },
             creation,
         }
+    }
+
+    async tx(
+        creation: AgentCreation<EContractTransaction>,
+    ): Promise<AgentCreation<EContractTransaction>> {
+        await this.validateTx(creation)
+        return creation
     }
 }
