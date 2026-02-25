@@ -279,3 +279,4 @@ func proofToLog(proof contracts.BeefyClientValidatorProof) logrus.Fields {
 		"Proof":   hexProof,
 	}
 }
+

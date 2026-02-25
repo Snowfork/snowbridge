@@ -5,6 +5,7 @@ pragma solidity 0.8.33;
 import {WETH9} from "canonical-weth/WETH9.sol";
 import {Script} from "forge-std/Script.sol";
 import {BeefyClient} from "../src/BeefyClient.sol";
+import {BeefyClientWrapper} from "../src/BeefyClientWrapper.sol";
 import {IGatewayV1} from "../src/v1/IGateway.sol";
 import {GatewayProxy} from "../src/GatewayProxy.sol";
 import {Gateway} from "../src/Gateway.sol";
@@ -81,6 +82,18 @@ contract DeployLocal is Script {
 
         GatewayProxy gateway = new GatewayProxy(address(gatewayLogic), abi.encode(config));
 
+        // Deploy BeefyClientWrapper (after GatewayProxy so we can pass its address)
+        BeefyClientWrapper beefyClientWrapper = new BeefyClientWrapper(
+            address(gateway),
+            vm.envUint("BEEFY_WRAPPER_MAX_GAS_PRICE"),
+            vm.envUint("BEEFY_WRAPPER_MAX_REFUND_AMOUNT"),
+            vm.envUint("BEEFY_WRAPPER_REFUND_TARGET"),
+            vm.envOr("BEEFY_WRAPPER_TICKET_TIMEOUT", uint256(15 minutes))
+        );
+
+        // Fund wrapper for refunds
+        payable(address(beefyClientWrapper)).call{value: vm.envUint("BEEFY_WRAPPER_INITIAL_DEPOSIT")}("");
+
         // Deploy WETH for testing
         WETH9 weth = new WETH9();
 
@@ -94,7 +107,7 @@ contract DeployLocal is Script {
         // For testing call contract
         new HelloWorld();
 
-        // Deploy test token for registration testing  
+        // Deploy test token for registration testing
         new Token("Test Token", "TEST", 18);
 
         // Fund the gateway proxy contract. Used to reward relayers
