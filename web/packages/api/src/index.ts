@@ -18,6 +18,18 @@ import { type EthereumProvider } from "./EthereumProvider"
 import { BridgeInfo, ChainId, Environment } from "@snowbridge/base-types"
 import { CreateAgent } from "./registration/agent/createAgent"
 import type { AgentCreationInterface } from "./registration/agent/agentInterface"
+import * as kusamaTransfers from "./forKusama"
+import * as interParachainTransfers from "./forInterParachain"
+import * as toEthereumTransfers from "./toEthereumSnowbridgeV2"
+import * as toPolkadotTransfers from "./toPolkadotSnowbridgeV2"
+import * as toEthereumEvmTransfers from "./toEthereumFromEVM_v2"
+import type { TransferInterface as ForInterParachainTransferInterface } from "./transfers/forInterParachain/transferInterface"
+import type { TransferInterface as ForKusamaTransferInterface } from "./transfers/forKusama/transferInterface"
+import type { TransferInterface as ToPolkadotTransferInterface } from "./transfers/toPolkadot/transferInterface"
+import type { TransferInterface as ToPolkadotL2TransferInterface } from "./transfers/l2ToPolkadot/transferInterface"
+import type { TransferInterface as ToEthereumTransferInterface } from "./transfers/toEthereum/transferInterface"
+import type { TransferInterface as ToEthereumL2TransferInterface } from "./transfers/polkadotToL2/transferInterface"
+import type { TransferInterface as ToEthereumEvmTransferInterface } from "./transfers/toEthereumEvm/transferInterface"
 
 export * as toPolkadotV2 from "./toPolkadot_v2"
 export * as toEthereumV2 from "./toEthereum_v2"
@@ -438,6 +450,29 @@ export type ApiOptions<
     >
 }
 
+export type TransferImplementation =
+    | ({ kind: "polkadot->polkadot" } & ForInterParachainTransferInterface)
+    | ({ kind: "kusama->polkadot" } & ForKusamaTransferInterface)
+    | ({ kind: "polkadot->kusama" } & ForKusamaTransferInterface)
+    | ({ kind: "polkadot->ethereum" } & ToEthereumTransferInterface)
+    | ({ kind: "ethereum->polkadot" } & ToPolkadotTransferInterface)
+    | ({ kind: "ethereum->ethereum" } & ToEthereumEvmTransferInterface)
+    | ({ kind: "polkadot->ethereum_l2" } & ToEthereumL2TransferInterface)
+    | ({ kind: "ethereum_l2->polkadot" } & ToPolkadotL2TransferInterface)
+
+type TransferKind = TransferImplementation["kind"]
+type TransferForKind<K extends TransferKind> = Extract<TransferImplementation, { kind: K }>
+type TransferFromTo<F extends ChainId, T extends ChainId> = TransferForKind<
+    Extract<`${F["kind"]}->${T["kind"]}`, TransferKind>
+>
+
+function withKind<K extends TransferImplementation["kind"], T>(
+    implementation: T,
+    kind: K,
+): T & { kind: K } {
+    return Object.assign(implementation as object, { kind }) as T & { kind: K }
+}
+
 export class SnowbridgeApi<
     EConnection,
     EContract,
@@ -481,11 +516,102 @@ export class SnowbridgeApi<
     > {
         return new CreateAgent(this.context, this.info.registry)
     }
-    transfer(
-        from: ChainId,
-        to: ChainId,
-    ) {
+    transfer<F extends ChainId, T extends ChainId>(
+        from: F,
+        to: T,
+        tokenAddress?: string,
+    ): TransferFromTo<F, T> {
+        const route = this.info.routes.find(
+            (entry) =>
+                entry.from.kind === from.kind &&
+                entry.from.id === from.id &&
+                entry.to.kind === to.kind &&
+                entry.to.id === to.id,
+        )
+        if (!route) {
+            throw new Error(`No route for ${from.kind}:${from.id} -> ${to.kind}:${to.id}.`)
+        }
 
+        const kind = `${from.kind}->${to.kind}` as const
+
+        switch (kind) {
+            case "polkadot->polkadot":
+                return withKind(
+                    interParachainTransfers.createTransferImplementation(),
+                    kind,
+                ) as TransferFromTo<F, T>
+            case "kusama->polkadot":
+            case "polkadot->kusama":
+                return withKind(
+                    kusamaTransfers.createTransferImplementation(),
+                    kind,
+                ) as TransferFromTo<F, T>
+            case "polkadot->ethereum":
+                if (!tokenAddress) {
+                    throw new Error("tokenAddress is required for polkadot->ethereum transfers.")
+                }
+                return withKind(
+                    toEthereumTransfers.createTransferImplementation(
+                        from.id,
+                        this.info.registry,
+                        tokenAddress,
+                    ),
+                    kind,
+                ) as TransferFromTo<F, T>
+            case "ethereum->polkadot":
+                if (!tokenAddress) {
+                    throw new Error("tokenAddress is required for ethereum->polkadot transfers.")
+                }
+                return withKind(
+                    toPolkadotTransfers.createTransferImplementation(
+                        to.id,
+                        this.info.registry,
+                        tokenAddress,
+                    ),
+                    kind,
+                ) as TransferFromTo<F, T>
+            case "ethereum->ethereum":
+                if (!tokenAddress) {
+                    throw new Error("tokenAddress is required for ethereum->ethereum transfers.")
+                }
+                return withKind(
+                    toEthereumEvmTransfers.createTransferImplementationV1(
+                        from.id,
+                        this.info.registry,
+                        tokenAddress,
+                    ),
+                    kind,
+                ) as TransferFromTo<F, T>
+            case "polkadot->ethereum_l2":
+                if (!tokenAddress) {
+                    throw new Error("tokenAddress is required for polkadot->ethereum_l2 transfers.")
+                }
+                return withKind(
+                    toEthereumTransfers.createL2TransferImplementation(
+                        from.id,
+                        this.info.registry,
+                        tokenAddress,
+                    ),
+                    kind,
+                ) as TransferFromTo<F, T>
+            case "ethereum_l2->polkadot":
+                if (!tokenAddress) {
+                    throw new Error(
+                        "tokenAddress is required for ethereum_l2->polkadot transfers.",
+                    )
+                }
+                return withKind(
+                    toPolkadotTransfers.createL2TransferImplementation(
+                        from.id,
+                        to.id,
+                        this.info.registry,
+                        tokenAddress,
+                    ),
+                    kind,
+                ) as TransferFromTo<F, T>
+            default:
+                throw new Error(`No implementation for route ${from.kind}:${from.id} -> ${to.kind}:${to.id}.`)
+        }
     }
 }
 
