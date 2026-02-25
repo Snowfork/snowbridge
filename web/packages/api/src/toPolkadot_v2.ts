@@ -20,6 +20,12 @@ import { XcmDryRunApiError, XcmDryRunEffects } from "@polkadot/types/interfaces"
 import { paraImplementation } from "./parachains"
 import { EthersContext } from "./index"
 import type { FeeData } from "./EthereumProvider"
+import { TransferInterface as ToPolkadotTransferInterface } from "./transfers/toPolkadot/transferInterface"
+import type {
+    DeliveryFee as ToPolkadotV2DeliveryFee,
+    Transfer as ToPolkadotV2Transfer,
+    ValidationResult as ToPolkadotV2ValidationResult,
+} from "./toPolkadotSnowbridgeV2"
 
 export type Transfer = {
     input: {
@@ -109,6 +115,157 @@ export type MessageReceipt = {
     blockHash: string
     txHash: string
     txIndex: number
+}
+
+function toV2DeliveryFee(fee: DeliveryFee): ToPolkadotV2DeliveryFee {
+    return {
+        ...fee,
+        feeAsset: null,
+        assetHubDeliveryFeeEther: 0n,
+        assetHubExecutionFeeEther: 0n,
+        destinationDeliveryFeeEther: 0n,
+        destinationExecutionFeeEther: 0n,
+        destinationExecutionFeeDOT: fee.destinationExecutionFeeDOT,
+        relayerFee: 0n,
+        extrinsicFeeDot: 0n,
+        extrinsicFeeEther: 0n,
+    }
+}
+
+function toV1DeliveryFee(fee: ToPolkadotV2DeliveryFee): DeliveryFee {
+    const v1Fee = fee as unknown as {
+        destinationDeliveryFeeDOT?: bigint
+        destinationExecutionFeeDOT?: bigint
+        totalFeeInWei?: bigint
+    }
+    if (
+        typeof v1Fee.destinationDeliveryFeeDOT !== "bigint" ||
+        typeof v1Fee.destinationExecutionFeeDOT !== "bigint" ||
+        typeof v1Fee.totalFeeInWei !== "bigint"
+    ) {
+        throw new Error(
+            "Unsupported fee object for v1 toPolkadot adapter. Expected destinationDeliveryFeeDOT, destinationExecutionFeeDOT, and totalFeeInWei.",
+        )
+    }
+    return {
+        destinationDeliveryFeeDOT: v1Fee.destinationDeliveryFeeDOT,
+        destinationExecutionFeeDOT: v1Fee.destinationExecutionFeeDOT,
+        totalFeeInWei: v1Fee.totalFeeInWei,
+    }
+}
+
+function toV2Transfer(transfer: Transfer): ToPolkadotV2Transfer {
+    return {
+        ...transfer,
+        input: {
+            ...transfer.input,
+            fee: toV2DeliveryFee(transfer.input.fee),
+        },
+        computed: {
+            ...transfer.computed,
+            claimer: null,
+            topic: "",
+            totalInputAmount: transfer.input.amount,
+        },
+    } as unknown as ToPolkadotV2Transfer
+}
+
+function toV1Transfer(transfer: ToPolkadotV2Transfer): Transfer {
+    const candidate = transfer as unknown as Transfer
+    const v1Fee = toV1DeliveryFee(transfer.input.fee)
+    if (typeof candidate.computed?.destinationFeeInDOT !== "bigint") {
+        throw new Error(
+            "Unsupported transfer object for v1 toPolkadot adapter. Expected v1 transfer shape.",
+        )
+    }
+    return {
+        ...candidate,
+        input: {
+            ...candidate.input,
+            fee: v1Fee,
+        },
+    }
+}
+
+export class V1ToPolkadotAdapter implements ToPolkadotTransferInterface {
+    async getDeliveryFee(
+        context: EthersContext,
+        registry: AssetRegistry,
+        tokenAddress: string,
+        destinationParaId: number,
+        options?: {
+            paddFeeByPercentage?: bigint
+            feeAsset?: any
+            customXcm?: any[]
+            overrideRelayerFee?: bigint
+        },
+    ): Promise<ToPolkadotV2DeliveryFee> {
+        if (options?.feeAsset !== undefined) {
+            throw new Error("v1 toPolkadot adapter does not support options.feeAsset.")
+        }
+        if (options?.customXcm !== undefined) {
+            throw new Error("v1 toPolkadot adapter does not support options.customXcm.")
+        }
+        if (options?.overrideRelayerFee !== undefined) {
+            throw new Error("v1 toPolkadot adapter does not support options.overrideRelayerFee.")
+        }
+
+        const fee = await getDeliveryFee(
+            context,
+            registry,
+            tokenAddress,
+            destinationParaId,
+            options?.paddFeeByPercentage,
+        )
+        return toV2DeliveryFee(fee)
+    }
+
+    async createTransfer(
+        context: EthersContext,
+        registry: AssetRegistry,
+        destinationParaId: number,
+        sourceAccount: string,
+        beneficiaryAccount: string,
+        tokenAddress: string,
+        amount: bigint,
+        fee: ToPolkadotV2DeliveryFee,
+        customXcm?: any[],
+    ): Promise<ToPolkadotV2Transfer> {
+        if (customXcm !== undefined) {
+            throw new Error("v1 toPolkadot adapter does not support customXcm.")
+        }
+
+        const v1Transfer = await createTransfer(
+            context,
+            registry,
+            sourceAccount,
+            beneficiaryAccount,
+            tokenAddress,
+            destinationParaId,
+            amount,
+            toV1DeliveryFee(fee),
+        )
+        return toV2Transfer(v1Transfer)
+    }
+
+    async validateTransfer(
+        context: EthersContext,
+        transfer: ToPolkadotV2Transfer,
+    ): Promise<ToPolkadotV2ValidationResult> {
+        const v1Result = await validateTransfer(context, toV1Transfer(transfer))
+        return {
+            ...v1Result,
+            transfer: toV2Transfer(v1Result.transfer),
+        } as ToPolkadotV2ValidationResult
+    }
+}
+
+export function createTransferImplementationV1(
+    _destinationParaId: number,
+    _registry: AssetRegistry,
+    _tokenAddress: string,
+): ToPolkadotTransferInterface {
+    return new V1ToPolkadotAdapter()
 }
 
 export async function getDeliveryFee(
