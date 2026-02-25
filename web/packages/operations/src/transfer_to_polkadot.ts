@@ -154,7 +154,7 @@ export const transferToPolkadot = async (
             }
 
             // Step 7. Get the message receipt for tracking purposes
-            const message = await toPolkadotV2.getMessageReceipt(receipt)
+            const message = await toPolkadotV2.getMessageReceipt(context, receipt)
             if (!message) {
                 throw Error(`Transaction ${receipt.hash} did not emit a message.`)
             }
