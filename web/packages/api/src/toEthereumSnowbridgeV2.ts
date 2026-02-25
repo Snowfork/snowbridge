@@ -35,7 +35,7 @@ import { paraImplementation } from "./parachains"
 import { Context, EthersContext } from "./index"
 import { ETHER_TOKEN_ADDRESS, findL2TokenAddress } from "./assets_v2"
 import { getOperatingStatus } from "./status"
-import { AbstractProvider, ethers, Wallet, TransactionReceipt } from "ethers"
+import { AbstractProvider, Wallet, TransactionReceipt } from "ethers"
 import { CreateAgent } from "./registration/agent/createAgent"
 import { estimateFees } from "./across/api"
 import { AgentCreation } from "./registration/agent/agentInterface"
@@ -607,17 +607,15 @@ export const validateTransferFromAssetHub = async (
     }
     let contractCall = transfer.input.contractCall
     if (contractCall) {
-        try {
-            await checkContractAddress(ethereum, contractCall.target)
-        } catch (error) {
+        const isContractAddress = await context.ethereumProvider.isContractAddress(
+            ethereum,
+            contractCall.target,
+        )
+        if (!isContractAddress) {
             logs.push({
                 kind: ValidationKind.Error,
                 reason: ValidationReason.ContractCallInvalidTarget,
-                message:
-                    "Contract call with invalid target address: " +
-                    contractCall.target +
-                    " error: " +
-                    String(error),
+                message: "Contract call with invalid target address: " + contractCall.target,
             })
         }
         try {
@@ -803,17 +801,15 @@ export const validateTransferFromParachain = async (
 
     let contractCall = transfer.input.contractCall
     if (contractCall) {
-        try {
-            await checkContractAddress(ethereum, contractCall.target)
-        } catch (error) {
+        const isContractAddress = await context.ethereumProvider.isContractAddress(
+            ethereum,
+            contractCall.target,
+        )
+        if (!isContractAddress) {
             logs.push({
                 kind: ValidationKind.Error,
                 reason: ValidationReason.ContractCallInvalidTarget,
-                message:
-                    "Contract call with invalid target address: " +
-                    contractCall.target +
-                    " error: " +
-                    String(error),
+                message: "Contract call with invalid target address: " + contractCall.target,
             })
         }
     }
@@ -931,24 +927,6 @@ export const mockDeliveryFee: DeliveryFee = {
     returnToSenderExecutionFeeDOT: 0n,
     totalFeeInDot: 10n,
     ethereumExecutionFee: 1n,
-}
-
-export const checkContractAddress = async (ethereum: AbstractProvider, address: string) => {
-    if (!ethers.isAddress(address)) {
-        throw new Error("Invalid contract address: " + address)
-    }
-    try {
-        const code = await ethereum.getCode(address)
-        if (code == "0x") {
-            throw new Error(
-                "Contract call with invalid target address: no contract deployed at " + address,
-            )
-        }
-    } catch (error) {
-        throw new Error(
-            "Contract call with invalid target address: " + address + " error: " + String(error),
-        )
-    }
 }
 
 // Agent creation exports
