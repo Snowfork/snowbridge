@@ -1,5 +1,5 @@
 import { Registry } from "@polkadot/types/types"
-import { beneficiaryMultiAddress } from "./utils"
+import { beneficiaryMultiAddress } from "./EthereumProvider"
 import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
 
 export const HERE_LOCATION = { parents: 0, interior: "Here" }
