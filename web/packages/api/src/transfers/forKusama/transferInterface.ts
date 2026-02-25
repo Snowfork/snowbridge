@@ -1,13 +1,7 @@
 import { ApiPromise } from "@polkadot/api"
 import { AddressOrPair, SignerOptions } from "@polkadot/api/types"
 import { AssetRegistry } from "@snowbridge/base-types"
-import {
-    DeliveryFee,
-    Direction,
-    MessageReceipt,
-    Transfer,
-    ValidationResult,
-} from "../../forKusama"
+import { DeliveryFee, Direction, MessageReceipt, Transfer, ValidationResult } from "../../forKusama"
 
 export interface TransferInterface {
     getDeliveryFee(
