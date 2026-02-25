@@ -143,7 +143,11 @@ export async function createTransferEvm(
     }
 
     const xcTokenAddress = ethChain.xcTokenMap[tokenAddress]
-    const contract = new Contract(ethChain.precompile, PALLET_XCM_PRECOMPILE)
+    const contract = source.context.ethereumProvider.connectContract<Contract>(
+        ethChain.precompile,
+        PALLET_XCM_PRECOMPILE as any,
+        source.context.ethChain(sourceParachain.info.evmChainId),
+    )
 
     const accountNonce = await sourceParachainImpl.accountNonce(sourceAccountHex)
     const messageId = buildMessageId(
@@ -166,9 +170,9 @@ export async function createTransferEvm(
         DOT_LOCATION, // TODO: Support Native fee for EVM chains
     )
 
-    const tx = await contract[
-        "transferAssetsUsingTypeAndThenAddress((uint8,bytes[]),(address,uint256)[],uint8,uint8,uint8,bytes)"
-    ].populateTransaction(
+    const tx = await source.context.ethereumProvider.populateTransaction(
+        contract,
+        "transferAssetsUsingTypeAndThenAddress((uint8,bytes[]),(address,uint256)[],uint8,uint8,uint8,bytes)",
         // This represents (1,X1(Parachain(1000)))
         [1, ["0x00" + numberToHex(assetHubParaId, 32).slice(2)]],
         // Assets including fee and the ERC20 asset, with fee be the first
