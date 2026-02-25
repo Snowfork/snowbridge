@@ -266,7 +266,12 @@ export const monitor = async (): Promise<status.AllMetrics> => {
 
     const { relayers, sovereigns } = await fetchBalances(context, snowbridgeEnv)
 
-    let indexerStatus = await fetchIndexerStatus(context, snowbridgeEnv)
+    let indexerStatus: status.IndexerServiceStatusInfo[] = []
+    try {
+        indexerStatus = await fetchIndexerStatus(context, snowbridgeEnv)
+    } catch (e) {
+        console.error("Failed to fetch indexer status, continuing without it:", e)
+    }
 
     const allMetrics: status.AllMetrics = {
         name,
