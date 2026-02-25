@@ -72,8 +72,8 @@ export class CreateAgent implements AgentCreationInterface {
         let feeInfo
         if (logs.length === 0 || !agentAlreadyExists) {
             const [estimatedGas, feeData] = await Promise.all([
-                ethereum.estimateGas(tx),
-                ethereum.getFeeData(),
+                context.ethereumProvider.estimateGas(ethereum, tx),
+                context.ethereumProvider.getFeeData(ethereum),
             ])
             const executionFee = (feeData.gasPrice ?? 0n) * estimatedGas
             if (executionFee === 0n) {

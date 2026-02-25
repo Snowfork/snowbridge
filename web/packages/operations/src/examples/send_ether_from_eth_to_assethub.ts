@@ -87,7 +87,7 @@ import { bridgeInfoFor } from "@snowbridge/registry"
 
     // Viewing gas and tx cost
     console.log("tx:", tx)
-    console.log("Gas price quoted:", validation.data.feeInfo?.feeData.toJSON())
+    console.log("Gas price quoted:", validation.data.feeInfo?.feeData)
     console.log("Transaction Gas Cost:", validation.data.feeInfo?.estimatedGas)
 
     console.log("Delivery Fee:", formatEther(fee.totalFeeInWei))
