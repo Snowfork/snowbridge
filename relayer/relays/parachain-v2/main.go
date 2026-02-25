@@ -44,6 +44,7 @@ func NewRelay(config *Config, keypair *secp256k1.Keypair) (*Relay, error) {
 	ethereumChannelWriter, err := NewEthereumWriter(
 		&config.Sink,
 		ethereumConnWriter,
+		ethereumConnBeefy,
 		tasks,
 		config,
 	)

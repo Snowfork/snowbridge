@@ -25,23 +25,27 @@ import (
 )
 
 type EthereumWriter struct {
-	config      *SinkConfig
-	conn        *ethereum.Connection
-	gateway     *contracts.Gateway
-	tasks       <-chan *Task
-	gatewayABI  abi.ABI
-	relayConfig *Config
+	config          *SinkConfig
+	conn            *ethereum.Connection
+	readConn        *ethereum.Connection
+	gateway         *contracts.Gateway
+	gatewayReadOnly *contracts.Gateway
+	tasks           <-chan *Task
+	gatewayABI      abi.ABI
+	relayConfig     *Config
 }
 
 func NewEthereumWriter(
 	config *SinkConfig,
 	conn *ethereum.Connection,
+	readConn *ethereum.Connection,
 	tasks <-chan *Task,
 	relayConfig *Config,
 ) (*EthereumWriter, error) {
 	return &EthereumWriter{
 		config:      config,
 		conn:        conn,
+		readConn:    readConn,
 		gateway:     nil,
 		tasks:       tasks,
 		relayConfig: relayConfig,
@@ -54,7 +58,12 @@ func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group) error {
 	if err != nil {
 		return err
 	}
+	gatewayReadOnly, err := contracts.NewGateway(address, wr.readConn.Client())
+	if err != nil {
+		return err
+	}
 	wr.gateway = gateway
+	wr.gatewayReadOnly = gatewayReadOnly
 
 	gatewayABI, err := abi.JSON(strings.NewReader(contracts.GatewayABI))
 	if err != nil {
@@ -136,7 +145,7 @@ func (wr *EthereumWriter) commandGas(command *CommandWrapper) uint64 {
 
 func (wr *EthereumWriter) isRelayMessageProfitable(ctx context.Context, proof *MessageProof) (bool, error) {
 	var result bool
-	gasPrice, err := wr.conn.Client().SuggestGasPrice(ctx)
+	gasPrice, err := wr.readConn.Client().SuggestGasPrice(ctx)
 	if err != nil {
 		return result, err
 	}
@@ -172,7 +181,7 @@ func (wr *EthereumWriter) WriteChannel(
 	nonce := commitmentProof.Message.OriginalMessage.Nonce
 
 	// Step 4 (again): Final check before submission in case another relayer submitted while we were waiting
-	isDispatched, err := wr.gateway.V2IsDispatched(&bind.CallOpts{Context: ctx}, uint64(nonce))
+	isDispatched, err := wr.gatewayReadOnly.V2IsDispatched(&bind.CallOpts{Context: ctx}, uint64(nonce))
 	if err != nil {
 		return fmt.Errorf("check if nonce %d is dispatched: %w", nonce, err)
 	}
