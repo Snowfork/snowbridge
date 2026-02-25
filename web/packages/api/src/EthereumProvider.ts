@@ -81,7 +81,14 @@ export const beneficiaryMultiAddress = (beneficiary: string): EncodedMultiAddres
     return { address, hexAddress }
 }
 
-export interface EthereumProvider<Connection, Contract, Abi, Interface, Transaction> {
+export interface EthereumProvider<
+    Connection,
+    Contract,
+    Abi,
+    Interface,
+    TransactionReceipt,
+    ContractTransaction,
+> {
     createProvider(url: string): Connection
     destroyProvider(provider: Connection): void
     destroyContract(contract: Contract): Promise<void>
@@ -96,13 +103,18 @@ export interface EthereumProvider<Connection, Contract, Abi, Interface, Transact
         owner: string,
         spender: string,
     ): Promise<{ balance: bigint; gatewayAllowance: bigint }>
-    populateTransaction(contract: Contract, method: string, ...args: any[]): Promise<Transaction>
+    populateTransaction(
+        contract: Contract,
+        method: string,
+        ...args: any[]
+    ): Promise<ContractTransaction>
     encodeFunctionData(abi: Abi, method: string, args: readonly unknown[]): string
     decodeFunctionResult<T = unknown>(abi: Abi, method: string, data: string): T
     encodeNativeAsset(tokenAddress: string, amount: bigint): string
     encodeAssetsArray(encodedAssets: readonly string[]): string
     beneficiaryMultiAddress(beneficiary: string): EncodedMultiAddress
-    estimateGas(provider: Connection, tx: Transaction): Promise<bigint>
+    estimateGas(provider: Connection, tx: ContractTransaction): Promise<bigint>
+    getBalance(provider: Connection, address: string): Promise<bigint>
     getFeeData(provider: Connection): Promise<FeeData>
     parseUnits(value: string, decimals: number): bigint
     isContractAddress(provider: Connection, address: string): Promise<boolean>
@@ -116,7 +128,14 @@ export interface EthereumProvider<Connection, Contract, Abi, Interface, Transact
 
 export class EthersEthereumProvider
     implements
-        EthereumProvider<AbstractProvider, Contract, InterfaceAbi, Interface, ContractTransaction>
+        EthereumProvider<
+            AbstractProvider,
+            Contract,
+            InterfaceAbi,
+            Interface,
+            TransactionReceipt,
+            ContractTransaction
+        >
 {
     static gatewayV1Interface = new Interface(IGATEWAY_V1_ABI)
     static gatewayV2Interface = new Interface(IGATEWAY_V2_ABI)
@@ -197,6 +216,10 @@ export class EthersEthereumProvider
         return await provider.estimateGas(tx)
     }
 
+    async getBalance(provider: AbstractProvider, address: string): Promise<bigint> {
+        return await provider.getBalance(address)
+    }
+
     async getFeeData(provider: AbstractProvider): Promise<FeeData> {
         const feeData: EthersFeeData = await provider.getFeeData()
         return {
@@ -273,5 +296,6 @@ export type EthersContext = Context<
     Contract,
     InterfaceAbi,
     Interface,
+    TransactionReceipt,
     ContractTransaction
 >
