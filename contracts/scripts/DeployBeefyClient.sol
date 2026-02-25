@@ -19,12 +19,12 @@ contract DeployBeefyClient is Script {
     function readConfig() internal view returns (Config memory config) {
         // Checkpoint generated using the script `./beefy-checkpoint.js` script in Polkadot-JS.
         if (
-            keccak256(abi.encodePacked(vm.envString("NODE_ENV")))
+            keccak256(abi.encodePacked(vm.envString("SNOWBRIDGE_DEPLOY_STAGE")))
                 == keccak256(abi.encodePacked("polkadot_mainnet"))
         ) {
             return mainnetConfig();
         } else if (
-            keccak256(abi.encodePacked(vm.envString("NODE_ENV")))
+            keccak256(abi.encodePacked(vm.envString("SNOWBRIDGE_DEPLOY_STAGE")))
                 == keccak256(abi.encodePacked("westend_sepolia"))
         ) {
             return westendConfig();
@@ -34,34 +34,34 @@ contract DeployBeefyClient is Script {
     function mainnetConfig() internal pure returns (Config memory config) {
         // Checkpoint generated using the script `./beefy-checkpoint.js` script in Polkadot-JS.
         config = Config({
-            startBlock: 27_895_089,
+            startBlock: 30_106_008,
             current: BeefyClient.ValidatorSet({
-                id: 3494,
+                id: 4421,
                 length: 600,
-                root: 0xa9860350770648563c3cc25f2121500db9b858b9fa401d8dfb0ed73f2f1c4ce0
+                root: 0x34c6f7fa363cd3c2c2089670b61994c3cd393144554e15f369f4026013ae2e6b
             }),
             next: BeefyClient.ValidatorSet({
-                id: 3495,
+                id: 4422,
                 length: 600,
-                root: 0xa9860350770648563c3cc25f2121500db9b858b9fa401d8dfb0ed73f2f1c4ce0
+                root: 0x34c6f7fa363cd3c2c2089670b61994c3cd393144554e15f369f4026013ae2e6b
             }),
             randaoCommitDelay: 128,
             randaoCommitExpiration: 24,
             minimumSignatures: 17,
-            fiatShamirRequiredSignatures: 101
+            fiatShamirRequiredSignatures: 111
         });
     }
 
     function westendConfig() internal pure returns (Config memory config) {
         config = Config({
-            startBlock: 29879785,
+            startBlock: 29_879_785,
             current: BeefyClient.ValidatorSet({
-                id: 19849,
+                id: 19_849,
                 length: 20,
                 root: 0xff1d13b4dc453f2f88261fbc1ec53922bce47d740489c9022bed06f345395f8c
             }),
             next: BeefyClient.ValidatorSet({
-                id: 19850,
+                id: 19_850,
                 length: 20,
                 root: 0xff1d13b4dc453f2f88261fbc1ec53922bce47d740489c9022bed06f345395f8c
             }),
