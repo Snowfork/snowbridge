@@ -3,13 +3,11 @@ import {
     AbstractProvider,
     ContractTransaction,
     FeeData,
-    Interface,
-    LogDescription,
     parseUnits,
     TransactionReceipt,
 } from "ethers"
 import { beneficiaryMultiAddress, padFeeByPercentage, paraIdToSovereignAccount } from "./utils"
-import { IERC20, IERC20_ABI, IGATEWAY_V1_ABI } from "./contracts"
+import { IERC20, IERC20_ABI } from "./contracts"
 import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
 import { Asset, AssetRegistry, ERC20Metadata, Parachain } from "@snowbridge/base-types"
 import { getOperatingStatus, OperationStatus } from "./status"
@@ -541,26 +539,15 @@ export async function validateTransfer(
 }
 
 export async function getMessageReceipt(
+    context: EthersContext,
     receipt: TransactionReceipt,
 ): Promise<MessageReceipt | null> {
-    const events: LogDescription[] = []
-    const gatewayInterface = new Interface(IGATEWAY_V1_ABI)
-    receipt.logs.forEach((log) => {
-        let event = gatewayInterface.parseLog({
-            topics: [...log.topics],
-            data: log.data,
-        })
-        if (event !== null) {
-            events.push(event)
-        }
-    })
-
-    const messageAccepted = events.find((log) => log.name === "OutboundMessageAccepted")
+    const messageAccepted = context.ethereumProvider.scanGatewayV1OutboundMessageAccepted(receipt)
     if (!messageAccepted) return null
     return {
-        channelId: String(messageAccepted.args[0]),
-        nonce: BigInt(messageAccepted.args[1]),
-        messageId: String(messageAccepted.args[2]),
+        channelId: messageAccepted.channelId,
+        nonce: messageAccepted.nonce,
+        messageId: messageAccepted.messageId,
         blockNumber: receipt.blockNumber,
         blockHash: receipt.blockHash,
         txHash: receipt.hash,
