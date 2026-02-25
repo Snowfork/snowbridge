@@ -15,7 +15,8 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
 
     const info = bridgeInfoFor(env)
     const { registry } = info
-    const context = createApi({ info, ethereumProvider: new EthersEthereumProvider() }).context
+    const api = createApi({ info, ethereumProvider: new EthersEthereumProvider() })
+    const context = api.context
 
     const polkadot_keyring = new Keyring({ type: "sr25519" })
 
@@ -39,17 +40,21 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
 
     console.log("Asset Hub to Ethereum")
     {
+        const transferImpl = api.transfer(
+            { kind: "polkadot", id: sourceParaId },
+            { kind: "ethereum", id: registry.ethChainId },
+            TOKEN_CONTRACT!,
+        )
         // Step 1. Get the delivery fee for the transaction
-        const fee = await toEthereumV2.getDeliveryFee(
-            context,
-            sourceParaId,
+        const fee = await transferImpl.getDeliveryFee(
+            { sourceParaId, context },
             registry,
             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
             TOKEN_CONTRACT!,
         )
 
         // Step 2. Create a transfer tx
-        const transfer = await toEthereumV2.createTransfer(
+        const transfer = await transferImpl.createTransfer(
             { sourceParaId, context },
             registry,
             POLKADOT_ACCOUNT_PUBLIC,
@@ -82,7 +87,7 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
         // )
 
         // Step 4. Validate the transaction.
-        const validation = await toEthereumV2.validateTransfer(context, transfer)
+        const validation = await transferImpl.validateTransfer(context, transfer)
         console.log("validation result", validation)
 
         // Step 5. Check validation logs for errors
