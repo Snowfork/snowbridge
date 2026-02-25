@@ -1,7 +1,6 @@
 import { MultiAddressStruct } from "./contracts"
 import {
     AbstractProvider,
-    Contract,
     ContractTransaction,
     FeeData,
     Interface,
@@ -11,7 +10,7 @@ import {
 } from "ethers"
 import { beneficiaryMultiAddress, padFeeByPercentage, paraIdToSovereignAccount } from "./utils"
 import { IERC20, IERC20_ABI, IGATEWAY_V1_ABI } from "./contracts"
-import { erc20Balance, ETHER_TOKEN_ADDRESS } from "./assets_v2"
+import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
 import { Asset, AssetRegistry, ERC20Metadata, Parachain } from "@snowbridge/base-types"
 import { getOperatingStatus, OperationStatus } from "./status"
 import { ApiPromise } from "@polkadot/api"
@@ -189,6 +188,7 @@ export async function getDeliveryFee(
 }
 
 export async function createTransfer(
+    context: EthersContext,
     registry: AssetRegistry,
     sourceAccount: string,
     beneficiaryAccount: string,
@@ -213,16 +213,22 @@ export async function createTransfer(
     if (tokenAddress === ETHER_TOKEN_ADDRESS) {
         value += amount
     }
-    const ifce = new Interface(IGATEWAY_V1_ABI)
-    const con = new Contract(registry.gatewayAddress, ifce)
+    const con = context.gateway()
 
     const totalFeeDot = fee.destinationDeliveryFeeDOT + fee.destinationExecutionFeeDOT
-    const tx = await con
-        .getFunction("sendToken")
-        .populateTransaction(tokenAddress, destinationParaId, beneficiary, totalFeeDot, amount, {
+    const tx = await context.ethereumProvider.populateTransaction(
+        con,
+        "sendToken",
+        tokenAddress,
+        destinationParaId,
+        beneficiary,
+        totalFeeDot,
+        amount,
+        {
             value,
             from: sourceAccount,
-        })
+        },
+    )
 
     return {
         input: {
@@ -291,7 +297,7 @@ export async function validateTransfer(
 
     let tokenBalance: { balance: bigint; gatewayAllowance: bigint }
     if (tokenAddress !== ETHER_TOKEN_ADDRESS) {
-        tokenBalance = await erc20Balance(
+        tokenBalance = await context.ethereumProvider.erc20Balance(
             ethereum,
             tokenAddress,
             sourceAccount,

@@ -4,11 +4,9 @@ import {
     AgentCreation,
     AgentCreationValidationResult,
 } from "./agentInterface"
-import { IGATEWAY_V2_ABI } from "../../contracts"
 import { EthersContext } from "../../index"
 import { ValidationKind } from "../../toPolkadotSnowbridgeV2"
 import { ValidationLog, ValidationReason } from "../../toPolkadot_v2"
-import { Contract, Interface } from "ethers"
 
 export class CreateAgent implements AgentCreationInterface {
     async createAgentCreation(
@@ -17,10 +15,9 @@ export class CreateAgent implements AgentCreationInterface {
         sourceAccount: string,
         agentId: string,
     ): Promise<AgentCreation> {
-        const ifce = new Interface(IGATEWAY_V2_ABI)
-        const con = new Contract(registry.gatewayAddress, ifce)
+        const con = context.gatewayV2()
 
-        const tx = await con.getFunction("v2_createAgent").populateTransaction(agentId, {
+        const tx = await context.ethereumProvider.populateTransaction(con, "v2_createAgent", agentId, {
             from: sourceAccount,
         })
 

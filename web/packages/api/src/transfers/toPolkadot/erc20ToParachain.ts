@@ -1,6 +1,5 @@
 import { AssetRegistry } from "@snowbridge/base-types"
 import { TransferInterface } from "./transferInterface"
-import { IGATEWAY_V2_ABI } from "../../contracts"
 import { EthersContext } from "../../index"
 import {
     buildMessageId,
@@ -15,7 +14,7 @@ import {
 } from "../../toPolkadotSnowbridgeV2"
 import { accountId32Location, DOT_LOCATION, erc20Location, isDOT } from "../../xcmBuilder"
 import { paraImplementation } from "../../parachains"
-import { erc20Balance, ETHER_TOKEN_ADDRESS } from "../../assets_v2"
+import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
 import { beneficiaryMultiAddress, padFeeByPercentage, paraIdToSovereignAccount } from "../../utils"
 import { FeeInfo, resolveInputs, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
 import {
@@ -24,7 +23,6 @@ import {
     buildParachainERC20ReceivedXcmOnDestination,
     buildParachainERC20ReceivedXcmOnDestinationWithDOTFee,
 } from "../../xcmbuilders/toPolkadot/erc20ToParachain"
-import { Contract, Interface } from "ethers"
 import {
     sendMessageXCM,
     sendMessageXCMWithDOTDestFee,
@@ -224,8 +222,7 @@ export class ERC20ToParachain implements TransferInterface {
         } else {
             assets = [encodeNativeAsset(tokenAddress, amount)]
         }
-        const ifce = new Interface(IGATEWAY_V2_ABI)
-        const con = new Contract(registry.gatewayAddress, ifce)
+        const con = context.gatewayV2()
 
         const accountNonce = await ethereum.getTransactionCount(sourceAccount, "pending")
         const topic = buildMessageId(
@@ -269,19 +266,19 @@ export class ERC20ToParachain implements TransferInterface {
         }
         let claimer = claimerFromBeneficiary(assetHub, beneficiaryAddressHex)
 
-        const tx = await con
-            .getFunction("v2_sendMessage")
-            .populateTransaction(
-                xcm,
-                assets,
-                claimerLocationToBytes(claimer),
-                fee.assetHubExecutionFeeEther + fee.destinationDeliveryFeeEther,
-                fee.relayerFee,
-                {
-                    value,
-                    from: sourceAccount,
-                },
-            )
+        const tx = await context.ethereumProvider.populateTransaction(
+            con,
+            "v2_sendMessage",
+            xcm,
+            assets,
+            claimerLocationToBytes(claimer),
+            fee.assetHubExecutionFeeEther + fee.destinationDeliveryFeeEther,
+            fee.relayerFee,
+            {
+                value,
+                from: sourceAccount,
+            },
+        )
 
         return {
             input: {
@@ -343,7 +340,7 @@ export class ERC20ToParachain implements TransferInterface {
 
         let tokenBalance: { balance: bigint; gatewayAllowance: bigint }
         if (tokenAddress !== ETHER_TOKEN_ADDRESS) {
-            tokenBalance = await erc20Balance(
+            tokenBalance = await context.ethereumProvider.erc20Balance(
                 ethereum,
                 tokenAddress,
                 sourceAccount,

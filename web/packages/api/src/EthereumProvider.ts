@@ -1,6 +1,7 @@
 import {
     AbstractProvider,
     Contract,
+    ContractTransaction,
     Interface,
     InterfaceAbi,
     JsonRpcProvider,
@@ -9,7 +10,7 @@ import {
 import { IERC20, IERC20_ABI } from "./contracts"
 import { Context } from "./"
 
-export interface EthereumProvider<Connection, Contract, Abi, Interface> {
+export interface EthereumProvider<Connection, Contract, Abi, Interface, Transaction> {
     createProvider(url: string): Connection
     destroyProvider(provider: Connection): void
     destroyContract(contract: Contract): Promise<void>
@@ -24,10 +25,16 @@ export interface EthereumProvider<Connection, Contract, Abi, Interface> {
         owner: string,
         spender: string,
     ): Promise<{ balance: bigint; gatewayAllowance: bigint }>
+    populateTransaction(
+        contract: Contract,
+        method: string,
+        ...args: any[]
+    ): Promise<Transaction>
 }
 
 export class EthersEthereumProvider
-    implements EthereumProvider<AbstractProvider, Contract, InterfaceAbi, Interface>
+    implements
+        EthereumProvider<AbstractProvider, Contract, InterfaceAbi, Interface, ContractTransaction>
 {
     createProvider(url: string): AbstractProvider {
         if (url.startsWith("http")) {
@@ -72,6 +79,20 @@ export class EthersEthereumProvider
             gatewayAllowance,
         }
     }
+
+    async populateTransaction(
+        contract: Contract,
+        method: string,
+        ...args: any[]
+    ): Promise<ContractTransaction> {
+        return await contract.getFunction(method).populateTransaction(...args)
+    }
 }
 
-export type EthersContext = Context<AbstractProvider, Contract, InterfaceAbi, Interface>
+export type EthersContext = Context<
+    AbstractProvider,
+    Contract,
+    InterfaceAbi,
+    Interface,
+    ContractTransaction
+>
