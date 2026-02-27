@@ -15,8 +15,8 @@ library AssetsStorage {
         uint128 assetHubCreateAssetFee;
         // XCM fee charged by AssetHub for receiving a token from the Gateway (DOT)
         uint128 assetHubReserveTransferFee;
-        // Extra fee for registering a token, to discourage spamming (Ether)
-        uint256 registerTokenFee;
+        // Previously used in V1 for registering a native token, this is now obsolete as token registration has been moved to V2 without on-chain fees.
+        uint256 __obsolete_1;
         // Foreign token registry by token ID
         mapping(bytes32 foreignID => address) tokenAddressOf;
         uint8 foreignTokenDecimals;

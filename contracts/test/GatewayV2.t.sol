@@ -157,7 +157,6 @@ contract GatewayV2Test is Test {
         Initializer.Config memory config = Initializer.Config({
             mode: OperatingMode.Normal,
             deliveryCost: 1e10,
-            registerTokenFee: 0,
             assetHubCreateAssetFee: 1e10,
             assetHubReserveTransferFee: 1e10,
             exchangeRate: ud60x18(0.0025e18),

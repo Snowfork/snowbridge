@@ -29,8 +29,6 @@ library Initializer {
         uint128 assetHubCreateAssetFee;
         /// @dev The extra fee charged for sending tokens (DOT)
         uint128 assetHubReserveTransferFee;
-        /// @dev extra fee to discourage spamming
-        uint256 registerTokenFee;
         /// @dev Fee multiplier
         UD60x18 multiplier;
         uint8 foreignTokenDecimals;
@@ -55,18 +53,12 @@ library Initializer {
 
         // Initialize channel for primary governance track
         core.channels[Constants.PRIMARY_GOVERNANCE_CHANNEL_ID] = Channel({
-            mode: OperatingMode.Normal,
-            agent: bridgeHubAgent,
-            inboundNonce: 0,
-            outboundNonce: 0
+            mode: OperatingMode.Normal, agent: bridgeHubAgent, inboundNonce: 0, outboundNonce: 0
         });
 
         // Initialize channel for secondary governance track
         core.channels[Constants.SECONDARY_GOVERNANCE_CHANNEL_ID] = Channel({
-            mode: OperatingMode.Normal,
-            agent: bridgeHubAgent,
-            inboundNonce: 0,
-            outboundNonce: 0
+            mode: OperatingMode.Normal, agent: bridgeHubAgent, inboundNonce: 0, outboundNonce: 0
         });
 
         // Initialize agent for for AssetHub
@@ -75,10 +67,7 @@ library Initializer {
 
         // Initialize channel for AssetHub
         core.channels[Constants.ASSET_HUB_PARA_ID.into()] = Channel({
-            mode: OperatingMode.Normal,
-            agent: assetHubAgent,
-            inboundNonce: 0,
-            outboundNonce: 0
+            mode: OperatingMode.Normal, agent: assetHubAgent, inboundNonce: 0, outboundNonce: 0
         });
 
         // Initialize pricing storage
@@ -92,7 +81,6 @@ library Initializer {
 
         assets.assetHubParaID = Constants.ASSET_HUB_PARA_ID;
         assets.assetHubAgent = assetHubAgent;
-        assets.registerTokenFee = config.registerTokenFee;
         assets.assetHubCreateAssetFee = config.assetHubCreateAssetFee;
         assets.assetHubReserveTransferFee = config.assetHubReserveTransferFee;
         assets.foreignTokenDecimals = config.foreignTokenDecimals;
