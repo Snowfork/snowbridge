@@ -414,7 +414,7 @@ contract BeefyClient {
         if (is_next_session) {
             // The id for candidate nextValidatorSet should be greater than the current
             // nextValidatorSet id
-            if (leaf.nextAuthoritySetID < nextValidatorSet.id + 1) {
+            if (leaf.nextAuthoritySetID <= nextValidatorSet.id) {
                 revert InvalidMMRLeaf();
             }
             bool leafIsValid = MMRProof.verifyLeafProof(
@@ -570,7 +570,7 @@ contract BeefyClient {
         if (is_next_session) {
             // The id for candidate nextValidatorSet should be greater than the current
             // nextValidatorSet id
-            if (leaf.nextAuthoritySetID < nextValidatorSet.id + 1) {
+            if (leaf.nextAuthoritySetID <= nextValidatorSet.id) {
                 revert InvalidMMRLeaf();
             }
             bool leafIsValid = MMRProof.verifyLeafProof(
