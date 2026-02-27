@@ -19,10 +19,6 @@ contract SubstrateTypesWrapper {
         return SubstrateTypes.None();
     }
 
-    function RegisterToken(address token, uint128 fee) external view returns (bytes memory) {
-        return SubstrateTypes.RegisterToken(token, fee);
-    }
-
     function SendTokenToAssetHubAddress32(
         address token,
         bytes32 recipient,
@@ -125,22 +121,6 @@ contract SubstrateTypesTest is Test {
         bytes memory got = wrapper.None();
         assertEq(got.length, 1);
         assertEq(uint8(got[0]), 0);
-    }
-
-    function testRegisterToken() public {
-        address token = address(0xdEADBEeF00000000000000000000000000000000);
-        uint128 fee = 123_456;
-        bytes memory got = wrapper.RegisterToken(token, fee);
-
-        bytes memory expect = bytes.concat(
-            bytes1(0x00),
-            abi.encodePacked(ScaleCodec.encodeU64(uint64(block.chainid))),
-            bytes1(0x00),
-            abi.encodePacked(token),
-            abi.encodePacked(ScaleCodec.encodeU128(fee))
-        );
-
-        assertEq(keccak256(got), keccak256(expect));
     }
 
     function testSendTokenToAssetHubAddress32() public {
