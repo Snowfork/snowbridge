@@ -28,11 +28,7 @@ async fn set_token_transfer_fees() {
 
 	let mut encoded = Vec::new();
 	ethereum_system_api
-		.set_token_transfer_fees(
-			*CREATE_ASSET_FEE,
-			*RESERVE_TRANSFER_FEE,
-			U256([*REGISTER_TOKEN_FEE, 0, 0, 0]),
-		)
+		.set_token_transfer_fees(*CREATE_ASSET_FEE, *RESERVE_TRANSFER_FEE, U256([0, 0, 0, 0]))
 		.encode_call_data_to(&test_clients.bridge_hub_client.metadata(), &mut encoded)
 		.expect("encoded call");
 
