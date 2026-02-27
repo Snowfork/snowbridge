@@ -70,7 +70,6 @@ contract DeployLocal is Script {
         Initializer.Config memory config = Initializer.Config({
             mode: OperatingMode.Normal,
             deliveryCost: uint128(vm.envUint("DELIVERY_COST")),
-            registerTokenFee: uint128(vm.envUint("REGISTER_TOKEN_FEE")),
             assetHubCreateAssetFee: uint128(vm.envUint("CREATE_ASSET_FEE")),
             assetHubReserveTransferFee: uint128(vm.envUint("RESERVE_TRANSFER_FEE")),
             exchangeRate: ud60x18(vm.envUint("EXCHANGE_RATE")),
@@ -94,7 +93,7 @@ contract DeployLocal is Script {
         // For testing call contract
         new HelloWorld();
 
-        // Deploy test token for registration testing  
+        // Deploy test token for registration testing
         new Token("Test Token", "TEST", 18);
 
         // Fund the gateway proxy contract. Used to reward relayers

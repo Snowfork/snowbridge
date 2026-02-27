@@ -1,7 +1,5 @@
 #[path = "v1/register_polkadot_token.rs"]
 mod register_polkadot_token;
-#[path = "v1/register_token.rs"]
-mod register_token;
 #[path = "v1/send_native_eth.rs"]
 mod send_native_eth;
 #[path = "v1/send_polkadot_token.rs"]

@@ -277,7 +277,7 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         override(IGatewayV1, IGatewayV2)
         returns (bool)
     {
-        return CallsV1.isTokenRegistered(token);
+        return CallsV2.isTokenRegistered(token);
     }
 
     function depositEther() external payable {

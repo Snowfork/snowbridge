@@ -10,7 +10,6 @@ tests=(
   transfer_native_eth
 
   # ERC20 Tests
-  register_token
   send_token_to_ah
   send_token_to_penpal
   transfer_token

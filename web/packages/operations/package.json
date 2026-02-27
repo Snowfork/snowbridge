@@ -39,7 +39,7 @@
     "transferPenpalTokenToAH": "npx ts-node src/transfer_from_e2p.ts 1000 pal 1000000000",
     "transferXQCYToEthereum": "npx ts-node src/transfer_from_p2e.ts 2313 xrqcy 1000000",
     "transferXQCYFromEthereumToAH": "npx ts-node src/transfer_from_e2p.ts 1000 xrqcy 100000",
-    "registerWeth": "npx ts-node src/register_erc20.ts 0xb8ea8cb425d85536b158d661da1ef0895bb92f1d",
+    "registerWeth": "npx ts-node src/register_token_v2.ts 0xb8ea8cb425d85536b158d661da1ef0895bb92f1d",
     "createAgent": "npx ts-node src/create_agent.ts",
     "addTip": "npx ts-node src/add_tip.ts Inbound 1 ETH 1000000000000000",
     "registerTokenV2": "npx ts-node src/register_token_v2.ts 0xFa2B947eEc368f42195f24F36d2aF29f7c24CeC2",

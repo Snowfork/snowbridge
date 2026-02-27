@@ -66,32 +66,6 @@ library CallsV1 {
     * External API
     */
 
-    /// @dev Registers a token (only native tokens at this time)
-    /// @param token The ERC20 token address.
-    function registerToken(address token) external {
-        AssetsStorage.Layout storage $ = AssetsStorage.layout();
-
-        // NOTE: Explicitly allow a token to be re-registered. This offers resiliency
-        // in case a previous registration attempt of the same token failed on the remote side.
-        // It means that registration can be retried.
-        Functions.registerNativeToken(token);
-
-        Ticket memory ticket = Ticket({
-            dest: $.assetHubParaID,
-            costs: _registerTokenCosts(),
-            payload: SubstrateTypes.RegisterToken(token, $.assetHubCreateAssetFee),
-            value: 0
-        });
-
-        emit IGatewayBase.TokenRegistrationSent(token);
-
-        _submitOutbound(ticket);
-    }
-
-    function quoteRegisterTokenFee() external view returns (uint256) {
-        return _calculateFee(_registerTokenCosts());
-    }
-
     function sendToken(
         address token,
         address sender,
@@ -138,11 +112,11 @@ library CallsV1 {
         }
     }
 
-    function quoteSendTokenFee(address token, ParaID destinationChain, uint128 destinationChainFee)
-        external
-        view
-        returns (uint256)
-    {
+    function quoteSendTokenFee(
+        address token,
+        ParaID destinationChain,
+        uint128 destinationChainFee
+    ) external view returns (uint256) {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
         TokenInfo storage info = $.tokenRegistry[token];
         if (!info.isRegistered) {
@@ -244,10 +218,6 @@ library CallsV1 {
         emit IGatewayV1.OutboundMessageAccepted(
             channelID, channel.outboundNonce, messageID, ticket.payload
         );
-    }
-
-    function isTokenRegistered(address token) external view returns (bool) {
-        return AssetsStorage.layout().tokenRegistry[token].isRegistered;
     }
 
     function _sendTokenCosts(ParaID destinationChain, uint128 destinationChainFee)
@@ -380,20 +350,5 @@ library CallsV1 {
         }
 
         emit IGatewayV1.TokenSent(token, sender, destinationChain, destinationAddress, amount);
-    }
-
-    function _registerTokenCosts() internal view returns (Costs memory costs) {
-        AssetsStorage.Layout storage $ = AssetsStorage.layout();
-
-        // Cost of registering this asset on AssetHub
-        costs.foreign = $.assetHubCreateAssetFee;
-
-        // Extra fee to prevent spamming
-        costs.native = $.registerTokenFee;
-    }
-
-    function _isTokenRegistered(address token) internal view returns (bool) {
-        AssetsStorage.Layout storage $ = AssetsStorage.layout();
-        return $.tokenRegistry[token].isRegistered;
     }
 }
