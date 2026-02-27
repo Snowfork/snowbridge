@@ -220,10 +220,6 @@ library CallsV1 {
         );
     }
 
-    function isTokenRegistered(address token) external view returns (bool) {
-        return AssetsStorage.layout().tokenRegistry[token].isRegistered;
-    }
-
     function _sendTokenCosts(ParaID destinationChain, uint128 destinationChainFee)
         internal
         view
