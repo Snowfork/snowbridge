@@ -19,7 +19,8 @@ import {
     UnlockNativeTokenParams,
     RegisterForeignTokenParams,
     MintForeignTokenParams,
-    CallContractParams
+    CallContractParams,
+    CallContractsParams
 } from "./Types.sol";
 
 library HandlersV2 {
@@ -69,6 +70,23 @@ library HandlersV2 {
         address agent = Functions.ensureAgent(origin);
         bytes memory call =
             abi.encodeCall(AgentExecutor.callContract, (params.target, params.data, params.value));
+        Functions.invokeOnAgent(agent, executor, call);
+    }
+
+    function callContracts(bytes32 origin, address executor, bytes calldata data) external {
+        CallContractsParams memory params = abi.decode(data, (CallContractsParams));
+        address agent = Functions.ensureAgent(origin);
+        bytes memory call = abi.encodeCall(AgentExecutor.callContracts, params.calls);
+        Functions.invokeOnAgent(agent, executor, call);
+    }
+
+    function sweepAfterCallContracts(bytes32 origin, address executor, bytes calldata data)
+        external
+    {
+        CallContractsParams memory params = abi.decode(data, (CallContractsParams));
+        address agent = Functions.ensureAgent(origin);
+        bytes memory call =
+            abi.encodeCall(AgentExecutor.sweep, (params.sweepRecipient, params.tokensToSweep));
         Functions.invokeOnAgent(agent, executor, call);
     }
 }
