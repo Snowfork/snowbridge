@@ -21,6 +21,9 @@ ignored_error_codes = [
 
 no_match_test = "testRegenerate*"
 
+# Coverage: use --ir-minimum to avoid "stack too deep" when running forge coverage
+# Example: forge coverage --ir-minimum --exclude-tests --report=lcov
+
 # Production profile: via_ir enabled for deployment contracts
 [profile.production]
 via_ir = true
