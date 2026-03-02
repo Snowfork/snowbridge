@@ -247,6 +247,62 @@ services:
         awslogs-stream: parachain-relay
         awslogs-create-group: "true"
 
+  primary-governance:
+    <<: *image
+    command: >
+      run parachain
+      --config /config/primary-governance.json
+      --ethereum.private-key-id ${PRIMARY_GOVERNANCE_RELAY_ETHEREUM_KEY_ID}
+    environment:
+      - AWS_REGION=${AWS_REGION}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - ETHEREUM_ENDPOINT=${ETHEREUM_ENDPOINT}
+      - POLKADOT_ENDPOINT=${POLKADOT_ENDPOINT}
+      - BRIDGEHUB_ENDPOINT=${BRIDGEHUB_ENDPOINT}
+      - FLASHBOTS_ENDPOINT=${FLASHBOTS_ENDPOINT}
+      - GATEWAY_CONTRACT=${GATEWAY_CONTRACT}
+      - BEEFY_CLIENT_CONTRACT=${BEEFY_CLIENT_CONTRACT}
+      - PRIMARY_GOVERNANCE_CHANNEL_ID=${PRIMARY_GOVERNANCE_CHANNEL_ID}
+      - CHAINALYSIS_API_KEY=${CHAINALYSIS_API_KEY}
+      - OFAC_ENABLED=${OFAC_ENABLED:-false}
+    restart: on-failure
+    logging:
+      <<: *awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: snowbridge/${ENVIRONMENT:-prod}
+        awslogs-stream: primary-governance-relay
+        awslogs-create-group: "true"
+
+  secondary-governance:
+    <<: *image
+    command: >
+      run parachain
+      --config /config/secondary-governance.json
+      --ethereum.private-key-id ${SECONDARY_GOVERNANCE_RELAY_ETHEREUM_KEY_ID}
+    environment:
+      - AWS_REGION=${AWS_REGION}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - ETHEREUM_ENDPOINT=${ETHEREUM_ENDPOINT}
+      - POLKADOT_ENDPOINT=${POLKADOT_ENDPOINT}
+      - BRIDGEHUB_ENDPOINT=${BRIDGEHUB_ENDPOINT}
+      - FLASHBOTS_ENDPOINT=${FLASHBOTS_ENDPOINT}
+      - GATEWAY_CONTRACT=${GATEWAY_CONTRACT}
+      - BEEFY_CLIENT_CONTRACT=${BEEFY_CLIENT_CONTRACT}
+      - SECONDARY_GOVERNANCE_CHANNEL_ID=${SECONDARY_GOVERNANCE_CHANNEL_ID}
+      - CHAINALYSIS_API_KEY=${CHAINALYSIS_API_KEY}
+      - OFAC_ENABLED=${OFAC_ENABLED:-false}
+    restart: on-failure
+    logging:
+      <<: *awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: snowbridge/${ENVIRONMENT:-prod}
+        awslogs-stream: secondary-governance-relay
+        awslogs-create-group: "true"
+
   beefy-on-demand:
     <<: *image
     profiles:
