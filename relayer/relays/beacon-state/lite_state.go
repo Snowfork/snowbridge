@@ -114,7 +114,7 @@ const (
 	minStateSizeFulu        = 2737225
 )
 
-// UnmarshalSSZLite unmarshals a Deneb beacon state, extracting only the fields
+// UnmarshalSSZLiteDeneb unmarshals a Deneb beacon state, extracting only the fields
 // needed for proof generation and computing hashes for the rest.
 // This saves ~130MB+ of memory compared to full unmarshaling.
 func UnmarshalSSZLiteDeneb(buf []byte) (*LiteBeaconState, error) {
