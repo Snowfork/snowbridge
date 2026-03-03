@@ -412,7 +412,9 @@ contract BeefyClient {
         bytes32 newMMRRoot = ensureProvidesMMRRoot(commitment);
 
         if (is_next_session) {
-            if (leaf.nextAuthoritySetID != nextValidatorSet.id + 1) {
+            // The id for candidate nextValidatorSet should be greater than the current
+            // nextValidatorSet id
+            if (leaf.nextAuthoritySetID <= nextValidatorSet.id) {
                 revert InvalidMMRLeaf();
             }
             bool leafIsValid = MMRProof.verifyLeafProof(
@@ -566,7 +568,9 @@ contract BeefyClient {
         verifyFiatShamirCommitment(commitmentHash, bitfield, vset, proofs);
 
         if (is_next_session) {
-            if (leaf.nextAuthoritySetID != nextValidatorSet.id + 1) {
+            // The id for candidate nextValidatorSet should be greater than the current
+            // nextValidatorSet id
+            if (leaf.nextAuthoritySetID <= nextValidatorSet.id) {
                 revert InvalidMMRLeaf();
             }
             bool leafIsValid = MMRProof.verifyLeafProof(
