@@ -24,10 +24,10 @@
     },
     "fees": {
       "base-delivery-gas": 100000,
-      "base-unlock-gas": 60000,
-      "base-mint-gas": 60000,
-      "fee-ratio-numerator": 1,
-      "fee-ratio-denominator": 1
+      "base-unlock-gas": 200000,
+      "base-mint-gas": 100000,
+      "fee-ratio-numerator": 2,
+      "fee-ratio-denominator": 3
     }
   },
   "reward-address": "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d",
