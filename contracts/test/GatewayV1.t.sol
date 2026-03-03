@@ -108,7 +108,6 @@ contract GatewayV1Test is Test {
 
     // remote fees in DOT
     uint128 public outboundFee = 1e10;
-    uint128 public registerTokenFee = 0;
     uint128 public sendTokenFee = 1e10;
     uint128 public createTokenFee = 1e10;
     uint128 public maxDestinationFee = 1e11;
@@ -130,7 +129,6 @@ contract GatewayV1Test is Test {
         Initializer.Config memory config = Initializer.Config({
             mode: OperatingMode.Normal,
             deliveryCost: outboundFee,
-            registerTokenFee: registerTokenFee,
             assetHubCreateAssetFee: createTokenFee,
             assetHubReserveTransferFee: sendTokenFee,
             exchangeRate: exchangeRate,

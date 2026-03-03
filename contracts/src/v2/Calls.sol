@@ -157,4 +157,8 @@ library CallsV2 {
     function outboundNonce() external view returns (uint64) {
         return CoreStorage.layout().outboundNonce;
     }
+
+    function isTokenRegistered(address token) external view returns (bool) {
+        return AssetsStorage.layout().tokenRegistry[token].isRegistered;
+    }
 }

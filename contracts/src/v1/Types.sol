@@ -133,7 +133,7 @@ struct SetTokenTransferFeesParams {
     uint128 assetHubCreateAssetFee;
     /// @dev The remote fee (DOT) for send tokens to AssetHub
     uint128 assetHubReserveTransferFee;
-    /// @dev extra fee to register an asset and discourage spamming (Ether)
+    /// @dev The extra fee to register an asset (Ether), though this field is now ignored and won't be applied, as the token registration in V1 is removed
     uint256 registerTokenFee;
 }
 

@@ -32,7 +32,4 @@ interface IGatewayBase {
 
     // Emitted when foreign token from polkadot registered
     event ForeignTokenRegistered(bytes32 indexed tokenID, address token);
-
-    /// @dev Emitted when a command is sent to register a new wrapped token on AssetHub
-    event TokenRegistrationSent(address token);
 }

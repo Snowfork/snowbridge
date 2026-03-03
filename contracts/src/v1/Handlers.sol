@@ -81,7 +81,6 @@ library HandlersV1 {
         SetTokenTransferFeesParams memory params = abi.decode(data, (SetTokenTransferFeesParams));
         $.assetHubCreateAssetFee = params.assetHubCreateAssetFee;
         $.assetHubReserveTransferFee = params.assetHubReserveTransferFee;
-        $.registerTokenFee = params.registerTokenFee;
         emit IGatewayV1.TokenTransferFeesChanged();
     }
 
