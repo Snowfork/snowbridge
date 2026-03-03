@@ -22,6 +22,7 @@ import {DepositParams, SendParams, SwapParams} from "../src/l2-integration/Types
 import {MockSpokePool, MockSpokePoolReverting} from "./mocks/MockSpokePool.sol";
 import {MockMessageHandler} from "./mocks/MockMessageHandler.sol";
 import {SnowbridgeL2TestLib} from "./GatewayV2SnowbridgeL2TestLib.sol";
+import {FakeAgent} from "./mocks/FakeAgent.sol";
 
 contract GatewayV2SnowbridgeL2Test is Test {
     address public assetHubAgent;
@@ -349,5 +350,32 @@ contract GatewayV2SnowbridgeL2Test is Test {
 
         vm.expectRevert("Sent value must be zero for WETH deposits");
         adaptor.sendEtherAndCall{value: 1 ether}(params, sendParams, recipient, keccak256("topic"));
+    }
+
+    function testFakeAgentCanBypassOnlyRegisteredGatewayAgentModifier() public {
+        (MockSpokePool mockSpokePool, SnowbridgeL1Adaptor adaptor) =
+            _deployL1AdaptorWithMockSpokePool();
+        uint256 inputAmount = 1 ether;
+        address recipient = makeAddr("recipient");
+
+        // Deploy a fake agent that returns the real gateway address from GATEWAY()
+        FakeAgent fakeAgent = new FakeAgent(address(gateway));
+
+        // Fund the fake agent with tokens (simulating a scenario where the adaptor holds tokens)
+        hoax(user1);
+        weth.transfer(address(adaptor), inputAmount);
+
+        DepositParams memory params =
+            SnowbridgeL2TestLib.makeDepositParamsToken(address(weth), inputAmount, 0.9 ether);
+        bytes32 topic = keccak256("fake-agent-topic");
+
+        // The fake agent bypasses the onlyRegisteredGatewayAgent modifier
+        // because it exposes GATEWAY() returning the real gateway address.
+        // This test documents the spoofability — it should FAIL once the modifier
+        // is strengthened to verify against the Gateway's agent registry.
+        fakeAgent.callDepositToken(adaptor, params, recipient, topic);
+
+        // If we reach here, the fake agent successfully called depositToken
+        assertEq(mockSpokePool.numberOfDeposits(), 1);
     }
 }
