@@ -322,7 +322,7 @@ export async function validateTransfer(
         destinationParaId,
         transfer.tx,
         sourceAccountHex,
-        source.parachainId === registry.assetHubParaId,
+        true,
     )
     if (!dryRunSource.success) {
         logs.push({
