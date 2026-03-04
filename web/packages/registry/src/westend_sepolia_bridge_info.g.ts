@@ -14,7 +14,7 @@ const registry = {
             "1002": "https://westend-bridge-hub-rpc.polkadot.io",
         },
         gatewayContract: "0x9ed8b47bc3417e3bd0507adc06e56e2fa360a4e9",
-        beefyContract: "0xEBD1CFcF82BaA170b86BDe532f69A6A49c6c790D".toLowerCase(),
+        beefyContract: "0xebd1cfcf82baa170b86bde532f69a6a49c6c790d",
         assetHubParaId: 1000,
         bridgeHubParaId: 1002,
         v2_parachains: [1000],
