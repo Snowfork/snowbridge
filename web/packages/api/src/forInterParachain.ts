@@ -322,7 +322,6 @@ export async function validateTransfer(
         destinationParaId,
         transfer.tx,
         sourceAccountHex,
-        true,
     )
     if (!dryRunSource.success) {
         logs.push({
@@ -523,16 +522,15 @@ export async function dryRunTx(
     destParaId: number,
     tx: SubmittableExtrinsic<"promise", ISubmittableResult>,
     sourceAccount: string,
-    useNewVersion: boolean,
 ) {
     const origin = { system: { signed: sourceAccount } }
     let result: Result<CallDryRunEffects, XcmDryRunApiError>
 
-    if (useNewVersion) {
+    try {
         result = await source.call.dryRunApi.dryRunCall<
             Result<CallDryRunEffects, XcmDryRunApiError>
         >(origin, tx, 4)
-    } else {
+    } catch {
         result = await source.call.dryRunApi.dryRunCall<
             Result<CallDryRunEffects, XcmDryRunApiError>
         >(origin, tx)
