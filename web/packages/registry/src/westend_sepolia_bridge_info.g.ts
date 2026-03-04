@@ -8,10 +8,10 @@ const registry = {
             "421614": "https://arbitrum-sepolia-rpc.publicnode.com",
             "11155111": "https://ethereum-sepolia-rpc.publicnode.com",
         },
-        relaychainUrl: "wss://westend-rpc.n.dwellir.com",
+        relaychainUrl: "https://westend-rpc.polkadot.io",
         parachains: {
-            "1000": "wss://asset-hub-westend-rpc.n.dwellir.com",
-            "1002": "wss://bridge-hub-westend-rpc.n.dwellir.com",
+            "1000": "https://westend-asset-hub-rpc.polkadot.io",
+            "1002": "https://westend-bridge-hub-rpc.polkadot.io",
         },
         gatewayContract: "0x9ed8b47bc3417e3bd0507adc06e56e2fa360a4e9",
         beefyContract: "0xEBD1CFcF82BaA170b86BDe532f69A6A49c6c790D".toLowerCase(),
