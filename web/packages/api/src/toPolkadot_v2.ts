@@ -363,21 +363,17 @@ export async function createTransfer(
     if (tokenAddress === ETHER_TOKEN_ADDRESS) {
         value += amount
     }
-    const con = context.gateway()
-
     const totalFeeDot = fee.destinationDeliveryFeeDOT + fee.destinationExecutionFeeDOT
-    const tx = await context.ethereumProvider.populateTransaction(
-        con,
-        "sendToken",
+    const tx = await context.ethereumProvider.gatewayV1SendToken(
+        context.ethereum(),
+        context.environment.gatewayContract,
+        sourceAccount,
         tokenAddress,
         destinationParaId,
         beneficiary,
         totalFeeDot,
         amount,
-        {
-            value,
-            from: sourceAccount,
-        },
+        value,
     )
 
     return {

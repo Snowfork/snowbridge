@@ -239,7 +239,6 @@ export class ERC20ToAH implements TransferInterface {
         let value: bigint
         let inputAmount: bigint = amount
 
-        const l2Adapter = context.l2Adapter(l2ChainId)
         const accountNonce = await l2Chain.getTransactionCount(sourceAccount, "pending")
 
         const topic = buildMessageId(
@@ -285,18 +284,15 @@ export class ERC20ToAH implements TransferInterface {
                 destinationChainId: BigInt(registry.ethChainId),
                 fillDeadlineBuffer: options?.fillDeadlineBuffer ?? 600n,
             }
-            let txOptions: any = { from: sourceAccount }
-            if (l2TokenAddress === ETHER_TOKEN_ADDRESS) {
-                txOptions = { ...txOptions, value: value }
-            }
-            tx = await context.ethereumProvider.populateTransaction(
-                l2Adapter,
-                "sendEtherAndCall",
+            tx = await context.ethereumProvider.l2AdapterSendEtherAndCall(
+                context.ethChain(l2ChainId),
+                context.environment.l2Bridge!.l2Chains[l2ChainId].adapterAddress,
+                sourceAccount,
                 depositParams,
                 sendParams,
                 sourceAccount,
                 topic,
-                txOptions,
+                l2TokenAddress === ETHER_TOKEN_ADDRESS ? value : undefined,
             )
         } else {
             value = fee.totalFeeInWei
@@ -324,17 +320,15 @@ export class ERC20ToAH implements TransferInterface {
                 router: l1SwapRouterAddress,
                 callData: swapCalldata,
             }
-            tx = await context.ethereumProvider.populateTransaction(
-                l2Adapter,
-                "sendTokenAndCall",
+            tx = await context.ethereumProvider.l2AdapterSendTokenAndCall(
+                context.ethChain(l2ChainId),
+                context.environment.l2Bridge!.l2Chains[l2ChainId].adapterAddress,
+                sourceAccount,
                 depositParams,
                 swapParams,
                 sendParams,
                 sourceAccount,
                 topic,
-                {
-                    from: sourceAccount,
-                },
             )
         }
 
@@ -363,7 +357,7 @@ export class ERC20ToAH implements TransferInterface {
                 destParachain,
                 claimer,
                 topic,
-                l2AdapterAddress: l2Adapter.target.toString(),
+                l2AdapterAddress: context.environment.l2Bridge!.l2Chains[l2ChainId].adapterAddress,
                 totalInputAmount: inputAmount,
             },
             tx,
