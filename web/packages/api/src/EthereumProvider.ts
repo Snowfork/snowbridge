@@ -13,7 +13,13 @@ import {
 } from "ethers"
 import { isHex, u8aToHex } from "@polkadot/util"
 import { decodeAddress } from "@polkadot/util-crypto"
-import { IERC20, IERC20_ABI, IGATEWAY_V1_ABI, IGATEWAY_V2_ABI } from "./contracts"
+import {
+    IERC20,
+    IERC20_ABI,
+    IGATEWAY_V1_ABI,
+    IGATEWAY_V2_ABI,
+    SNOWBRIDGE_L2_ADAPTOR_ABI,
+} from "./contracts"
 import { MultiAddressStruct } from "./contracts"
 import { Context } from "./"
 
@@ -81,6 +87,47 @@ export const beneficiaryMultiAddress = (beneficiary: string): EncodedMultiAddres
     return { address, hexAddress }
 }
 
+const PALLET_XCM_PRECOMPILE_ABI: InterfaceAbi = [
+    {
+        inputs: [
+            {
+                components: [
+                    { internalType: "uint8", name: "parents", type: "uint8" },
+                    { internalType: "bytes[]", name: "interior", type: "bytes[]" },
+                ],
+                internalType: "struct XCM.Location",
+                name: "dest",
+                type: "tuple",
+            },
+            {
+                components: [
+                    { internalType: "address", name: "asset", type: "address" },
+                    { internalType: "uint256", name: "amount", type: "uint256" },
+                ],
+                internalType: "struct XCM.AssetAddressInfo[]",
+                name: "assets",
+                type: "tuple[]",
+            },
+            {
+                internalType: "enum XCM.TransferType",
+                name: "assetsTransferType",
+                type: "uint8",
+            },
+            { internalType: "uint8", name: "remoteFeesIdIndex", type: "uint8" },
+            {
+                internalType: "enum XCM.TransferType",
+                name: "feesTransferType",
+                type: "uint8",
+            },
+            { internalType: "bytes", name: "customXcmOnDest", type: "bytes" },
+        ],
+        name: "transferAssetsUsingTypeAndThenAddress",
+        outputs: [],
+        stateMutability: "nonpayable",
+        type: "function",
+    },
+]
+
 export interface EthereumProvider<
     Connection,
     Contract,
@@ -114,6 +161,75 @@ export interface EthereumProvider<
     encodeAssetsArray(encodedAssets: readonly string[]): string
     beneficiaryMultiAddress(beneficiary: string): EncodedMultiAddress
     estimateGas(provider: Connection, tx: ContractTransaction): Promise<bigint>
+    gatewayV1SendToken(
+        provider: Connection,
+        gatewayAddress: string,
+        sourceAccount: string,
+        tokenAddress: string,
+        destinationParaId: number,
+        beneficiary: MultiAddressStruct,
+        totalFeeDot: bigint,
+        amount: bigint,
+        value: bigint,
+    ): Promise<ContractTransaction>
+    gatewayV2RegisterToken(
+        provider: Connection,
+        gatewayAddress: string,
+        sourceAccount: string,
+        tokenAddress: string,
+        network: number,
+        assetHubExecutionFeeEther: bigint,
+        relayerFee: bigint,
+        totalValue: bigint,
+    ): Promise<ContractTransaction>
+    gatewayV2CreateAgent(
+        provider: Connection,
+        gatewayAddress: string,
+        sourceAccount: string,
+        agentId: string,
+    ): Promise<ContractTransaction>
+    gatewayV2SendMessage(
+        provider: Connection,
+        gatewayAddress: string,
+        sourceAccount: string,
+        xcm: Uint8Array,
+        assets: any[],
+        claimer: Uint8Array,
+        assetHubExecutionFeeEther: bigint,
+        relayerFee: bigint,
+        value: bigint,
+    ): Promise<ContractTransaction>
+    l2AdapterSendEtherAndCall(
+        provider: Connection,
+        adapterAddress: string,
+        sourceAccount: string,
+        depositParams: any,
+        sendParams: any,
+        refundAddress: string,
+        topic: string,
+        value?: bigint,
+    ): Promise<ContractTransaction>
+    l2AdapterSendTokenAndCall(
+        provider: Connection,
+        adapterAddress: string,
+        sourceAccount: string,
+        depositParams: any,
+        swapParams: any,
+        sendParams: any,
+        refundAddress: string,
+        topic: string,
+    ): Promise<ContractTransaction>
+    evmParachainTransferAssetsUsingTypeAndThenAddress(
+        provider: Connection,
+        precompileAddress: string,
+        sourceAccount: string,
+        destination: [number, string[]],
+        assets: [string, bigint][],
+        assetsTransferType: number,
+        remoteFeesIdIndex: number,
+        feesTransferType: number,
+        customXcmHex: string,
+    ): Promise<ContractTransaction>
     getBalance(provider: Connection, address: string): Promise<bigint>
     getFeeData(provider: Connection): Promise<FeeData>
     parseUnits(value: string, decimals: number): bigint
@@ -190,6 +306,160 @@ export class EthersEthereumProvider
         ...args: any[]
     ): Promise<ContractTransaction> {
         return await contract.getFunction(method).populateTransaction(...args)
+    }
+
+    async gatewayV1SendToken(
+        provider: AbstractProvider,
+        gatewayAddress: string,
+        sourceAccount: string,
+        tokenAddress: string,
+        destinationParaId: number,
+        beneficiary: MultiAddressStruct,
+        totalFeeDot: bigint,
+        amount: bigint,
+        value: bigint,
+    ): Promise<ContractTransaction> {
+        const gateway = this.connectContract(gatewayAddress, IGATEWAY_V1_ABI, provider)
+        return await this.populateTransaction(
+            gateway,
+            "sendToken",
+            tokenAddress,
+            destinationParaId,
+            beneficiary,
+            totalFeeDot,
+            amount,
+            { value, from: sourceAccount },
+        )
+    }
+
+    async gatewayV2RegisterToken(
+        provider: AbstractProvider,
+        gatewayAddress: string,
+        sourceAccount: string,
+        tokenAddress: string,
+        network: number,
+        assetHubExecutionFeeEther: bigint,
+        relayerFee: bigint,
+        totalValue: bigint,
+    ): Promise<ContractTransaction> {
+        const gateway = this.connectContract(gatewayAddress, IGATEWAY_V2_ABI, provider)
+        return await this.populateTransaction(
+            gateway,
+            "v2_registerToken",
+            tokenAddress,
+            network,
+            assetHubExecutionFeeEther,
+            relayerFee,
+            { value: totalValue, from: sourceAccount },
+        )
+    }
+
+    async gatewayV2CreateAgent(
+        provider: AbstractProvider,
+        gatewayAddress: string,
+        sourceAccount: string,
+        agentId: string,
+    ): Promise<ContractTransaction> {
+        const gateway = this.connectContract(gatewayAddress, IGATEWAY_V2_ABI, provider)
+        return await this.populateTransaction(gateway, "v2_createAgent", agentId, {
+            from: sourceAccount,
+        })
+    }
+
+    async gatewayV2SendMessage(
+        provider: AbstractProvider,
+        gatewayAddress: string,
+        sourceAccount: string,
+        xcm: Uint8Array,
+        assets: any[],
+        claimer: Uint8Array,
+        assetHubExecutionFeeEther: bigint,
+        relayerFee: bigint,
+        value: bigint,
+    ): Promise<ContractTransaction> {
+        const gateway = this.connectContract(gatewayAddress, IGATEWAY_V2_ABI, provider)
+        return await this.populateTransaction(
+            gateway,
+            "v2_sendMessage",
+            xcm,
+            assets,
+            claimer,
+            assetHubExecutionFeeEther,
+            relayerFee,
+            { value, from: sourceAccount },
+        )
+    }
+
+    async l2AdapterSendEtherAndCall(
+        provider: AbstractProvider,
+        adapterAddress: string,
+        sourceAccount: string,
+        depositParams: any,
+        sendParams: any,
+        refundAddress: string,
+        topic: string,
+        value?: bigint,
+    ): Promise<ContractTransaction> {
+        const adapter = this.connectContract(adapterAddress, SNOWBRIDGE_L2_ADAPTOR_ABI, provider)
+        const txOptions = value === undefined ? { from: sourceAccount } : { from: sourceAccount, value }
+        return await this.populateTransaction(
+            adapter,
+            "sendEtherAndCall",
+            depositParams,
+            sendParams,
+            refundAddress,
+            topic,
+            txOptions,
+        )
+    }
+
+    async l2AdapterSendTokenAndCall(
+        provider: AbstractProvider,
+        adapterAddress: string,
+        sourceAccount: string,
+        depositParams: any,
+        swapParams: any,
+        sendParams: any,
+        refundAddress: string,
+        topic: string,
+    ): Promise<ContractTransaction> {
+        const adapter = this.connectContract(adapterAddress, SNOWBRIDGE_L2_ADAPTOR_ABI, provider)
+        return await this.populateTransaction(
+            adapter,
+            "sendTokenAndCall",
+            depositParams,
+            swapParams,
+            sendParams,
+            refundAddress,
+            topic,
+            { from: sourceAccount },
+        )
+    }
+
+    async evmParachainTransferAssetsUsingTypeAndThenAddress(
+        provider: AbstractProvider,
+        precompileAddress: string,
+        sourceAccount: string,
+        destination: [number, string[]],
+        assets: [string, bigint][],
+        assetsTransferType: number,
+        remoteFeesIdIndex: number,
+        feesTransferType: number,
+        customXcmHex: string,
+    ): Promise<ContractTransaction> {
+        const precompile = this.connectContract(precompileAddress, PALLET_XCM_PRECOMPILE_ABI, provider)
+        const tx = await this.populateTransaction(
+            precompile,
+            "transferAssetsUsingTypeAndThenAddress((uint8,bytes[]),(address,uint256)[],uint8,uint8,uint8,bytes)",
+            destination,
+            assets,
+            assetsTransferType,
+            remoteFeesIdIndex,
+            feesTransferType,
+            customXcmHex,
+        )
+        tx.from = sourceAccount
+        return tx
     }
 
     encodeFunctionData(abi: InterfaceAbi, method: string, args: readonly unknown[]): string {

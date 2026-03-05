@@ -135,7 +135,6 @@ export class ERC20ToAH implements TransferInterface {
         } else {
             assets = [encodeNativeAsset(tokenAddress, amount)]
         }
-        const con = context.gatewayV2()
         const accountNonce = await ethereum.getTransactionCount(sourceAccount, "pending")
 
         const topic = buildMessageId(
@@ -152,18 +151,16 @@ export class ERC20ToAH implements TransferInterface {
         )
         let claimer = claimerFromBeneficiary(assetHub, beneficiaryAddressHex)
 
-        const tx = await context.ethereumProvider.populateTransaction(
-            con,
-            "v2_sendMessage",
+        const tx = await context.ethereumProvider.gatewayV2SendMessage(
+            context.ethereum(),
+            context.environment.gatewayContract,
+            sourceAccount,
             xcm,
             assets,
             claimerLocationToBytes(claimer),
             fee.assetHubExecutionFeeEther,
             fee.relayerFee,
-            {
-                value,
-                from: sourceAccount,
-            },
+            value,
         )
 
         return {

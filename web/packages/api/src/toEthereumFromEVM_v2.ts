@@ -15,7 +15,7 @@ import {
 } from "@snowbridge/base-types"
 import { getOperatingStatus, OperationStatus } from "./status"
 import { EventRecord } from "@polkadot/types/interfaces"
-import { Contract, ContractTransaction, TransactionReceipt } from "ethers"
+import { ContractTransaction, TransactionReceipt } from "ethers"
 import { paraImplementation } from "./parachains"
 import {
     getDeliveryFee as getDeliveryFeeV1,
@@ -32,47 +32,6 @@ import {
 } from "./toEthereum_v2"
 import { EthersContext } from "./index"
 import { TransferInterface as ToEthereumEvmTransferInterface } from "./transfers/toEthereumEvm/transferInterface"
-
-const PALLET_XCM_PRECOMPILE = [
-    {
-        inputs: [
-            {
-                components: [
-                    { internalType: "uint8", name: "parents", type: "uint8" },
-                    { internalType: "bytes[]", name: "interior", type: "bytes[]" },
-                ],
-                internalType: "struct XCM.Location",
-                name: "dest",
-                type: "tuple",
-            },
-            {
-                components: [
-                    { internalType: "address", name: "asset", type: "address" },
-                    { internalType: "uint256", name: "amount", type: "uint256" },
-                ],
-                internalType: "struct XCM.AssetAddressInfo[]",
-                name: "assets",
-                type: "tuple[]",
-            },
-            {
-                internalType: "enum XCM.TransferType",
-                name: "assetsTransferType",
-                type: "uint8",
-            },
-            { internalType: "uint8", name: "remoteFeesIdIndex", type: "uint8" },
-            {
-                internalType: "enum XCM.TransferType",
-                name: "feesTransferType",
-                type: "uint8",
-            },
-            { internalType: "bytes", name: "customXcmOnDest", type: "bytes" },
-        ],
-        name: "transferAssetsUsingTypeAndThenAddress",
-        outputs: [],
-        stateMutability: "nonpayable",
-        type: "function",
-    },
-]
 
 export type TransferEvm = {
     input: {
@@ -220,11 +179,6 @@ export async function createTransferEvm(
     }
 
     const xcTokenAddress = ethChain.xcTokenMap[tokenAddress]
-    const contract = source.context.ethereumProvider.connectContract<Contract>(
-        ethChain.precompile,
-        PALLET_XCM_PRECOMPILE as any,
-        source.context.ethChain(sourceParachain.info.evmChainId),
-    )
 
     const accountNonce = await sourceParachainImpl.accountNonce(sourceAccountHex)
     const messageId = buildMessageId(
@@ -247,26 +201,20 @@ export async function createTransferEvm(
         DOT_LOCATION, // TODO: Support Native fee for EVM chains
     )
 
-    const tx = await source.context.ethereumProvider.populateTransaction(
-        contract,
-        "transferAssetsUsingTypeAndThenAddress((uint8,bytes[]),(address,uint256)[],uint8,uint8,uint8,bytes)",
-        // This represents (1,X1(Parachain(1000)))
+    const tx = await source.context.ethereumProvider.evmParachainTransferAssetsUsingTypeAndThenAddress(
+        source.context.ethChain(sourceParachain.info.evmChainId),
+        ethChain.precompile,
+        sourceAccountHex,
         [1, ["0x00" + numberToHex(assetHubParaId, 32).slice(2)]],
-        // Assets including fee and the ERC20 asset, with fee be the first
         [
             [ethChain.xcDOT, fee.totalFeeInDot],
             [xcTokenAddress, amount],
         ],
-        // The TransferType corresponding to asset being sent, 2 represents `DestinationReserve`
         2,
-        // index for the fee
         0,
-        // The TransferType corresponding to fee asset
         2,
         customXcm.toHex(),
     )
-
-    tx.from = sourceAccountHex
     return {
         input: {
             registry,

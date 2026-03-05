@@ -44,15 +44,11 @@ export class CreateAgent<
         sourceAccount: string,
         agentId: string,
     ): Promise<AgentCreation<EContractTransaction>> {
-        const con = this.context.gatewayV2()
-
-        const tx = await this.context.ethereumProvider.populateTransaction(
-            con,
-            "v2_createAgent",
+        const tx = await this.context.ethereumProvider.gatewayV2CreateAgent(
+            this.context.ethereum(),
+            this.context.environment.gatewayContract,
+            sourceAccount,
             agentId,
-            {
-                from: sourceAccount,
-            },
         )
 
         return {

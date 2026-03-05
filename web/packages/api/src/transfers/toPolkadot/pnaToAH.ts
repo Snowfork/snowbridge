@@ -135,8 +135,6 @@ export class PNAToAH implements TransferInterface {
             beneficiaryMultiAddress(beneficiaryAccount)
         let value = fee.assetHubExecutionFeeEther + fee.assetHubDeliveryFeeEther + fee.relayerFee
 
-        const con = context.gatewayV2()
-
         if (!ahAssetMetadata.foreignId) {
             throw Error("asset foreign ID not set in metadata")
         }
@@ -157,18 +155,16 @@ export class PNAToAH implements TransferInterface {
         let assets = [encodeNativeAsset(tokenAddress, amount)]
         let claimer = claimerFromBeneficiary(assetHub, beneficiaryAddressHex)
 
-        const tx = await context.ethereumProvider.populateTransaction(
-            con,
-            "v2_sendMessage",
+        const tx = await context.ethereumProvider.gatewayV2SendMessage(
+            context.ethereum(),
+            context.environment.gatewayContract,
+            sourceAccount,
             xcm,
             assets,
             claimerLocationToBytes(claimer),
             fee.assetHubExecutionFeeEther,
             fee.relayerFee,
-            {
-                value,
-                from: sourceAccount,
-            },
+            value,
         )
 
         return {
