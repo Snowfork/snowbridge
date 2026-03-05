@@ -223,8 +223,6 @@ export class ERC20ToParachain implements TransferInterface {
         } else {
             assets = [encodeNativeAsset(tokenAddress, amount)]
         }
-        const con = context.gatewayV2()
-
         const accountNonce = await ethereum.getTransactionCount(sourceAccount, "pending")
         const topic = buildMessageId(
             destinationParaId,
@@ -267,18 +265,16 @@ export class ERC20ToParachain implements TransferInterface {
         }
         let claimer = claimerFromBeneficiary(assetHub, beneficiaryAddressHex)
 
-        const tx = await context.ethereumProvider.populateTransaction(
-            con,
-            "v2_sendMessage",
+        const tx = await context.ethereumProvider.gatewayV2SendMessage(
+            context.ethereum(),
+            context.environment.gatewayContract,
+            sourceAccount,
             xcm,
             assets,
             claimerLocationToBytes(claimer),
             fee.assetHubExecutionFeeEther + fee.destinationDeliveryFeeEther,
             fee.relayerFee,
-            {
-                value,
-                from: sourceAccount,
-            },
+            value,
         )
 
         return {

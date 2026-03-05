@@ -101,23 +101,19 @@ export class RegisterToken implements RegistrationInterface {
         tokenAddress: string,
         fee: RegistrationFee,
     ): Promise<TokenRegistration> {
-        const con = context.gatewayV2()
-
         const totalValue = fee.totalFeeInWei
 
         const network = 0
 
-        const tx = await context.ethereumProvider.populateTransaction(
-            con,
-            "v2_registerToken",
+        const tx = await context.ethereumProvider.gatewayV2RegisterToken(
+            context.ethereum(),
+            context.environment.gatewayContract,
+            sourceAccount,
             tokenAddress,
             network,
             fee.assetHubExecutionFeeEther,
             fee.relayerFee,
-            {
-                value: totalValue,
-                from: sourceAccount,
-            },
+            totalValue,
         )
 
         return {
