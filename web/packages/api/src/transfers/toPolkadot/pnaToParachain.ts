@@ -1,4 +1,5 @@
 import { AssetRegistry } from "@snowbridge/base-types"
+import { TransactionReceipt } from "ethers"
 import { TransferInterface } from "./transferInterface"
 import { EthersContext } from "../../index"
 import {
@@ -8,6 +9,7 @@ import {
     claimerLocationToBytes,
     DeliveryFee,
     encodeNativeAsset,
+    getMessageReceipt as getSharedMessageReceipt,
     Transfer,
     ValidationKind,
     ValidationResult,
@@ -592,5 +594,9 @@ export class PNAToParachain implements TransferInterface {
             },
             transfer,
         }
+    }
+
+    async getMessageReceipt(context: EthersContext, receipt: TransactionReceipt) {
+        return getSharedMessageReceipt(context.ethereumProvider, receipt)
     }
 }

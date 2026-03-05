@@ -9,7 +9,7 @@ import {
     AssetRegistry,
     ContractCall,
 } from "@snowbridge/base-types"
-import { getOperatingStatus, OperationStatus } from "./status"
+import { getOperatingStatus } from "./status"
 import { EventRecord } from "@polkadot/types/interfaces"
 import { TransactionReceipt } from "ethers"
 import { paraImplementation } from "./parachains"

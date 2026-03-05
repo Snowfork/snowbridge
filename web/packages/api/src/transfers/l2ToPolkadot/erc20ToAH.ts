@@ -8,6 +8,7 @@ import {
     claimerLocationToBytes,
     DeliveryFee,
     encodeNativeAsset,
+    getMessageReceipt as getSharedMessageReceipt,
     ValidationKind,
 } from "../../toPolkadotSnowbridgeV2"
 import {
@@ -31,6 +32,7 @@ import {
 } from "../../contracts"
 import { estimateFees } from "../../across/api"
 import { ContractTransaction } from "ethers/lib.commonjs/contract/types"
+import { TransactionReceipt } from "ethers"
 
 export class ERC20ToAH implements TransferInterface {
     async getDeliveryFee(
@@ -561,5 +563,9 @@ export class ERC20ToAH implements TransferInterface {
             },
             transfer,
         }
+    }
+
+    async getMessageReceipt(context: EthersContext, receipt: TransactionReceipt) {
+        return getSharedMessageReceipt(context.ethereumProvider, receipt)
     }
 }

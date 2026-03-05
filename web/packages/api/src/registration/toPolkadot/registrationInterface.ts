@@ -1,8 +1,9 @@
 import { AssetRegistry } from "@snowbridge/base-types"
 import { EthersContext } from "../../index"
-import { ContractTransaction } from "ethers"
+import { ContractTransaction, TransactionReceipt } from "ethers"
 import { OperationStatus } from "../../status"
 import { FeeInfo, ValidationLog } from "../../toPolkadot_v2"
+import type { MessageReceipt } from "../../toPolkadotSnowbridgeV2"
 
 export type TokenRegistration = {
     input: {
@@ -62,4 +63,9 @@ export interface RegistrationInterface {
         context: EthersContext,
         registration: TokenRegistration,
     ): Promise<RegistrationValidationResult>
+
+    getMessageReceipt(
+        context: EthersContext,
+        receipt: TransactionReceipt,
+    ): Promise<MessageReceipt | null>
 }

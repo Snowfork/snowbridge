@@ -3,7 +3,6 @@ import {
     EthersContext,
     EthersEthereumProvider,
     createApi,
-    toPolkadotSnowbridgeV2,
     toPolkadotV2,
 } from "@snowbridge/api"
 import { formatEther, Wallet } from "ethers"
@@ -169,7 +168,7 @@ export const transferToPolkadot = async (
             }
 
             // Step 7. Get the message receipt for tracking purposes
-            const message = await toPolkadotSnowbridgeV2.getMessageReceipt(context, receipt)
+            const message = await transferImpl.getMessageReceipt(context, receipt)
             if (!message) {
                 throw Error(`Transaction ${receipt.hash} did not emit a message.`)
             }
