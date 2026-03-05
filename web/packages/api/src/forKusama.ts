@@ -38,7 +38,6 @@ import {
     XcmDryRunEffects,
 } from "@polkadot/types/interfaces"
 import { Result } from "@polkadot/types"
-import { beneficiaryMultiAddress } from "./EthereumProvider"
 import { padFeeByPercentage, u32ToLeBytes } from "./utils"
 import { paraImplementation } from "./parachains"
 import { TransferInterface as KusamaTransferInterface } from "./transfers/forKusama/transferInterface"
@@ -109,7 +108,6 @@ function resolveInputs(
     return { sourceAssetMetadata, destAssetMetadata, sourceParachain }
 }
 
-
 export enum ValidationKind {
     Warning,
     Error,
@@ -140,7 +138,6 @@ export type ValidationResult = {
     }
     transfer: Transfer
 }
-
 
 export type MessageReceipt = {
     blockNumber: number
@@ -204,7 +201,10 @@ export class KusamaTransfer implements KusamaTransferInterface {
             xcmBridgeBaseFee = BigInt(baseFeeInStorage.toString())
         }
 
-        let feePerByteInStorage = await getStorageItem(sourceAssetHub, ":XcmBridgeHubRouterByteFee:")
+        let feePerByteInStorage = await getStorageItem(
+            sourceAssetHub,
+            ":XcmBridgeHubRouterByteFee:",
+        )
         let xcmFeePerByte: bigint
         if (feePerByteInStorage.eqn(0)) {
             console.warn(
@@ -282,7 +282,10 @@ export class KusamaTransfer implements KusamaTransferInterface {
             )
         }
         const destAssetHubImpl = await paraImplementation(destAssetHub)
-        let destinationFeeInDestNative = await destAssetHubImpl.calculateXcmFee(destXcm, DOT_LOCATION)
+        let destinationFeeInDestNative = await destAssetHubImpl.calculateXcmFee(
+            destXcm,
+            DOT_LOCATION,
+        )
 
         const sourceAssetHubImpl = await paraImplementation(sourceAssetHub)
         let bridgeHubDeliveryFee = await sourceAssetHubImpl.calculateDeliveryFeeInDOT(
@@ -295,7 +298,8 @@ export class KusamaTransfer implements KusamaTransferInterface {
         if (this.#direction() == Direction.ToPolkadot) {
             feeAssetOnDest = ksmLocationOnPolkadotAssetHub
             minBalanceFeeDest = getDestFeeAssetMinimumBalance(
-                this.info.registry.parachains[`polkadot_${this.info.registry.assetHubParaId}`].assets,
+                this.info.registry.parachains[`polkadot_${this.info.registry.assetHubParaId}`]
+                    .assets,
                 "kusama",
             )
         } else {
@@ -348,7 +352,8 @@ export class KusamaTransfer implements KusamaTransferInterface {
             throw Error("Kusama destination para ID is not set")
         }
 
-        let { hexAddress: beneficiaryAddressHex } = beneficiaryMultiAddress(beneficiaryAccount)
+        let { hexAddress: beneficiaryAddressHex } =
+            this.context.ethereumProvider.beneficiaryMultiAddress(beneficiaryAccount)
 
         const { sourceAssetMetadata, destAssetMetadata, sourceParachain } = resolveInputs(
             this.info.registry,
@@ -366,7 +371,11 @@ export class KusamaTransfer implements KusamaTransferInterface {
             amount,
         )
 
-        let tokenLocationOnSource = getTokenLocation(this.info.registry, this.#direction(), tokenAddress)
+        let tokenLocationOnSource = getTokenLocation(
+            this.info.registry,
+            this.#direction(),
+            tokenAddress,
+        )
         let tx
         if (this.#direction() == Direction.ToPolkadot) {
             tx = createERC20ToPolkadotTx(
@@ -418,8 +427,12 @@ export class KusamaTransfer implements KusamaTransferInterface {
         let destAssetHub = connections.destAssetHub
 
         const { registry, fee, tokenAddress, amount } = transfer.input
-        const { sourceAccountHex, sourceParachain: _source, beneficiaryAddressHex, destAssetMetadata } =
-            transfer.computed
+        const {
+            sourceAccountHex,
+            sourceParachain: _source,
+            beneficiaryAddressHex,
+            destAssetMetadata,
+        } = transfer.computed
         const { tx } = transfer
 
         let tokenLocation = getTokenLocation(registry, this.#direction(), tokenAddress)
@@ -515,7 +528,8 @@ export class KusamaTransfer implements KusamaTransferInterface {
             logs.push({
                 kind: ValidationKind.Error,
                 reason: ValidationReason.DryRunFailed,
-                message: "Dry run call on destination AH failed: " + dryRunAssetHubDest.errorMessage,
+                message:
+                    "Dry run call on destination AH failed: " + dryRunAssetHubDest.errorMessage,
             })
             assetHubDryRunError = dryRunAssetHubDest.errorMessage
 
@@ -584,7 +598,8 @@ export class KusamaTransfer implements KusamaTransferInterface {
                                 resolve({
                                     ...result,
                                     success: false,
-                                    dispatchError: (e.event.data.toHuman(true) as any)?.dispatchError,
+                                    dispatchError: (e.event.data.toHuman(true) as any)
+                                        ?.dispatchError,
                                 })
                             }
                             if (sourceAssetHub.events.polkadotXcm.Sent.is(e.event)) {

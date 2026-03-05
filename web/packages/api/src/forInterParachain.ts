@@ -17,7 +17,6 @@ import {
     Parachain,
     TransferRoute,
 } from "@snowbridge/base-types"
-import { beneficiaryMultiAddress } from "./EthereumProvider"
 import { padFeeByPercentage } from "./utils"
 import { paraImplementation } from "./parachains"
 import { EthersContext } from "."
@@ -96,7 +95,6 @@ function resolveInputs(
     return { sourceAssetMetadata, destAssetMetadata, sourceParachain, destParachain }
 }
 
-
 export enum ValidationKind {
     Warning,
     Error,
@@ -128,7 +126,6 @@ export type ValidationResult = {
     }
     transfer: Transfer
 }
-
 
 export type MessageReceipt = {
     blockNumber: number
@@ -229,8 +226,10 @@ export class InterParachainTransfer implements InterParachainTransferInterface {
         const sourceParachain = await this.context.parachain(this.from.id)
         const source = await paraImplementation(sourceParachain)
 
-        let { hexAddress: beneficiaryAddressHex } = beneficiaryMultiAddress(beneficiaryAccount)
-        let { hexAddress: sourceAccountHex } = beneficiaryMultiAddress(sourceAccount)
+        let { hexAddress: beneficiaryAddressHex } =
+            this.context.ethereumProvider.beneficiaryMultiAddress(beneficiaryAccount)
+        let { hexAddress: sourceAccountHex } =
+            this.context.ethereumProvider.beneficiaryMultiAddress(sourceAccount)
 
         const {
             sourceAssetMetadata,
@@ -296,12 +295,8 @@ export class InterParachainTransfer implements InterParachainTransferInterface {
         ])
 
         const { registry, tokenAddress, amount, destinationParaId } = transfer.input
-        const {
-            sourceAccountHex,
-            sourceAssetMetadata,
-            destAssetMetadata,
-            beneficiaryAddressHex,
-        } = transfer.computed
+        const { sourceAccountHex, sourceAssetMetadata, destAssetMetadata, beneficiaryAddressHex } =
+            transfer.computed
         const { tx } = transfer
 
         const nativeBalance = await source.getNativeBalance(sourceAccountHex, true)
@@ -332,7 +327,12 @@ export class InterParachainTransfer implements InterParachainTransferInterface {
 
         let dryRunError
 
-        const dryRunSource = await dryRunTx(sourceParachain, destinationParaId, transfer.tx, sourceAccountHex)
+        const dryRunSource = await dryRunTx(
+            sourceParachain,
+            destinationParaId,
+            transfer.tx,
+            sourceAccountHex,
+        )
         if (!dryRunSource.success) {
             logs.push({
                 kind: ValidationKind.Error,
@@ -434,7 +434,8 @@ export class InterParachainTransfer implements InterParachainTransferInterface {
                                 resolve({
                                     ...result,
                                     success: false,
-                                    dispatchError: (e.event.data.toHuman(true) as any)?.dispatchError,
+                                    dispatchError: (e.event.data.toHuman(true) as any)
+                                        ?.dispatchError,
                                 })
                             }
 
@@ -458,7 +459,9 @@ export class InterParachainTransfer implements InterParachainTransferInterface {
             }
         })
 
-        result.blockHash = u8aToHex(await sourceParachain.rpc.chain.getBlockHash(result.blockNumber))
+        result.blockHash = u8aToHex(
+            await sourceParachain.rpc.chain.getBlockHash(result.blockNumber),
+        )
         result.messageId = transfer.computed.messageId ?? result.messageId
 
         return result
