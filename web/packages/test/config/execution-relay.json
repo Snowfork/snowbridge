@@ -32,7 +32,7 @@
     },
     "ss58Prefix": 1
   },
-  "instantVerification": true,
+  "instantVerification": false,
   "ofac": {
     "enabled": false,
     "apiKey": ""
