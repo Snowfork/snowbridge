@@ -18,7 +18,7 @@ import { accountToLocation, DOT_LOCATION, erc20Location } from "./xcmBuilder"
 import { Codec } from "@polkadot/types/types"
 import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
 import { padFeeByPercentage } from "./utils"
-import { EthersContext } from "./index"
+import { EthereumProvider, EthersContext } from "./index"
 import {
     encodeAssetsArray as providerEncodeAssetsArray,
     encodeNativeAsset as providerEncodeNativeAsset,
@@ -215,20 +215,13 @@ export function encodeAssetsArray(encodedAssets: string[]) {
     return providerEncodeAssetsArray(encodedAssets)
 }
 
-export async function getMessageReceipt(
-    context: EthersContext,
-    receipt: TransactionReceipt,
+export async function getMessageReceipt<ETransactionReceipt>(
+    ethereumProvider: EthereumProvider<unknown, unknown, unknown, unknown, ETransactionReceipt, unknown>,
+    receipt: ETransactionReceipt,
 ): Promise<MessageReceipt | null> {
-    const messageAccepted = context.ethereumProvider.scanGatewayV2OutboundMessageAccepted(receipt)
+    const messageAccepted = ethereumProvider.scanGatewayV2OutboundMessageAccepted(receipt)
     if (!messageAccepted) return null
-    return {
-        nonce: messageAccepted.nonce,
-        payload: messageAccepted.payload,
-        blockNumber: receipt.blockNumber,
-        blockHash: receipt.blockHash,
-        txHash: receipt.hash,
-        txIndex: receipt.index,
-    }
+    return messageAccepted
 }
 
 export function claimerFromBeneficiary(assetHub: ApiPromise, beneficiaryAddressHex: string) {

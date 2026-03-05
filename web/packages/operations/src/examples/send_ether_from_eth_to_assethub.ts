@@ -4,7 +4,6 @@ import {
     assetsV2,
     createApi,
     historyV2,
-    toPolkadotSnowbridgeV2,
 } from "@snowbridge/api"
 import { formatEther, Wallet } from "ethers"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
@@ -112,7 +111,7 @@ import { bridgeInfoFor } from "@snowbridge/registry"
     }
 
     // Step 6. Get the message receipt for tracking purposes
-    const message = await toPolkadotSnowbridgeV2.getMessageReceipt(context, receipt)
+    const message = await transferImpl.getMessageReceipt(context, receipt)
     if (!message) {
         throw Error(`Transaction ${receipt.hash} did not emit a message.`)
     }

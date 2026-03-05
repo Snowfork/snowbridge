@@ -27,11 +27,21 @@ export type GatewayV1OutboundMessageAccepted = {
     channelId: string
     nonce: bigint
     messageId: string
+
+    blockNumber: number
+    blockHash: string
+    txHash: string
+    txIndex: number
 }
 
 export type GatewayV2OutboundMessageAccepted = {
     nonce: bigint
     payload: string
+
+    blockNumber: number
+    blockHash: string
+    txHash: string
+    txIndex: number
 }
 
 export type FeeData = {
@@ -529,6 +539,11 @@ export class EthersEthereumProvider
                         channelId: String(event.args[0]),
                         nonce: BigInt(event.args[1]),
                         messageId: String(event.args[2]),
+
+                        blockHash: receipt.blockHash,
+                        blockNumber: receipt.blockNumber,
+                        txHash: receipt.hash,
+                        txIndex: receipt.index
                     }
                 }
             } catch {
@@ -551,6 +566,10 @@ export class EthersEthereumProvider
                     return {
                         nonce: BigInt(event.args[0]),
                         payload: event.args[1],
+                        blockHash: receipt.blockHash,
+                        blockNumber: receipt.blockNumber,
+                        txHash: receipt.hash,
+                        txIndex: receipt.index
                     }
                 }
             } catch {

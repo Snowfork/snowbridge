@@ -150,8 +150,13 @@ export const transferToPolkadot = async (
                 throw Error(`Transaction ${response.hash} not included.`)
             }
 
+            const message = await transferImpl.getMessageReceipt(context, receipt)
+            if (!message) {
+                throw Error(`Transaction ${receipt.hash} did not emit a message.`)
+            }
+
             console.log(
-                `Success messages:
+                `Success message with nonce: ${message.nonce}
                 block number: ${receipt.blockNumber}
                 tx hash: ${receipt.hash}`,
             )

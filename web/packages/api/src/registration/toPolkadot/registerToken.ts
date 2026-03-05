@@ -7,7 +7,7 @@ import {
     RegistrationValidationResult,
 } from "./registrationInterface"
 import { EthersContext } from "../../index"
-import { ValidationKind } from "../../toPolkadotSnowbridgeV2"
+import { getMessageReceipt as getSharedMessageReceipt, ValidationKind } from "../../toPolkadotSnowbridgeV2"
 import { FeeInfo, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
 import { getOperatingStatus } from "../../status"
 import { DOT_LOCATION, erc20Location } from "../../xcmBuilder"
@@ -18,6 +18,7 @@ import {
     buildAssetHubRegisterTokenXcm,
     getBridgeOwnerAccount,
 } from "../../xcmbuilders/toPolkadot/registerToken"
+import { TransactionReceipt } from "ethers"
 
 const getAssetDeposit = (assetHub: ApiPromise): bigint => {
     return BigInt(assetHub.consts.foreignAssets.assetDeposit.toString())
@@ -256,5 +257,9 @@ export class RegisterToken implements RegistrationInterface {
             },
             registration,
         }
+    }
+
+    async getMessageReceipt(context: EthersContext, receipt: TransactionReceipt) {
+        return getSharedMessageReceipt(context.ethereumProvider, receipt)
     }
 }

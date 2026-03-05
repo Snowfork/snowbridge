@@ -167,7 +167,7 @@ export function createTransferImplementationV1(
     return new V1ToEthereumAdapter()
 }
 
-export async function createTransfer(
+async function createTransfer(
     source: { sourceParaId: number; context: EthersContext },
     registry: AssetRegistry,
     sourceAccount: string,
@@ -528,7 +528,7 @@ export type ValidationResult = {
     transfer: Transfer
 }
 
-export async function validateTransfer(
+async function validateTransfer(
     context: EthersContext,
     transfer: Transfer,
 ): Promise<ValidationResult> {

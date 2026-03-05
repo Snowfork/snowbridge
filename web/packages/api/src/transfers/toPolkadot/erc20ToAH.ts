@@ -1,4 +1,5 @@
 import { AssetRegistry } from "@snowbridge/base-types"
+import { TransactionReceipt } from "ethers"
 import { TransferInterface } from "./transferInterface"
 import { EthersContext } from "../../index"
 import {
@@ -7,6 +8,7 @@ import {
     claimerLocationToBytes,
     DeliveryFee,
     encodeNativeAsset,
+    getMessageReceipt as getSharedMessageReceipt,
     ValidationKind,
 } from "../../toPolkadotSnowbridgeV2"
 import {
@@ -366,5 +368,9 @@ export class ERC20ToAH implements TransferInterface {
             },
             transfer,
         }
+    }
+
+    async getMessageReceipt(context: EthersContext, receipt: TransactionReceipt) {
+        return getSharedMessageReceipt(context.ethereumProvider, receipt)
     }
 }
