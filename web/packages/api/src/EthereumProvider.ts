@@ -22,6 +22,7 @@ import {
 } from "./contracts"
 import { MultiAddressStruct } from "./contracts"
 import { Context } from "./"
+import { resolveBeneficiary } from "./utils"
 
 export type GatewayV1OutboundMessageAccepted = {
     channelId: string
@@ -53,48 +54,6 @@ export type FeeData = {
 export type EncodedMultiAddress = {
     address: MultiAddressStruct
     hexAddress: string
-}
-
-export const encodeAssetsArray = (encodedAssets: readonly string[]): string => {
-    return AbiCoder.defaultAbiCoder().encode(["bytes[]"], [encodedAssets])
-}
-
-export const encodeNativeAsset = (tokenAddress: string, amount: bigint): string => {
-    return AbiCoder.defaultAbiCoder().encode(
-        ["uint8", "address", "uint128"],
-        [0, tokenAddress, amount],
-    )
-}
-
-export const beneficiaryMultiAddress = (beneficiary: string): EncodedMultiAddress => {
-    const abi = AbiCoder.defaultAbiCoder()
-
-    let address: MultiAddressStruct
-    let hexAddress: string
-    if (isHex(beneficiary)) {
-        hexAddress = beneficiary
-        if (beneficiary.length === 42) {
-            address = {
-                kind: 2,
-                data: abi.encode(["bytes20"], [hexAddress]),
-            }
-        } else if (beneficiary.length === 66) {
-            address = {
-                kind: 1,
-                data: abi.encode(["bytes32"], [hexAddress]),
-            }
-        } else {
-            throw new Error("Unknown Beneficiary address format.")
-        }
-    } else {
-        hexAddress = u8aToHex(decodeAddress(beneficiary))
-        address = {
-            kind: 1,
-            data: abi.encode(["bytes32"], [hexAddress]),
-        }
-    }
-
-    return { address, hexAddress }
 }
 
 const PALLET_XCM_PRECOMPILE_ABI: InterfaceAbi = [
@@ -160,11 +119,6 @@ export interface EthereumProvider<
         owner: string,
         spender: string,
     ): Promise<{ balance: bigint; gatewayAllowance: bigint }>
-    populateTransaction(
-        contract: Contract,
-        method: string,
-        ...args: any[]
-    ): Promise<ContractTransaction>
     encodeFunctionData(abi: Abi, method: string, args: readonly unknown[]): string
     decodeFunctionResult<T = unknown>(abi: Abi, method: string, data: string): T
     encodeNativeAsset(tokenAddress: string, amount: bigint): string
@@ -309,14 +263,6 @@ export class EthersEthereumProvider
         }
     }
 
-    async populateTransaction(
-        contract: Contract,
-        method: string,
-        ...args: any[]
-    ): Promise<ContractTransaction> {
-        return await contract.getFunction(method).populateTransaction(...args)
-    }
-
     async gatewayV1SendToken(
         provider: AbstractProvider,
         gatewayAddress: string,
@@ -329,16 +275,16 @@ export class EthersEthereumProvider
         value: bigint,
     ): Promise<ContractTransaction> {
         const gateway = this.connectContract(gatewayAddress, IGATEWAY_V1_ABI, provider)
-        return await this.populateTransaction(
-            gateway,
-            "sendToken",
-            tokenAddress,
-            destinationParaId,
-            beneficiary,
-            totalFeeDot,
-            amount,
-            { value, from: sourceAccount },
-        )
+        return await gateway
+            .getFunction("sendToken")
+            .populateTransaction(
+                tokenAddress,
+                destinationParaId,
+                beneficiary,
+                totalFeeDot,
+                amount,
+                { value, from: sourceAccount },
+            )
     }
 
     async gatewayV2RegisterToken(
@@ -352,15 +298,12 @@ export class EthersEthereumProvider
         totalValue: bigint,
     ): Promise<ContractTransaction> {
         const gateway = this.connectContract(gatewayAddress, IGATEWAY_V2_ABI, provider)
-        return await this.populateTransaction(
-            gateway,
-            "v2_registerToken",
-            tokenAddress,
-            network,
-            assetHubExecutionFeeEther,
-            relayerFee,
-            { value: totalValue, from: sourceAccount },
-        )
+        return await gateway
+            .getFunction("v2_registerToken")
+            .populateTransaction(tokenAddress, network, assetHubExecutionFeeEther, relayerFee, {
+                value: totalValue,
+                from: sourceAccount,
+            })
     }
 
     async gatewayV2CreateAgent(
@@ -369,7 +312,7 @@ export class EthersEthereumProvider
         agentId: string,
     ): Promise<ContractTransaction> {
         const gateway = this.connectContract(gatewayAddress, IGATEWAY_V2_ABI, provider)
-        return await this.populateTransaction(gateway, "v2_createAgent", agentId)
+        return await gateway.getFunction("v2_createAgent").populateTransaction(agentId)
     }
 
     async gatewayV2SendMessage(
@@ -384,16 +327,12 @@ export class EthersEthereumProvider
         value: bigint,
     ): Promise<ContractTransaction> {
         const gateway = this.connectContract(gatewayAddress, IGATEWAY_V2_ABI, provider)
-        return await this.populateTransaction(
-            gateway,
-            "v2_sendMessage",
-            xcm,
-            assets,
-            claimer,
-            assetHubExecutionFeeEther,
-            relayerFee,
-            { value, from: sourceAccount },
-        )
+        return await gateway
+            .getFunction("v2_sendMessage")
+            .populateTransaction(xcm, assets, claimer, assetHubExecutionFeeEther, relayerFee, {
+                value,
+                from: sourceAccount,
+            })
     }
 
     async l2AdapterSendEtherAndCall(
@@ -407,16 +346,11 @@ export class EthersEthereumProvider
         value?: bigint,
     ): Promise<ContractTransaction> {
         const adapter = this.connectContract(adapterAddress, SNOWBRIDGE_L2_ADAPTOR_ABI, provider)
-        const txOptions = value === undefined ? { from: sourceAccount } : { from: sourceAccount, value }
-        return await this.populateTransaction(
-            adapter,
-            "sendEtherAndCall",
-            depositParams,
-            sendParams,
-            refundAddress,
-            topic,
-            txOptions,
-        )
+        const txOptions =
+            value === undefined ? { from: sourceAccount } : { from: sourceAccount, value }
+        return await adapter
+            .getFunction("sendEtherAndCall")
+            .populateTransaction(depositParams, sendParams, refundAddress, topic, txOptions)
     }
 
     async l2AdapterSendTokenAndCall(
@@ -430,16 +364,11 @@ export class EthersEthereumProvider
         topic: string,
     ): Promise<ContractTransaction> {
         const adapter = this.connectContract(adapterAddress, SNOWBRIDGE_L2_ADAPTOR_ABI, provider)
-        return await this.populateTransaction(
-            adapter,
-            "sendTokenAndCall",
-            depositParams,
-            swapParams,
-            sendParams,
-            refundAddress,
-            topic,
-            { from: sourceAccount },
-        )
+        return await adapter
+            .getFunction("sendTokenAndCall")
+            .populateTransaction(depositParams, swapParams, sendParams, refundAddress, topic, {
+                from: sourceAccount,
+            })
     }
 
     async evmParachainTransferAssetsUsingTypeAndThenAddress(
@@ -453,17 +382,23 @@ export class EthersEthereumProvider
         feesTransferType: number,
         customXcmHex: string,
     ): Promise<ContractTransaction> {
-        const precompile = this.connectContract(precompileAddress, PALLET_XCM_PRECOMPILE_ABI, provider)
-        const tx = await this.populateTransaction(
-            precompile,
-            "transferAssetsUsingTypeAndThenAddress((uint8,bytes[]),(address,uint256)[],uint8,uint8,uint8,bytes)",
-            destination,
-            assets,
-            assetsTransferType,
-            remoteFeesIdIndex,
-            feesTransferType,
-            customXcmHex,
+        const precompile = this.connectContract(
+            precompileAddress,
+            PALLET_XCM_PRECOMPILE_ABI,
+            provider,
         )
+        const tx = await precompile
+            .getFunction(
+                "transferAssetsUsingTypeAndThenAddress((uint8,bytes[]),(address,uint256)[],uint8,uint8,uint8,bytes)",
+            )
+            .populateTransaction(
+                destination,
+                assets,
+                assetsTransferType,
+                remoteFeesIdIndex,
+                feesTransferType,
+                customXcmHex,
+            )
         tx.from = sourceAccount
         return tx
     }
@@ -477,15 +412,40 @@ export class EthersEthereumProvider
     }
 
     encodeNativeAsset(tokenAddress: string, amount: bigint): string {
-        return encodeNativeAsset(tokenAddress, amount)
+        return AbiCoder.defaultAbiCoder().encode(
+            ["uint8", "address", "uint128"],
+            [0, tokenAddress, amount],
+        )
     }
 
     encodeAssetsArray(encodedAssets: readonly string[]): string {
-        return encodeAssetsArray(encodedAssets)
+        return AbiCoder.defaultAbiCoder().encode(["bytes[]"], [encodedAssets])
     }
 
     beneficiaryMultiAddress(beneficiary: string): EncodedMultiAddress {
-        return beneficiaryMultiAddress(beneficiary)
+        const abi = AbiCoder.defaultAbiCoder()
+
+        const { hexAddress, kind } = resolveBeneficiary(beneficiary)
+        let data: string
+        switch (kind) {
+            case 1: {
+                data = abi.encode(["bytes32"], [hexAddress])
+                break
+            }
+            case 2: {
+                data = abi.encode(["bytes20"], [hexAddress])
+                break
+            }
+            default:
+                throw new Error(`Unknown Beneficiary kind {kind}.`)
+        }
+        return {
+            hexAddress,
+            address: {
+                kind,
+                data,
+            },
+        }
     }
 
     async estimateGas(provider: AbstractProvider, tx: ContractTransaction): Promise<bigint> {
@@ -539,7 +499,7 @@ export class EthersEthereumProvider
                         blockHash: receipt.blockHash,
                         blockNumber: receipt.blockNumber,
                         txHash: receipt.hash,
-                        txIndex: receipt.index
+                        txIndex: receipt.index,
                     }
                 }
             } catch {
@@ -565,7 +525,7 @@ export class EthersEthereumProvider
                         blockHash: receipt.blockHash,
                         blockNumber: receipt.blockNumber,
                         txHash: receipt.hash,
-                        txIndex: receipt.index
+                        txIndex: receipt.index,
                     }
                 }
             } catch {

@@ -8,7 +8,6 @@ import {
     claimerFromBeneficiary,
     claimerLocationToBytes,
     DeliveryFee,
-    encodeNativeAsset,
     getMessageReceipt as getSharedMessageReceipt,
     Transfer,
     ValidationKind,
@@ -17,7 +16,6 @@ import {
 import { accountId32Location, DOT_LOCATION, erc20Location, isDOT } from "../../xcmBuilder"
 import { paraImplementation } from "../../parachains"
 import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
-import { beneficiaryMultiAddress } from "../../EthereumProvider"
 import { padFeeByPercentage, paraIdToSovereignAccount } from "../../utils"
 import { FeeInfo, resolveInputs, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
 import {
@@ -215,7 +213,7 @@ export class ERC20ToParachain implements TransferInterface {
                 : destAssetMetadata.minimumBalance
 
         let { address: beneficiary, hexAddress: beneficiaryAddressHex } =
-            beneficiaryMultiAddress(beneficiaryAccount)
+            context.ethereumProvider.beneficiaryMultiAddress(beneficiaryAccount)
         let value = fee.totalFeeInWei
         let inputAmount = amount
         let assets: any = []
@@ -223,7 +221,7 @@ export class ERC20ToParachain implements TransferInterface {
             value += amount
             inputAmount += fee.totalFeeInWei
         } else {
-            assets = [encodeNativeAsset(tokenAddress, amount)]
+            assets = [context.ethereumProvider.encodeNativeAsset(tokenAddress, amount)]
         }
         const accountNonce = await ethereum.getTransactionCount(sourceAccount, "pending")
         const topic = buildMessageId(
