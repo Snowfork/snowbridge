@@ -195,7 +195,6 @@ export interface EthereumProvider<
     gatewayV2CreateAgent(
         provider: Connection,
         gatewayAddress: string,
-        sourceAccount: string,
         agentId: string,
     ): Promise<ContractTransaction>
     gatewayV2SendMessage(
@@ -367,13 +366,10 @@ export class EthersEthereumProvider
     async gatewayV2CreateAgent(
         provider: AbstractProvider,
         gatewayAddress: string,
-        sourceAccount: string,
         agentId: string,
     ): Promise<ContractTransaction> {
         const gateway = this.connectContract(gatewayAddress, IGATEWAY_V2_ABI, provider)
-        return await this.populateTransaction(gateway, "v2_createAgent", agentId, {
-            from: sourceAccount,
-        })
+        return await this.populateTransaction(gateway, "v2_createAgent", agentId)
     }
 
     async gatewayV2SendMessage(

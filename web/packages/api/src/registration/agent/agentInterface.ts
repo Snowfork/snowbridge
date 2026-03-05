@@ -32,5 +32,8 @@ export interface AgentCreationInterface<Context, ContractTransaction> {
         creation: AgentCreation<ContractTransaction>,
     ): Promise<AgentCreationValidationResult<ContractTransaction>>
 
-    tx(creation: AgentCreation<ContractTransaction>): Promise<AgentCreation<ContractTransaction>>
+    tx(
+        sourceAccount: string,
+        agentId: string,
+    ): Promise<AgentCreationValidationResult<ContractTransaction>>
 }

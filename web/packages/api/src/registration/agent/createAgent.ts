@@ -47,7 +47,6 @@ export class CreateAgent<
         const tx = await this.context.ethereumProvider.gatewayV2CreateAgent(
             this.context.ethereum(),
             this.context.environment.gatewayContract,
-            sourceAccount,
             agentId,
         )
 
@@ -137,9 +136,10 @@ export class CreateAgent<
     }
 
     async tx(
-        creation: AgentCreation<EContractTransaction>,
-    ): Promise<AgentCreation<EContractTransaction>> {
-        await this.validateTx(creation)
-        return creation
+        sourceAccount: string,
+        agentId: string,
+    ): Promise<AgentCreationValidationResult<EContractTransaction>> {
+        const creation = await this.rawTx(sourceAccount, agentId)
+        return this.validateTx(creation)
     }
 }
