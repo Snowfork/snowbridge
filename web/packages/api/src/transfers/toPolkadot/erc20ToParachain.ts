@@ -216,12 +216,12 @@ export class ERC20ToParachain implements TransferInterface {
             context.ethereumProvider.beneficiaryMultiAddress(beneficiaryAccount)
         let value = fee.totalFeeInWei
         let inputAmount = amount
-        let assets: any = []
+        const assets: string[] = []
         if (tokenAddress === ETHER_TOKEN_ADDRESS) {
             value += amount
             inputAmount += fee.totalFeeInWei
         } else {
-            assets = [context.ethereumProvider.encodeNativeAsset(tokenAddress, amount)]
+            assets.push(context.ethereumProvider.encodeNativeAsset(tokenAddress, amount))
         }
         const accountNonce = await ethereum.getTransactionCount(sourceAccount, "pending")
         const topic = buildMessageId(

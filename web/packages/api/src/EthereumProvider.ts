@@ -11,8 +11,6 @@ import {
     TransactionReceipt,
     WebSocketProvider,
 } from "ethers"
-import { isHex, u8aToHex } from "@polkadot/util"
-import { decodeAddress } from "@polkadot/util-crypto"
 import {
     IERC20,
     IERC20_ABI,
@@ -122,7 +120,6 @@ export interface EthereumProvider<
     encodeFunctionData(abi: Abi, method: string, args: readonly unknown[]): string
     decodeFunctionResult<T = unknown>(abi: Abi, method: string, data: string): T
     encodeNativeAsset(tokenAddress: string, amount: bigint): string
-    encodeAssetsArray(encodedAssets: readonly string[]): string
     beneficiaryMultiAddress(beneficiary: string): EncodedMultiAddress
     estimateGas(provider: Connection, tx: ContractTransaction): Promise<bigint>
     gatewayV1SendToken(
@@ -156,7 +153,7 @@ export interface EthereumProvider<
         gatewayAddress: string,
         sourceAccount: string,
         xcm: Uint8Array,
-        assets: any[],
+        assets: string[],
         claimer: Uint8Array,
         assetHubExecutionFeeEther: bigint,
         relayerFee: bigint,
@@ -320,7 +317,7 @@ export class EthersEthereumProvider
         gatewayAddress: string,
         sourceAccount: string,
         xcm: Uint8Array,
-        assets: any[],
+        assets: string[],
         claimer: Uint8Array,
         assetHubExecutionFeeEther: bigint,
         relayerFee: bigint,
@@ -416,10 +413,6 @@ export class EthersEthereumProvider
             ["uint8", "address", "uint128"],
             [0, tokenAddress, amount],
         )
-    }
-
-    encodeAssetsArray(encodedAssets: readonly string[]): string {
-        return AbiCoder.defaultAbiCoder().encode(["bytes[]"], [encodedAssets])
     }
 
     beneficiaryMultiAddress(beneficiary: string): EncodedMultiAddress {
