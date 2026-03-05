@@ -12,16 +12,12 @@ const MOONBEAM_ERC20_ABI = [
 ]
 const ethereumProvider = new EthersEthereumProvider()
 
-export function toMoonbeamXC20(assetId: bigint) {
+function toMoonbeamXC20(assetId: bigint) {
     const xc20 = assetId.toString(16).toLowerCase()
     return "0xffffffff" + xc20
 }
 
-export async function getMoonbeamEvmForeignAssetBalance(
-    api: ApiPromise,
-    token: string,
-    account: string,
-) {
+async function getMoonbeamEvmForeignAssetBalance(api: ApiPromise, token: string, account: string) {
     const method = "balanceOf"
     const data = ethereumProvider.encodeFunctionData(MOONBEAM_ERC20_ABI, method, [account])
     const result = await api.call.ethereumRuntimeRPCApi.call(
@@ -52,7 +48,7 @@ export async function getMoonbeamEvmForeignAssetBalance(
     return BigInt(retVal[0])
 }
 
-export async function getMoonbeamEvmAssetMetadata(api: ApiPromise, method: string, token: string) {
+async function getMoonbeamEvmAssetMetadata(api: ApiPromise, method: string, token: string) {
     const data = ethereumProvider.encodeFunctionData(MOONBEAM_ERC20_ABI, method, [])
     const result = await api.call.ethereumRuntimeRPCApi.call(
         "0x0000000000000000000000000000000000000000",
