@@ -325,7 +325,18 @@ func (relay *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayInboundMe
 		"Proof":    inboundMsg.Proof,
 	}).Debug("Generated message from Ethereum log")
 
-	err = relay.writer.WriteToParachainAndWatch(ctx, "EthereumOutboundQueueV2.submit_delivery_receipt", inboundMsg)
+	// Todo: Make this configurable or auto detect from runtime spec version
+	var submitPayload interface{}
+	tidyMessage := true
+	var inboundMsgV2 *parachain.MessageV2
+	if tidyMessage {
+		inboundMsgV2, _ = parachain.ConvertToV2Message(inboundMsg)
+		submitPayload = interface{}(inboundMsgV2)
+	} else {
+		submitPayload = interface{}(inboundMsg)
+	}
+
+	err = relay.writer.WriteToParachainAndWatch(ctx, "EthereumOutboundQueueV2.submit_delivery_receipt", submitPayload)
 	if err != nil {
 		return fmt.Errorf("submit message to outbound queue v2: %w", err)
 	}

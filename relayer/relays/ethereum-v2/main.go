@@ -210,9 +210,20 @@ func (r *Relay) writeToParachain(ctx context.Context, proof scale.ProofPayload, 
 		"Proof":    inboundMsg.Proof,
 	}).Debug("Generated message from Ethereum log")
 
+	// Todo: Make this configurable or auto detect from runtime spec version
+	var submitPayload interface{}
+	tidyMessage := true
+	var inboundMsgV2 *parachain.MessageV2
+	if tidyMessage {
+		inboundMsgV2, _ = parachain.ConvertToV2Message(inboundMsg)
+		submitPayload = interface{}(inboundMsgV2)
+	} else {
+		submitPayload = interface{}(inboundMsg)
+	}
+
 	// There is already a valid finalized header on-chain that can prove the message
 	if proof.FinalizedPayload == nil {
-		err := r.writer.WriteToParachainAndWatch(ctx, "EthereumInboundQueueV2.submit", inboundMsg)
+		err := r.writer.WriteToParachainAndWatch(ctx, "EthereumInboundQueueV2.submit", submitPayload)
 		if err != nil {
 			if isDuplicateError(err) {
 				log.Info("message already processed (duplicate), skipping")
@@ -231,7 +242,7 @@ func (r *Relay) writeToParachain(ctx context.Context, proof scale.ProofPayload, 
 	}).Debug("Batching finalized header update with message")
 
 	extrinsics := []string{"EthereumBeaconClient.submit", "EthereumInboundQueueV2.submit"}
-	payloads := []interface{}{proof.FinalizedPayload.Payload, inboundMsg}
+	payloads := []interface{}{proof.FinalizedPayload.Payload, submitPayload}
 	// Batch the finalized header update with the inbound message
 	err := r.writer.BatchCall(ctx, extrinsics, payloads)
 	if err != nil {
