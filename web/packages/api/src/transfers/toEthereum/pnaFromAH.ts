@@ -130,18 +130,41 @@ export class PNAFromAH implements TransferInterface {
             beneficiaryAccount,
             amount,
         )
-        let tx: SubmittableExtrinsic<"promise", ISubmittableResult> = await this.createTx(
-            source.context,
-            parachain,
-            ethChainId,
-            sourceAccount,
-            beneficiaryAccount,
-            ahAssetMetadata,
-            amount,
-            messageId,
-            fee,
-            options,
-        )
+        let callHex: string | undefined
+        if (options?.contractCall) {
+            callHex = await buildContractCallHex(source.context, options.contractCall)
+        }
+        let xcm: any
+        if (!fee.feeLocation) {
+            xcm = buildTransferXcmFromAssetHub(
+                parachain.registry,
+                ethChainId,
+                sourceAccount,
+                beneficiaryAccount,
+                messageId,
+                ahAssetMetadata,
+                amount,
+                fee,
+                callHex,
+            )
+        } else if (isRelaychainLocation(fee.feeLocation)) {
+            xcm = buildTransferXcmFromAssetHubWithDOTAsFee(
+                parachain.registry,
+                ethChainId,
+                sourceAccount,
+                beneficiaryAccount,
+                messageId,
+                ahAssetMetadata,
+                amount,
+                fee,
+                callHex,
+            )
+        } else {
+            throw new Error(`Fee token as ${fee.feeLocation} is not supported yet.`)
+        }
+        console.log("xcm on AH:", xcm.toHuman())
+        let tx: SubmittableExtrinsic<"promise", ISubmittableResult> =
+            parachain.tx.polkadotXcm.execute(xcm, MaxWeight)
 
         return {
             input: {
@@ -168,59 +191,5 @@ export class PNAFromAH implements TransferInterface {
 
     async validateTransfer(context: EthersContext, transfer: Transfer): Promise<ValidationResult> {
         return validateTransferFromAssetHub(context, transfer)
-    }
-
-    async createTx(
-        context: EthersContext,
-        parachain: ApiPromise,
-        ethChainId: number,
-        sourceAccount: string,
-        beneficiaryAccount: string,
-        asset: Asset,
-        amount: bigint,
-        messageId: string,
-        fee: DeliveryFee,
-        options?: {
-            claimerLocation?: any
-            contractCall?: ContractCall
-        },
-    ): Promise<SubmittableExtrinsic<"promise", ISubmittableResult>> {
-        let callHex: string | undefined
-        if (options?.contractCall) {
-            callHex = await buildContractCallHex(context, options.contractCall)
-        }
-        let xcm: any
-        // If there is no fee specified, we assume that Ether is available in user's wallet on source chain,
-        // thus no swap required on Asset Hub.
-        if (!fee.feeLocation) {
-            xcm = buildTransferXcmFromAssetHub(
-                parachain.registry,
-                ethChainId,
-                sourceAccount,
-                beneficiaryAccount,
-                messageId,
-                asset,
-                amount,
-                fee,
-                callHex,
-            )
-        } // If the fee asset is in DOT, we need to swap it to Ether on Asset Hub.
-        else if (isRelaychainLocation(fee.feeLocation)) {
-            xcm = buildTransferXcmFromAssetHubWithDOTAsFee(
-                parachain.registry,
-                ethChainId,
-                sourceAccount,
-                beneficiaryAccount,
-                messageId,
-                asset,
-                amount,
-                fee,
-                callHex,
-            )
-        } else {
-            throw new Error(`Fee token as ${fee.feeLocation} is not supported yet.`)
-        }
-        console.log("xcm on AH:", xcm.toHuman())
-        return parachain.tx.polkadotXcm.execute(xcm, MaxWeight)
     }
 }
