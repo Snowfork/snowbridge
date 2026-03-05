@@ -96,134 +96,6 @@ function resolveInputs(
     return { sourceAssetMetadata, destAssetMetadata, sourceParachain, destParachain }
 }
 
-export async function getDeliveryFee(
-    connections: { context: EthersContext; sourceParaId: number; destinationParaId: number },
-    registry: AssetRegistry,
-    tokenAddress: string,
-    options?: {
-        padPercentage?: bigint
-    },
-): Promise<DeliveryFee> {
-    const sourceParachain = await connections.context.parachain(connections.sourceParaId)
-    const destParachain = await connections.context.parachain(connections.destinationParaId)
-
-    const [source, destination] = await Promise.all([
-        paraImplementation(sourceParachain),
-        paraImplementation(destParachain),
-    ])
-
-    // PNA filtered out by resolve inputs.
-    resolveInputs(registry, tokenAddress, source.parachainId, destination.parachainId)
-    let xcm
-    if (source.parachainId === registry.assetHubParaId) {
-        xcm = buildParachainERC20ReceivedXcmOnDestination(
-            sourceParachain.registry,
-            registry.ethChainId,
-            "0x0000000000000000000000000000000000000000",
-            340282366920938463463374607431768211455n,
-            340282366920938463463374607431768211455n,
-            "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "0x0000000000000000000000000000000000000000000000000000000000000000",
-        )
-    } else {
-        xcm = buildERC20ToAssetHubFromParachain(
-            sourceParachain.registry,
-            registry.ethChainId,
-            "0x0000000000000000000000000000000000000000",
-            "0x0000000000000000000000000000000000000000",
-            "0x0000000000000000000000000000000000000000",
-            "0x0000000000000000000000000000000000000000000000000000000000000000",
-            340282366920938463463374607431768211455n,
-            340282366920938463463374607431768211455n,
-            340282366920938463463374607431768211455n,
-            DOT_LOCATION,
-        )
-    }
-
-    const deliveryFee = padFeeByPercentage(
-        await source.calculateDeliveryFeeInDOT(destination.parachainId, xcm),
-        options?.padPercentage ?? 33n,
-    )
-    const executionFee = padFeeByPercentage(
-        await destination.calculateXcmFee(xcm, DOT_LOCATION),
-        options?.padPercentage ?? 33n,
-    )
-
-    return {
-        deliveryFee,
-        executionFee,
-        totalFeeInDot: deliveryFee + executionFee,
-    }
-}
-
-export async function createTransfer(
-    connections: { context: EthersContext; sourceParaId: number },
-    registry: AssetRegistry,
-    sourceAccount: string,
-    beneficiaryAccount: string,
-    destinationParaId: number,
-    tokenAddress: string,
-    amount: bigint,
-    fee: DeliveryFee,
-): Promise<Transfer> {
-    const sourceParachain = await connections.context.parachain(connections.sourceParaId)
-
-    const source = await paraImplementation(sourceParachain)
-
-    let { hexAddress: beneficiaryAddressHex } = beneficiaryMultiAddress(beneficiaryAccount)
-    let { hexAddress: sourceAccountHex } = beneficiaryMultiAddress(sourceAccount)
-
-    const {
-        sourceAssetMetadata,
-        destAssetMetadata,
-        sourceParachain: sourceParachainMeta,
-        destParachain,
-    } = resolveInputs(registry, tokenAddress, source.parachainId, destinationParaId)
-    const accountNonce = await source.accountNonce(sourceAccountHex)
-    let messageId = buildMessageId(
-        source.parachainId,
-        sourceAccountHex,
-        accountNonce,
-        tokenAddress,
-        beneficiaryAccount,
-        amount,
-    )
-
-    const tx = createTx(
-        sourceParachain,
-        registry.ethChainId,
-        destinationParaId,
-        tokenAddress,
-        beneficiaryAccount,
-        messageId,
-        amount,
-        fee.totalFeeInDot,
-        source.parachainId === registry.assetHubParaId ? "LocalReserve" : "DestinationReserve",
-    )
-
-    return {
-        input: {
-            registry,
-            sourceAccount,
-            beneficiaryAccount,
-            destinationParaId,
-            tokenAddress,
-            amount,
-            fee,
-        },
-        computed: {
-            sourceParaId: source.parachainId,
-            sourceParachain: sourceParachainMeta,
-            destParachain,
-            sourceAssetMetadata,
-            destAssetMetadata,
-            sourceAccountHex,
-            messageId,
-            beneficiaryAddressHex,
-        },
-        tx,
-    }
-}
 
 export enum ValidationKind {
     Warning,
@@ -257,136 +129,6 @@ export type ValidationResult = {
     transfer: Transfer
 }
 
-export async function validateTransfer(
-    connections: { context: EthersContext; sourceParaId: number; destinationParaId: number },
-    transfer: Transfer,
-): Promise<ValidationResult> {
-    const sourceParachain = await connections.context.parachain(connections.sourceParaId)
-    const destParachain = await connections.context.parachain(connections.destinationParaId)
-
-    const [source, destination] = await Promise.all([
-        paraImplementation(sourceParachain),
-        paraImplementation(destParachain),
-    ])
-
-    const { registry, fee, tokenAddress, amount, destinationParaId } = transfer.input
-    const {
-        sourceAccountHex,
-        sourceAssetMetadata,
-        destAssetMetadata,
-        destParachain: destParachainMeta,
-        beneficiaryAddressHex,
-    } = transfer.computed
-    const { tx } = transfer
-
-    const nativeBalance = await source.getNativeBalance(sourceAccountHex, true)
-    const tokenBalance = await source.getTokenBalance(
-        sourceAccountHex,
-        registry.ethChainId,
-        tokenAddress,
-        sourceAssetMetadata,
-    )
-
-    const logs: ValidationLog[] = []
-
-    if (amount > tokenBalance) {
-        logs.push({
-            kind: ValidationKind.Error,
-            reason: ValidationReason.InsufficientTokenBalance,
-            message: "Insufficient token balance to submit transaction.",
-        })
-    }
-
-    if (amount < destAssetMetadata.minimumBalance) {
-        logs.push({
-            kind: ValidationKind.Error,
-            reason: ValidationReason.MinimumAmountValidation,
-            message: "The amount transferred is less than the minimum amount.",
-        })
-    }
-
-    let dryRunError
-
-    const dryRunSource = await dryRunTx(
-        sourceParachain,
-        destinationParaId,
-        transfer.tx,
-        sourceAccountHex,
-    )
-    if (!dryRunSource.success) {
-        logs.push({
-            kind: ValidationKind.Error,
-            reason: ValidationReason.DryRunFailed,
-            message: "Dry run call on source failed.",
-        })
-        dryRunError = dryRunSource.error
-    }
-
-    const dryRunDestination = await dryRunXcm(
-        destParachain,
-        source.parachainId,
-        dryRunSource.forwardedXcm,
-    )
-    if (!dryRunDestination.success) {
-        logs.push({
-            kind: ValidationKind.Error,
-            reason: ValidationReason.DryRunFailed,
-            message: "Dry run call on destination failed.",
-        })
-        dryRunError = dryRunDestination.errorMessage
-
-        if (!destAssetMetadata.isSufficient) {
-            const { accountMaxConsumers, accountExists } = await destination.validateAccount(
-                beneficiaryAddressHex,
-                registry.ethChainId,
-                tokenAddress,
-                destAssetMetadata,
-            )
-
-            if (accountMaxConsumers) {
-                logs.push({
-                    kind: ValidationKind.Error,
-                    reason: ValidationReason.MaxConsumersReached,
-                    message:
-                        "Beneficiary account has reached the max consumer limit on the destination chain.",
-                })
-            }
-            if (!accountExists) {
-                logs.push({
-                    kind: ValidationKind.Error,
-                    reason: ValidationReason.AccountDoesNotExist,
-                    message: "Beneficiary account does not exist on the destination chain.",
-                })
-            }
-        }
-    }
-
-    const paymentInfo = await tx.paymentInfo(sourceAccountHex)
-    const sourceExecutionFee = paymentInfo["partialFee"].toBigInt()
-
-    if (sourceExecutionFee > nativeBalance) {
-        logs.push({
-            kind: ValidationKind.Error,
-            reason: ValidationReason.InsufficientFee,
-            message:
-                "Insufficient native asset balance to submit transaction on the source parachain.",
-        })
-    }
-
-    const success = logs.find((l) => l.kind === ValidationKind.Error) === undefined
-
-    return {
-        logs,
-        success,
-        data: {
-            nativeBalance,
-            sourceExecutionFee,
-            tokenBalance,
-            dryRunError: dryRunError,
-        },
-        transfer,
-    }
-}
 
 export type MessageReceipt = {
     blockNumber: number
@@ -426,16 +168,55 @@ export class InterParachainTransfer implements InterParachainTransferInterface {
             padPercentage?: bigint
         },
     ): Promise<DeliveryFee> {
-        return getDeliveryFee(
-            {
-                context: this.context,
-                sourceParaId: this.from.id,
-                destinationParaId: this.to.id,
-            },
-            this.info.registry,
-            tokenAddress,
-            options,
+        const sourceParachain = await this.context.parachain(this.from.id)
+        const destParachain = await this.context.parachain(this.to.id)
+
+        const [source, destination] = await Promise.all([
+            paraImplementation(sourceParachain),
+            paraImplementation(destParachain),
+        ])
+
+        resolveInputs(this.info.registry, tokenAddress, source.parachainId, destination.parachainId)
+        let xcm
+        if (source.parachainId === this.info.registry.assetHubParaId) {
+            xcm = buildParachainERC20ReceivedXcmOnDestination(
+                sourceParachain.registry,
+                this.info.registry.ethChainId,
+                "0x0000000000000000000000000000000000000000",
+                340282366920938463463374607431768211455n,
+                340282366920938463463374607431768211455n,
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
+            )
+        } else {
+            xcm = buildERC20ToAssetHubFromParachain(
+                sourceParachain.registry,
+                this.info.registry.ethChainId,
+                "0x0000000000000000000000000000000000000000",
+                "0x0000000000000000000000000000000000000000",
+                "0x0000000000000000000000000000000000000000",
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
+                340282366920938463463374607431768211455n,
+                340282366920938463463374607431768211455n,
+                340282366920938463463374607431768211455n,
+                DOT_LOCATION,
+            )
+        }
+
+        const deliveryFee = padFeeByPercentage(
+            await source.calculateDeliveryFeeInDOT(destination.parachainId, xcm),
+            options?.padPercentage ?? 33n,
         )
+        const executionFee = padFeeByPercentage(
+            await destination.calculateXcmFee(xcm, DOT_LOCATION),
+            options?.padPercentage ?? 33n,
+        )
+
+        return {
+            deliveryFee,
+            executionFee,
+            totalFeeInDot: deliveryFee + executionFee,
+        }
     }
 
     async createTransfer(
@@ -445,27 +226,186 @@ export class InterParachainTransfer implements InterParachainTransferInterface {
         amount: bigint,
         fee: DeliveryFee,
     ): Promise<Transfer> {
-        return createTransfer(
-            { context: this.context, sourceParaId: this.from.id },
-            this.info.registry,
-            sourceAccount,
+        const sourceParachain = await this.context.parachain(this.from.id)
+        const source = await paraImplementation(sourceParachain)
+
+        let { hexAddress: beneficiaryAddressHex } = beneficiaryMultiAddress(beneficiaryAccount)
+        let { hexAddress: sourceAccountHex } = beneficiaryMultiAddress(sourceAccount)
+
+        const {
+            sourceAssetMetadata,
+            destAssetMetadata,
+            sourceParachain: sourceParachainMeta,
+            destParachain,
+        } = resolveInputs(this.info.registry, tokenAddress, source.parachainId, this.to.id)
+        const accountNonce = await source.accountNonce(sourceAccountHex)
+        let messageId = buildMessageId(
+            source.parachainId,
+            sourceAccountHex,
+            accountNonce,
+            tokenAddress,
             beneficiaryAccount,
+            amount,
+        )
+
+        const tx = createTx(
+            sourceParachain,
+            this.info.registry.ethChainId,
             this.to.id,
             tokenAddress,
+            beneficiaryAccount,
+            messageId,
             amount,
-            fee,
+            fee.totalFeeInDot,
+            source.parachainId === this.info.registry.assetHubParaId
+                ? "LocalReserve"
+                : "DestinationReserve",
         )
+
+        return {
+            input: {
+                registry: this.info.registry,
+                sourceAccount,
+                beneficiaryAccount,
+                destinationParaId: this.to.id,
+                tokenAddress,
+                amount,
+                fee,
+            },
+            computed: {
+                sourceParaId: source.parachainId,
+                sourceParachain: sourceParachainMeta,
+                destParachain,
+                sourceAssetMetadata,
+                destAssetMetadata,
+                sourceAccountHex,
+                messageId,
+                beneficiaryAddressHex,
+            },
+            tx,
+        }
     }
 
     async validateTransfer(transfer: Transfer): Promise<ValidationResult> {
-        return validateTransfer(
-            {
-                context: this.context,
-                sourceParaId: this.from.id,
-                destinationParaId: this.to.id,
+        const sourceParachain = await this.context.parachain(this.from.id)
+        const destParachain = await this.context.parachain(this.to.id)
+
+        const [source, destination] = await Promise.all([
+            paraImplementation(sourceParachain),
+            paraImplementation(destParachain),
+        ])
+
+        const { registry, tokenAddress, amount, destinationParaId } = transfer.input
+        const {
+            sourceAccountHex,
+            sourceAssetMetadata,
+            destAssetMetadata,
+            beneficiaryAddressHex,
+        } = transfer.computed
+        const { tx } = transfer
+
+        const nativeBalance = await source.getNativeBalance(sourceAccountHex, true)
+        const tokenBalance = await source.getTokenBalance(
+            sourceAccountHex,
+            registry.ethChainId,
+            tokenAddress,
+            sourceAssetMetadata,
+        )
+
+        const logs: ValidationLog[] = []
+
+        if (amount > tokenBalance) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.InsufficientTokenBalance,
+                message: "Insufficient token balance to submit transaction.",
+            })
+        }
+
+        if (amount < destAssetMetadata.minimumBalance) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.MinimumAmountValidation,
+                message: "The amount transferred is less than the minimum amount.",
+            })
+        }
+
+        let dryRunError
+
+        const dryRunSource = await dryRunTx(sourceParachain, destinationParaId, transfer.tx, sourceAccountHex)
+        if (!dryRunSource.success) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.DryRunFailed,
+                message: "Dry run call on source failed.",
+            })
+            dryRunError = dryRunSource.error
+        }
+
+        const dryRunDestination = await dryRunXcm(
+            destParachain,
+            source.parachainId,
+            dryRunSource.forwardedXcm,
+        )
+        if (!dryRunDestination.success) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.DryRunFailed,
+                message: "Dry run call on destination failed.",
+            })
+            dryRunError = dryRunDestination.errorMessage
+
+            if (!destAssetMetadata.isSufficient) {
+                const { accountMaxConsumers, accountExists } = await destination.validateAccount(
+                    beneficiaryAddressHex,
+                    registry.ethChainId,
+                    tokenAddress,
+                    destAssetMetadata,
+                )
+
+                if (accountMaxConsumers) {
+                    logs.push({
+                        kind: ValidationKind.Error,
+                        reason: ValidationReason.MaxConsumersReached,
+                        message:
+                            "Beneficiary account has reached the max consumer limit on the destination chain.",
+                    })
+                }
+                if (!accountExists) {
+                    logs.push({
+                        kind: ValidationKind.Error,
+                        reason: ValidationReason.AccountDoesNotExist,
+                        message: "Beneficiary account does not exist on the destination chain.",
+                    })
+                }
+            }
+        }
+
+        const paymentInfo = await tx.paymentInfo(sourceAccountHex)
+        const sourceExecutionFee = paymentInfo["partialFee"].toBigInt()
+
+        if (sourceExecutionFee > nativeBalance) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.InsufficientFee,
+                message:
+                    "Insufficient native asset balance to submit transaction on the source parachain.",
+            })
+        }
+
+        const success = logs.find((l) => l.kind === ValidationKind.Error) === undefined
+
+        return {
+            logs,
+            success,
+            data: {
+                nativeBalance,
+                sourceExecutionFee,
+                tokenBalance,
+                dryRunError,
             },
             transfer,
-        )
+        }
     }
 
     async signAndSend(
@@ -473,72 +413,56 @@ export class InterParachainTransfer implements InterParachainTransferInterface {
         account: AddressOrPair,
         options: Partial<SignerOptions>,
     ): Promise<MessageReceipt> {
-        return signAndSend(
-            { context: this.context, sourceParaId: this.from.id },
-            transfer,
-            account,
-            options,
-        )
+        const sourceParachain = await this.context.parachain(this.from.id)
+        const result = await new Promise<MessageReceipt>((resolve, reject) => {
+            try {
+                transfer.tx.signAndSend(account, options, (c) => {
+                    if (c.isError) {
+                        console.error(c)
+                        reject(c.internalError || c.dispatchError || c)
+                    }
+                    if (c.isFinalized) {
+                        const result = {
+                            txHash: u8aToHex(c.txHash),
+                            txIndex: c.txIndex || 0,
+                            blockNumber: Number((c as any).blockNumber),
+                            blockHash: "",
+                            events: c.events,
+                        }
+                        for (const e of c.events) {
+                            if (sourceParachain.events.system.ExtrinsicFailed.is(e.event)) {
+                                resolve({
+                                    ...result,
+                                    success: false,
+                                    dispatchError: (e.event.data.toHuman(true) as any)?.dispatchError,
+                                })
+                            }
+
+                            if (sourceParachain.events.polkadotXcm.Sent.is(e.event)) {
+                                resolve({
+                                    ...result,
+                                    success: true,
+                                    messageId: (e.event.data.toPrimitive() as any)[3],
+                                })
+                            }
+                        }
+                        resolve({
+                            ...result,
+                            success: false,
+                        })
+                    }
+                })
+            } catch (e) {
+                console.error(e)
+                reject(e)
+            }
+        })
+
+        result.blockHash = u8aToHex(await sourceParachain.rpc.chain.getBlockHash(result.blockNumber))
+        result.messageId = transfer.computed.messageId ?? result.messageId
+
+        return result
     }
-}
-
-export async function signAndSend(
-    connections: { context: EthersContext; sourceParaId: number },
-    transfer: Transfer,
-    account: AddressOrPair,
-    options: Partial<SignerOptions>,
-): Promise<MessageReceipt> {
-    const sourceParachain = await connections.context.parachain(connections.sourceParaId)
-    const result = await new Promise<MessageReceipt>((resolve, reject) => {
-        try {
-            transfer.tx.signAndSend(account, options, (c) => {
-                if (c.isError) {
-                    console.error(c)
-                    reject(c.internalError || c.dispatchError || c)
-                }
-                // We have to check for finalization here because re-orgs will produce a different messageId on Asset Hub.
-                // TODO: Change back to isInBlock when we switch to pallet-xcm.execute for Asset Hub and we can generate the messageId offchain.
-                if (c.isFinalized) {
-                    const result = {
-                        txHash: u8aToHex(c.txHash),
-                        txIndex: c.txIndex || 0,
-                        blockNumber: Number((c as any).blockNumber),
-                        blockHash: "",
-                        events: c.events,
-                    }
-                    for (const e of c.events) {
-                        if (sourceParachain.events.system.ExtrinsicFailed.is(e.event)) {
-                            resolve({
-                                ...result,
-                                success: false,
-                                dispatchError: (e.event.data.toHuman(true) as any)?.dispatchError,
-                            })
-                        }
-
-                        if (sourceParachain.events.polkadotXcm.Sent.is(e.event)) {
-                            resolve({
-                                ...result,
-                                success: true,
-                                messageId: (e.event.data.toPrimitive() as any)[3],
-                            })
-                        }
-                    }
-                    resolve({
-                        ...result,
-                        success: false,
-                    })
-                }
-            })
-        } catch (e) {
-            console.error(e)
-            reject(e)
-        }
-    })
-
-    result.blockHash = u8aToHex(await sourceParachain.rpc.chain.getBlockHash(result.blockNumber))
-    result.messageId = transfer.computed.messageId ?? result.messageId
-
-    return result
 }
 
 function createTx(
