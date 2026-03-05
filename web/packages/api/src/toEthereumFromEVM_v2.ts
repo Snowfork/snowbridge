@@ -5,10 +5,7 @@ import {
     buildAssetHubERC20TransferFromParachain,
     DOT_LOCATION,
 } from "./xcmBuilder"
-import {
-    AssetRegistry,
-    ContractCall,
-} from "@snowbridge/base-types"
+import { AssetRegistry, ContractCall } from "@snowbridge/base-types"
 import { getOperatingStatus } from "./status"
 import { EventRecord } from "@polkadot/types/interfaces"
 import { TransactionReceipt } from "ethers"
@@ -214,7 +211,11 @@ export class V1ToEthereumEvmAdapter implements ToEthereumEvmTransferInterface {
             sourceAssetMetadata.symbol == source.info.tokenSymbols
         const [nativeBalance, tokenBalance] = await Promise.all([
             sourceParachainImpl.getNativeBalance(sourceAccountHex, true),
-            sourceParachainImpl.getTokenBalance(sourceAccountHex, registry.ethChainId, tokenAddress),
+            sourceParachainImpl.getTokenBalance(
+                sourceAccountHex,
+                registry.ethChainId,
+                tokenAddress,
+            ),
         ])
 
         let nativeBalanceCheckFailed = false
@@ -422,9 +423,9 @@ export class V1ToEthereumEvmAdapter implements ToEthereumEvmTransferInterface {
     ): Promise<MessageReceiptEvm> {
         const sourceParachain = await source.context.parachain(source.sourceParaId)
         const blockHash = await sourceParachain.rpc.chain.getBlockHash(receipt.blockNumber)
-        const events = await (await sourceParachain.at(blockHash)).query.system.events<
-            EventRecord[]
-        >()
+        const events = await (
+            await sourceParachain.at(blockHash)
+        ).query.system.events<EventRecord[]>()
         let success = false
         let dispatchError: any
         let messageId: string | undefined

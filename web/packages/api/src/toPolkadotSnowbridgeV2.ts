@@ -19,10 +19,6 @@ import { Codec } from "@polkadot/types/types"
 import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
 import { padFeeByPercentage } from "./utils"
 import { EthereumProvider, EthersContext } from "./index"
-import {
-    encodeAssetsArray as providerEncodeAssetsArray,
-    encodeNativeAsset as providerEncodeNativeAsset,
-} from "./EthereumProvider"
 export { ValidationKind } from "./toPolkadot_v2"
 import { ParachainBase } from "./parachains/parachainBase"
 
@@ -204,19 +200,15 @@ export function buildMessageId(
     return blake2AsHex(entropy)
 }
 
-// ERC20 asset: abi.encode(0, tokenAddress, amount)
-// 0 = AssetKind.NativeTokenERC20 from Solidity Types.sol
-export function encodeNativeAsset(tokenAddress: string, amount: bigint) {
-    return providerEncodeNativeAsset(tokenAddress, amount)
-}
-
-// Encode assets array as bytes[] for the gateway contract
-export function encodeAssetsArray(encodedAssets: string[]) {
-    return providerEncodeAssetsArray(encodedAssets)
-}
-
 export async function getMessageReceipt<ETransactionReceipt>(
-    ethereumProvider: EthereumProvider<unknown, unknown, unknown, unknown, ETransactionReceipt, unknown>,
+    ethereumProvider: EthereumProvider<
+        unknown,
+        unknown,
+        unknown,
+        unknown,
+        ETransactionReceipt,
+        unknown
+    >,
     receipt: ETransactionReceipt,
 ): Promise<MessageReceipt | null> {
     const messageAccepted = ethereumProvider.scanGatewayV2OutboundMessageAccepted(receipt)

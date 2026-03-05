@@ -1,10 +1,5 @@
 import { Keyring } from "@polkadot/keyring"
-import {
-    EthersEthereumProvider,
-    assetsV2,
-    createApi,
-    historyV2,
-} from "@snowbridge/api"
+import { EthersEthereumProvider, assetsV2, createApi, historyV2 } from "@snowbridge/api"
 import { formatEther, Wallet } from "ethers"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { setTimeout } from "timers/promises"

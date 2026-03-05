@@ -7,7 +7,10 @@ import {
     RegistrationValidationResult,
 } from "./registrationInterface"
 import { EthersContext } from "../../index"
-import { getMessageReceipt as getSharedMessageReceipt, ValidationKind } from "../../toPolkadotSnowbridgeV2"
+import {
+    getMessageReceipt as getSharedMessageReceipt,
+    ValidationKind,
+} from "../../toPolkadotSnowbridgeV2"
 import { FeeInfo, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
 import { getOperatingStatus } from "../../status"
 import { DOT_LOCATION, erc20Location } from "../../xcmBuilder"

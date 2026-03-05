@@ -8,7 +8,6 @@ import {
     claimerFromBeneficiary,
     claimerLocationToBytes,
     DeliveryFee,
-    encodeNativeAsset,
     getMessageReceipt as getSharedMessageReceipt,
     Transfer,
     ValidationKind,
@@ -17,7 +16,6 @@ import {
 import { accountId32Location, DOT_LOCATION, erc20Location, isDOT } from "../../xcmBuilder"
 import { paraImplementation } from "../../parachains"
 import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
-import { beneficiaryMultiAddress } from "../../EthereumProvider"
 import { padFeeByPercentage, paraIdToSovereignAccount } from "../../utils"
 import { FeeInfo, resolveInputs, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
 import {
@@ -213,7 +211,7 @@ export class PNAToParachain implements TransferInterface {
                 : destAssetMetadata.minimumBalance
 
         let { address: beneficiary, hexAddress: beneficiaryAddressHex } =
-            beneficiaryMultiAddress(beneficiaryAccount)
+            context.ethereumProvider.beneficiaryMultiAddress(beneficiaryAccount)
         let value = fee.totalFeeInWei
 
         if (!ahAssetMetadata.foreignId) {
@@ -261,7 +259,7 @@ export class PNAToParachain implements TransferInterface {
                 ).toHex(),
             )
         }
-        let assets = [encodeNativeAsset(tokenAddress, amount)]
+        let assets = [context.ethereumProvider.encodeNativeAsset(tokenAddress, amount)]
         let claimer = claimerFromBeneficiary(assetHub, beneficiaryAddressHex)
 
         const tx = await context.ethereumProvider.gatewayV2SendMessage(

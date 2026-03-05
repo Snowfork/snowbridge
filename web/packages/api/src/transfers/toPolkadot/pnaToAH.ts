@@ -8,7 +8,6 @@ import {
     claimerFromBeneficiary,
     claimerLocationToBytes,
     DeliveryFee,
-    encodeNativeAsset,
     getMessageReceipt as getSharedMessageReceipt,
     Transfer,
     ValidationKind,
@@ -17,7 +16,6 @@ import {
 import { accountId32Location, DOT_LOCATION, erc20Location } from "../../xcmBuilder"
 import { paraImplementation } from "../../parachains"
 import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
-import { beneficiaryMultiAddress } from "../../EthereumProvider"
 import { padFeeByPercentage } from "../../utils"
 import { FeeInfo, resolveInputs, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
 import { buildAssetHubPNAReceivedXcm, sendMessageXCM } from "../../xcmbuilders/toPolkadot/pnaToAH"
@@ -134,7 +132,7 @@ export class PNAToAH implements TransferInterface {
                 : destAssetMetadata.minimumBalance
 
         let { address: beneficiary, hexAddress: beneficiaryAddressHex } =
-            beneficiaryMultiAddress(beneficiaryAccount)
+            context.ethereumProvider.beneficiaryMultiAddress(beneficiaryAccount)
         let value = fee.assetHubExecutionFeeEther + fee.assetHubDeliveryFeeEther + fee.relayerFee
 
         if (!ahAssetMetadata.foreignId) {
@@ -154,7 +152,7 @@ export class PNAToAH implements TransferInterface {
         const xcm = hexToU8a(
             sendMessageXCM(assetHub.registry, beneficiaryAddressHex, topic, customXcm).toHex(),
         )
-        let assets = [encodeNativeAsset(tokenAddress, amount)]
+        let assets = [context.ethereumProvider.encodeNativeAsset(tokenAddress, amount)]
         let claimer = claimerFromBeneficiary(assetHub, beneficiaryAddressHex)
 
         const tx = await context.ethereumProvider.gatewayV2SendMessage(

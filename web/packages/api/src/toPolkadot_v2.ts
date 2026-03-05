@@ -1,6 +1,5 @@
 import { MultiAddressStruct } from "./contracts"
 import { ContractTransaction, TransactionReceipt } from "ethers"
-import { beneficiaryMultiAddress } from "./EthereumProvider"
 import { padFeeByPercentage } from "./utils"
 import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
 import { Asset, AssetRegistry, ERC20Metadata, Parachain } from "@snowbridge/base-types"
@@ -286,18 +285,15 @@ export class V1ToPolkadotAdapter implements ToPolkadotTransferInterface {
             throw new Error("v1 toPolkadot adapter does not support customXcm.")
         }
         const v1Fee = toV1DeliveryFee(fee)
-        const { tokenErcMetadata, destParachain, ahAssetMetadata, destAssetMetadata } = resolveInputs(
-            registry,
-            tokenAddress,
-            destinationParaId,
-        )
+        const { tokenErcMetadata, destParachain, ahAssetMetadata, destAssetMetadata } =
+            resolveInputs(registry, tokenAddress, destinationParaId)
         const minimalBalance =
             ahAssetMetadata.minimumBalance > destAssetMetadata.minimumBalance
                 ? ahAssetMetadata.minimumBalance
                 : destAssetMetadata.minimumBalance
 
         let { address: beneficiary, hexAddress: beneficiaryAddressHex } =
-            beneficiaryMultiAddress(beneficiaryAccount)
+            context.ethereumProvider.beneficiaryMultiAddress(beneficiaryAccount)
         let value = v1Fee.totalFeeInWei
         if (tokenAddress === ETHER_TOKEN_ADDRESS) {
             value += amount
@@ -346,16 +342,27 @@ export class V1ToPolkadotAdapter implements ToPolkadotTransferInterface {
     ): Promise<ToPolkadotV2ValidationResult> {
         const v1Transfer = toV1Transfer(transfer)
         const { tx } = v1Transfer
-        const { amount, sourceAccount, tokenAddress, registry, destinationParaId } = v1Transfer.input
-        const { ethereum, bridgeHub, assetHub, destParachain: destParachainApi } = {
+        const { amount, sourceAccount, tokenAddress, registry, destinationParaId } =
+            v1Transfer.input
+        const {
+            ethereum,
+            bridgeHub,
+            assetHub,
+            destParachain: destParachainApi,
+        } = {
             ethereum: context.ethereum(),
             bridgeHub: await context.bridgeHub(),
             assetHub: await context.assetHub(),
             destParachain: await context.parachain(destinationParaId),
         }
 
-        const { totalValue, minimalBalance, destAssetMetadata, ahAssetMetadata, beneficiaryAddressHex } =
-            v1Transfer.computed
+        const {
+            totalValue,
+            minimalBalance,
+            destAssetMetadata,
+            ahAssetMetadata,
+            beneficiaryAddressHex,
+        } = v1Transfer.computed
 
         const logs: ValidationLog[] = []
         if (amount < minimalBalance) {
@@ -433,7 +440,10 @@ export class V1ToPolkadotAdapter implements ToPolkadotTransferInterface {
             gateway: context.gateway(),
             bridgeHub,
         })
-        if (bridgeStatus.toPolkadot.outbound !== "Normal" || bridgeStatus.toPolkadot.beacon !== "Normal") {
+        if (
+            bridgeStatus.toPolkadot.outbound !== "Normal" ||
+            bridgeStatus.toPolkadot.beacon !== "Normal"
+        ) {
             logs.push({
                 kind: ValidationKind.Error,
                 reason: ValidationReason.BridgeStatusNotOperational,
@@ -514,7 +524,8 @@ export class V1ToPolkadotAdapter implements ToPolkadotTransferInterface {
         context: EthersContext,
         receipt: TransactionReceipt,
     ): Promise<MessageReceipt | null> {
-        const messageAccepted = context.ethereumProvider.scanGatewayV1OutboundMessageAccepted(receipt)
+        const messageAccepted =
+            context.ethereumProvider.scanGatewayV1OutboundMessageAccepted(receipt)
         if (!messageAccepted) return null
         return messageAccepted
     }

@@ -7,7 +7,6 @@ import {
     claimerFromBeneficiary,
     claimerLocationToBytes,
     DeliveryFee,
-    encodeNativeAsset,
     getMessageReceipt as getSharedMessageReceipt,
     ValidationKind,
 } from "../../toPolkadotSnowbridgeV2"
@@ -18,7 +17,6 @@ import {
 import { accountId32Location, DOT_LOCATION, erc20Location } from "../../xcmBuilder"
 import { paraImplementation } from "../../parachains"
 import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
-import { beneficiaryMultiAddress } from "../../EthereumProvider"
 import { padFeeByPercentage } from "../../utils"
 import { FeeInfo, resolveInputs, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
 import { buildMessageId, Transfer, ValidationResult } from "../../toPolkadotSnowbridgeV2"
@@ -127,7 +125,7 @@ export class ERC20ToAH implements TransferInterface {
                 : destAssetMetadata.minimumBalance
 
         let { address: beneficiary, hexAddress: beneficiaryAddressHex } =
-            beneficiaryMultiAddress(beneficiaryAccount)
+            context.ethereumProvider.beneficiaryMultiAddress(beneficiaryAccount)
         let value = fee.totalFeeInWei
         let inputAmount = amount
         let assets: any = []
@@ -135,7 +133,7 @@ export class ERC20ToAH implements TransferInterface {
             value += amount
             inputAmount += fee.totalFeeInWei
         } else {
-            assets = [encodeNativeAsset(tokenAddress, amount)]
+            assets = [context.ethereumProvider.encodeNativeAsset(tokenAddress, amount)]
         }
         const accountNonce = await ethereum.getTransactionCount(sourceAccount, "pending")
 
