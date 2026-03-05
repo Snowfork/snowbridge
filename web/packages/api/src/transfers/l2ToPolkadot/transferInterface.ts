@@ -1,6 +1,12 @@
 import { AssetRegistry } from "@snowbridge/base-types"
+import { TransactionReceipt } from "ethers"
 import { EthersContext } from "../../index"
-import { DeliveryFee, Transfer, ValidationResult } from "../../toPolkadotSnowbridgeV2"
+import {
+    DeliveryFee,
+    MessageReceipt,
+    Transfer,
+    ValidationResult,
+} from "../../toPolkadotSnowbridgeV2"
 
 export interface TransferInterface {
     getDeliveryFee(
@@ -37,4 +43,9 @@ export interface TransferInterface {
     ): Promise<Transfer>
 
     validateTransfer(context: EthersContext, transfer: Transfer): Promise<ValidationResult>
+
+    getMessageReceipt(
+        context: EthersContext,
+        receipt: TransactionReceipt,
+    ): Promise<MessageReceipt | null>
 }

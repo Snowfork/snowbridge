@@ -509,6 +509,15 @@ export class V1ToPolkadotAdapter implements ToPolkadotTransferInterface {
             transfer: toV2Transfer(v1Result.transfer),
         } as ToPolkadotV2ValidationResult
     }
+
+    async getMessageReceipt(
+        context: EthersContext,
+        receipt: TransactionReceipt,
+    ): Promise<MessageReceipt | null> {
+        const messageAccepted = context.ethereumProvider.scanGatewayV1OutboundMessageAccepted(receipt)
+        if (!messageAccepted) return null
+        return messageAccepted
+    }
 }
 
 export function createTransferImplementationV1(
@@ -517,23 +526,6 @@ export function createTransferImplementationV1(
     _tokenAddress: string,
 ): ToPolkadotTransferInterface {
     return new V1ToPolkadotAdapter()
-}
-
-export async function getMessageReceipt(
-    context: EthersContext,
-    receipt: TransactionReceipt,
-): Promise<MessageReceipt | null> {
-    const messageAccepted = context.ethereumProvider.scanGatewayV1OutboundMessageAccepted(receipt)
-    if (!messageAccepted) return null
-    return {
-        channelId: messageAccepted.channelId,
-        nonce: messageAccepted.nonce,
-        messageId: messageAccepted.messageId,
-        blockNumber: receipt.blockNumber,
-        blockHash: receipt.blockHash,
-        txHash: receipt.hash,
-        txIndex: receipt.index,
-    }
 }
 
 export function resolveInputs(
