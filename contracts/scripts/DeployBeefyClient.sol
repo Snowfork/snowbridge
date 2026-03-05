@@ -55,21 +55,21 @@ contract DeployBeefyClient is Script {
 
     function westendConfig() internal pure returns (Config memory config) {
         config = Config({
-            startBlock: 29_879_785,
+            startBlock: 30_057_085,
             current: BeefyClient.ValidatorSet({
-                id: 19_849,
+                id: 20_144,
                 length: 20,
                 root: 0xff1d13b4dc453f2f88261fbc1ec53922bce47d740489c9022bed06f345395f8c
             }),
             next: BeefyClient.ValidatorSet({
-                id: 19_850,
+                id: 20_145,
                 length: 20,
                 root: 0xff1d13b4dc453f2f88261fbc1ec53922bce47d740489c9022bed06f345395f8c
             }),
             randaoCommitDelay: 0,
             randaoCommitExpiration: 1024,
             minimumSignatures: 12,
-            fiatShamirRequiredSignatures: 101
+            fiatShamirRequiredSignatures: 111
         });
     }
 
