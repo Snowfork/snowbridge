@@ -139,7 +139,10 @@ export class ERC20FromAH implements TransferInterface {
         options = options || {}
         options.contractCall = options.contractCall || callInfo.l2Call
 
-        const l1AdapterAddress = await context.l1Adapter().getAddress()
+        const l1AdapterAddress = context.environment.l2Bridge?.l1AdapterAddress
+        if (!l1AdapterAddress) {
+            throw new Error("L2 bridge configuration is missing.")
+        }
 
         let l1ReceiverAddress = l1AdapterAddress
 

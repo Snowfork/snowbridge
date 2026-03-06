@@ -957,8 +957,10 @@ export async function buildL2Call(
     if (!acrossApiUrl) {
         throw new Error("L2 bridge configuration is missing.")
     }
-    const l1Adapter = context.l1Adapter()
-    let l1AdapterAddress = await l1Adapter.getAddress()
+    const l1AdapterAddress = context.environment.l2Bridge?.l1AdapterAddress
+    if (!l1AdapterAddress) {
+        throw new Error("L2 bridge configuration is missing.")
+    }
     let l2BridgeFeeInL1Token: bigint
     let l2Call: ContractCall
     if (tokenAddress === ETHER_TOKEN_ADDRESS) {
@@ -978,7 +980,7 @@ export async function buildL2Call(
             ),
             options?.l2PadFeeByPercentage ?? 33n,
         )
-        let calldata = l1Adapter.interface.encodeFunctionData("depositNativeEther", [
+        const calldata = context.ethereumProvider.l1AdapterDepositNativeEther(
             {
                 inputToken: tokenAddress,
                 outputToken: l2FeeTokenAddress,
@@ -989,7 +991,7 @@ export async function buildL2Call(
             },
             destinationAddress,
             topic,
-        ])
+        )
         l2Call = {
             target: l1AdapterAddress,
             value: 0n,
@@ -1008,7 +1010,7 @@ export async function buildL2Call(
             ),
             options?.l2PadFeeByPercentage ?? 33n,
         )
-        let calldata = l1Adapter.interface.encodeFunctionData("depositToken", [
+        const calldata = context.ethereumProvider.l1AdapterDepositToken(
             {
                 inputToken: tokenAddress,
                 outputToken: l2TokenAddress,
@@ -1019,7 +1021,7 @@ export async function buildL2Call(
             },
             destinationAddress,
             topic,
-        ])
+        )
         l2Call = {
             target: l1AdapterAddress,
             value: 0n,
