@@ -99,7 +99,7 @@ import { bridgeInfoFor } from "@snowbridge/registry"
     }
 
     // Step 6. Submit transaction and get receipt for tracking
-    const response = await toEthereumSnowbridgeV2.signAndSend(
+    const response = await transferImpl.signAndSend(
         context, // The context
         transfer,
         POLKADOT_ACCOUNT,

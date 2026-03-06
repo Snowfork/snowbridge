@@ -27,7 +27,6 @@ import {
     ERC20Metadata,
     Parachain,
 } from "@snowbridge/base-types"
-import { IGatewayV1 as IGateway } from "./contracts"
 import {
     CallDryRunEffects,
     EventRecord,
@@ -116,7 +115,9 @@ export class V1ToEthereumAdapter implements ToEthereumTransferInterface {
             throw new Error("v1 toEthereum adapter does not support options.contractCall.")
         }
 
-        return getDeliveryFee(source.context, source.sourceParaId, registry, tokenAddress, {
+        const assetHub = await source.context.assetHub()
+        const parachain = await source.context.parachain(source.sourceParaId)
+        return getDeliveryFeeV1(assetHub, parachain, source.sourceParaId, registry, tokenAddress, {
             padPercentage: options?.padPercentage,
             slippagePadPercentage: options?.slippagePadPercentage,
             defaultFee: options?.defaultFee,
@@ -143,19 +144,434 @@ export class V1ToEthereumAdapter implements ToEthereumTransferInterface {
             throw new Error("v1 toEthereum adapter does not support options.contractCall.")
         }
 
-        return createTransfer(
-            source,
-            registry,
-            sourceAccount,
-            beneficiaryAccount,
-            tokenAddress,
-            amount,
-            fee,
-        )
+        const { ethChainId, assetHubParaId } = registry
+
+        let sourceAccountHex = sourceAccount
+        if (!isHex(sourceAccountHex)) {
+            sourceAccountHex = u8aToHex(decodeAddress(sourceAccount))
+        }
+
+        const parachain = await source.context.parachain(source.sourceParaId)
+
+        const sourceParachainImpl = await paraImplementation(parachain)
+        const { tokenErcMetadata, sourceParachain, ahAssetMetadata, sourceAssetMetadata } =
+            resolveInputs(registry, tokenAddress, sourceParachainImpl.parachainId)
+
+        let messageId: string | undefined
+        let tx: SubmittableExtrinsic<"promise", ISubmittableResult>
+        if (sourceParachainImpl.parachainId === assetHubParaId) {
+            // For PNA from foreign consensus
+            if (ahAssetMetadata.location?.parents == 2) {
+                tx = createAssetHubTxForPNAFromForeignConsensus(
+                    parachain,
+                    ethChainId,
+                    beneficiaryAccount,
+                    amount,
+                    ahAssetMetadata,
+                )
+            } else {
+                tx = createAssetHubTx(
+                    parachain,
+                    ethChainId,
+                    tokenAddress,
+                    beneficiaryAccount,
+                    amount,
+                    ahAssetMetadata,
+                )
+            }
+        } else {
+            const accountNonce = await sourceParachainImpl.accountNonce(sourceAccountHex)
+            messageId = buildMessageId(
+                sourceParachainImpl.parachainId,
+                sourceAccountHex,
+                accountNonce,
+                tokenAddress,
+                beneficiaryAccount,
+                amount,
+            )
+            if (sourceAssetMetadata.location) {
+                tx = createPNASourceParachainTx(
+                    sourceParachainImpl,
+                    ethChainId,
+                    assetHubParaId,
+                    sourceAssetMetadata,
+                    beneficiaryAccount,
+                    amount,
+                    fee.totalFeeInNative ?? fee.totalFeeInDot,
+                    messageId,
+                    fee.totalFeeInNative !== undefined,
+                )
+            } else {
+                tx = createERC20SourceParachainTx(
+                    sourceParachainImpl,
+                    ethChainId,
+                    assetHubParaId,
+                    sourceAccountHex,
+                    tokenAddress,
+                    beneficiaryAccount,
+                    amount,
+                    fee.totalFeeInNative ?? fee.totalFeeInDot,
+                    messageId,
+                    sourceParachainImpl.parachainId,
+                    fee.returnToSenderExecutionFeeDOT,
+                    fee.totalFeeInNative !== undefined,
+                )
+            }
+        }
+
+        return {
+            input: {
+                registry,
+                sourceAccount,
+                beneficiaryAccount,
+                tokenAddress,
+                amount,
+                fee,
+            },
+            computed: {
+                sourceParaId: sourceParachainImpl.parachainId,
+                sourceAccountHex,
+                tokenErcMetadata,
+                sourceParachain,
+                ahAssetMetadata,
+                sourceAssetMetadata,
+                messageId,
+            },
+            tx,
+        }
     }
 
     async validateTransfer(context: EthersContext, transfer: Transfer): Promise<ValidationResult> {
-        return validateTransfer(context, transfer)
+        const { registry, fee, tokenAddress, amount, beneficiaryAccount } = transfer.input
+        const {
+            sourceAccountHex,
+            sourceParaId,
+            sourceParachain: source,
+            sourceAssetMetadata,
+        } = transfer.computed
+
+        const sourceParachain = await context.parachain(sourceParaId)
+        const assetHub = await context.assetHub()
+        const gateway = context.gateway()
+        const bridgeHub = await context.bridgeHub()
+
+        const { tx } = transfer
+
+        const logs: ValidationLog[] = []
+        const sourceParachainImpl = await paraImplementation(sourceParachain)
+        const nativeBalance = await sourceParachainImpl.getNativeBalance(sourceAccountHex, true)
+        let dotBalance: bigint | undefined = undefined
+        if (source.features.hasDotBalance) {
+            dotBalance = await sourceParachainImpl.getDotBalance(sourceAccountHex)
+        }
+        let tokenBalance: any
+        let isNativeBalance = false
+        // For DOT on AH, get it from the native balance pallet.
+        if (
+            sourceParaId == registry.assetHubParaId &&
+            transfer.computed.ahAssetMetadata.location?.parents == DOT_LOCATION.parents &&
+            transfer.computed.ahAssetMetadata.location?.interior == DOT_LOCATION.interior
+        ) {
+            tokenBalance = await sourceParachainImpl.getNativeBalance(sourceAccountHex, true)
+            isNativeBalance = true
+        } else {
+            isNativeBalance =
+                sourceAssetMetadata.decimals === source.info.tokenDecimals &&
+                sourceAssetMetadata.symbol == source.info.tokenSymbols
+            if (isNativeBalance) {
+                tokenBalance = await sourceParachainImpl.getNativeBalance(sourceAccountHex, true)
+            } else {
+                tokenBalance = await sourceParachainImpl.getTokenBalance(
+                    sourceAccountHex,
+                    registry.ethChainId,
+                    tokenAddress,
+                    sourceAssetMetadata,
+                )
+            }
+        }
+        let nativeBalanceCheckFailed = false
+        if (isNativeBalance && fee.totalFeeInNative) {
+            nativeBalanceCheckFailed = true
+            if (amount + fee.totalFeeInNative > tokenBalance) {
+                logs.push({
+                    kind: ValidationKind.Error,
+                    reason: ValidationReason.InsufficientTokenBalance,
+                    message: "Insufficient token balance to submit transaction.",
+                })
+            }
+        } else {
+            if (amount > tokenBalance) {
+                logs.push({
+                    kind: ValidationKind.Error,
+                    reason: ValidationReason.InsufficientTokenBalance,
+                    message: "Insufficient token balance to submit transaction.",
+                })
+            }
+        }
+
+        let sourceDryRunError
+        let assetHubDryRunError
+        let bridgeHubDryRunError
+        if (source.features.hasDryRunApi) {
+            // do the dry run, get the forwarded xcm and dry run that
+            const dryRunSource = await dryRunOnSourceParachain(
+                sourceParachain,
+                registry.assetHubParaId,
+                registry.bridgeHubParaId,
+                transfer.tx,
+                sourceAccountHex,
+            )
+            if (!dryRunSource.success) {
+                logs.push({
+                    kind: ValidationKind.Error,
+                    reason: ValidationReason.DryRunFailed,
+                    message: "Dry run call on source failed.",
+                })
+                sourceDryRunError = dryRunSource.error
+            }
+
+            if (dryRunSource.success) {
+                if (sourceParaId == registry.assetHubParaId) {
+                    if (!dryRunSource.bridgeHubForwarded) {
+                        logs.push({
+                            kind: ValidationKind.Error,
+                            reason: ValidationReason.DryRunFailed,
+                            message: "Dry run call did not provide a forwarded xcm.",
+                        })
+                    } else {
+                        const dryRunResultBridgeHub = await dryRunBridgeHub(
+                            bridgeHub,
+                            registry.assetHubParaId,
+                            dryRunSource.bridgeHubForwarded[1][0],
+                        )
+                        if (!dryRunResultBridgeHub.success) {
+                            logs.push({
+                                kind: ValidationKind.Error,
+                                reason: ValidationReason.DryRunFailed,
+                                message: "Dry run failed on Bridge Hub.",
+                            })
+                            bridgeHubDryRunError = dryRunResultBridgeHub.errorMessage
+                        }
+                    }
+                } else {
+                    if (!dryRunSource.assetHubForwarded) {
+                        logs.push({
+                            kind: ValidationKind.Error,
+                            reason: ValidationReason.DryRunFailed,
+                            message: "Dry run call did not provide a forwarded xcm.",
+                        })
+                    } else {
+                        const dryRunResultAssetHub = await dryRunAssetHub(
+                            assetHub,
+                            sourceParaId,
+                            registry.bridgeHubParaId,
+                            dryRunSource.assetHubForwarded[1][0],
+                        )
+                        if (
+                            dryRunResultAssetHub.success &&
+                            dryRunResultAssetHub.bridgeHubForwarded
+                        ) {
+                            const dryRunResultBridgeHub = await dryRunBridgeHub(
+                                bridgeHub,
+                                registry.assetHubParaId,
+                                dryRunResultAssetHub.bridgeHubForwarded[1][0],
+                            )
+                            if (!dryRunResultBridgeHub.success) {
+                                logs.push({
+                                    kind: ValidationKind.Error,
+                                    reason: ValidationReason.DryRunFailed,
+                                    message: "Dry run failed on Bridge Hub.",
+                                })
+                                bridgeHubDryRunError = dryRunResultBridgeHub.errorMessage
+                            }
+                        } else {
+                            logs.push({
+                                kind: ValidationKind.Error,
+                                reason: ValidationReason.DryRunFailed,
+                                message: "Dry run call failed on Asset Hub.",
+                            })
+                            assetHubDryRunError = dryRunResultAssetHub.errorMessage
+                        }
+                    }
+                }
+            }
+        } else {
+            logs.push({
+                kind: ValidationKind.Warning,
+                reason: ValidationReason.DryRunApiNotAvailable,
+                message: "Source parachain can not dry run call. Cannot verify success.",
+            })
+            if (sourceParaId !== registry.assetHubParaId) {
+                let dryRunResultAssetHub: any
+                if (sourceAssetMetadata.location) {
+                    dryRunResultAssetHub = await dryRunAssetHub(
+                        assetHub,
+                        sourceParaId,
+                        registry.bridgeHubParaId,
+                        buildResultXcmAssetHubPNATransferFromParachain(
+                            sourceParachain.registry,
+                            registry.ethChainId,
+                            sourceAssetMetadata.locationOnAH,
+                            sourceAssetMetadata.locationOnEthereum,
+                            sourceAccountHex,
+                            beneficiaryAccount,
+                            "0x0000000000000000000000000000000000000000000000000000000000000000",
+                            amount,
+                            fee.totalFeeInDot,
+                            fee.assetHubExecutionFeeDOT,
+                        ),
+                    )
+                } else {
+                    if (!source.features.hasDotBalance && fee.totalFeeInNative) {
+                        dryRunResultAssetHub = await dryRunAssetHub(
+                            assetHub,
+                            sourceParaId,
+                            registry.bridgeHubParaId,
+                            buildResultXcmAssetHubERC20TransferFromParachain(
+                                sourceParachain.registry,
+                                registry.ethChainId,
+                                sourceAccountHex,
+                                beneficiaryAccount,
+                                tokenAddress,
+                                "0x0000000000000000000000000000000000000000000000000000000000000000",
+                                amount,
+                                fee.totalFeeInNative,
+                                fee.assetHubExecutionFeeNative ?? 0n,
+                                sourceParaId,
+                                fee.returnToSenderExecutionFeeNative ?? 0n,
+                                sourceParachainImpl.getNativeBalanceLocation("here"),
+                                sourceParachainImpl.getNativeBalanceLocation("sibling"),
+                                true,
+                            ),
+                        )
+                    } else {
+                        dryRunResultAssetHub = await dryRunAssetHub(
+                            assetHub,
+                            sourceParaId,
+                            registry.bridgeHubParaId,
+                            buildResultXcmAssetHubERC20TransferFromParachain(
+                                sourceParachain.registry,
+                                registry.ethChainId,
+                                sourceAccountHex,
+                                beneficiaryAccount,
+                                tokenAddress,
+                                "0x0000000000000000000000000000000000000000000000000000000000000000",
+                                amount,
+                                fee.totalFeeInDot,
+                                fee.assetHubExecutionFeeDOT,
+                                sourceParaId,
+                                fee.returnToSenderExecutionFeeDOT,
+                                DOT_LOCATION,
+                                DOT_LOCATION,
+                                false,
+                            ),
+                        )
+                    }
+                }
+                if (!dryRunResultAssetHub.success) {
+                    logs.push({
+                        kind: ValidationKind.Error,
+                        reason: ValidationReason.DryRunFailed,
+                        message: "Dry run failed on Asset Hub.",
+                    })
+                    assetHubDryRunError = dryRunResultAssetHub.errorMessage
+                }
+            }
+        }
+
+        const paymentInfo = await tx.paymentInfo(sourceAccountHex)
+        const sourceExecutionFee = paymentInfo["partialFee"].toBigInt()
+
+        // recheck total after fee estimation
+        if (isNativeBalance && fee.totalFeeInNative && !nativeBalanceCheckFailed) {
+            if (amount + fee.totalFeeInNative + sourceExecutionFee > tokenBalance) {
+                logs.push({
+                    kind: ValidationKind.Error,
+                    reason: ValidationReason.InsufficientTokenBalance,
+                    message: "Insufficient token balance to submit transaction.",
+                })
+            }
+        }
+
+        if (sourceParaId === registry.assetHubParaId) {
+            if (!dotBalance) {
+                logs.push({
+                    kind: ValidationKind.Error,
+                    reason: ValidationReason.InsufficientDotFee,
+                    message: "Could not determine the DOT balance",
+                })
+            } else if (sourceExecutionFee + fee.totalFeeInDot > dotBalance) {
+                logs.push({
+                    kind: ValidationKind.Error,
+                    reason: ValidationReason.InsufficientDotFee,
+                    message:
+                        "Insufficient DOT balance to submit transaction on the source parachain.",
+                })
+            }
+        } else {
+            if (dotBalance && fee.totalFeeInDot > dotBalance) {
+                logs.push({
+                    kind: ValidationKind.Error,
+                    reason: ValidationReason.InsufficientDotFee,
+                    message:
+                        "Insufficient DOT balance to submit transaction on the source parachain.",
+                })
+            } else if (
+                fee.totalFeeInNative &&
+                fee.totalFeeInNative + sourceExecutionFee > nativeBalance &&
+                !nativeBalanceCheckFailed
+            ) {
+                logs.push({
+                    kind: ValidationKind.Error,
+                    reason: ValidationReason.InsufficientNativeFee,
+                    message:
+                        "Insufficient native balance to submit transaction on the source parachain.",
+                })
+            }
+            if (sourceExecutionFee > nativeBalance) {
+                logs.push({
+                    kind: ValidationKind.Error,
+                    reason: ValidationReason.InsufficientNativeFee,
+                    message:
+                        "Insufficient native balance to submit transaction on the source parachain.",
+                })
+            }
+        }
+        const bridgeStatus = await getOperatingStatus({ gateway, bridgeHub })
+        if (bridgeStatus.toEthereum.outbound !== "Normal") {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.BridgeStatusNotOperational,
+                message: "Bridge operations have been paused by onchain governance.",
+            })
+        }
+
+        const success = logs.find((l) => l.kind === ValidationKind.Error) === undefined
+
+        return {
+            logs,
+            success,
+            data: {
+                bridgeStatus,
+                nativeBalance,
+                dotBalance,
+                sourceExecutionFee,
+                tokenBalance,
+                sourceDryRunError,
+                assetHubDryRunError,
+            },
+            transfer,
+        }
+    }
+
+    async signAndSend(
+        context: EthersContext,
+        transfer: Transfer,
+        account: AddressOrPair,
+        options: Partial<SignerOptions>,
+    ): Promise<MessageReceipt> {
+        const sourceParachain = await context.parachain(transfer.computed.sourceParaId)
+        return signAndSendTransfer(sourceParachain, transfer, account, options)
     }
 }
 
@@ -167,115 +583,61 @@ export function createTransferImplementationV1(
     return new V1ToEthereumAdapter()
 }
 
-async function createTransfer(
-    source: { sourceParaId: number; context: EthersContext },
-    registry: AssetRegistry,
-    sourceAccount: string,
-    beneficiaryAccount: string,
-    tokenAddress: string,
-    amount: bigint,
-    fee: DeliveryFee,
-): Promise<Transfer> {
-    const { ethChainId, assetHubParaId } = registry
-
-    let sourceAccountHex = sourceAccount
-    if (!isHex(sourceAccountHex)) {
-        sourceAccountHex = u8aToHex(decodeAddress(sourceAccount))
-    }
-
-    const parachain = await source.context.parachain(source.sourceParaId)
-
-    const sourceParachainImpl = await paraImplementation(parachain)
-    const { tokenErcMetadata, sourceParachain, ahAssetMetadata, sourceAssetMetadata } =
-        resolveInputs(registry, tokenAddress, sourceParachainImpl.parachainId)
-
-    let messageId: string | undefined
-    let tx: SubmittableExtrinsic<"promise", ISubmittableResult>
-    if (sourceParachainImpl.parachainId === assetHubParaId) {
-        // For PNA from foreign consensus
-        if (ahAssetMetadata.location?.parents == 2) {
-            tx = createAssetHubTxForPNAFromForeignConsensus(
-                parachain,
-                ethChainId,
-                beneficiaryAccount,
-                amount,
-                ahAssetMetadata,
-            )
-        } else {
-            tx = createAssetHubTx(
-                parachain,
-                ethChainId,
-                tokenAddress,
-                beneficiaryAccount,
-                amount,
-                ahAssetMetadata,
-            )
-        }
-    } else {
-        const accountNonce = await sourceParachainImpl.accountNonce(sourceAccountHex)
-        messageId = buildMessageId(
-            sourceParachainImpl.parachainId,
-            sourceAccountHex,
-            accountNonce,
-            tokenAddress,
-            beneficiaryAccount,
-            amount,
-        )
-        if (sourceAssetMetadata.location) {
-            tx = createPNASourceParachainTx(
-                sourceParachainImpl,
-                ethChainId,
-                assetHubParaId,
-                sourceAssetMetadata,
-                beneficiaryAccount,
-                amount,
-                fee.totalFeeInNative ?? fee.totalFeeInDot,
-                messageId,
-                fee.totalFeeInNative !== undefined,
-            )
-        } else {
-            tx = createERC20SourceParachainTx(
-                sourceParachainImpl,
-                ethChainId,
-                assetHubParaId,
-                sourceAccountHex,
-                tokenAddress,
-                beneficiaryAccount,
-                amount,
-                fee.totalFeeInNative ?? fee.totalFeeInDot,
-                messageId,
-                sourceParachainImpl.parachainId,
-                fee.returnToSenderExecutionFeeDOT,
-                fee.totalFeeInNative !== undefined,
-            )
-        }
-    }
-
-    return {
-        input: {
-            registry,
-            sourceAccount,
-            beneficiaryAccount,
-            tokenAddress,
-            amount,
-            fee,
-        },
-        computed: {
-            sourceParaId: sourceParachainImpl.parachainId,
-            sourceAccountHex,
-            tokenErcMetadata,
-            sourceParachain,
-            ahAssetMetadata,
-            sourceAssetMetadata,
-            messageId,
-        },
-        tx,
-    }
+export enum ValidationKind {
+    Warning,
+    Error,
 }
 
-export async function getDeliveryFee(
-    context: EthersContext,
-    parachain: number,
+export enum ValidationReason {
+    BridgeStatusNotOperational,
+    InsufficientTokenBalance,
+    FeeEstimationError,
+    InsufficientDotFee,
+    InsufficientNativeFee,
+    DryRunApiNotAvailable,
+    DryRunFailed,
+    InsufficientEtherBalance,
+    ContractCallInvalidTarget,
+    ContractCallAgentNotRegistered,
+}
+
+export type ValidationLog = {
+    kind: ValidationKind
+    reason: ValidationReason
+    message: string
+}
+
+export type ValidationResult = {
+    logs: ValidationLog[]
+    success: boolean
+    data: {
+        bridgeStatus: OperationStatus
+        nativeBalance: bigint
+        dotBalance?: bigint
+        sourceExecutionFee: bigint
+        tokenBalance: bigint
+        sourceDryRunError: any
+        assetHubDryRunError: any
+        bridgeHubDryRunError?: any
+    }
+    transfer: Transfer
+}
+
+export type MessageReceipt = {
+    blockNumber: number
+    blockHash: string
+    txIndex: number
+    txHash: string
+    success: boolean
+    events: EventRecord[]
+    dispatchError?: any
+    messageId?: string
+}
+
+export async function getDeliveryFeeV1(
+    assetHub: ApiPromise,
+    parachain: ApiPromise,
+    sourceParaId: number,
     registry: AssetRegistry,
     tokenAddress: string,
     options?: {
@@ -284,9 +646,6 @@ export async function getDeliveryFee(
         defaultFee?: bigint
     },
 ): Promise<DeliveryFee> {
-    const assetHub = await context.assetHub()
-    const source = await context.parachain(parachain)
-
     // Fees stored in 0x5fbc5c7ba58845ad1f1a9a7c5bc12fad
     const feePadPercentage = options?.padPercentage ?? 33n
     const feeSlippagePadPercentage = options?.slippagePadPercentage ?? 20n
@@ -305,9 +664,9 @@ export async function getDeliveryFee(
     const { sourceAssetMetadata, sourceParachain } = resolveInputs(
         registry,
         tokenAddress,
-        parachain,
+        sourceParaId,
     )
-    const sourceParachainImpl = await paraImplementation(source)
+    const sourceParachainImpl = await paraImplementation(parachain)
 
     let xcm: any, forwardedXcm: any
 
@@ -346,7 +705,7 @@ export async function getDeliveryFee(
                 340282366920938463463374607431768211455n,
                 340282366920938463463374607431768211455n,
                 340282366920938463463374607431768211455n,
-                parachain,
+                sourceParaId,
                 340282366920938463463374607431768211455n,
                 DOT_LOCATION,
                 DOT_LOCATION,
@@ -363,7 +722,7 @@ export async function getDeliveryFee(
                 340282366920938463463374607431768211455n,
                 340282366920938463463374607431768211455n,
                 340282366920938463463374607431768211455n,
-                parachain,
+                sourceParaId,
                 340282366920938463463374607431768211455n,
                 sourceParachainImpl.getNativeBalanceLocation("here"),
                 sourceParachainImpl.getNativeBalanceLocation("sibling"),
@@ -389,11 +748,11 @@ export async function getDeliveryFee(
         registry.bridgeHubParaId,
         forwardedXcm,
     )
-    if (parachain !== registry.assetHubParaId) {
+    if (sourceParaId !== registry.assetHubParaId) {
         let returnToSenderXcm: any
         if (sourceAssetMetadata.location) {
             returnToSenderXcm = buildParachainPNAReceivedXcmOnDestination(
-                source.registry,
+                parachain.registry,
                 sourceAssetMetadata.location,
                 340282366920938463463374607431768211455n,
                 340282366920938463463374607431768211455n,
@@ -402,7 +761,7 @@ export async function getDeliveryFee(
             )
         } else {
             returnToSenderXcm = buildParachainERC20ReceivedXcmOnDestination(
-                source.registry,
+                parachain.registry,
                 registry.ethChainId,
                 "0x0000000000000000000000000000000000000000",
                 340282366920938463463374607431768211455n,
@@ -413,7 +772,7 @@ export async function getDeliveryFee(
         }
 
         returnToSenderDeliveryFeeDOT = await assetHubImpl.calculateDeliveryFeeInDOT(
-            parachain,
+            sourceParaId,
             returnToSenderXcm,
         )
         returnToSenderExecutionFeeDOT = padFeeByPercentage(
@@ -433,12 +792,10 @@ export async function getDeliveryFee(
         returnToSenderDeliveryFeeDOT +
         bridgeHubDeliveryFeeDOT
 
-    // calculate the cost of swapping for DOT
     let totalFeeInNative: bigint | undefined = undefined
     let assetHubExecutionFeeNative: bigint | undefined = undefined
     let returnToSenderExecutionFeeNative: bigint | undefined = undefined
-    if (!registry.parachains[`polkadot_${parachain}`].features.hasDotBalance) {
-        // padding the bridging fee and bridge hub delivery by the slippage fee to make sure the trade goes through.
+    if (!registry.parachains[`polkadot_${sourceParaId}`].features.hasDotBalance) {
         totalFeeInDot =
             padFeeByPercentage(
                 snowbridgeDeliveryFeeDOT + bridgeHubDeliveryFeeDOT,
@@ -488,387 +845,12 @@ export async function getDeliveryFee(
     }
 }
 
-export enum ValidationKind {
-    Warning,
-    Error,
-}
-
-export enum ValidationReason {
-    BridgeStatusNotOperational,
-    InsufficientTokenBalance,
-    FeeEstimationError,
-    InsufficientDotFee,
-    InsufficientNativeFee,
-    DryRunApiNotAvailable,
-    DryRunFailed,
-    InsufficientEtherBalance,
-    ContractCallInvalidTarget,
-    ContractCallAgentNotRegistered,
-}
-
-export type ValidationLog = {
-    kind: ValidationKind
-    reason: ValidationReason
-    message: string
-}
-
-export type ValidationResult = {
-    logs: ValidationLog[]
-    success: boolean
-    data: {
-        bridgeStatus: OperationStatus
-        nativeBalance: bigint
-        dotBalance?: bigint
-        sourceExecutionFee: bigint
-        tokenBalance: bigint
-        sourceDryRunError: any
-        assetHubDryRunError: any
-        bridgeHubDryRunError?: any
-    }
-    transfer: Transfer
-}
-
-async function validateTransfer(
-    context: EthersContext,
-    transfer: Transfer,
-): Promise<ValidationResult> {
-    const { registry, fee, tokenAddress, amount, beneficiaryAccount } = transfer.input
-    const {
-        sourceAccountHex,
-        sourceParaId,
-        sourceParachain: source,
-        sourceAssetMetadata,
-    } = transfer.computed
-
-    const sourceParachain = await context.parachain(sourceParaId)
-    const assetHub = await context.assetHub()
-    const gateway = context.gateway()
-    const bridgeHub = await context.bridgeHub()
-
-    const { tx } = transfer
-
-    const logs: ValidationLog[] = []
-    const sourceParachainImpl = await paraImplementation(sourceParachain)
-    const nativeBalance = await sourceParachainImpl.getNativeBalance(sourceAccountHex, true)
-    let dotBalance: bigint | undefined = undefined
-    if (source.features.hasDotBalance) {
-        dotBalance = await sourceParachainImpl.getDotBalance(sourceAccountHex)
-    }
-    let tokenBalance: any
-    let isNativeBalance = false
-    // For DOT on AH, get it from the native balance pallet.
-    if (
-        sourceParaId == registry.assetHubParaId &&
-        transfer.computed.ahAssetMetadata.location?.parents == DOT_LOCATION.parents &&
-        transfer.computed.ahAssetMetadata.location?.interior == DOT_LOCATION.interior
-    ) {
-        tokenBalance = await sourceParachainImpl.getNativeBalance(sourceAccountHex, true)
-        isNativeBalance = true
-    } else {
-        isNativeBalance =
-            sourceAssetMetadata.decimals === source.info.tokenDecimals &&
-            sourceAssetMetadata.symbol == source.info.tokenSymbols
-        if (isNativeBalance) {
-            tokenBalance = await sourceParachainImpl.getNativeBalance(sourceAccountHex, true)
-        } else {
-            tokenBalance = await sourceParachainImpl.getTokenBalance(
-                sourceAccountHex,
-                registry.ethChainId,
-                tokenAddress,
-                sourceAssetMetadata,
-            )
-        }
-    }
-    let nativeBalanceCheckFailed = false
-    if (isNativeBalance && fee.totalFeeInNative) {
-        nativeBalanceCheckFailed = true
-        if (amount + fee.totalFeeInNative > tokenBalance) {
-            logs.push({
-                kind: ValidationKind.Error,
-                reason: ValidationReason.InsufficientTokenBalance,
-                message: "Insufficient token balance to submit transaction.",
-            })
-        }
-    } else {
-        if (amount > tokenBalance) {
-            logs.push({
-                kind: ValidationKind.Error,
-                reason: ValidationReason.InsufficientTokenBalance,
-                message: "Insufficient token balance to submit transaction.",
-            })
-        }
-    }
-
-    let sourceDryRunError
-    let assetHubDryRunError
-    let bridgeHubDryRunError
-    if (source.features.hasDryRunApi) {
-        // do the dry run, get the forwarded xcm and dry run that
-        const dryRunSource = await dryRunOnSourceParachain(
-            sourceParachain,
-            registry.assetHubParaId,
-            registry.bridgeHubParaId,
-            transfer.tx,
-            sourceAccountHex,
-        )
-        if (!dryRunSource.success) {
-            logs.push({
-                kind: ValidationKind.Error,
-                reason: ValidationReason.DryRunFailed,
-                message: "Dry run call on source failed.",
-            })
-            sourceDryRunError = dryRunSource.error
-        }
-
-        if (dryRunSource.success) {
-            if (sourceParaId == registry.assetHubParaId) {
-                if (!dryRunSource.bridgeHubForwarded) {
-                    logs.push({
-                        kind: ValidationKind.Error,
-                        reason: ValidationReason.DryRunFailed,
-                        message: "Dry run call did not provide a forwarded xcm.",
-                    })
-                } else {
-                    const dryRunResultBridgeHub = await dryRunBridgeHub(
-                        bridgeHub,
-                        registry.assetHubParaId,
-                        dryRunSource.bridgeHubForwarded[1][0],
-                    )
-                    if (!dryRunResultBridgeHub.success) {
-                        logs.push({
-                            kind: ValidationKind.Error,
-                            reason: ValidationReason.DryRunFailed,
-                            message: "Dry run failed on Bridge Hub.",
-                        })
-                        bridgeHubDryRunError = dryRunResultBridgeHub.errorMessage
-                    }
-                }
-            } else {
-                if (!dryRunSource.assetHubForwarded) {
-                    logs.push({
-                        kind: ValidationKind.Error,
-                        reason: ValidationReason.DryRunFailed,
-                        message: "Dry run call did not provide a forwarded xcm.",
-                    })
-                } else {
-                    const dryRunResultAssetHub = await dryRunAssetHub(
-                        assetHub,
-                        sourceParaId,
-                        registry.bridgeHubParaId,
-                        dryRunSource.assetHubForwarded[1][0],
-                    )
-                    if (dryRunResultAssetHub.success && dryRunResultAssetHub.bridgeHubForwarded) {
-                        const dryRunResultBridgeHub = await dryRunBridgeHub(
-                            bridgeHub,
-                            registry.assetHubParaId,
-                            dryRunResultAssetHub.bridgeHubForwarded[1][0],
-                        )
-                        if (!dryRunResultBridgeHub.success) {
-                            logs.push({
-                                kind: ValidationKind.Error,
-                                reason: ValidationReason.DryRunFailed,
-                                message: "Dry run failed on Bridge Hub.",
-                            })
-                            bridgeHubDryRunError = dryRunResultBridgeHub.errorMessage
-                        }
-                    } else {
-                        logs.push({
-                            kind: ValidationKind.Error,
-                            reason: ValidationReason.DryRunFailed,
-                            message: "Dry run call failed on Asset Hub.",
-                        })
-                        assetHubDryRunError = dryRunResultAssetHub.errorMessage
-                    }
-                }
-            }
-        }
-    } else {
-        logs.push({
-            kind: ValidationKind.Warning,
-            reason: ValidationReason.DryRunApiNotAvailable,
-            message: "Source parachain can not dry run call. Cannot verify success.",
-        })
-        if (sourceParaId !== registry.assetHubParaId) {
-            let dryRunResultAssetHub: any
-            if (sourceAssetMetadata.location) {
-                dryRunResultAssetHub = await dryRunAssetHub(
-                    assetHub,
-                    sourceParaId,
-                    registry.bridgeHubParaId,
-                    buildResultXcmAssetHubPNATransferFromParachain(
-                        sourceParachain.registry,
-                        registry.ethChainId,
-                        sourceAssetMetadata.locationOnAH,
-                        sourceAssetMetadata.locationOnEthereum,
-                        sourceAccountHex,
-                        beneficiaryAccount,
-                        "0x0000000000000000000000000000000000000000000000000000000000000000",
-                        amount,
-                        fee.totalFeeInDot,
-                        fee.assetHubExecutionFeeDOT,
-                    ),
-                )
-            } else {
-                if (!source.features.hasDotBalance && fee.totalFeeInNative) {
-                    dryRunResultAssetHub = await dryRunAssetHub(
-                        assetHub,
-                        sourceParaId,
-                        registry.bridgeHubParaId,
-                        buildResultXcmAssetHubERC20TransferFromParachain(
-                            sourceParachain.registry,
-                            registry.ethChainId,
-                            sourceAccountHex,
-                            beneficiaryAccount,
-                            tokenAddress,
-                            "0x0000000000000000000000000000000000000000000000000000000000000000",
-                            amount,
-                            fee.totalFeeInNative,
-                            fee.assetHubExecutionFeeNative ?? 0n,
-                            sourceParaId,
-                            fee.returnToSenderExecutionFeeNative ?? 0n,
-                            sourceParachainImpl.getNativeBalanceLocation("here"),
-                            sourceParachainImpl.getNativeBalanceLocation("sibling"),
-                            true,
-                        ),
-                    )
-                } else {
-                    dryRunResultAssetHub = await dryRunAssetHub(
-                        assetHub,
-                        sourceParaId,
-                        registry.bridgeHubParaId,
-                        buildResultXcmAssetHubERC20TransferFromParachain(
-                            sourceParachain.registry,
-                            registry.ethChainId,
-                            sourceAccountHex,
-                            beneficiaryAccount,
-                            tokenAddress,
-                            "0x0000000000000000000000000000000000000000000000000000000000000000",
-                            amount,
-                            fee.totalFeeInDot,
-                            fee.assetHubExecutionFeeDOT,
-                            sourceParaId,
-                            fee.returnToSenderExecutionFeeDOT,
-                            DOT_LOCATION,
-                            DOT_LOCATION,
-                            false,
-                        ),
-                    )
-                }
-            }
-            if (!dryRunResultAssetHub.success) {
-                logs.push({
-                    kind: ValidationKind.Error,
-                    reason: ValidationReason.DryRunFailed,
-                    message: "Dry run failed on Asset Hub.",
-                })
-                assetHubDryRunError = dryRunResultAssetHub.errorMessage
-            }
-        }
-    }
-
-    const paymentInfo = await tx.paymentInfo(sourceAccountHex)
-    const sourceExecutionFee = paymentInfo["partialFee"].toBigInt()
-
-    // recheck total after fee estimation
-    if (isNativeBalance && fee.totalFeeInNative && !nativeBalanceCheckFailed) {
-        if (amount + fee.totalFeeInNative + sourceExecutionFee > tokenBalance) {
-            logs.push({
-                kind: ValidationKind.Error,
-                reason: ValidationReason.InsufficientTokenBalance,
-                message: "Insufficient token balance to submit transaction.",
-            })
-        }
-    }
-
-    if (sourceParaId === registry.assetHubParaId) {
-        if (!dotBalance) {
-            logs.push({
-                kind: ValidationKind.Error,
-                reason: ValidationReason.InsufficientDotFee,
-                message: "Could not determine the DOT balance",
-            })
-        } else if (sourceExecutionFee + fee.totalFeeInDot > dotBalance) {
-            logs.push({
-                kind: ValidationKind.Error,
-                reason: ValidationReason.InsufficientDotFee,
-                message: "Insufficient DOT balance to submit transaction on the source parachain.",
-            })
-        }
-    } else {
-        if (dotBalance && fee.totalFeeInDot > dotBalance) {
-            logs.push({
-                kind: ValidationKind.Error,
-                reason: ValidationReason.InsufficientDotFee,
-                message: "Insufficient DOT balance to submit transaction on the source parachain.",
-            })
-        } else if (
-            fee.totalFeeInNative &&
-            fee.totalFeeInNative + sourceExecutionFee > nativeBalance &&
-            !nativeBalanceCheckFailed
-        ) {
-            logs.push({
-                kind: ValidationKind.Error,
-                reason: ValidationReason.InsufficientNativeFee,
-                message:
-                    "Insufficient native balance to submit transaction on the source parachain.",
-            })
-        }
-        if (sourceExecutionFee > nativeBalance) {
-            logs.push({
-                kind: ValidationKind.Error,
-                reason: ValidationReason.InsufficientNativeFee,
-                message:
-                    "Insufficient native balance to submit transaction on the source parachain.",
-            })
-        }
-    }
-    const bridgeStatus = await getOperatingStatus({ gateway, bridgeHub })
-    if (bridgeStatus.toEthereum.outbound !== "Normal") {
-        logs.push({
-            kind: ValidationKind.Error,
-            reason: ValidationReason.BridgeStatusNotOperational,
-            message: "Bridge operations have been paused by onchain governance.",
-        })
-    }
-
-    const success = logs.find((l) => l.kind === ValidationKind.Error) === undefined
-
-    return {
-        logs,
-        success,
-        data: {
-            bridgeStatus,
-            nativeBalance,
-            dotBalance,
-            sourceExecutionFee,
-            tokenBalance,
-            sourceDryRunError,
-            assetHubDryRunError,
-        },
-        transfer,
-    }
-}
-
-export type MessageReceipt = {
-    blockNumber: number
-    blockHash: string
-    txIndex: number
-    txHash: string
-    success: boolean
-    events: EventRecord[]
-    dispatchError?: any
-    messageId?: string
-}
-
-export async function signAndSend(
-    context: EthersContext,
+export async function signAndSendTransfer(
+    sourceParachain: ApiPromise,
     transfer: Transfer,
     account: AddressOrPair,
     options: Partial<SignerOptions>,
 ): Promise<MessageReceipt> {
-    const { sourceParaId } = transfer.computed
-    const sourceParachain = await context.parachain(sourceParaId)
-
     const result = await new Promise<MessageReceipt>((resolve, reject) => {
         try {
             transfer.tx.signAndSend(account, options, (c) => {
