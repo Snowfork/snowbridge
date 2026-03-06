@@ -187,9 +187,12 @@ function toV1Transfer(transfer: ToPolkadotV2Transfer): Transfer {
 }
 
 export class V1ToPolkadotAdapter implements ToPolkadotTransferInterface {
+    constructor(
+        private readonly context: EthersContext,
+        private readonly registry: AssetRegistry,
+    ) {}
+
     async getDeliveryFee(
-        context: EthersContext,
-        registry: AssetRegistry,
         tokenAddress: string,
         destinationParaId: number,
         options?: {
@@ -208,6 +211,8 @@ export class V1ToPolkadotAdapter implements ToPolkadotTransferInterface {
         if (options?.overrideRelayerFee !== undefined) {
             throw new Error("v1 toPolkadot adapter does not support options.overrideRelayerFee.")
         }
+        const context = this.context
+        const registry = this.registry
         const gateway = context.gateway()
         const assetHub = await context.assetHub()
         const destination = await context.parachain(destinationParaId)
@@ -271,8 +276,6 @@ export class V1ToPolkadotAdapter implements ToPolkadotTransferInterface {
     }
 
     async createTransfer(
-        context: EthersContext,
-        registry: AssetRegistry,
         destinationParaId: number,
         sourceAccount: string,
         beneficiaryAccount: string,
@@ -284,6 +287,8 @@ export class V1ToPolkadotAdapter implements ToPolkadotTransferInterface {
         if (customXcm !== undefined) {
             throw new Error("v1 toPolkadot adapter does not support customXcm.")
         }
+        const context = this.context
+        const registry = this.registry
         const v1Fee = toV1DeliveryFee(fee)
         const { tokenErcMetadata, destParachain, ahAssetMetadata, destAssetMetadata } =
             resolveInputs(registry, tokenAddress, destinationParaId)
@@ -336,10 +341,8 @@ export class V1ToPolkadotAdapter implements ToPolkadotTransferInterface {
         })
     }
 
-    async validateTransfer(
-        context: EthersContext,
-        transfer: ToPolkadotV2Transfer,
-    ): Promise<ToPolkadotV2ValidationResult> {
+    async validateTransfer(transfer: ToPolkadotV2Transfer): Promise<ToPolkadotV2ValidationResult> {
+        const context = this.context
         const v1Transfer = toV1Transfer(transfer)
         const { tx } = v1Transfer
         const { amount, sourceAccount, tokenAddress, registry, destinationParaId } =
@@ -520,10 +523,8 @@ export class V1ToPolkadotAdapter implements ToPolkadotTransferInterface {
         } as ToPolkadotV2ValidationResult
     }
 
-    async getMessageReceipt(
-        context: EthersContext,
-        receipt: TransactionReceipt,
-    ): Promise<MessageReceipt | null> {
+    async getMessageReceipt(receipt: TransactionReceipt): Promise<MessageReceipt | null> {
+        const context = this.context
         const messageAccepted =
             context.ethereumProvider.scanGatewayV1OutboundMessageAccepted(receipt)
         if (!messageAccepted) return null
@@ -532,11 +533,11 @@ export class V1ToPolkadotAdapter implements ToPolkadotTransferInterface {
 }
 
 export function createTransferImplementationV1(
-    _destinationParaId: number,
-    _registry: AssetRegistry,
+    context: EthersContext,
+    registry: AssetRegistry,
     _tokenAddress: string,
 ): ToPolkadotTransferInterface {
-    return new V1ToPolkadotAdapter()
+    return new V1ToPolkadotAdapter(context, registry)
 }
 
 export function resolveInputs(

@@ -58,18 +58,10 @@ export const transferToEthereumL2 = async (
             TOKEN_CONTRACT,
         )
         // Step 1. Get the delivery fee for the transaction
-        let fee = await transferImpl.getDeliveryFee(
-            context,
-            registry,
-            l2ChainId,
-            TOKEN_CONTRACT,
-            amount,
-        )
+        let fee = await transferImpl.getDeliveryFee(l2ChainId, TOKEN_CONTRACT, amount)
 
         // Step 2. Create a transfer tx
         const transfer = await transferImpl.createTransfer(
-            context,
-            registry,
             l2ChainId,
             TOKEN_CONTRACT,
             amount,
@@ -97,7 +89,7 @@ export const transferToEthereumL2 = async (
         )
 
         // Step 4. Validate the transaction.
-        const validation = await transferImpl.validateTransfer(context, transfer)
+        const validation = await transferImpl.validateTransfer(transfer)
         console.log("validation result", validation)
 
         // Step 5. Check validation logs for errors
@@ -106,7 +98,7 @@ export const transferToEthereumL2 = async (
         }
         if (process.env["DRY_RUN"] != "true") {
             // Step 6. Submit transaction and get receipt for tracking
-            const response = await transferImpl.signAndSend(context, transfer, POLKADOT_ACCOUNT, {
+            const response = await transferImpl.signAndSend(transfer, POLKADOT_ACCOUNT, {
                 withSignedTransaction: true,
             })
             if (!response) {

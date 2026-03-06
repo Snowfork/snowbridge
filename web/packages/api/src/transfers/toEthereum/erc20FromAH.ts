@@ -31,9 +31,13 @@ import {
 } from "../../toEthereumSnowbridgeV2"
 
 export class ERC20FromAH implements TransferInterface {
+    constructor(
+        private readonly context: EthersContext,
+        private readonly registry: AssetRegistry,
+    ) {}
+
     async getDeliveryFee(
-        source: { sourceParaId: number; context: EthersContext },
-        registry: AssetRegistry,
+        source: { sourceParaId: number },
         tokenAddress: string,
         options?: {
             padPercentage?: bigint
@@ -46,15 +50,19 @@ export class ERC20FromAH implements TransferInterface {
         const { assetHub } =
             "sourceParaId" in source
                 ? {
-                      assetHub: await source.context.assetHub(),
+                      assetHub: await this.context.assetHub(),
                   }
                 : source
 
-        const { sourceAssetMetadata } = resolveInputs(registry, tokenAddress, source.sourceParaId)
+        const { sourceAssetMetadata } = resolveInputs(
+            this.registry,
+            tokenAddress,
+            source.sourceParaId,
+        )
 
         let localXcm = buildTransferXcmFromAssetHub(
             assetHub.registry,
-            registry.ethChainId,
+            this.registry.ethChainId,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -65,7 +73,7 @@ export class ERC20FromAH implements TransferInterface {
 
         let forwardedXcmToBH = buildExportXcm(
             assetHub.registry,
-            registry.ethChainId,
+            this.registry.ethChainId,
             sourceAssetMetadata,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000",
@@ -75,8 +83,8 @@ export class ERC20FromAH implements TransferInterface {
         )
 
         const fees = await estimateFeesFromAssetHub(
-            source.context,
-            registry,
+            this.context,
+            this.registry,
             tokenAddress,
             {
                 localXcm,
@@ -88,8 +96,7 @@ export class ERC20FromAH implements TransferInterface {
     }
 
     async createTransfer(
-        source: { sourceParaId: number; context: EthersContext },
-        registry: AssetRegistry,
+        source: { sourceParaId: number },
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
@@ -100,6 +107,7 @@ export class ERC20FromAH implements TransferInterface {
             contractCall?: ContractCall
         },
     ): Promise<Transfer> {
+        const registry = this.registry
         const { ethChainId } = registry
 
         let sourceAccountHex = sourceAccount
@@ -108,7 +116,7 @@ export class ERC20FromAH implements TransferInterface {
         }
         const { parachain } =
             "sourceParaId" in source
-                ? { parachain: await source.context.parachain(source.sourceParaId) }
+                ? { parachain: await this.context.parachain(source.sourceParaId) }
                 : source
 
         const sourceParachainImpl = await paraImplementation(parachain)
@@ -126,7 +134,7 @@ export class ERC20FromAH implements TransferInterface {
         )
         let callHex: string | undefined
         if (options?.contractCall) {
-            callHex = await buildContractCallHex(source.context, options.contractCall)
+            callHex = await buildContractCallHex(this.context, options.contractCall)
         }
         let xcm: any
         // If there is no fee specified, we assume that Ether is available in user's wallet on source chain,
@@ -185,17 +193,16 @@ export class ERC20FromAH implements TransferInterface {
         }
     }
 
-    async validateTransfer(context: EthersContext, transfer: Transfer): Promise<ValidationResult> {
-        return validateTransferFromAssetHub(context, transfer)
+    async validateTransfer(transfer: Transfer): Promise<ValidationResult> {
+        return validateTransferFromAssetHub(this.context, transfer)
     }
 
     async signAndSend(
-        context: EthersContext,
         transfer: Transfer,
         account: AddressOrPair,
         options: Partial<SignerOptions>,
     ): Promise<MessageReceipt> {
-        const sourceParachain = await context.parachain(transfer.computed.sourceParaId)
+        const sourceParachain = await this.context.parachain(transfer.computed.sourceParaId)
         return signAndSendTransfer(sourceParachain, transfer, account, options)
     }
 }

@@ -24,9 +24,12 @@ import { getOperatingStatus } from "../../status"
 import { hexToU8a } from "@polkadot/util"
 
 export class ERC20ToAH implements TransferInterface {
+    constructor(
+        private readonly context: EthersContext,
+        private readonly registry: AssetRegistry,
+    ) {}
+
     async getDeliveryFee(
-        context: EthersContext,
-        registry: AssetRegistry,
         tokenAddress: string,
         _destinationParaId: number,
         options?: {
@@ -36,6 +39,8 @@ export class ERC20ToAH implements TransferInterface {
             overrideRelayerFee: bigint
         },
     ): Promise<DeliveryFee> {
+        const context = this.context
+        const registry = this.registry
         const assetHub = await context.assetHub()
         const bridgeHub = await context.bridgeHub()
 
@@ -104,8 +109,6 @@ export class ERC20ToAH implements TransferInterface {
     }
 
     async createTransfer(
-        context: EthersContext,
-        registry: AssetRegistry,
         destinationParaId: number,
         sourceAccount: string,
         beneficiaryAccount: string,
@@ -114,6 +117,8 @@ export class ERC20ToAH implements TransferInterface {
         fee: DeliveryFee,
         customXcm?: any[],
     ): Promise<Transfer> {
+        const context = this.context
+        const registry = this.registry
         const ethereum = context.ethereum()
         const assetHub = await context.assetHub()
 
@@ -192,7 +197,8 @@ export class ERC20ToAH implements TransferInterface {
         }
     }
 
-    async validateTransfer(context: EthersContext, transfer: Transfer): Promise<ValidationResult> {
+    async validateTransfer(transfer: Transfer): Promise<ValidationResult> {
+        const context = this.context
         const { tx } = transfer
         const { amount, sourceAccount, tokenAddress, registry } = transfer.input
         const ethereum = context.ethereum()
@@ -368,7 +374,7 @@ export class ERC20ToAH implements TransferInterface {
         }
     }
 
-    async getMessageReceipt(context: EthersContext, receipt: TransactionReceipt) {
-        return getSharedMessageReceipt(context.ethereumProvider, receipt)
+    async getMessageReceipt(receipt: TransactionReceipt) {
+        return getSharedMessageReceipt(this.context.ethereumProvider, receipt)
     }
 }

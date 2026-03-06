@@ -53,16 +53,14 @@ import { bridgeInfoFor } from "@snowbridge/registry"
     )
     // Step 1. Get the delivery fee for the transaction
     const fee = await transferImpl.getDeliveryFee(
-        { sourceParaId: SOURCE_PARACHAIN, context }, // The context + source parachain
-        registry, // The asset registry
+        { sourceParaId: SOURCE_PARACHAIN }, // The source parachain
         TOKEN_CONTRACT, // The token being transferred
     )
 
     // Step 2. Create a transfer tx
     const amount = 15_000_000_000_000n // 0.000015 ETH
     const transfer = await transferImpl.createTransfer(
-        { sourceParaId: SOURCE_PARACHAIN, context }, // The context and source parachain
-        registry, // The asset registry
+        { sourceParaId: SOURCE_PARACHAIN }, // The source parachain
         POLKADOT_ACCOUNT_PUBLIC, // The source account
         ETHEREUM_ACCOUNT_PUBLIC, // The destination account
         TOKEN_CONTRACT, // The transfer token
@@ -86,10 +84,7 @@ import { bridgeInfoFor } from "@snowbridge/registry"
     )
 
     // Step 4. Validate the transaction.
-    const validation = await transferImpl.validateTransfer(
-        context, // The context
-        transfer,
-    )
+    const validation = await transferImpl.validateTransfer(transfer)
     console.log("validation result", validation)
 
     // Step 5. Check validation for dry run errors
@@ -99,12 +94,9 @@ import { bridgeInfoFor } from "@snowbridge/registry"
     }
 
     // Step 6. Submit transaction and get receipt for tracking
-    const response = await transferImpl.signAndSend(
-        context, // The context
-        transfer,
-        POLKADOT_ACCOUNT,
-        { withSignedTransaction: true },
-    )
+    const response = await transferImpl.signAndSend(transfer, POLKADOT_ACCOUNT, {
+        withSignedTransaction: true,
+    })
     if (!response) {
         throw Error(`Transaction ${response} not included.`)
     }

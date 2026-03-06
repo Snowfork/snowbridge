@@ -47,16 +47,14 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
         )
         // Step 1. Get the delivery fee for the transaction
         const fee = await transferImpl.getDeliveryFee(
-            { sourceParaId, context },
-            registry,
+            { sourceParaId },
             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
             TOKEN_CONTRACT!,
         )
 
         // Step 2. Create a transfer tx
         const transfer = await transferImpl.createTransfer(
-            { sourceParaId, context },
-            registry,
+            { sourceParaId },
             POLKADOT_ACCOUNT_PUBLIC,
             ETHEREUM_ACCOUNT_PUBLIC,
             TOKEN_CONTRACT!,
@@ -87,7 +85,7 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
         // )
 
         // Step 4. Validate the transaction.
-        const validation = await transferImpl.validateTransfer(context, transfer)
+        const validation = await transferImpl.validateTransfer(transfer)
         console.log("validation result", validation)
 
         // Step 5. Check validation logs for errors
@@ -96,7 +94,7 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
         }
         if (process.env["DRY_RUN"] != "true") {
             // Step 6. Submit transaction and get receipt for tracking
-            const response = await transferImpl.signAndSend(context, transfer, POLKADOT_ACCOUNT, {
+            const response = await transferImpl.signAndSend(transfer, POLKADOT_ACCOUNT, {
                 withSignedTransaction: true,
             })
             if (!response) {

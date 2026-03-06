@@ -34,9 +34,13 @@ import {
 } from "../../toEthereumSnowbridgeV2"
 
 export class PNAFromParachain implements TransferInterface {
+    constructor(
+        private readonly context: EthersContext,
+        private readonly registry: AssetRegistry,
+    ) {}
+
     async getDeliveryFee(
-        source: { sourceParaId: number; context: EthersContext },
-        registry: AssetRegistry,
+        source: { sourceParaId: number },
         tokenAddress: string,
         options?: {
             padPercentage?: bigint
@@ -50,14 +54,14 @@ export class PNAFromParachain implements TransferInterface {
         const { assetHub, parachain } =
             "sourceParaId" in source
                 ? {
-                      assetHub: await source.context.assetHub(),
-                      parachain: await source.context.parachain(source.sourceParaId),
+                      assetHub: await this.context.assetHub(),
+                      parachain: await this.context.parachain(source.sourceParaId),
                   }
                 : source
 
         const sourceParachainImpl = await paraImplementation(parachain)
         const { sourceAssetMetadata } = resolveInputs(
-            registry,
+            this.registry,
             tokenAddress,
             sourceParachainImpl.parachainId,
         )
@@ -66,7 +70,7 @@ export class PNAFromParachain implements TransferInterface {
 
         forwardXcmToAH = buildResultXcmAssetHubPNATransferFromParachain(
             assetHub.registry,
-            registry.ethChainId,
+            this.registry.ethChainId,
             sourceAssetMetadata.locationOnAH,
             sourceAssetMetadata.locationOnEthereum,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -88,9 +92,9 @@ export class PNAFromParachain implements TransferInterface {
 
         localXcm = buildTransferXcmFromParachain(
             assetHub.registry,
-            registry.environment,
-            registry.ethChainId,
-            registry.assetHubParaId,
+            this.registry.environment,
+            this.registry.ethChainId,
+            this.registry.assetHubParaId,
             sourceParachainImpl.parachainId,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000",
@@ -102,7 +106,7 @@ export class PNAFromParachain implements TransferInterface {
 
         forwardedXcmToBH = buildExportXcm(
             assetHub.registry,
-            registry.ethChainId,
+            this.registry.ethChainId,
             sourceAssetMetadata,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000",
@@ -112,9 +116,9 @@ export class PNAFromParachain implements TransferInterface {
         )
 
         const fees = await estimateFeesFromParachains(
-            source.context,
+            this.context,
             source.sourceParaId,
-            registry,
+            this.registry,
             tokenAddress,
             {
                 localXcm,
@@ -128,8 +132,7 @@ export class PNAFromParachain implements TransferInterface {
     }
 
     async createTransfer(
-        source: { sourceParaId: number; context: EthersContext },
-        registry: AssetRegistry,
+        source: { sourceParaId: number },
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
@@ -140,6 +143,7 @@ export class PNAFromParachain implements TransferInterface {
             contractCall?: ContractCall
         },
     ): Promise<Transfer> {
+        const registry = this.registry
         const { ethChainId, assetHubParaId, environment } = registry
 
         let sourceAccountHex = sourceAccount
@@ -148,7 +152,7 @@ export class PNAFromParachain implements TransferInterface {
         }
         const { parachain } =
             "sourceParaId" in source
-                ? { parachain: await source.context.parachain(source.sourceParaId) }
+                ? { parachain: await this.context.parachain(source.sourceParaId) }
                 : source
 
         const sourceParachainImpl = await paraImplementation(parachain)
@@ -167,7 +171,7 @@ export class PNAFromParachain implements TransferInterface {
         let claimerLocation = options?.claimerLocation
         let callHex: string | undefined
         if (options?.contractCall) {
-            callHex = await buildContractCallHex(source.context, options.contractCall)
+            callHex = await buildContractCallHex(this.context, options.contractCall)
         }
         let xcm: any
         if (!fee.feeLocation) {
@@ -250,17 +254,16 @@ export class PNAFromParachain implements TransferInterface {
         }
     }
 
-    async validateTransfer(context: EthersContext, transfer: Transfer): Promise<ValidationResult> {
-        return validateTransferFromParachain(context, transfer)
+    async validateTransfer(transfer: Transfer): Promise<ValidationResult> {
+        return validateTransferFromParachain(this.context, transfer)
     }
 
     async signAndSend(
-        context: EthersContext,
         transfer: Transfer,
         account: AddressOrPair,
         options: Partial<SignerOptions>,
     ): Promise<MessageReceipt> {
-        const sourceParachain = await context.parachain(transfer.computed.sourceParaId)
+        const sourceParachain = await this.context.parachain(transfer.computed.sourceParaId)
         return signAndSendTransfer(sourceParachain, transfer, account, options)
     }
 }

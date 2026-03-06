@@ -105,6 +105,7 @@ export type {
 } from "./registration/toPolkadot/registrationInterface"
 
 export function createTransferImplementation(
+    context: EthersContext,
     destinationParaId: number,
     registry: AssetRegistry,
     tokenAddress: string,
@@ -114,21 +115,22 @@ export function createTransferImplementation(
     let transferImpl: TransferInterface
     if (destinationParaId == registry.assetHubParaId) {
         if (ahAssetMetadata.location) {
-            transferImpl = new PNAToAH()
+            transferImpl = new PNAToAH(context, registry)
         } else {
-            transferImpl = new ERC20ToAH()
+            transferImpl = new ERC20ToAH(context, registry)
         }
     } else {
         if (ahAssetMetadata.location) {
-            transferImpl = new PNAToParachain()
+            transferImpl = new PNAToParachain(context, registry)
         } else {
-            transferImpl = new ERC20ToParachain()
+            transferImpl = new ERC20ToParachain(context, registry)
         }
     }
     return transferImpl
 }
 
 export function createL2TransferImplementation(
+    context: EthersContext,
     l2ChainId: number,
     destinationParaId: number,
     registry: AssetRegistry,
@@ -145,7 +147,7 @@ export function createL2TransferImplementation(
     }
 
     // Todo: Resolve inputs based on the token address and support non-system destination parachain
-    let transferImpl: L2TransferInterface = new ERC20FromL2ToAH()
+    let transferImpl: L2TransferInterface = new ERC20FromL2ToAH(context, registry)
     return transferImpl
 }
 

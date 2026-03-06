@@ -86,20 +86,11 @@ export const transferToPolkadot = async (
             TOKEN_CONTRACT,
         )
         // Step 1. Get the delivery fee for the transaction
-        let fee = await transferImpl.getDeliveryFee(
-            context,
-            registry,
-            l2ChainId,
-            TOKEN_CONTRACT,
-            amount,
-            destParaId,
-        )
+        let fee = await transferImpl.getDeliveryFee(l2ChainId, TOKEN_CONTRACT, amount, destParaId)
 
         console.log("fee: ", fee)
         // Step 2. Create a transfer tx
         const transfer = await transferImpl.createTransfer(
-            context,
-            registry,
             l2ChainId,
             TOKEN_CONTRACT,
             amount,
@@ -110,7 +101,7 @@ export const transferToPolkadot = async (
         )
 
         // Step 3. Validate the transaction.
-        const validation = await transferImpl.validateTransfer(context, transfer)
+        const validation = await transferImpl.validateTransfer(transfer)
         console.log("validation result", validation)
 
         // Step 4. Check validation logs for errors
@@ -150,7 +141,7 @@ export const transferToPolkadot = async (
                 throw Error(`Transaction ${response.hash} not included.`)
             }
 
-            const message = await transferImpl.getMessageReceipt(context, receipt)
+            const message = await transferImpl.getMessageReceipt(receipt)
             if (!message) {
                 throw Error(`Transaction ${receipt.hash} did not emit a message.`)
             }

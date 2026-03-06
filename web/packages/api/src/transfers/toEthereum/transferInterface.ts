@@ -1,12 +1,10 @@
 import { AddressOrPair, SignerOptions } from "@polkadot/api/types"
-import { AssetRegistry, ContractCall } from "@snowbridge/base-types"
+import { ContractCall } from "@snowbridge/base-types"
 import { DeliveryFee, MessageReceipt, Transfer, ValidationResult } from "../../toEthereum_v2"
-import { EthersContext } from "../../index"
 
 export interface TransferInterface {
     getDeliveryFee(
-        source: { sourceParaId: number; context: EthersContext },
-        registry: AssetRegistry,
+        source: { sourceParaId: number },
         tokenAddress: string,
         options?: {
             padPercentage?: bigint
@@ -19,8 +17,7 @@ export interface TransferInterface {
     ): Promise<DeliveryFee>
 
     createTransfer(
-        source: { sourceParaId: number; context: EthersContext },
-        registry: AssetRegistry,
+        source: { sourceParaId: number },
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
@@ -32,10 +29,9 @@ export interface TransferInterface {
         },
     ): Promise<Transfer>
 
-    validateTransfer(context: EthersContext, transfer: Transfer): Promise<ValidationResult>
+    validateTransfer(transfer: Transfer): Promise<ValidationResult>
 
     signAndSend(
-        context: EthersContext,
         transfer: Transfer,
         account: AddressOrPair,
         options: Partial<SignerOptions>,
