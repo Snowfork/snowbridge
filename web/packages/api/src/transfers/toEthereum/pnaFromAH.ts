@@ -9,7 +9,7 @@ import {
     buildTransferXcmFromAssetHub,
 } from "../../xcmbuilders/toEthereum/pnaFromAH"
 import { buildTransferXcmFromAssetHubWithDOTAsFee } from "../../xcmbuilders/toEthereum/pnaFromAHWithDotAsFee"
-import { Asset, AssetRegistry, ContractCall } from "@snowbridge/base-types"
+import { Asset, AssetRegistry, ChainId, ContractCall } from "@snowbridge/base-types"
 import { paraImplementation } from "../../parachains"
 import {
     buildMessageId,
@@ -32,12 +32,13 @@ import {
 
 export class PNAFromAH implements TransferInterface {
     constructor(
-        private readonly context: EthersContext,
-        private readonly registry: AssetRegistry,
+        public readonly context: EthersContext,
+        public readonly registry: AssetRegistry,
+        public readonly from: ChainId,
+        public readonly to: ChainId,
     ) {}
 
     async getDeliveryFee(
-        source: { sourceParaId: number },
         tokenAddress: string,
         options?: {
             padPercentage?: bigint
@@ -47,13 +48,8 @@ export class PNAFromAH implements TransferInterface {
             contractCall?: ContractCall
         },
     ): Promise<DeliveryFee> {
-        const { assetHub, parachain } =
-            "sourceParaId" in source
-                ? {
-                      assetHub: await this.context.assetHub(),
-                      parachain: await this.context.parachain(source.sourceParaId),
-                  }
-                : source
+        const assetHub = await this.context.assetHub()
+        const parachain = await this.context.parachain(this.from.id)
 
         const sourceParachainImpl = await paraImplementation(parachain)
         const { sourceAssetMetadata } = resolveInputs(
@@ -100,7 +96,6 @@ export class PNAFromAH implements TransferInterface {
     }
 
     async createTransfer(
-        source: { sourceParaId: number },
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
@@ -118,10 +113,7 @@ export class PNAFromAH implements TransferInterface {
         if (!isHex(sourceAccountHex)) {
             sourceAccountHex = u8aToHex(decodeAddress(sourceAccount))
         }
-        const { parachain } =
-            "sourceParaId" in source
-                ? { parachain: await this.context.parachain(source.sourceParaId) }
-                : source
+        const parachain = await this.context.parachain(this.from.id)
 
         const sourceParachainImpl = await paraImplementation(parachain)
         const { tokenErcMetadata, sourceParachain, ahAssetMetadata, sourceAssetMetadata } =

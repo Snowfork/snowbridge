@@ -1,4 +1,4 @@
-import { AssetRegistry } from "@snowbridge/base-types"
+import { AssetRegistry, ChainId } from "@snowbridge/base-types"
 import { TransactionReceipt } from "ethers"
 import { TransferInterface } from "./transferInterface"
 import { EthersContext } from "../../index"
@@ -33,13 +33,14 @@ import { hexToU8a } from "@polkadot/util"
 
 export class ERC20ToParachain implements TransferInterface {
     constructor(
-        private readonly context: EthersContext,
-        private readonly registry: AssetRegistry,
+        public readonly context: EthersContext,
+        public readonly registry: AssetRegistry,
+        public readonly from: ChainId,
+        public readonly to: ChainId,
     ) {}
 
     async getDeliveryFee(
         tokenAddress: string,
-        destinationParaId: number,
         options?: {
             paddFeeByPercentage?: bigint
             feeAsset?: any
@@ -51,9 +52,9 @@ export class ERC20ToParachain implements TransferInterface {
         const registry = this.registry
         const assetHub = await context.assetHub()
         const bridgeHub = await context.bridgeHub()
-        const destination = await context.parachain(destinationParaId)
+        const destination = await context.parachain(this.to.id)
 
-        const { destParachain } = resolveInputs(registry, tokenAddress, destinationParaId)
+        const { destParachain } = resolveInputs(registry, tokenAddress, this.to.id)
 
         // AssetHub fees
         let assetHubXcm = buildAssetHubERC20ReceivedXcm(
@@ -68,7 +69,7 @@ export class ERC20ToParachain implements TransferInterface {
             ),
             "0x0000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000000000000000000000000000",
-            destinationParaId,
+            this.to.id,
             1000000000000n,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
         )
@@ -129,7 +130,7 @@ export class ERC20ToParachain implements TransferInterface {
         const destinationImpl = await paraImplementation(destination)
         // Delivery fee AssetHub to Destination
         let destinationDeliveryFeeDOT = await assetHubImpl.calculateDeliveryFeeInDOT(
-            destinationParaId,
+            this.to.id,
             destinationXcm,
         )
 
@@ -193,7 +194,6 @@ export class ERC20ToParachain implements TransferInterface {
     }
 
     async createTransfer(
-        destinationParaId: number,
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
@@ -205,13 +205,13 @@ export class ERC20ToParachain implements TransferInterface {
         const registry = this.registry
         const ethereum = context.ethereum()
         const assetHub = await context.assetHub()
-        const destination = await context.parachain(destinationParaId)
+        const destination = await context.parachain(this.to.id)
 
         if (!destination) {
-            throw Error(`Unable to connect to destination parachain with ID ${destinationParaId}.`)
+            throw Error(`Unable to connect to destination parachain with ID ${this.to.id}.`)
         }
         const { tokenErcMetadata, destParachain, ahAssetMetadata, destAssetMetadata } =
-            resolveInputs(registry, tokenAddress, destinationParaId)
+            resolveInputs(registry, tokenAddress, this.to.id)
         const minimalBalance =
             ahAssetMetadata.minimumBalance > destAssetMetadata.minimumBalance
                 ? ahAssetMetadata.minimumBalance
@@ -230,7 +230,7 @@ export class ERC20ToParachain implements TransferInterface {
         }
         const accountNonce = await ethereum.getTransactionCount(sourceAccount, "pending")
         const topic = buildMessageId(
-            destinationParaId,
+            this.to.id,
             sourceAccount,
             tokenAddress,
             beneficiaryAddressHex,
@@ -244,7 +244,7 @@ export class ERC20ToParachain implements TransferInterface {
                 sendMessageXCMWithDOTDestFee(
                     destination.registry,
                     registry.ethChainId,
-                    destinationParaId,
+                    this.to.id,
                     tokenAddress,
                     beneficiaryAddressHex,
                     amount,
@@ -258,7 +258,7 @@ export class ERC20ToParachain implements TransferInterface {
                 sendMessageXCM(
                     destination.registry,
                     registry.ethChainId,
-                    destinationParaId,
+                    this.to.id,
                     tokenAddress,
                     beneficiaryAddressHex,
                     amount,
@@ -288,7 +288,7 @@ export class ERC20ToParachain implements TransferInterface {
                 sourceAccount,
                 beneficiaryAccount,
                 tokenAddress,
-                destinationParaId,
+                destinationParaId: this.to.id,
                 amount,
                 fee,
                 customXcm,

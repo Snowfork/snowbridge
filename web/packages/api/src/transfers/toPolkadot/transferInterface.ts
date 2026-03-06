@@ -10,7 +10,6 @@ export type MessageReceipt = ToPolkadotV1MessageReceipt | ToPolkadotV2MessageRec
 export interface TransferInterface {
     getDeliveryFee(
         tokenAddress: string,
-        destinationParaId: number,
         options?: {
             paddFeeByPercentage?: bigint
             feeAsset?: any
@@ -20,7 +19,6 @@ export interface TransferInterface {
     ): Promise<DeliveryFee>
 
     createTransfer(
-        destinationParaId: number,
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,

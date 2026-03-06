@@ -58,11 +58,10 @@ export const transferToEthereumL2 = async (
             TOKEN_CONTRACT,
         )
         // Step 1. Get the delivery fee for the transaction
-        let fee = await transferImpl.getDeliveryFee(l2ChainId, TOKEN_CONTRACT, amount)
+        let fee = await transferImpl.getDeliveryFee(TOKEN_CONTRACT, amount)
 
         // Step 2. Create a transfer tx
         const transfer = await transferImpl.createTransfer(
-            l2ChainId,
             TOKEN_CONTRACT,
             amount,
             POLKADOT_ACCOUNT_PUBLIC,

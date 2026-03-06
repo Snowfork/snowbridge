@@ -2,7 +2,7 @@ import { MultiAddressStruct } from "./contracts"
 import { ContractTransaction, TransactionReceipt } from "ethers"
 import { padFeeByPercentage } from "./utils"
 import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
-import { Asset, AssetRegistry, ERC20Metadata, Parachain } from "@snowbridge/base-types"
+import { Asset, AssetRegistry, ChainId, ERC20Metadata, Parachain } from "@snowbridge/base-types"
 import { getOperatingStatus, OperationStatus } from "./status"
 import { ApiPromise } from "@polkadot/api"
 import {
@@ -188,13 +188,14 @@ function toV1Transfer(transfer: ToPolkadotV2Transfer): Transfer {
 
 export class V1ToPolkadotAdapter implements ToPolkadotTransferInterface {
     constructor(
-        private readonly context: EthersContext,
-        private readonly registry: AssetRegistry,
+        public readonly context: EthersContext,
+        public readonly registry: AssetRegistry,
+        public readonly from: ChainId,
+        public readonly to: ChainId,
     ) {}
 
     async getDeliveryFee(
         tokenAddress: string,
-        destinationParaId: number,
         options?: {
             paddFeeByPercentage?: bigint
             feeAsset?: any
@@ -215,17 +216,17 @@ export class V1ToPolkadotAdapter implements ToPolkadotTransferInterface {
         const registry = this.registry
         const gateway = context.gateway()
         const assetHub = await context.assetHub()
-        const destination = await context.parachain(destinationParaId)
+        const destination = await context.parachain(this.to.id)
 
         const { destParachain, destAssetMetadata } = resolveInputs(
             registry,
             tokenAddress,
-            destinationParaId,
+            this.to.id,
         )
 
         let destinationDeliveryFeeDOT = 0n
         let destinationExecutionFeeDOT = 0n
-        if (destinationParaId !== registry.assetHubParaId) {
+        if (this.to.id !== registry.assetHubParaId) {
             let destinationXcm: any
             if (destAssetMetadata.location) {
                 destinationXcm = buildParachainPNAReceivedXcmOnDestination(
@@ -254,7 +255,7 @@ export class V1ToPolkadotAdapter implements ToPolkadotTransferInterface {
 
             const assetHubImpl = await paraImplementation(assetHub)
             destinationDeliveryFeeDOT = await assetHubImpl.calculateDeliveryFeeInDOT(
-                destinationParaId,
+                this.to.id,
                 destinationXcm,
             )
             const destinationImpl = await paraImplementation(destination)
@@ -267,16 +268,11 @@ export class V1ToPolkadotAdapter implements ToPolkadotTransferInterface {
         return toV2DeliveryFee({
             destinationExecutionFeeDOT,
             destinationDeliveryFeeDOT,
-            totalFeeInWei: await gateway.quoteSendTokenFee(
-                tokenAddress,
-                destinationParaId,
-                totalFeeInDOT,
-            ),
+            totalFeeInWei: await gateway.quoteSendTokenFee(tokenAddress, this.to.id, totalFeeInDOT),
         })
     }
 
     async createTransfer(
-        destinationParaId: number,
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
@@ -291,7 +287,7 @@ export class V1ToPolkadotAdapter implements ToPolkadotTransferInterface {
         const registry = this.registry
         const v1Fee = toV1DeliveryFee(fee)
         const { tokenErcMetadata, destParachain, ahAssetMetadata, destAssetMetadata } =
-            resolveInputs(registry, tokenAddress, destinationParaId)
+            resolveInputs(registry, tokenAddress, this.to.id)
         const minimalBalance =
             ahAssetMetadata.minimumBalance > destAssetMetadata.minimumBalance
                 ? ahAssetMetadata.minimumBalance
@@ -309,7 +305,7 @@ export class V1ToPolkadotAdapter implements ToPolkadotTransferInterface {
             context.environment.gatewayContract,
             sourceAccount,
             tokenAddress,
-            destinationParaId,
+            this.to.id,
             beneficiary,
             totalFeeDot,
             amount,
@@ -321,7 +317,7 @@ export class V1ToPolkadotAdapter implements ToPolkadotTransferInterface {
                 sourceAccount,
                 beneficiaryAccount,
                 tokenAddress,
-                destinationParaId,
+                destinationParaId: this.to.id,
                 amount,
                 fee: v1Fee,
             },
@@ -534,10 +530,12 @@ export class V1ToPolkadotAdapter implements ToPolkadotTransferInterface {
 
 export function createTransferImplementationV1(
     context: EthersContext,
+    from: ChainId,
+    to: ChainId,
     registry: AssetRegistry,
     _tokenAddress: string,
 ): ToPolkadotTransferInterface {
-    return new V1ToPolkadotAdapter(context, registry)
+    return new V1ToPolkadotAdapter(context, registry, from, to)
 }
 
 export function resolveInputs(

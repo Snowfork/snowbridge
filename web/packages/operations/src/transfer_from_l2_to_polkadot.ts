@@ -86,15 +86,13 @@ export const transferToPolkadot = async (
             TOKEN_CONTRACT,
         )
         // Step 1. Get the delivery fee for the transaction
-        let fee = await transferImpl.getDeliveryFee(l2ChainId, TOKEN_CONTRACT, amount, destParaId)
+        let fee = await transferImpl.getDeliveryFee(TOKEN_CONTRACT, amount)
 
         console.log("fee: ", fee)
         // Step 2. Create a transfer tx
         const transfer = await transferImpl.createTransfer(
-            l2ChainId,
             TOKEN_CONTRACT,
             amount,
-            destParaId,
             ETHEREUM_ACCOUNT_PUBLIC,
             POLKADOT_ACCOUNT_PUBLIC,
             fee,
