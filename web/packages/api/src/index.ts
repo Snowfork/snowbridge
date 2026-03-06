@@ -8,11 +8,8 @@ import {
     IGatewayV2,
     IGATEWAY_V2_ABI,
     ISwapQuoter,
-    SNOWBRIDGE_L1_ADAPTOR_ABI,
     SNOWBRIDGE_L2_ADAPTOR_ABI,
-    SWAP_LEGACY_ROUTER_ABI,
     SWAP_QUOTER_ABI,
-    SWAP_ROUTER_ABI,
 } from "./contracts"
 import { type EthereumProvider } from "./EthereumProvider"
 import { BridgeInfo, ChainId, Environment } from "@snowbridge/base-types"
@@ -74,10 +71,7 @@ export class Context<
     #gateway?: EContract & IGatewayV1
     #gatewayV2?: EContract & IGatewayV2
     #beefyClient?: EContract & BeefyClient
-    #l1Adapter?: EContract
     #l1SwapQuoter?: EContract & ISwapQuoter
-    #l1SwapRouter?: EContract
-    #l1LegacySwapRouter?: EContract
     #l2Adapters: { [l2ChainId: number]: EContract } = {}
 
     // Substrate
@@ -354,21 +348,6 @@ export class Context<
         }
     }
 
-    l1Adapter(): EContract {
-        if (!this.environment.l2Bridge) {
-            throw new Error("L2 bridge configuration is missing.")
-        }
-        if (this.#l1Adapter) {
-            return this.#l1Adapter
-        }
-        this.#l1Adapter = this.ethereumProvider.connectContract<EContract>(
-            this.environment.l2Bridge.l1AdapterAddress,
-            SNOWBRIDGE_L1_ADAPTOR_ABI as EAbi,
-            this.ethereum(),
-        )
-        return this.#l1Adapter!
-    }
-
     l1SwapQuoter(): EContract {
         if (!this.environment.l2Bridge) {
             throw new Error("L2 bridge configuration is missing.")
@@ -382,36 +361,6 @@ export class Context<
             this.ethereum(),
         )
         return this.#l1SwapQuoter!
-    }
-
-    l1SwapRouter(): EContract {
-        if (!this.environment.l2Bridge) {
-            throw new Error("L2 bridge configuration is missing.")
-        }
-        if (this.#l1SwapRouter) {
-            return this.#l1SwapRouter
-        }
-        this.#l1SwapRouter = this.ethereumProvider.connectContract<EContract>(
-            this.environment.l2Bridge.l1SwapRouterAddress,
-            SWAP_ROUTER_ABI as EAbi,
-            this.ethereum(),
-        )
-        return this.#l1SwapRouter!
-    }
-
-    l1LegacySwapRouter(): EContract {
-        if (!this.environment.l2Bridge) {
-            throw new Error("L2 bridge configuration is missing.")
-        }
-        if (this.#l1LegacySwapRouter) {
-            return this.#l1LegacySwapRouter
-        }
-        this.#l1LegacySwapRouter = this.ethereumProvider.connectContract<EContract>(
-            this.environment.l2Bridge.l1SwapRouterAddress,
-            SWAP_LEGACY_ROUTER_ABI as EAbi,
-            this.ethereum(),
-        )
-        return this.#l1LegacySwapRouter!
     }
 
     l2Adapter(l2ChainId: number): EContract {

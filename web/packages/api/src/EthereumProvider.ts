@@ -16,6 +16,9 @@ import {
     IERC20_ABI,
     IGATEWAY_V1_ABI,
     IGATEWAY_V2_ABI,
+    SWAP_LEGACY_ROUTER_ABI,
+    SWAP_ROUTER_ABI,
+    SNOWBRIDGE_L1_ADAPTOR_ABI,
     SNOWBRIDGE_L2_ADAPTOR_ABI,
 } from "./contracts"
 import { MultiAddressStruct } from "./contracts"
@@ -52,6 +55,36 @@ export type FeeData = {
 export type EncodedMultiAddress = {
     address: MultiAddressStruct
     hexAddress: string
+}
+
+export type L1AdapterDepositParams = {
+    inputToken: string
+    outputToken: string
+    inputAmount: bigint
+    outputAmount: bigint
+    destinationChainId: number
+    fillDeadlineBuffer: bigint
+}
+
+export type L1SwapRouterExactOutputSingleParams = {
+    tokenIn: string
+    tokenOut: string
+    fee: bigint
+    recipient: string
+    deadline: bigint
+    amountOut: bigint
+    amountInMaximum: bigint
+    sqrtPriceLimitX96: bigint
+}
+
+export type L1LegacySwapRouterExactOutputSingleParams = {
+    tokenIn: string
+    tokenOut: string
+    fee: bigint
+    recipient: string
+    amountOut: bigint
+    amountInMaximum: bigint
+    sqrtPriceLimitX96: bigint
 }
 
 const PALLET_XCM_PRECOMPILE_ABI: InterfaceAbi = [
@@ -120,6 +153,20 @@ export interface EthereumProvider<
     encodeFunctionData(abi: Abi, method: string, args: readonly unknown[]): string
     decodeFunctionResult<T = unknown>(abi: Abi, method: string, data: string): T
     encodeNativeAsset(tokenAddress: string, amount: bigint): string
+    l1AdapterDepositNativeEther(
+        params: L1AdapterDepositParams,
+        recipient: string,
+        topic: string,
+    ): string
+    l1AdapterDepositToken(
+        params: L1AdapterDepositParams,
+        recipient: string,
+        topic: string,
+    ): string
+    l1SwapRouterExactOutputSingle(params: L1SwapRouterExactOutputSingleParams): string
+    l1LegacySwapRouterExactOutputSingle(
+        params: L1LegacySwapRouterExactOutputSingleParams,
+    ): string
     beneficiaryMultiAddress(beneficiary: string): EncodedMultiAddress
     estimateGas(provider: Connection, tx: ContractTransaction): Promise<bigint>
     gatewayV1SendToken(
@@ -413,6 +460,42 @@ export class EthersEthereumProvider
             ["uint8", "address", "uint128"],
             [0, tokenAddress, amount],
         )
+    }
+
+    l1AdapterDepositNativeEther(
+        params: L1AdapterDepositParams,
+        recipient: string,
+        topic: string,
+    ): string {
+        return new Interface(SNOWBRIDGE_L1_ADAPTOR_ABI).encodeFunctionData("depositNativeEther", [
+            params,
+            recipient,
+            topic,
+        ])
+    }
+
+    l1AdapterDepositToken(
+        params: L1AdapterDepositParams,
+        recipient: string,
+        topic: string,
+    ): string {
+        return new Interface(SNOWBRIDGE_L1_ADAPTOR_ABI).encodeFunctionData("depositToken", [
+            params,
+            recipient,
+            topic,
+        ])
+    }
+
+    l1SwapRouterExactOutputSingle(params: L1SwapRouterExactOutputSingleParams): string {
+        return new Interface(SWAP_ROUTER_ABI).encodeFunctionData("exactOutputSingle", [params])
+    }
+
+    l1LegacySwapRouterExactOutputSingle(
+        params: L1LegacySwapRouterExactOutputSingleParams,
+    ): string {
+        return new Interface(SWAP_LEGACY_ROUTER_ABI).encodeFunctionData("exactOutputSingle", [
+            params,
+        ])
     }
 
     beneficiaryMultiAddress(beneficiary: string): EncodedMultiAddress {
