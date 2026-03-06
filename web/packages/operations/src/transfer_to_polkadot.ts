@@ -106,15 +106,10 @@ export const transferToPolkadot = async (
             TOKEN_CONTRACT!,
         )
         // Step 1. Get the delivery fee for the transaction
-        const fee = await transferImpl.getDeliveryFee(
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            TOKEN_CONTRACT!,
-            destinationChainId,
-        )
+        const fee = await transferImpl.getDeliveryFee(TOKEN_CONTRACT!)
 
         // Step 2. Create a transfer tx
         const transfer = await transferImpl.createTransfer(
-            destinationChainId,
             ETHEREUM_ACCOUNT_PUBLIC,
             POLKADOT_ACCOUNT_PUBLIC,
             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion

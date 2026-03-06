@@ -3,7 +3,7 @@ import { TransferInterface as L2TransferInterface } from "./transfers/l2ToPolkad
 import { ERC20ToAH } from "./transfers/toPolkadot/erc20ToAH"
 import { ERC20ToAH as ERC20FromL2ToAH } from "./transfers/l2ToPolkadot/erc20ToAH"
 import { RegisterToken } from "./registration/toPolkadot/registerToken"
-import { Asset, AssetRegistry, ERC20Metadata, Parachain } from "@snowbridge/base-types"
+import { Asset, AssetRegistry, ChainId, ERC20Metadata, Parachain } from "@snowbridge/base-types"
 import { PNAToAH } from "./transfers/toPolkadot/pnaToAH"
 import { ERC20ToParachain } from "./transfers/toPolkadot/erc20ToParachain"
 import { PNAToParachain } from "./transfers/toPolkadot/pnaToParachain"
@@ -106,24 +106,26 @@ export type {
 
 export function createTransferImplementation(
     context: EthersContext,
-    destinationParaId: number,
+    from: ChainId,
+    to: ChainId,
     registry: AssetRegistry,
     tokenAddress: string,
 ): TransferInterface {
+    const destinationParaId = to.id
     const { ahAssetMetadata } = resolveInputs(registry, tokenAddress, destinationParaId)
 
     let transferImpl: TransferInterface
     if (destinationParaId == registry.assetHubParaId) {
         if (ahAssetMetadata.location) {
-            transferImpl = new PNAToAH(context, registry)
+            transferImpl = new PNAToAH(context, registry, from, to)
         } else {
-            transferImpl = new ERC20ToAH(context, registry)
+            transferImpl = new ERC20ToAH(context, registry, from, to)
         }
     } else {
         if (ahAssetMetadata.location) {
-            transferImpl = new PNAToParachain(context, registry)
+            transferImpl = new PNAToParachain(context, registry, from, to)
         } else {
-            transferImpl = new ERC20ToParachain(context, registry)
+            transferImpl = new ERC20ToParachain(context, registry, from, to)
         }
     }
     return transferImpl
@@ -131,11 +133,13 @@ export function createTransferImplementation(
 
 export function createL2TransferImplementation(
     context: EthersContext,
-    l2ChainId: number,
-    destinationParaId: number,
+    from: ChainId,
+    to: ChainId,
     registry: AssetRegistry,
     l2TokenAddress: string,
 ): L2TransferInterface {
+    const l2ChainId = from.id
+    const destinationParaId = to.id
     const assets = registry.ethereumChains[`ethereum_l2_${l2ChainId}`].assets
     const tokenMetadata = assets[l2TokenAddress]
     if (!tokenMetadata) {
@@ -147,7 +151,7 @@ export function createL2TransferImplementation(
     }
 
     // Todo: Resolve inputs based on the token address and support non-system destination parachain
-    let transferImpl: L2TransferInterface = new ERC20FromL2ToAH(context, registry)
+    let transferImpl: L2TransferInterface = new ERC20FromL2ToAH(context, registry, from, to)
     return transferImpl
 }
 

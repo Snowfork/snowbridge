@@ -1,4 +1,4 @@
-import { AssetRegistry } from "@snowbridge/base-types"
+import { AssetRegistry, ChainId } from "@snowbridge/base-types"
 import { TransactionReceipt } from "ethers"
 import { TransferInterface } from "./transferInterface"
 import { EthersContext } from "../../index"
@@ -31,13 +31,14 @@ import { hexToU8a } from "@polkadot/util"
 
 export class PNAToParachain implements TransferInterface {
     constructor(
-        private readonly context: EthersContext,
-        private readonly registry: AssetRegistry,
+        public readonly context: EthersContext,
+        public readonly registry: AssetRegistry,
+        public readonly from: ChainId,
+        public readonly to: ChainId,
     ) {}
 
     async getDeliveryFee(
         tokenAddress: string,
-        destinationParaId: number,
         options?: {
             paddFeeByPercentage?: bigint
             feeAsset?: any
@@ -49,12 +50,12 @@ export class PNAToParachain implements TransferInterface {
         const registry = this.registry
         const assetHub = await context.assetHub()
         const bridgeHub = await context.bridgeHub()
-        const destination = await context.parachain(destinationParaId)
+        const destination = await context.parachain(this.to.id)
 
         const { destParachain, destAssetMetadata } = resolveInputs(
             registry,
             tokenAddress,
-            destinationParaId,
+            this.to.id,
         )
         // AssetHub fees
         let assetHubXcm = buildAssetHubPNAReceivedXcm(
@@ -70,7 +71,7 @@ export class PNAToParachain implements TransferInterface {
             ),
             "0x0000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000000000000000000000000000",
-            destinationParaId,
+            this.to.id,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
         )
         const bridgeHubImpl = await paraImplementation(bridgeHub)
@@ -129,7 +130,7 @@ export class PNAToParachain implements TransferInterface {
         const destinationImpl = await paraImplementation(destination)
         // Delivery fee AssetHub to Destination
         let destinationDeliveryFeeDOT = await assetHubImpl.calculateDeliveryFeeInDOT(
-            destinationParaId,
+            this.to.id,
             destinationXcm,
         )
         // Swap to ether
@@ -192,7 +193,6 @@ export class PNAToParachain implements TransferInterface {
     }
 
     async createTransfer(
-        destinationParaId: number,
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
@@ -204,12 +204,12 @@ export class PNAToParachain implements TransferInterface {
         const registry = this.registry
         const ethereum = context.ethereum()
         const assetHub = await context.assetHub()
-        const destination = await context.parachain(destinationParaId)
+        const destination = await context.parachain(this.to.id)
         if (!destination) {
-            throw Error(`Unable to connect to destination parachain with ID ${destinationParaId}.`)
+            throw Error(`Unable to connect to destination parachain with ID ${this.to.id}.`)
         }
         const { tokenErcMetadata, destParachain, ahAssetMetadata, destAssetMetadata } =
-            resolveInputs(registry, tokenAddress, destinationParaId)
+            resolveInputs(registry, tokenAddress, this.to.id)
         const minimalBalance =
             ahAssetMetadata.minimumBalance > destAssetMetadata.minimumBalance
                 ? ahAssetMetadata.minimumBalance
@@ -225,7 +225,7 @@ export class PNAToParachain implements TransferInterface {
 
         const accountNonce = await ethereum.getTransactionCount(sourceAccount, "pending")
         const topic = buildMessageId(
-            destinationParaId,
+            this.to.id,
             sourceAccount,
             tokenAddress,
             beneficiaryAddressHex,
@@ -239,7 +239,7 @@ export class PNAToParachain implements TransferInterface {
                 sendMessageXCMWithDOTDestFee(
                     destination.registry,
                     registry.ethChainId,
-                    destinationParaId,
+                    this.to.id,
                     destAssetMetadata.location,
                     beneficiaryAddressHex,
                     amount,
@@ -254,7 +254,7 @@ export class PNAToParachain implements TransferInterface {
                 sendMessageXCM(
                     destination.registry,
                     registry.ethChainId,
-                    destinationParaId,
+                    this.to.id,
                     destAssetMetadata.location,
                     beneficiaryAddressHex,
                     amount,
@@ -285,7 +285,7 @@ export class PNAToParachain implements TransferInterface {
                 sourceAccount,
                 beneficiaryAccount,
                 tokenAddress,
-                destinationParaId,
+                destinationParaId: this.to.id,
                 amount,
                 fee,
                 customXcm,

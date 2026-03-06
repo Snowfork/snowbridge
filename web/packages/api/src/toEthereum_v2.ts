@@ -23,6 +23,7 @@ import { getOperatingStatus, OperationStatus } from "./status"
 import {
     Asset,
     AssetRegistry,
+    ChainId,
     ContractCall,
     ERC20Metadata,
     Parachain,
@@ -93,12 +94,13 @@ export type FeeInfo = {
 
 export class V1ToEthereumAdapter implements ToEthereumTransferInterface {
     constructor(
-        private readonly context: EthersContext,
-        private readonly registry: AssetRegistry,
+        public readonly context: EthersContext,
+        public readonly registry: AssetRegistry,
+        public readonly from: ChainId,
+        public readonly to: ChainId,
     ) {}
 
     async getDeliveryFee(
-        source: { sourceParaId: number },
         tokenAddress: string,
         options?: {
             padPercentage?: bigint
@@ -120,23 +122,15 @@ export class V1ToEthereumAdapter implements ToEthereumTransferInterface {
         }
 
         const assetHub = await this.context.assetHub()
-        const parachain = await this.context.parachain(source.sourceParaId)
-        return getDeliveryFeeV1(
-            assetHub,
-            parachain,
-            source.sourceParaId,
-            this.registry,
-            tokenAddress,
-            {
-                padPercentage: options?.padPercentage,
-                slippagePadPercentage: options?.slippagePadPercentage,
-                defaultFee: options?.defaultFee,
-            },
-        )
+        const parachain = await this.context.parachain(this.from.id)
+        return getDeliveryFeeV1(assetHub, parachain, this.from.id, this.registry, tokenAddress, {
+            padPercentage: options?.padPercentage,
+            slippagePadPercentage: options?.slippagePadPercentage,
+            defaultFee: options?.defaultFee,
+        })
     }
 
     async createTransfer(
-        source: { sourceParaId: number },
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
@@ -162,7 +156,7 @@ export class V1ToEthereumAdapter implements ToEthereumTransferInterface {
             sourceAccountHex = u8aToHex(decodeAddress(sourceAccount))
         }
 
-        const parachain = await this.context.parachain(source.sourceParaId)
+        const parachain = await this.context.parachain(this.from.id)
 
         const sourceParachainImpl = await paraImplementation(parachain)
         const { tokenErcMetadata, sourceParachain, ahAssetMetadata, sourceAssetMetadata } =
@@ -588,10 +582,12 @@ export class V1ToEthereumAdapter implements ToEthereumTransferInterface {
 
 export function createTransferImplementationV1(
     context: EthersContext,
+    from: ChainId,
+    to: ChainId,
     registry: AssetRegistry,
     _tokenAddress: string,
 ): ToEthereumTransferInterface {
-    return new V1ToEthereumAdapter(context, registry)
+    return new V1ToEthereumAdapter(context, registry, from, to)
 }
 
 export enum ValidationKind {

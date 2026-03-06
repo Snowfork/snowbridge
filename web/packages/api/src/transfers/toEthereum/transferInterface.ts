@@ -4,7 +4,6 @@ import { DeliveryFee, MessageReceipt, Transfer, ValidationResult } from "../../t
 
 export interface TransferInterface {
     getDeliveryFee(
-        source: { sourceParaId: number },
         tokenAddress: string,
         options?: {
             padPercentage?: bigint
@@ -17,7 +16,6 @@ export interface TransferInterface {
     ): Promise<DeliveryFee>
 
     createTransfer(
-        source: { sourceParaId: number },
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,

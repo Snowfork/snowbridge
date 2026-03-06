@@ -8,10 +8,8 @@ import {
 
 export interface TransferInterface {
     getDeliveryFee(
-        l2ChainId: number,
         tokenAddress: string,
         amount: bigint,
-        destinationParaId: number,
         options?: {
             paddFeeByPercentage?: bigint
             feeAsset?: any
@@ -23,10 +21,8 @@ export interface TransferInterface {
     ): Promise<DeliveryFee>
 
     createTransfer(
-        l2ChainId: number,
         tokenAddress: string,
         amount: bigint,
-        destinationParaId: number,
         sourceAccount: string,
         beneficiaryAccount: string,
         fee: DeliveryFee,
