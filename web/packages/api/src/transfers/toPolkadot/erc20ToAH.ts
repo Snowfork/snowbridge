@@ -1,4 +1,4 @@
-import { AssetRegistry, ChainId } from "@snowbridge/base-types"
+import { AssetRegistry, ChainId, TransferRoute } from "@snowbridge/base-types"
 import { TransactionReceipt } from "ethers"
 import { TransferInterface } from "./transferInterface"
 import { EthersContext } from "../../index"
@@ -27,9 +27,16 @@ export class ERC20ToAH implements TransferInterface {
     constructor(
         public readonly context: EthersContext,
         public readonly registry: AssetRegistry,
-        public readonly from: ChainId,
-        public readonly to: ChainId,
+        public readonly route: TransferRoute,
     ) {}
+
+    get from(): ChainId {
+        return this.route.from
+    }
+
+    get to(): ChainId {
+        return this.route.to
+    }
 
     async getDeliveryFee(
         tokenAddress: string,

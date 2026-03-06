@@ -5,7 +5,7 @@ import {
     buildAssetHubERC20TransferFromParachain,
     DOT_LOCATION,
 } from "./xcmBuilder"
-import { AssetRegistry, ChainId, ContractCall } from "@snowbridge/base-types"
+import { AssetRegistry, ChainId, ContractCall, TransferRoute } from "@snowbridge/base-types"
 import { getOperatingStatus } from "./status"
 import { EventRecord } from "@polkadot/types/interfaces"
 import { TransactionReceipt } from "ethers"
@@ -35,9 +35,16 @@ export class V1ToEthereumEvmAdapter implements ToEthereumEvmTransferInterface {
     constructor(
         public readonly context: EthersContext,
         public readonly registry: AssetRegistry,
-        public readonly from: ChainId,
-        public readonly to: ChainId,
+        public readonly route: TransferRoute,
     ) {}
+
+    get from(): ChainId {
+        return this.route.from
+    }
+
+    get to(): ChainId {
+        return this.route.to
+    }
 
     async getDeliveryFee(
         tokenAddress: string,
@@ -473,14 +480,4 @@ export class V1ToEthereumEvmAdapter implements ToEthereumEvmTransferInterface {
             events: matchedEvents.map((x) => x.toPrimitive() as any as EventRecord),
         }
     }
-}
-
-export function createTransferImplementationV1(
-    context: EthersContext,
-    from: ChainId,
-    to: ChainId,
-    registry: AssetRegistry,
-    _tokenAddress: string,
-): ToEthereumEvmTransferInterface {
-    return new V1ToEthereumEvmAdapter(context, registry, from, to)
 }

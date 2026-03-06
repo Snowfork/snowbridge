@@ -43,7 +43,6 @@ import { bridgeInfoFor } from "@snowbridge/registry"
     const transferImpl = api.transfer(
         { kind: "ethereum", id: registry.ethChainId },
         { kind: "polkadot", id: DESTINATION_PARACHAIN },
-        TOKEN_CONTRACT,
     )
     // Step 1. Get the delivery fee for the transaction
     const fee = await transferImpl.getDeliveryFee(TOKEN_CONTRACT)

@@ -3,7 +3,14 @@ import { TransferInterface as L2TransferInterface } from "./transfers/l2ToPolkad
 import { ERC20ToAH } from "./transfers/toPolkadot/erc20ToAH"
 import { ERC20ToAH as ERC20FromL2ToAH } from "./transfers/l2ToPolkadot/erc20ToAH"
 import { RegisterToken } from "./registration/toPolkadot/registerToken"
-import { Asset, AssetRegistry, ChainId, ERC20Metadata, Parachain } from "@snowbridge/base-types"
+import {
+    Asset,
+    AssetRegistry,
+    ChainId,
+    ERC20Metadata,
+    Parachain,
+    TransferRoute,
+} from "@snowbridge/base-types"
 import { PNAToAH } from "./transfers/toPolkadot/pnaToAH"
 import { ERC20ToParachain } from "./transfers/toPolkadot/erc20ToParachain"
 import { PNAToParachain } from "./transfers/toPolkadot/pnaToParachain"
@@ -104,55 +111,83 @@ export type {
     RegistrationInterface,
 } from "./registration/toPolkadot/registrationInterface"
 
-export function createTransferImplementation(
-    context: EthersContext,
-    from: ChainId,
-    to: ChainId,
-    registry: AssetRegistry,
-    tokenAddress: string,
-): TransferInterface {
-    const destinationParaId = to.id
-    const { ahAssetMetadata } = resolveInputs(registry, tokenAddress, destinationParaId)
+class TransferToPolkadot implements TransferInterface {
+    #pnaImpl?: TransferInterface
+    #erc20Impl?: TransferInterface
 
-    let transferImpl: TransferInterface
-    if (destinationParaId == registry.assetHubParaId) {
-        if (ahAssetMetadata.location) {
-            transferImpl = new PNAToAH(context, registry, from, to)
-        } else {
-            transferImpl = new ERC20ToAH(context, registry, from, to)
-        }
-    } else {
-        if (ahAssetMetadata.location) {
-            transferImpl = new PNAToParachain(context, registry, from, to)
-        } else {
-            transferImpl = new ERC20ToParachain(context, registry, from, to)
-        }
+    constructor(
+        private readonly context: EthersContext,
+        private readonly route: TransferRoute,
+        private readonly registry: AssetRegistry,
+    ) {}
+
+    get from(): ChainId {
+        return this.route.from
     }
-    return transferImpl
+
+    get to(): ChainId {
+        return this.route.to
+    }
+
+    #resolveByTokenAddress(tokenAddress: string): TransferInterface {
+        const destinationParaId = this.route.to.id
+        const { ahAssetMetadata } = resolveInputs(this.registry, tokenAddress, destinationParaId)
+
+        if (ahAssetMetadata.location) {
+            this.#pnaImpl ??=
+                destinationParaId == this.registry.assetHubParaId
+                    ? new PNAToAH(this.context, this.registry, this.route)
+                    : new PNAToParachain(this.context, this.registry, this.route)
+            return this.#pnaImpl
+        }
+
+        this.#erc20Impl ??=
+            destinationParaId == this.registry.assetHubParaId
+                ? new ERC20ToAH(this.context, this.registry, this.route)
+                : new ERC20ToParachain(this.context, this.registry, this.route)
+        return this.#erc20Impl
+    }
+
+    async getDeliveryFee(
+        tokenAddress: string,
+        options?: Parameters<TransferInterface["getDeliveryFee"]>[1],
+    ): Promise<DeliveryFee> {
+        return this.#resolveByTokenAddress(tokenAddress).getDeliveryFee(tokenAddress, options)
+    }
+
+    async createTransfer(
+        sourceAccount: string,
+        beneficiaryAccount: string,
+        tokenAddress: string,
+        amount: bigint,
+        fee: DeliveryFee,
+        customXcm?: Parameters<TransferInterface["createTransfer"]>[5],
+    ): Promise<Transfer> {
+        return this.#resolveByTokenAddress(tokenAddress).createTransfer(
+            sourceAccount,
+            beneficiaryAccount,
+            tokenAddress,
+            amount,
+            fee,
+            customXcm,
+        )
+    }
+
+    async validateTransfer(transfer: Transfer): Promise<ValidationResult> {
+        return this.#resolveByTokenAddress(transfer.input.tokenAddress).validateTransfer(transfer)
+    }
+
+    async getMessageReceipt(receipt: TransactionReceipt): Promise<MessageReceipt | null> {
+        return getMessageReceipt(this.context.ethereumProvider as any, receipt)
+    }
 }
 
-export function createL2TransferImplementation(
+export function createTransferImplementation(
     context: EthersContext,
-    from: ChainId,
-    to: ChainId,
+    route: TransferRoute,
     registry: AssetRegistry,
-    l2TokenAddress: string,
-): L2TransferInterface {
-    const l2ChainId = from.id
-    const destinationParaId = to.id
-    const assets = registry.ethereumChains[`ethereum_l2_${l2ChainId}`].assets
-    const tokenMetadata = assets[l2TokenAddress]
-    if (!tokenMetadata) {
-        throw Error(`No token ${l2TokenAddress} registered on ethereum chain ${l2ChainId}.`)
-    }
-    const tokenAddress = tokenMetadata.swapTokenAddress
-    if (!tokenAddress) {
-        throw Error(`No swap token address for ${l2TokenAddress} on ethereum chain ${l2ChainId}.`)
-    }
-
-    // Todo: Resolve inputs based on the token address and support non-system destination parachain
-    let transferImpl: L2TransferInterface = new ERC20FromL2ToAH(context, registry, from, to)
-    return transferImpl
+): TransferInterface {
+    return new TransferToPolkadot(context, route, registry)
 }
 
 function resolveInputs(registry: AssetRegistry, tokenAddress: string, destinationParaId: number) {
