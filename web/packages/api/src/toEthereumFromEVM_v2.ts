@@ -11,13 +11,13 @@ import { EventRecord } from "@polkadot/types/interfaces"
 import { TransactionReceipt } from "ethers"
 import { paraImplementation } from "./parachains"
 import {
-    getDeliveryFee as getDeliveryFeeV1,
     buildMessageId,
     createERC20SourceParachainTx,
     DeliveryFee,
     dryRunAssetHub,
     dryRunOnSourceParachain,
     FeeInfo,
+    getDeliveryFeeV1,
     resolveInputs,
     ValidationKind,
     ValidationLog,
@@ -54,7 +54,9 @@ export class V1ToEthereumEvmAdapter implements ToEthereumEvmTransferInterface {
         if (options?.contractCall !== undefined) {
             throw new Error("v1 toEthereumEVM adapter does not support options.contractCall.")
         }
-        return getDeliveryFeeV1(source.context, source.sourceParaId, registry, tokenAddress, {
+        const assetHub = await source.context.assetHub()
+        const parachain = await source.context.parachain(source.sourceParaId)
+        return getDeliveryFeeV1(assetHub, parachain, source.sourceParaId, registry, tokenAddress, {
             padPercentage: options?.padPercentage,
             slippagePadPercentage: options?.slippagePadPercentage,
             defaultFee: options?.defaultFee,
