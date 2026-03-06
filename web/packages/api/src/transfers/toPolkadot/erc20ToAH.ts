@@ -1,4 +1,4 @@
-import { AssetRegistry } from "@snowbridge/base-types"
+import { AssetRegistry, ChainId } from "@snowbridge/base-types"
 import { TransactionReceipt } from "ethers"
 import { TransferInterface } from "./transferInterface"
 import { EthersContext } from "../../index"
@@ -25,13 +25,14 @@ import { hexToU8a } from "@polkadot/util"
 
 export class ERC20ToAH implements TransferInterface {
     constructor(
-        private readonly context: EthersContext,
-        private readonly registry: AssetRegistry,
+        public readonly context: EthersContext,
+        public readonly registry: AssetRegistry,
+        public readonly from: ChainId,
+        public readonly to: ChainId,
     ) {}
 
     async getDeliveryFee(
         tokenAddress: string,
-        _destinationParaId: number,
         options?: {
             paddFeeByPercentage?: bigint
             feeAsset?: any
@@ -109,7 +110,6 @@ export class ERC20ToAH implements TransferInterface {
     }
 
     async createTransfer(
-        destinationParaId: number,
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
@@ -123,7 +123,7 @@ export class ERC20ToAH implements TransferInterface {
         const assetHub = await context.assetHub()
 
         const { tokenErcMetadata, destParachain, ahAssetMetadata, destAssetMetadata } =
-            resolveInputs(registry, tokenAddress, destinationParaId)
+            resolveInputs(registry, tokenAddress, this.to.id)
         const minimalBalance =
             ahAssetMetadata.minimumBalance > destAssetMetadata.minimumBalance
                 ? ahAssetMetadata.minimumBalance
@@ -143,7 +143,7 @@ export class ERC20ToAH implements TransferInterface {
         const accountNonce = await ethereum.getTransactionCount(sourceAccount, "pending")
 
         const topic = buildMessageId(
-            destinationParaId,
+            this.to.id,
             sourceAccount,
             tokenAddress,
             beneficiaryAddressHex,
@@ -174,7 +174,7 @@ export class ERC20ToAH implements TransferInterface {
                 sourceAccount,
                 beneficiaryAccount,
                 tokenAddress,
-                destinationParaId,
+                destinationParaId: this.to.id,
                 amount,
                 fee,
                 customXcm,

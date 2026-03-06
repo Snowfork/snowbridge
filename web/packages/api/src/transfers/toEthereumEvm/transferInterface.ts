@@ -64,7 +64,6 @@ export type MessageReceiptEvm = {
 
 export interface TransferInterface {
     getDeliveryFee(
-        source: { sourceParaId: number },
         tokenAddress: string,
         options?: {
             padPercentage?: bigint
@@ -77,7 +76,6 @@ export interface TransferInterface {
     ): Promise<DeliveryFee>
 
     createTransfer(
-        source: { sourceParaId: number },
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
@@ -91,8 +89,5 @@ export interface TransferInterface {
 
     validateTransfer(transfer: TransferEvm): Promise<ValidationResultEvm>
 
-    getMessageReceipt(
-        source: { sourceParaId: number },
-        receipt: TransactionReceipt,
-    ): Promise<MessageReceiptEvm>
+    getMessageReceipt(receipt: TransactionReceipt): Promise<MessageReceiptEvm>
 }

@@ -5,7 +5,7 @@ import {
     buildAssetHubERC20TransferFromParachain,
     DOT_LOCATION,
 } from "./xcmBuilder"
-import { AssetRegistry, ContractCall } from "@snowbridge/base-types"
+import { AssetRegistry, ChainId, ContractCall } from "@snowbridge/base-types"
 import { getOperatingStatus } from "./status"
 import { EventRecord } from "@polkadot/types/interfaces"
 import { TransactionReceipt } from "ethers"
@@ -33,12 +33,13 @@ import {
 
 export class V1ToEthereumEvmAdapter implements ToEthereumEvmTransferInterface {
     constructor(
-        private readonly context: EthersContext,
-        private readonly registry: AssetRegistry,
+        public readonly context: EthersContext,
+        public readonly registry: AssetRegistry,
+        public readonly from: ChainId,
+        public readonly to: ChainId,
     ) {}
 
     async getDeliveryFee(
-        source: { sourceParaId: number },
         tokenAddress: string,
         options?: {
             padPercentage?: bigint
@@ -59,23 +60,15 @@ export class V1ToEthereumEvmAdapter implements ToEthereumEvmTransferInterface {
             throw new Error("v1 toEthereumEVM adapter does not support options.contractCall.")
         }
         const assetHub = await this.context.assetHub()
-        const parachain = await this.context.parachain(source.sourceParaId)
-        return getDeliveryFeeV1(
-            assetHub,
-            parachain,
-            source.sourceParaId,
-            this.registry,
-            tokenAddress,
-            {
-                padPercentage: options?.padPercentage,
-                slippagePadPercentage: options?.slippagePadPercentage,
-                defaultFee: options?.defaultFee,
-            },
-        )
+        const parachain = await this.context.parachain(this.from.id)
+        return getDeliveryFeeV1(assetHub, parachain, this.from.id, this.registry, tokenAddress, {
+            padPercentage: options?.padPercentage,
+            slippagePadPercentage: options?.slippagePadPercentage,
+            defaultFee: options?.defaultFee,
+        })
     }
 
     async createTransfer(
-        source: { sourceParaId: number },
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
@@ -104,7 +97,7 @@ export class V1ToEthereumEvmAdapter implements ToEthereumEvmTransferInterface {
             throw Error(`Source address ${sourceAccountHex} is not a 20 byte address.`)
         }
 
-        const parachain = await this.context.parachain(source.sourceParaId)
+        const parachain = await this.context.parachain(this.from.id)
         const sourceParachainImpl = await paraImplementation(parachain)
         const { tokenErcMetadata, sourceParachain, ahAssetMetadata, sourceAssetMetadata } =
             resolveInputs(registry, tokenAddress, sourceParachainImpl.parachainId)
@@ -428,11 +421,8 @@ export class V1ToEthereumEvmAdapter implements ToEthereumEvmTransferInterface {
         }
     }
 
-    async getMessageReceipt(
-        source: { sourceParaId: number },
-        receipt: TransactionReceipt,
-    ): Promise<MessageReceiptEvm> {
-        const sourceParachain = await this.context.parachain(source.sourceParaId)
+    async getMessageReceipt(receipt: TransactionReceipt): Promise<MessageReceiptEvm> {
+        const sourceParachain = await this.context.parachain(this.from.id)
         const blockHash = await sourceParachain.rpc.chain.getBlockHash(receipt.blockNumber)
         const events = await (
             await sourceParachain.at(blockHash)
@@ -487,8 +477,10 @@ export class V1ToEthereumEvmAdapter implements ToEthereumEvmTransferInterface {
 
 export function createTransferImplementationV1(
     context: EthersContext,
+    from: ChainId,
+    to: ChainId,
     registry: AssetRegistry,
     _tokenAddress: string,
 ): ToEthereumEvmTransferInterface {
-    return new V1ToEthereumEvmAdapter(context, registry)
+    return new V1ToEthereumEvmAdapter(context, registry, from, to)
 }

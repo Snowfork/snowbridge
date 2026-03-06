@@ -46,15 +46,11 @@ import { bridgeInfoFor } from "@snowbridge/registry"
         TOKEN_CONTRACT,
     )
     // Step 1. Get the delivery fee for the transaction
-    const fee = await transferImpl.getDeliveryFee(
-        TOKEN_CONTRACT, // The erc20 token contract address
-        DESTINATION_PARACHAIN, // Destination parachain
-    )
+    const fee = await transferImpl.getDeliveryFee(TOKEN_CONTRACT)
 
     // Step 2. Create a transfer tx.
     const amount = 15_000_000_000_000n // 0.000015 ETH
     const transfer = await transferImpl.createTransfer(
-        DESTINATION_PARACHAIN, // Destination parachain
         ETHEREUM_ACCOUNT_PUBLIC, // Source account
         POLKADOT_ACCOUNT_PUBLIC, // Destination account
         TOKEN_CONTRACT, // The erc20 token contract address

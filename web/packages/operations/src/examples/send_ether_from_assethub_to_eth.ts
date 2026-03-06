@@ -52,15 +52,11 @@ import { bridgeInfoFor } from "@snowbridge/registry"
         TOKEN_CONTRACT,
     )
     // Step 1. Get the delivery fee for the transaction
-    const fee = await transferImpl.getDeliveryFee(
-        { sourceParaId: SOURCE_PARACHAIN }, // The source parachain
-        TOKEN_CONTRACT, // The token being transferred
-    )
+    const fee = await transferImpl.getDeliveryFee(TOKEN_CONTRACT)
 
     // Step 2. Create a transfer tx
     const amount = 15_000_000_000_000n // 0.000015 ETH
     const transfer = await transferImpl.createTransfer(
-        { sourceParaId: SOURCE_PARACHAIN }, // The source parachain
         POLKADOT_ACCOUNT_PUBLIC, // The source account
         ETHEREUM_ACCOUNT_PUBLIC, // The destination account
         TOKEN_CONTRACT, // The transfer token

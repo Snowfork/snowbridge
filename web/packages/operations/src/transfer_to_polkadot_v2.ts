@@ -74,14 +74,13 @@ export const transferToPolkadot = async (
         // Step 1. Get the delivery fee for the transaction
         const feeAssetLocation =
             feeAsset?.toLowerCase() === "dot" ? xcmBuilder.DOT_LOCATION : undefined
-        let fee = await transferImpl.getDeliveryFee(TOKEN_CONTRACT, destParaId, {
+        let fee = await transferImpl.getDeliveryFee(TOKEN_CONTRACT, {
             feeAsset: feeAssetLocation,
         })
 
         console.log("fee: ", fee)
         // Step 2. Create a transfer tx
         const transfer = await transferImpl.createTransfer(
-            destParaId,
             ETHEREUM_ACCOUNT_PUBLIC,
             POLKADOT_ACCOUNT_PUBLIC,
             TOKEN_CONTRACT,

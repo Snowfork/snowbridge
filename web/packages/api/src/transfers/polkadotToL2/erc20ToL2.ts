@@ -9,7 +9,7 @@ import {
     buildTransferXcmFromAssetHub,
 } from "../../xcmbuilders/toEthereum/erc20FromAH"
 import { buildTransferXcmFromAssetHubWithDOTAsFee } from "../../xcmbuilders/toEthereum/erc20FromAHWithDotAsFee"
-import { Asset, AssetRegistry, ContractCall } from "@snowbridge/base-types"
+import { Asset, AssetRegistry, ChainId, ContractCall } from "@snowbridge/base-types"
 import { paraImplementation } from "../../parachains"
 import {
     buildMessageId,
@@ -33,12 +33,13 @@ import {
 
 export class ERC20FromAH implements TransferInterface {
     constructor(
-        private readonly context: EthersContext,
-        private readonly registry: AssetRegistry,
+        public readonly context: EthersContext,
+        public readonly registry: AssetRegistry,
+        public readonly from: ChainId,
+        public readonly to: ChainId,
     ) {}
 
     async getDeliveryFee(
-        l2ChainId: number,
         tokenAddress: string,
         amount: bigint,
         options?: {
@@ -55,11 +56,7 @@ export class ERC20FromAH implements TransferInterface {
         const registry = this.registry
         const assetHub = await context.assetHub()
 
-        const { sourceAssetMetadata } = resolveInputs(
-            registry,
-            tokenAddress,
-            registry.assetHubParaId,
-        )
+        const { sourceAssetMetadata } = resolveInputs(registry, tokenAddress, this.from.id)
 
         let localXcm = buildTransferXcmFromAssetHub(
             assetHub.registry,
@@ -92,14 +89,13 @@ export class ERC20FromAH implements TransferInterface {
                 forwardedXcmToBH,
             },
             options,
-            l2ChainId,
+            this.to.id,
             amount,
         )
         return fees
     }
 
     async createTransfer(
-        l2ChainId: number,
         tokenAddress: string,
         amount: bigint,
         sourceAccount: string,
@@ -118,7 +114,7 @@ export class ERC20FromAH implements TransferInterface {
         if (!isHex(sourceAccountHex)) {
             sourceAccountHex = u8aToHex(decodeAddress(sourceAccount))
         }
-        const parachain = await context.parachain(registry.assetHubParaId)
+        const parachain = await context.parachain(this.from.id)
 
         const sourceParachainImpl = await paraImplementation(parachain)
         const { tokenErcMetadata, sourceParachain, ahAssetMetadata, sourceAssetMetadata } =
@@ -138,7 +134,7 @@ export class ERC20FromAH implements TransferInterface {
             context,
             registry,
             tokenAddress,
-            l2ChainId,
+            this.to.id,
             amount,
             beneficiaryAccount,
             messageId,

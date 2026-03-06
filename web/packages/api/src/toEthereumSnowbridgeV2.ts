@@ -1,7 +1,7 @@
 import { ApiPromise } from "@polkadot/api"
 import { SubmittableExtrinsic } from "@polkadot/api/types"
 import { Codec, ISubmittableResult } from "@polkadot/types/types"
-import { AssetRegistry, ContractCall } from "@snowbridge/base-types"
+import { AssetRegistry, ChainId, ContractCall } from "@snowbridge/base-types"
 import { CallDryRunEffects, XcmDryRunApiError, XcmDryRunEffects } from "@polkadot/types/interfaces"
 import { Result } from "@polkadot/types"
 import {
@@ -41,24 +41,26 @@ export { ValidationKind, signAndSendTransfer } from "./toEthereum_v2"
 
 export function createTransferImplementation(
     context: EthersContext,
-    sourceParaId: number,
+    from: ChainId,
+    to: ChainId,
     registry: AssetRegistry,
     tokenAddress: string,
 ): TransferInterface {
+    const sourceParaId = from.id
     const { sourceAssetMetadata } = resolveInputs(registry, tokenAddress, sourceParaId)
 
     let transferImpl
     if (sourceParaId == registry.assetHubParaId) {
         if (sourceAssetMetadata.location) {
-            transferImpl = new PNAFromAH(context, registry)
+            transferImpl = new PNAFromAH(context, registry, from, to)
         } else {
-            transferImpl = new ERC20FromAH(context, registry)
+            transferImpl = new ERC20FromAH(context, registry, from, to)
         }
     } else {
         if (sourceAssetMetadata.location) {
-            transferImpl = new PNAFromParachain(context, registry)
+            transferImpl = new PNAFromParachain(context, registry, from, to)
         } else {
-            transferImpl = new ERC20FromParachain(context, registry)
+            transferImpl = new ERC20FromParachain(context, registry, from, to)
         }
     }
     return transferImpl
@@ -66,14 +68,16 @@ export function createTransferImplementation(
 
 export function createL2TransferImplementation(
     context: EthersContext,
-    sourceParaId: number,
+    from: ChainId,
+    to: ChainId,
     registry: AssetRegistry,
     tokenAddress: string,
 ): TransferInterfaceToL2 {
+    const sourceParaId = from.id
     // Todo: Support PNA transfers to L2
     const { sourceAssetMetadata } = resolveInputs(registry, tokenAddress, sourceParaId)
 
-    let transferImpl = new ERC20FromAHToL2(context, registry)
+    let transferImpl = new ERC20FromAHToL2(context, registry, from, to)
 
     return transferImpl
 }

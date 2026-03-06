@@ -58,7 +58,7 @@ export const transferToEthereum = async (
             TOKEN_CONTRACT,
         )
         // Step 1. Get the delivery fee for the transaction
-        let fee = await transferImpl.getDeliveryFee({ sourceParaId }, TOKEN_CONTRACT, {
+        let fee = await transferImpl.getDeliveryFee(TOKEN_CONTRACT, {
             feeTokenLocation: options?.feeTokenLocation,
             slippagePadPercentage: 20n,
             contractCall: options?.contractCall,
@@ -66,7 +66,6 @@ export const transferToEthereum = async (
 
         // Step 2. Create a transfer tx
         const transfer = await transferImpl.createTransfer(
-            { sourceParaId },
             POLKADOT_ACCOUNT_PUBLIC,
             ETHEREUM_ACCOUNT_PUBLIC,
             TOKEN_CONTRACT,
