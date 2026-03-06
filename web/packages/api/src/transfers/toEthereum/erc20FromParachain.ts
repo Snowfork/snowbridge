@@ -11,7 +11,7 @@ import {
 } from "../../xcmbuilders/toEthereum/erc20FromParachain"
 import { buildTransferXcmFromParachainWithDOTAsFee } from "../../xcmbuilders/toEthereum/erc20FromParachainWithDotAsFee"
 import { buildTransferXcmFromParachainWithNativeAssetFee } from "../../xcmbuilders/toEthereum/erc20FromParachainWithNativeAsFee"
-import { Asset, AssetRegistry, ChainId, ContractCall } from "@snowbridge/base-types"
+import { Asset, AssetRegistry, ChainId, ContractCall, TransferRoute } from "@snowbridge/base-types"
 import { paraImplementation } from "../../parachains"
 import {
     buildMessageId,
@@ -36,9 +36,16 @@ export class ERC20FromParachain implements TransferInterface {
     constructor(
         public readonly context: EthersContext,
         public readonly registry: AssetRegistry,
-        public readonly from: ChainId,
-        public readonly to: ChainId,
+        public readonly route: TransferRoute,
     ) {}
+
+    get from(): ChainId {
+        return this.route.from
+    }
+
+    get to(): ChainId {
+        return this.route.to
+    }
 
     async getDeliveryFee(
         tokenAddress: string,

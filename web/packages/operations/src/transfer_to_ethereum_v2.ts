@@ -55,7 +55,6 @@ export const transferToEthereum = async (
         const transferImpl = api.transfer(
             { kind: "polkadot", id: sourceParaId },
             { kind: "ethereum", id: registry.ethChainId },
-            TOKEN_CONTRACT,
         )
         // Step 1. Get the delivery fee for the transaction
         let fee = await transferImpl.getDeliveryFee(TOKEN_CONTRACT, {
