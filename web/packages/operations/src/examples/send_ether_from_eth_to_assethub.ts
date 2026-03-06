@@ -47,8 +47,6 @@ import { bridgeInfoFor } from "@snowbridge/registry"
     )
     // Step 1. Get the delivery fee for the transaction
     const fee = await transferImpl.getDeliveryFee(
-        context, // The context
-        registry, // Asset registry
         TOKEN_CONTRACT, // The erc20 token contract address
         DESTINATION_PARACHAIN, // Destination parachain
     )
@@ -56,8 +54,6 @@ import { bridgeInfoFor } from "@snowbridge/registry"
     // Step 2. Create a transfer tx.
     const amount = 15_000_000_000_000n // 0.000015 ETH
     const transfer = await transferImpl.createTransfer(
-        context, // The context
-        registry, // Asset registry
         DESTINATION_PARACHAIN, // Destination parachain
         ETHEREUM_ACCOUNT_PUBLIC, // Source account
         POLKADOT_ACCOUNT_PUBLIC, // Destination account
@@ -67,10 +63,7 @@ import { bridgeInfoFor } from "@snowbridge/registry"
     )
 
     // Step 3. Validate the transaction by dry-running on source and destination.
-    const validation = await transferImpl.validateTransfer(
-        context, // The context
-        transfer, // The transfer tx
-    )
+    const validation = await transferImpl.validateTransfer(transfer)
     console.log("validation result", validation)
 
     // Step 4. Check validation logs for dry errors
@@ -106,7 +99,7 @@ import { bridgeInfoFor } from "@snowbridge/registry"
     }
 
     // Step 6. Get the message receipt for tracking purposes
-    const message = await transferImpl.getMessageReceipt(context, receipt)
+    const message = await transferImpl.getMessageReceipt(receipt)
     if (!message) {
         throw Error(`Transaction ${receipt.hash} did not emit a message.`)
     }

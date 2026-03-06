@@ -107,8 +107,6 @@ export const transferToPolkadot = async (
         )
         // Step 1. Get the delivery fee for the transaction
         const fee = await transferImpl.getDeliveryFee(
-            context,
-            registry,
             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
             TOKEN_CONTRACT!,
             destinationChainId,
@@ -116,8 +114,6 @@ export const transferToPolkadot = async (
 
         // Step 2. Create a transfer tx
         const transfer = await transferImpl.createTransfer(
-            context,
-            registry,
             destinationChainId,
             ETHEREUM_ACCOUNT_PUBLIC,
             POLKADOT_ACCOUNT_PUBLIC,
@@ -128,7 +124,7 @@ export const transferToPolkadot = async (
         )
 
         // Step 3. Validate the transaction.
-        const validation = await transferImpl.validateTransfer(context, transfer)
+        const validation = await transferImpl.validateTransfer(transfer)
         console.log("validation result", validation)
 
         // Step 4. Check validation logs for errors
@@ -163,7 +159,7 @@ export const transferToPolkadot = async (
             }
 
             // Step 7. Get the message receipt for tracking purposes
-            const message = await transferImpl.getMessageReceipt(context, receipt)
+            const message = await transferImpl.getMessageReceipt(receipt)
             if (!message) {
                 throw Error(`Transaction ${receipt.hash} did not emit a message.`)
             }

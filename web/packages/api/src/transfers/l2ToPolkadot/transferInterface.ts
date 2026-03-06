@@ -1,6 +1,4 @@
-import { AssetRegistry } from "@snowbridge/base-types"
 import { TransactionReceipt } from "ethers"
-import { EthersContext } from "../../index"
 import {
     DeliveryFee,
     MessageReceipt,
@@ -10,8 +8,6 @@ import {
 
 export interface TransferInterface {
     getDeliveryFee(
-        context: EthersContext,
-        registry: AssetRegistry,
         l2ChainId: number,
         tokenAddress: string,
         amount: bigint,
@@ -27,8 +23,6 @@ export interface TransferInterface {
     ): Promise<DeliveryFee>
 
     createTransfer(
-        context: EthersContext,
-        registry: AssetRegistry,
         l2ChainId: number,
         tokenAddress: string,
         amount: bigint,
@@ -42,10 +36,7 @@ export interface TransferInterface {
         },
     ): Promise<Transfer>
 
-    validateTransfer(context: EthersContext, transfer: Transfer): Promise<ValidationResult>
+    validateTransfer(transfer: Transfer): Promise<ValidationResult>
 
-    getMessageReceipt(
-        context: EthersContext,
-        receipt: TransactionReceipt,
-    ): Promise<MessageReceipt | null>
+    getMessageReceipt(receipt: TransactionReceipt): Promise<MessageReceipt | null>
 }

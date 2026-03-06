@@ -32,9 +32,12 @@ import {
 } from "../../toEthereumSnowbridgeV2"
 
 export class ERC20FromAH implements TransferInterface {
+    constructor(
+        private readonly context: EthersContext,
+        private readonly registry: AssetRegistry,
+    ) {}
+
     async getDeliveryFee(
-        context: EthersContext,
-        registry: AssetRegistry,
         l2ChainId: number,
         tokenAddress: string,
         amount: bigint,
@@ -48,6 +51,8 @@ export class ERC20FromAH implements TransferInterface {
             fillDeadlineBuffer?: bigint
         },
     ): Promise<DeliveryFee> {
+        const context = this.context
+        const registry = this.registry
         const assetHub = await context.assetHub()
 
         const { sourceAssetMetadata } = resolveInputs(
@@ -94,8 +99,6 @@ export class ERC20FromAH implements TransferInterface {
     }
 
     async createTransfer(
-        context: EthersContext,
-        registry: AssetRegistry,
         l2ChainId: number,
         tokenAddress: string,
         amount: bigint,
@@ -107,6 +110,8 @@ export class ERC20FromAH implements TransferInterface {
             contractCall?: ContractCall
         },
     ): Promise<Transfer> {
+        const context = this.context
+        const registry = this.registry
         const { ethChainId } = registry
 
         let sourceAccountHex = sourceAccount
@@ -208,17 +213,16 @@ export class ERC20FromAH implements TransferInterface {
         }
     }
 
-    async validateTransfer(context: EthersContext, transfer: Transfer): Promise<ValidationResult> {
-        return validateTransferFromAssetHub(context, transfer)
+    async validateTransfer(transfer: Transfer): Promise<ValidationResult> {
+        return validateTransferFromAssetHub(this.context, transfer)
     }
 
     async signAndSend(
-        context: EthersContext,
         transfer: Transfer,
         account: AddressOrPair,
         options: Partial<SignerOptions>,
     ): Promise<MessageReceipt> {
-        const sourceParachain = await context.parachain(transfer.computed.sourceParaId)
+        const sourceParachain = await this.context.parachain(transfer.computed.sourceParaId)
         return signAndSendTransfer(sourceParachain, transfer, account, options)
     }
 }
