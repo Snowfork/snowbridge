@@ -17,18 +17,24 @@
     "ShanghaiTime": 0,
     "CancunTime": 0,
     "PragueTime": 0,
+    "OsakaTime": 0,
     "terminalTotalDifficultyPassed": true,
     "terminalTotalDifficulty": 0,
     "blobSchedule": {
       "cancun": {
-        "max": 0,
-        "target": 0,
-        "baseFeeUpdateFraction": 1
+        "max": 6,
+        "target": 3,
+        "baseFeeUpdateFraction": 3338477
       },
       "prague": {
-        "max": 0,
-        "target": 0,
-        "baseFeeUpdateFraction": 1
+        "max": 6,
+        "target": 3,
+        "baseFeeUpdateFraction": 3338477
+      },
+      "osaka": {
+        "max": 6,
+        "target": 3,
+        "baseFeeUpdateFraction": 3338477
       }
     }
   },

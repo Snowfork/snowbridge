@@ -12,6 +12,7 @@ type Config struct {
 	Sink                SinkConfig        `mapstructure:"sink"`
 	InstantVerification bool              `mapstructure:"instantVerification"`
 	OFAC                config.OFACConfig `mapstructure:"ofac"`
+	FetchInterval       uint32            `mapstructure:"fetch-interval"`
 }
 
 type SourceConfig struct {

@@ -11,6 +11,7 @@ type Config struct {
 	Source        SourceConfig `mapstructure:"source"`
 	Sink          SinkConfig   `mapstructure:"sink"`
 	RewardAddress string       `mapstructure:"reward-address"`
+	FetchInterval uint32       `mapstructure:"fetch-interval"`
 }
 
 type SourceConfig struct {

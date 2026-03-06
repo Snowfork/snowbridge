@@ -15,8 +15,8 @@ zombienet_data_dir="$output_dir/zombienet"
 export PATH="$output_bin_dir:$PATH"
 polkadot_sdk_dir="${POLKADOT_SDK_DIR:-../polkadot-sdk}"
 
-export GETH_VERSION=v1.16.4
-export LODESTAR_VERSION=v1.35.0
+export GETH_VERSION=v1.17.1
+export LODESTAR_VERSION=v1.40.0
 rebuild_web_packages="${REBUILD_WEB_API:-false}"
 
 eth_network="${ETH_NETWORK:-localhost}"
@@ -59,6 +59,8 @@ relaychain_ws_url="${RELAYCHAIN_WS_URL:-ws://127.0.0.1:9944}"
 relaychain_sudo_seed="${RELAYCHAIN_SUDO_SEED:-//Alice}"
 
 skip_relayer="${SKIP_RELAYER:-false}"
+skip_penpal_config="${SKIP_PENPAL_CONFIG:-true}"
+skip_build_gas_estimator="${SKIP_BUILD_GAS_ESTIMATOR:-true}"
 
 ## Important accounts
 
@@ -88,7 +90,7 @@ export ETHERSCAN_API_KEY="${ETHERSCAN_API_KEY:-0x0}"
 # but for rococo-local each session is only 20 slots=120s
 # so relax somehow here just for quick test
 # for production deployment ETH_RANDAO_DELAY should be configured in a more reasonable sense
-export RANDAO_COMMIT_DELAY="${ETH_RANDAO_DELAY:-4}"
+export RANDAO_COMMIT_DELAY="${ETH_RANDAO_DELAY:-1}"
 export RANDAO_COMMIT_EXP="${ETH_RANDAO_EXP:-32}"
 export MINIMUM_REQUIRED_SIGNATURES="${MINIMUM_REQUIRED_SIGNATURES:-17}"
 export FIAT_SHAMIR_REQUIRED_SIGNATURES="${FIAT_SHAMIR_REQUIRED_SIGNATURES:-101}"
