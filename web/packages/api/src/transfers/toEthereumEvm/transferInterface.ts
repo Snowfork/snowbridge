@@ -10,7 +10,6 @@ import { EventRecord } from "@polkadot/types/interfaces"
 import { ContractTransaction, TransactionReceipt } from "ethers"
 import { OperationStatus } from "../../status"
 import { DeliveryFee, FeeInfo, ValidationLog } from "../../toEthereum_v2"
-import { EthersContext } from "../../index"
 
 export type TransferEvm = {
     input: {
@@ -65,8 +64,7 @@ export type MessageReceiptEvm = {
 
 export interface TransferInterface {
     getDeliveryFee(
-        source: { sourceParaId: number; context: EthersContext },
-        registry: AssetRegistry,
+        source: { sourceParaId: number },
         tokenAddress: string,
         options?: {
             padPercentage?: bigint
@@ -79,8 +77,7 @@ export interface TransferInterface {
     ): Promise<DeliveryFee>
 
     createTransfer(
-        source: { sourceParaId: number; context: EthersContext },
-        registry: AssetRegistry,
+        source: { sourceParaId: number },
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
@@ -92,10 +89,10 @@ export interface TransferInterface {
         },
     ): Promise<TransferEvm>
 
-    validateTransfer(context: EthersContext, transfer: TransferEvm): Promise<ValidationResultEvm>
+    validateTransfer(transfer: TransferEvm): Promise<ValidationResultEvm>
 
     getMessageReceipt(
-        source: { sourceParaId: number; context: EthersContext },
+        source: { sourceParaId: number },
         receipt: TransactionReceipt,
     ): Promise<MessageReceiptEvm>
 }

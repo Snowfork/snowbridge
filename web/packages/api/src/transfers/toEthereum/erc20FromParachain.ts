@@ -33,9 +33,13 @@ import {
 } from "../../toEthereumSnowbridgeV2"
 
 export class ERC20FromParachain implements TransferInterface {
+    constructor(
+        private readonly context: EthersContext,
+        private readonly registry: AssetRegistry,
+    ) {}
+
     async getDeliveryFee(
-        source: { sourceParaId: number; context: EthersContext },
-        registry: AssetRegistry,
+        source: { sourceParaId: number },
         tokenAddress: string,
         options?: {
             padPercentage?: bigint
@@ -49,19 +53,23 @@ export class ERC20FromParachain implements TransferInterface {
         const { assetHub, parachain } =
             "sourceParaId" in source
                 ? {
-                      assetHub: await source.context.assetHub(),
-                      parachain: await source.context.parachain(source.sourceParaId),
+                      assetHub: await this.context.assetHub(),
+                      parachain: await this.context.parachain(source.sourceParaId),
                   }
                 : source
 
         const sourceParachainImpl = await paraImplementation(parachain)
-        const { sourceAssetMetadata } = resolveInputs(registry, tokenAddress, source.sourceParaId)
+        const { sourceAssetMetadata } = resolveInputs(
+            this.registry,
+            tokenAddress,
+            source.sourceParaId,
+        )
 
         let forwardXcmToAH: any, forwardedXcmToBH: any, localXcm: any
 
         forwardXcmToAH = buildResultXcmAssetHubERC20TransferFromParachain(
             assetHub.registry,
-            registry.ethChainId,
+            this.registry.ethChainId,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000",
@@ -77,9 +85,9 @@ export class ERC20FromParachain implements TransferInterface {
 
         localXcm = buildTransferXcmFromParachain(
             parachain.registry,
-            registry.environment,
-            registry.ethChainId,
-            registry.assetHubParaId,
+            this.registry.environment,
+            this.registry.ethChainId,
+            this.registry.assetHubParaId,
             sourceParachainImpl.parachainId,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000",
@@ -91,7 +99,7 @@ export class ERC20FromParachain implements TransferInterface {
 
         forwardedXcmToBH = buildExportXcm(
             assetHub.registry,
-            registry.ethChainId,
+            this.registry.ethChainId,
             sourceAssetMetadata,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000",
@@ -101,9 +109,9 @@ export class ERC20FromParachain implements TransferInterface {
         )
 
         const fees = await estimateFeesFromParachains(
-            source.context,
+            this.context,
             source.sourceParaId,
-            registry,
+            this.registry,
             tokenAddress,
             {
                 localXcm,
@@ -116,8 +124,7 @@ export class ERC20FromParachain implements TransferInterface {
     }
 
     async createTransfer(
-        source: { sourceParaId: number; context: EthersContext },
-        registry: AssetRegistry,
+        source: { sourceParaId: number },
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
@@ -128,6 +135,7 @@ export class ERC20FromParachain implements TransferInterface {
             contractCall?: ContractCall
         },
     ): Promise<Transfer> {
+        const registry = this.registry
         const { ethChainId, assetHubParaId, environment } = registry
 
         let sourceAccountHex = sourceAccount
@@ -136,7 +144,7 @@ export class ERC20FromParachain implements TransferInterface {
         }
         const { parachain } =
             "sourceParaId" in source
-                ? { parachain: await source.context.parachain(source.sourceParaId) }
+                ? { parachain: await this.context.parachain(source.sourceParaId) }
                 : source
 
         const sourceParachainImpl = await paraImplementation(parachain)
@@ -155,7 +163,7 @@ export class ERC20FromParachain implements TransferInterface {
         let claimerLocation = options?.claimerLocation
         let callHex: string | undefined
         if (options?.contractCall) {
-            callHex = await buildContractCallHex(source.context, options.contractCall)
+            callHex = await buildContractCallHex(this.context, options.contractCall)
         }
         let xcm: any
         if (!fee.feeLocation) {
@@ -236,17 +244,16 @@ export class ERC20FromParachain implements TransferInterface {
         }
     }
 
-    async validateTransfer(context: EthersContext, transfer: Transfer): Promise<ValidationResult> {
-        return validateTransferFromParachain(context, transfer)
+    async validateTransfer(transfer: Transfer): Promise<ValidationResult> {
+        return validateTransferFromParachain(this.context, transfer)
     }
 
     async signAndSend(
-        context: EthersContext,
         transfer: Transfer,
         account: AddressOrPair,
         options: Partial<SignerOptions>,
     ): Promise<MessageReceipt> {
-        const sourceParachain = await context.parachain(transfer.computed.sourceParaId)
+        const sourceParachain = await this.context.parachain(transfer.computed.sourceParaId)
         return signAndSendTransfer(sourceParachain, transfer, account, options)
     }
 }

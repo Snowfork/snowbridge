@@ -32,9 +32,13 @@ import {
 } from "./transfers/toEthereumEvm/transferInterface"
 
 export class V1ToEthereumEvmAdapter implements ToEthereumEvmTransferInterface {
+    constructor(
+        private readonly context: EthersContext,
+        private readonly registry: AssetRegistry,
+    ) {}
+
     async getDeliveryFee(
-        source: { sourceParaId: number; context: EthersContext },
-        registry: AssetRegistry,
+        source: { sourceParaId: number },
         tokenAddress: string,
         options?: {
             padPercentage?: bigint
@@ -54,18 +58,24 @@ export class V1ToEthereumEvmAdapter implements ToEthereumEvmTransferInterface {
         if (options?.contractCall !== undefined) {
             throw new Error("v1 toEthereumEVM adapter does not support options.contractCall.")
         }
-        const assetHub = await source.context.assetHub()
-        const parachain = await source.context.parachain(source.sourceParaId)
-        return getDeliveryFeeV1(assetHub, parachain, source.sourceParaId, registry, tokenAddress, {
-            padPercentage: options?.padPercentage,
-            slippagePadPercentage: options?.slippagePadPercentage,
-            defaultFee: options?.defaultFee,
-        })
+        const assetHub = await this.context.assetHub()
+        const parachain = await this.context.parachain(source.sourceParaId)
+        return getDeliveryFeeV1(
+            assetHub,
+            parachain,
+            source.sourceParaId,
+            this.registry,
+            tokenAddress,
+            {
+                padPercentage: options?.padPercentage,
+                slippagePadPercentage: options?.slippagePadPercentage,
+                defaultFee: options?.defaultFee,
+            },
+        )
     }
 
     async createTransfer(
-        source: { sourceParaId: number; context: EthersContext },
-        registry: AssetRegistry,
+        source: { sourceParaId: number },
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
@@ -83,6 +93,7 @@ export class V1ToEthereumEvmAdapter implements ToEthereumEvmTransferInterface {
             throw new Error("v1 toEthereumEVM adapter does not support options.contractCall.")
         }
 
+        const registry = this.registry
         const { ethChainId, assetHubParaId } = registry
 
         let sourceAccountHex = sourceAccount
@@ -93,7 +104,7 @@ export class V1ToEthereumEvmAdapter implements ToEthereumEvmTransferInterface {
             throw Error(`Source address ${sourceAccountHex} is not a 20 byte address.`)
         }
 
-        const parachain = await source.context.parachain(source.sourceParaId)
+        const parachain = await this.context.parachain(source.sourceParaId)
         const sourceParachainImpl = await paraImplementation(parachain)
         const { tokenErcMetadata, sourceParachain, ahAssetMetadata, sourceAssetMetadata } =
             resolveInputs(registry, tokenAddress, sourceParachainImpl.parachainId)
@@ -143,8 +154,8 @@ export class V1ToEthereumEvmAdapter implements ToEthereumEvmTransferInterface {
         )
 
         const tx =
-            await source.context.ethereumProvider.evmParachainTransferAssetsUsingTypeAndThenAddress(
-                source.context.ethChain(sourceParachain.info.evmChainId),
+            await this.context.ethereumProvider.evmParachainTransferAssetsUsingTypeAndThenAddress(
+                this.context.ethChain(sourceParachain.info.evmChainId),
                 ethChain.precompile,
                 sourceAccountHex,
                 [1, ["0x00" + numberToHex(assetHubParaId, 32).slice(2)]],
@@ -181,10 +192,8 @@ export class V1ToEthereumEvmAdapter implements ToEthereumEvmTransferInterface {
         }
     }
 
-    async validateTransfer(
-        context: EthersContext,
-        transfer: TransferEvm,
-    ): Promise<ValidationResultEvm> {
+    async validateTransfer(transfer: TransferEvm): Promise<ValidationResultEvm> {
+        const context = this.context
         const { registry, fee, tokenAddress, amount, beneficiaryAccount } = transfer.input
         const {
             sourceAccountHex,
@@ -420,10 +429,10 @@ export class V1ToEthereumEvmAdapter implements ToEthereumEvmTransferInterface {
     }
 
     async getMessageReceipt(
-        source: { sourceParaId: number; context: EthersContext },
+        source: { sourceParaId: number },
         receipt: TransactionReceipt,
     ): Promise<MessageReceiptEvm> {
-        const sourceParachain = await source.context.parachain(source.sourceParaId)
+        const sourceParachain = await this.context.parachain(source.sourceParaId)
         const blockHash = await sourceParachain.rpc.chain.getBlockHash(receipt.blockNumber)
         const events = await (
             await sourceParachain.at(blockHash)
@@ -477,9 +486,9 @@ export class V1ToEthereumEvmAdapter implements ToEthereumEvmTransferInterface {
 }
 
 export function createTransferImplementationV1(
-    _sourceParaId: number,
-    _registry: AssetRegistry,
+    context: EthersContext,
+    registry: AssetRegistry,
     _tokenAddress: string,
 ): ToEthereumEvmTransferInterface {
-    return new V1ToEthereumEvmAdapter()
+    return new V1ToEthereumEvmAdapter(context, registry)
 }

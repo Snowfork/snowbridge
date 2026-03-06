@@ -92,9 +92,13 @@ export type FeeInfo = {
 }
 
 export class V1ToEthereumAdapter implements ToEthereumTransferInterface {
+    constructor(
+        private readonly context: EthersContext,
+        private readonly registry: AssetRegistry,
+    ) {}
+
     async getDeliveryFee(
-        source: { sourceParaId: number; context: EthersContext },
-        registry: AssetRegistry,
+        source: { sourceParaId: number },
         tokenAddress: string,
         options?: {
             padPercentage?: bigint
@@ -115,18 +119,24 @@ export class V1ToEthereumAdapter implements ToEthereumTransferInterface {
             throw new Error("v1 toEthereum adapter does not support options.contractCall.")
         }
 
-        const assetHub = await source.context.assetHub()
-        const parachain = await source.context.parachain(source.sourceParaId)
-        return getDeliveryFeeV1(assetHub, parachain, source.sourceParaId, registry, tokenAddress, {
-            padPercentage: options?.padPercentage,
-            slippagePadPercentage: options?.slippagePadPercentage,
-            defaultFee: options?.defaultFee,
-        })
+        const assetHub = await this.context.assetHub()
+        const parachain = await this.context.parachain(source.sourceParaId)
+        return getDeliveryFeeV1(
+            assetHub,
+            parachain,
+            source.sourceParaId,
+            this.registry,
+            tokenAddress,
+            {
+                padPercentage: options?.padPercentage,
+                slippagePadPercentage: options?.slippagePadPercentage,
+                defaultFee: options?.defaultFee,
+            },
+        )
     }
 
     async createTransfer(
-        source: { sourceParaId: number; context: EthersContext },
-        registry: AssetRegistry,
+        source: { sourceParaId: number },
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
@@ -144,6 +154,7 @@ export class V1ToEthereumAdapter implements ToEthereumTransferInterface {
             throw new Error("v1 toEthereum adapter does not support options.contractCall.")
         }
 
+        const registry = this.registry
         const { ethChainId, assetHubParaId } = registry
 
         let sourceAccountHex = sourceAccount
@@ -151,7 +162,7 @@ export class V1ToEthereumAdapter implements ToEthereumTransferInterface {
             sourceAccountHex = u8aToHex(decodeAddress(sourceAccount))
         }
 
-        const parachain = await source.context.parachain(source.sourceParaId)
+        const parachain = await this.context.parachain(source.sourceParaId)
 
         const sourceParachainImpl = await paraImplementation(parachain)
         const { tokenErcMetadata, sourceParachain, ahAssetMetadata, sourceAssetMetadata } =
@@ -241,7 +252,8 @@ export class V1ToEthereumAdapter implements ToEthereumTransferInterface {
         }
     }
 
-    async validateTransfer(context: EthersContext, transfer: Transfer): Promise<ValidationResult> {
+    async validateTransfer(transfer: Transfer): Promise<ValidationResult> {
+        const context = this.context
         const { registry, fee, tokenAddress, amount, beneficiaryAccount } = transfer.input
         const {
             sourceAccountHex,
@@ -565,22 +577,21 @@ export class V1ToEthereumAdapter implements ToEthereumTransferInterface {
     }
 
     async signAndSend(
-        context: EthersContext,
         transfer: Transfer,
         account: AddressOrPair,
         options: Partial<SignerOptions>,
     ): Promise<MessageReceipt> {
-        const sourceParachain = await context.parachain(transfer.computed.sourceParaId)
+        const sourceParachain = await this.context.parachain(transfer.computed.sourceParaId)
         return signAndSendTransfer(sourceParachain, transfer, account, options)
     }
 }
 
 export function createTransferImplementationV1(
-    _sourceParaId: number,
-    _registry: AssetRegistry,
+    context: EthersContext,
+    registry: AssetRegistry,
     _tokenAddress: string,
 ): ToEthereumTransferInterface {
-    return new V1ToEthereumAdapter()
+    return new V1ToEthereumAdapter(context, registry)
 }
 
 export enum ValidationKind {

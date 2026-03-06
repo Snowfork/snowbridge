@@ -513,6 +513,7 @@ export class SnowbridgeApi<
                 }
                 return withKind(
                     toEthereumTransfers.createTransferImplementation(
+                        this.context as any,
                         from.id,
                         this.info.registry,
                         tokenAddress,
@@ -525,6 +526,7 @@ export class SnowbridgeApi<
                 }
                 return withKind(
                     toPolkadotTransfers.createTransferImplementation(
+                        this.context as any,
                         to.id,
                         this.info.registry,
                         tokenAddress,
@@ -537,7 +539,7 @@ export class SnowbridgeApi<
                 }
                 return withKind(
                     toEthereumEvmTransfers.createTransferImplementationV1(
-                        from.id,
+                        this.context as any,
                         this.info.registry,
                         tokenAddress,
                     ),
@@ -549,6 +551,7 @@ export class SnowbridgeApi<
                 }
                 return withKind(
                     toEthereumTransfers.createL2TransferImplementation(
+                        this.context as any,
                         from.id,
                         this.info.registry,
                         tokenAddress,
@@ -561,6 +564,7 @@ export class SnowbridgeApi<
                 }
                 return withKind(
                     toPolkadotTransfers.createL2TransferImplementation(
+                        this.context as any,
                         from.id,
                         to.id,
                         this.info.registry,

@@ -40,6 +40,7 @@ import { estimateFees } from "./across/api"
 export { ValidationKind, signAndSendTransfer } from "./toEthereum_v2"
 
 export function createTransferImplementation(
+    context: EthersContext,
     sourceParaId: number,
     registry: AssetRegistry,
     tokenAddress: string,
@@ -49,21 +50,22 @@ export function createTransferImplementation(
     let transferImpl
     if (sourceParaId == registry.assetHubParaId) {
         if (sourceAssetMetadata.location) {
-            transferImpl = new PNAFromAH()
+            transferImpl = new PNAFromAH(context, registry)
         } else {
-            transferImpl = new ERC20FromAH()
+            transferImpl = new ERC20FromAH(context, registry)
         }
     } else {
         if (sourceAssetMetadata.location) {
-            transferImpl = new PNAFromParachain()
+            transferImpl = new PNAFromParachain(context, registry)
         } else {
-            transferImpl = new ERC20FromParachain()
+            transferImpl = new ERC20FromParachain(context, registry)
         }
     }
     return transferImpl
 }
 
 export function createL2TransferImplementation(
+    context: EthersContext,
     sourceParaId: number,
     registry: AssetRegistry,
     tokenAddress: string,
@@ -71,7 +73,7 @@ export function createL2TransferImplementation(
     // Todo: Support PNA transfers to L2
     const { sourceAssetMetadata } = resolveInputs(registry, tokenAddress, sourceParaId)
 
-    let transferImpl = new ERC20FromAHToL2()
+    let transferImpl = new ERC20FromAHToL2(context, registry)
 
     return transferImpl
 }
