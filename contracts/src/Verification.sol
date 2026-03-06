@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.33;
+pragma solidity 0.8.34;
 
 import {SubstrateMerkleProof} from "./utils/SubstrateMerkleProof.sol";
 import {BeefyClient} from "./BeefyClient.sol";
@@ -142,11 +142,11 @@ library Verification {
         bool isV2
     ) internal pure returns (bool) {
         bytes1 digestItemOtherKind = isV2 ? DIGEST_ITEM_OTHER_SNOWBRIDGE_V2 : DIGEST_ITEM_OTHER_SNOWBRIDGE;
-        
+
         for (uint256 i = 0; i < header.digestItems.length; i++) {
             // First check if the digest item is of the correct kind (DIGEST_ITEM_OTHER)
             // and has the correct length (33 bytes)
-            if (header.digestItems[i].kind == DIGEST_ITEM_OTHER && 
+            if (header.digestItems[i].kind == DIGEST_ITEM_OTHER &&
                 header.digestItems[i].data.length == 33 &&
                 header.digestItems[i].data[0] == digestItemOtherKind &&
                 commitment == bytes32(header.digestItems[i].data[1:])
