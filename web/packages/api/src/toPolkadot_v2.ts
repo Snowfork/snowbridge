@@ -2,7 +2,14 @@ import { MultiAddressStruct } from "./contracts"
 import { ContractTransaction, TransactionReceipt } from "ethers"
 import { padFeeByPercentage } from "./utils"
 import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
-import { Asset, AssetRegistry, ChainId, ERC20Metadata, Parachain } from "@snowbridge/base-types"
+import {
+    Asset,
+    AssetRegistry,
+    ChainId,
+    ERC20Metadata,
+    Parachain,
+    TransferRoute,
+} from "@snowbridge/base-types"
 import { getOperatingStatus, OperationStatus } from "./status"
 import { ApiPromise } from "@polkadot/api"
 import {
@@ -190,9 +197,16 @@ export class V1ToPolkadotAdapter implements ToPolkadotTransferInterface {
     constructor(
         public readonly context: EthersContext,
         public readonly registry: AssetRegistry,
-        public readonly from: ChainId,
-        public readonly to: ChainId,
+        public readonly route: TransferRoute,
     ) {}
+
+    get from(): ChainId {
+        return this.route.from
+    }
+
+    get to(): ChainId {
+        return this.route.to
+    }
 
     async getDeliveryFee(
         tokenAddress: string,
@@ -530,12 +544,11 @@ export class V1ToPolkadotAdapter implements ToPolkadotTransferInterface {
 
 export function createTransferImplementationV1(
     context: EthersContext,
-    from: ChainId,
-    to: ChainId,
+    route: TransferRoute,
     registry: AssetRegistry,
     _tokenAddress: string,
 ): ToPolkadotTransferInterface {
-    return new V1ToPolkadotAdapter(context, registry, from, to)
+    return new V1ToPolkadotAdapter(context, registry, route)
 }
 
 export function resolveInputs(

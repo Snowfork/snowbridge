@@ -1,12 +1,13 @@
 import { ApiPromise } from "@polkadot/api"
 import { SubmittableExtrinsic } from "@polkadot/api/types"
 import { Codec, ISubmittableResult } from "@polkadot/types/types"
-import { AssetRegistry, ChainId, ContractCall } from "@snowbridge/base-types"
+import { AssetRegistry, ChainId, ContractCall, TransferRoute } from "@snowbridge/base-types"
 import { CallDryRunEffects, XcmDryRunApiError, XcmDryRunEffects } from "@polkadot/types/interfaces"
 import { Result } from "@polkadot/types"
 import {
     DeliveryFee,
     dryRunBridgeHub,
+    MessageReceipt,
     resolveInputs,
     Transfer,
     ValidationKind,
@@ -16,9 +17,7 @@ import {
 } from "./toEthereum_v2"
 import { PNAFromAH } from "./transfers/toEthereum/pnaFromAH"
 import { TransferInterface } from "./transfers/toEthereum/transferInterface"
-import { TransferInterface as TransferInterfaceToL2 } from "./transfers/polkadotToL2/transferInterface"
 import { ERC20FromAH } from "./transfers/toEthereum/erc20FromAH"
-import { ERC20FromAH as ERC20FromAHToL2 } from "./transfers/polkadotToL2/erc20ToL2"
 import { PNAFromParachain } from "./transfers/toEthereum/pnaFromParachain"
 import { ERC20FromParachain } from "./transfers/toEthereum/erc20FromParachain"
 import {
@@ -39,47 +38,91 @@ import { estimateFees } from "./across/api"
 
 export { ValidationKind, signAndSendTransfer } from "./toEthereum_v2"
 
-export function createTransferImplementation(
-    context: EthersContext,
-    from: ChainId,
-    to: ChainId,
-    registry: AssetRegistry,
-    tokenAddress: string,
-): TransferInterface {
-    const sourceParaId = from.id
-    const { sourceAssetMetadata } = resolveInputs(registry, tokenAddress, sourceParaId)
+class TransferToEthereum implements TransferInterface {
+    #pnaImpl?: TransferInterface
+    #erc20Impl?: TransferInterface
 
-    let transferImpl
-    if (sourceParaId == registry.assetHubParaId) {
-        if (sourceAssetMetadata.location) {
-            transferImpl = new PNAFromAH(context, registry, from, to)
-        } else {
-            transferImpl = new ERC20FromAH(context, registry, from, to)
-        }
-    } else {
-        if (sourceAssetMetadata.location) {
-            transferImpl = new PNAFromParachain(context, registry, from, to)
-        } else {
-            transferImpl = new ERC20FromParachain(context, registry, from, to)
-        }
+    constructor(
+        private readonly context: EthersContext,
+        private readonly route: TransferRoute,
+        private readonly registry: AssetRegistry,
+    ) {}
+
+    get from(): ChainId {
+        return this.route.from
     }
-    return transferImpl
+
+    get to(): ChainId {
+        return this.route.to
+    }
+
+    #resolveByTokenAddress(tokenAddress: string): TransferInterface {
+        const sourceParaId = this.route.from.id
+        const { sourceAssetMetadata } = resolveInputs(this.registry, tokenAddress, sourceParaId)
+
+        if (sourceAssetMetadata.location) {
+            this.#pnaImpl ??=
+                sourceParaId == this.registry.assetHubParaId
+                    ? new PNAFromAH(this.context, this.registry, this.route)
+                    : new PNAFromParachain(this.context, this.registry, this.route)
+            return this.#pnaImpl
+        }
+
+        this.#erc20Impl ??=
+            sourceParaId == this.registry.assetHubParaId
+                ? new ERC20FromAH(this.context, this.registry, this.route)
+                : new ERC20FromParachain(this.context, this.registry, this.route)
+        return this.#erc20Impl
+    }
+
+    async getDeliveryFee(
+        tokenAddress: string,
+        options?: Parameters<TransferInterface["getDeliveryFee"]>[1],
+    ): Promise<DeliveryFee> {
+        return this.#resolveByTokenAddress(tokenAddress).getDeliveryFee(tokenAddress, options)
+    }
+
+    async createTransfer(
+        sourceAccount: string,
+        beneficiaryAccount: string,
+        tokenAddress: string,
+        amount: bigint,
+        fee: DeliveryFee,
+        options?: Parameters<TransferInterface["createTransfer"]>[5],
+    ): Promise<Transfer> {
+        return this.#resolveByTokenAddress(tokenAddress).createTransfer(
+            sourceAccount,
+            beneficiaryAccount,
+            tokenAddress,
+            amount,
+            fee,
+            options,
+        )
+    }
+
+    async validateTransfer(transfer: Transfer): Promise<ValidationResult> {
+        return this.#resolveByTokenAddress(transfer.input.tokenAddress).validateTransfer(transfer)
+    }
+
+    async signAndSend(
+        transfer: Transfer,
+        account: Parameters<TransferInterface["signAndSend"]>[1],
+        options: Parameters<TransferInterface["signAndSend"]>[2],
+    ): Promise<MessageReceipt> {
+        return this.#resolveByTokenAddress(transfer.input.tokenAddress).signAndSend(
+            transfer,
+            account,
+            options,
+        )
+    }
 }
 
-export function createL2TransferImplementation(
+export function createTransferImplementation(
     context: EthersContext,
-    from: ChainId,
-    to: ChainId,
+    route: TransferRoute,
     registry: AssetRegistry,
-    tokenAddress: string,
-): TransferInterfaceToL2 {
-    const sourceParaId = from.id
-    // Todo: Support PNA transfers to L2
-    const { sourceAssetMetadata } = resolveInputs(registry, tokenAddress, sourceParaId)
-
-    let transferImpl = new ERC20FromAHToL2(context, registry, from, to)
-
-    return transferImpl
+): TransferInterface {
+    return new TransferToEthereum(context, route, registry)
 }
 
 export async function dryRunOnSourceParachain(

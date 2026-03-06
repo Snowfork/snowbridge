@@ -9,7 +9,7 @@ import {
     buildTransferXcmFromAssetHub,
 } from "../../xcmbuilders/toEthereum/erc20FromAH"
 import { buildTransferXcmFromAssetHubWithDOTAsFee } from "../../xcmbuilders/toEthereum/erc20FromAHWithDotAsFee"
-import { Asset, AssetRegistry, ChainId, ContractCall } from "@snowbridge/base-types"
+import { Asset, AssetRegistry, ChainId, ContractCall, TransferRoute } from "@snowbridge/base-types"
 import { paraImplementation } from "../../parachains"
 import {
     buildMessageId,
@@ -34,9 +34,16 @@ export class ERC20FromAH implements TransferInterface {
     constructor(
         public readonly context: EthersContext,
         public readonly registry: AssetRegistry,
-        public readonly from: ChainId,
-        public readonly to: ChainId,
+        public readonly route: TransferRoute,
     ) {}
+
+    get from(): ChainId {
+        return this.route.from
+    }
+
+    get to(): ChainId {
+        return this.route.to
+    }
 
     async getDeliveryFee(
         tokenAddress: string,

@@ -27,6 +27,7 @@ import {
     ContractCall,
     ERC20Metadata,
     Parachain,
+    TransferRoute,
 } from "@snowbridge/base-types"
 import {
     CallDryRunEffects,
@@ -96,9 +97,16 @@ export class V1ToEthereumAdapter implements ToEthereumTransferInterface {
     constructor(
         public readonly context: EthersContext,
         public readonly registry: AssetRegistry,
-        public readonly from: ChainId,
-        public readonly to: ChainId,
+        public readonly route: TransferRoute,
     ) {}
+
+    get from(): ChainId {
+        return this.route.from
+    }
+
+    get to(): ChainId {
+        return this.route.to
+    }
 
     async getDeliveryFee(
         tokenAddress: string,
@@ -582,12 +590,11 @@ export class V1ToEthereumAdapter implements ToEthereumTransferInterface {
 
 export function createTransferImplementationV1(
     context: EthersContext,
-    from: ChainId,
-    to: ChainId,
+    route: TransferRoute,
     registry: AssetRegistry,
     _tokenAddress: string,
 ): ToEthereumTransferInterface {
-    return new V1ToEthereumAdapter(context, registry, from, to)
+    return new V1ToEthereumAdapter(context, registry, route)
 }
 
 export enum ValidationKind {
