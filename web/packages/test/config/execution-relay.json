@@ -38,9 +38,10 @@
     "apiKey": ""
   },
   "gasEstimation": {
-    "enabled": true,
+    "enabled": false,
     "binary-path": "../../../gas-estimator/target/release/snowbridge-gas-estimator",
     "asset-hub-url": "ws://127.0.0.1:12144",
     "bridge-hub-url": "ws://127.0.0.1:11144"
-  }
+  },
+  "fetch-interval": 5
 }

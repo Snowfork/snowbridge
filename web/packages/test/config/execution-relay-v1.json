@@ -37,5 +37,6 @@
   "ofac": {
     "enabled": false,
     "apiKey": ""
-  }
+  },
+  "fetch-interval": 5
 }

@@ -120,11 +120,18 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		"chainId": r.chainID,
 	}).Info("relayer config")
 
+	var fetchInterval time.Duration
+	if r.config.FetchInterval == 0 {
+		fetchInterval = 60 * time.Second
+	} else {
+		fetchInterval = time.Duration(r.config.FetchInterval) * time.Second
+	}
+
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
-		case <-time.After(60 * time.Second):
+		case <-time.After(fetchInterval):
 			log.WithFields(log.Fields{
 				"channelId": r.config.Source.ChannelID,
 			}).Info("Polling Nonces")
