@@ -1,8 +1,8 @@
 import { ApiPromise } from "@polkadot/api"
-import { ethers } from "ethers"
 import { ParachainBase } from "./parachainBase"
 import { AssetMap, PNAMap } from "@snowbridge/base-types"
 import { DOT_LOCATION, getTokenFromLocation } from "../xcmBuilder"
+import { EthersEthereumProvider } from "../EthereumProvider"
 
 const MOONBEAM_ERC20_ABI = [
     "function name() view returns (string)",
@@ -10,20 +10,16 @@ const MOONBEAM_ERC20_ABI = [
     "function decimals() view returns (uint8)",
     "function balanceOf(address) view returns (uint256)",
 ]
-const MOONBEAM_ERC20 = new ethers.Interface(MOONBEAM_ERC20_ABI)
+const ethereumProvider = new EthersEthereumProvider()
 
-export function toMoonbeamXC20(assetId: bigint) {
+function toMoonbeamXC20(assetId: bigint) {
     const xc20 = assetId.toString(16).toLowerCase()
     return "0xffffffff" + xc20
 }
 
-export async function getMoonbeamEvmForeignAssetBalance(
-    api: ApiPromise,
-    token: string,
-    account: string,
-) {
+async function getMoonbeamEvmForeignAssetBalance(api: ApiPromise, token: string, account: string) {
     const method = "balanceOf"
-    const data = MOONBEAM_ERC20.encodeFunctionData(method, [account])
+    const data = ethereumProvider.encodeFunctionData(MOONBEAM_ERC20_ABI, method, [account])
     const result = await api.call.ethereumRuntimeRPCApi.call(
         "0x0000000000000000000000000000000000000000",
         token,
@@ -44,12 +40,16 @@ export async function getMoonbeamEvmForeignAssetBalance(
             `Could not fetch balance for ${token}: ${JSON.stringify(resultJson?.ok?.exitReason)}`,
         )
     }
-    const retVal = MOONBEAM_ERC20.decodeFunctionResult(method, resultJson?.ok?.value)
+    const retVal = ethereumProvider.decodeFunctionResult<[bigint]>(
+        MOONBEAM_ERC20_ABI,
+        method,
+        resultJson?.ok?.value,
+    )
     return BigInt(retVal[0])
 }
 
-export async function getMoonbeamEvmAssetMetadata(api: ApiPromise, method: string, token: string) {
-    const data = MOONBEAM_ERC20.encodeFunctionData(method, [])
+async function getMoonbeamEvmAssetMetadata(api: ApiPromise, method: string, token: string) {
+    const data = ethereumProvider.encodeFunctionData(MOONBEAM_ERC20_ABI, method, [])
     const result = await api.call.ethereumRuntimeRPCApi.call(
         "0x0000000000000000000000000000000000000000",
         token,
@@ -70,7 +70,11 @@ export async function getMoonbeamEvmAssetMetadata(api: ApiPromise, method: strin
             `Could not fetch metadata for ${token}: ${JSON.stringify(resultJson?.ok?.exitReason)}`,
         )
     }
-    const retVal = MOONBEAM_ERC20.decodeFunctionResult(method, resultJson?.ok?.value)
+    const retVal = ethereumProvider.decodeFunctionResult<[string | bigint]>(
+        MOONBEAM_ERC20_ABI,
+        method,
+        resultJson?.ok?.value,
+    )
     return retVal[0]
 }
 

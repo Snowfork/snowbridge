@@ -1,45 +1,44 @@
-import { ApiPromise } from "@polkadot/api"
-import { AssetRegistry } from "@snowbridge/base-types"
-import { Connections, TransferInterface } from "./transferInterface"
-import {
-    IGatewayV2__factory as IGateway__factory,
-    IGatewayV2 as IGateway,
-} from "@snowbridge/contract-types"
-import { Context } from "../../index"
+import { AssetRegistry, ChainId, TransferRoute } from "@snowbridge/base-types"
+import { TransactionReceipt } from "ethers"
+import { TransferInterface } from "./transferInterface"
+import { EthersContext } from "../../index"
 import {
     buildMessageId,
     calculateRelayerFee,
     claimerFromBeneficiary,
     claimerLocationToBytes,
     DeliveryFee,
-    encodeNativeAsset,
+    getMessageReceipt as getSharedMessageReceipt,
     Transfer,
     ValidationKind,
     ValidationResult,
 } from "../../toPolkadotSnowbridgeV2"
 import { accountId32Location, DOT_LOCATION, erc20Location } from "../../xcmBuilder"
 import { paraImplementation } from "../../parachains"
-import { erc20Balance, ETHER_TOKEN_ADDRESS } from "../../assets_v2"
-import { beneficiaryMultiAddress, padFeeByPercentage } from "../../utils"
+import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
+import { padFeeByPercentage } from "../../utils"
 import { FeeInfo, resolveInputs, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
-import { AbstractProvider, Contract } from "ethers"
 import { buildAssetHubPNAReceivedXcm, sendMessageXCM } from "../../xcmbuilders/toPolkadot/pnaToAH"
 import { getOperatingStatus } from "../../status"
 import { hexToU8a } from "@polkadot/util"
 
 export class PNAToAH implements TransferInterface {
+    constructor(
+        public readonly context: EthersContext,
+        public readonly registry: AssetRegistry,
+        public readonly route: TransferRoute,
+    ) {}
+
+    get from(): ChainId {
+        return this.route.from
+    }
+
+    get to(): ChainId {
+        return this.route.to
+    }
+
     async getDeliveryFee(
-        context:
-            | Context
-            | {
-                  gateway: IGateway
-                  assetHub: ApiPromise
-                  bridgeHub: ApiPromise
-                  destination: ApiPromise
-              },
-        registry: AssetRegistry,
         tokenAddress: string,
-        _destinationParaId: number,
         options?: {
             paddFeeByPercentage?: bigint
             feeAsset?: any
@@ -47,13 +46,10 @@ export class PNAToAH implements TransferInterface {
             overrideRelayerFee?: bigint
         },
     ): Promise<DeliveryFee> {
-        const { assetHub, bridgeHub } =
-            context instanceof Context
-                ? {
-                      assetHub: await context.assetHub(),
-                      bridgeHub: await context.bridgeHub(),
-                  }
-                : context
+        const context = this.context
+        const registry = this.registry
+        const assetHub = await context.assetHub()
+        const bridgeHub = await context.bridgeHub()
 
         const ahAssetMetadata =
             registry.parachains[`polkadot_${registry.assetHubParaId}`].assets[
@@ -128,15 +124,6 @@ export class PNAToAH implements TransferInterface {
     }
 
     async createTransfer(
-        context:
-            | Context
-            | {
-                  ethereum: AbstractProvider
-                  assetHub: ApiPromise
-                  destination: ApiPromise
-              },
-        registry: AssetRegistry,
-        destinationParaId: number,
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
@@ -144,27 +131,21 @@ export class PNAToAH implements TransferInterface {
         fee: DeliveryFee,
         customXcm?: any[],
     ): Promise<Transfer> {
-        const { ethereum, assetHub } =
-            context instanceof Context
-                ? {
-                      ethereum: context.ethereum(),
-                      assetHub: await context.assetHub(),
-                  }
-                : context
+        const context = this.context
+        const registry = this.registry
+        const ethereum = context.ethereum()
+        const assetHub = await context.assetHub()
 
         const { tokenErcMetadata, destParachain, ahAssetMetadata, destAssetMetadata } =
-            resolveInputs(registry, tokenAddress, destinationParaId)
+            resolveInputs(registry, tokenAddress, this.to.id)
         const minimalBalance =
             ahAssetMetadata.minimumBalance > destAssetMetadata.minimumBalance
                 ? ahAssetMetadata.minimumBalance
                 : destAssetMetadata.minimumBalance
 
         let { address: beneficiary, hexAddress: beneficiaryAddressHex } =
-            beneficiaryMultiAddress(beneficiaryAccount)
+            context.ethereumProvider.beneficiaryMultiAddress(beneficiaryAccount)
         let value = fee.assetHubExecutionFeeEther + fee.assetHubDeliveryFeeEther + fee.relayerFee
-
-        const ifce = IGateway__factory.createInterface()
-        const con = new Contract(registry.gatewayAddress, ifce)
 
         if (!ahAssetMetadata.foreignId) {
             throw Error("asset foreign ID not set in metadata")
@@ -172,7 +153,7 @@ export class PNAToAH implements TransferInterface {
 
         const accountNonce = await ethereum.getTransactionCount(sourceAccount, "pending")
         const topic = buildMessageId(
-            destinationParaId,
+            this.to.id,
             sourceAccount,
             tokenAddress,
             beneficiaryAddressHex,
@@ -183,22 +164,20 @@ export class PNAToAH implements TransferInterface {
         const xcm = hexToU8a(
             sendMessageXCM(assetHub.registry, beneficiaryAddressHex, topic, customXcm).toHex(),
         )
-        let assets = [encodeNativeAsset(tokenAddress, amount)]
+        let assets = [context.ethereumProvider.encodeNativeAsset(tokenAddress, amount)]
         let claimer = claimerFromBeneficiary(assetHub, beneficiaryAddressHex)
 
-        const tx = await con
-            .getFunction("v2_sendMessage")
-            .populateTransaction(
-                xcm,
-                assets,
-                claimerLocationToBytes(claimer),
-                fee.assetHubExecutionFeeEther,
-                fee.relayerFee,
-                {
-                    value,
-                    from: sourceAccount,
-                },
-            )
+        const tx = await context.ethereumProvider.gatewayV2SendMessage(
+            context.ethereum(),
+            context.environment.gatewayContract,
+            sourceAccount,
+            xcm,
+            assets,
+            claimerLocationToBytes(claimer),
+            fee.assetHubExecutionFeeEther,
+            fee.relayerFee,
+            value,
+        )
 
         return {
             input: {
@@ -206,7 +185,7 @@ export class PNAToAH implements TransferInterface {
                 sourceAccount,
                 beneficiaryAccount,
                 tokenAddress,
-                destinationParaId,
+                destinationParaId: this.to.id,
                 amount,
                 fee,
                 customXcm,
@@ -229,21 +208,14 @@ export class PNAToAH implements TransferInterface {
         }
     }
 
-    async validateTransfer(
-        context: Context | Connections,
-        transfer: Transfer,
-    ): Promise<ValidationResult> {
+    async validateTransfer(transfer: Transfer): Promise<ValidationResult> {
+        const context = this.context
         const { tx } = transfer
         const { amount, sourceAccount, tokenAddress, registry } = transfer.input
-        const { ethereum, gateway, bridgeHub, assetHub } =
-            context instanceof Context
-                ? {
-                      ethereum: context.ethereum(),
-                      gateway: context.gateway(),
-                      bridgeHub: await context.bridgeHub(),
-                      assetHub: await context.assetHub(),
-                  }
-                : context
+        const ethereum = context.ethereum()
+        const gateway = context.gateway()
+        const bridgeHub = await context.bridgeHub()
+        const assetHub = await context.assetHub()
 
         const { totalValue, minimalBalance, ahAssetMetadata, beneficiaryAddressHex, claimer } =
             transfer.computed
@@ -256,11 +228,11 @@ export class PNAToAH implements TransferInterface {
                 message: "The amount transferred is less than the minimum amount.",
             })
         }
-        const etherBalance = await ethereum.getBalance(sourceAccount)
+        const etherBalance = await context.ethereumProvider.getBalance(ethereum, sourceAccount)
 
         let tokenBalance: { balance: bigint; gatewayAllowance: bigint }
         if (tokenAddress !== ETHER_TOKEN_ADDRESS) {
-            tokenBalance = await erc20Balance(
+            tokenBalance = await context.ethereumProvider.erc20Balance(
                 ethereum,
                 tokenAddress,
                 sourceAccount,
@@ -292,8 +264,8 @@ export class PNAToAH implements TransferInterface {
         let feeInfo: FeeInfo | undefined
         if (logs.length === 0) {
             const [estimatedGas, feeData] = await Promise.all([
-                ethereum.estimateGas(tx),
-                ethereum.getFeeData(),
+                context.ethereumProvider.estimateGas(ethereum, tx),
+                context.ethereumProvider.getFeeData(ethereum),
             ])
             const executionFee = (feeData.gasPrice ?? 0n) * estimatedGas
             if (executionFee === 0n) {
@@ -409,5 +381,9 @@ export class PNAToAH implements TransferInterface {
             },
             transfer,
         }
+    }
+
+    async getMessageReceipt(receipt: TransactionReceipt) {
+        return getSharedMessageReceipt(this.context.ethereumProvider, receipt)
     }
 }

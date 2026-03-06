@@ -1,26 +1,22 @@
-import { ApiPromise } from "@polkadot/api"
-import { AssetRegistry } from "@snowbridge/base-types"
-import { Connections, TransferInterface } from "./transferInterface"
-import {
-    IGatewayV2__factory as IGateway__factory,
-    IGatewayV2 as IGateway,
-} from "@snowbridge/contract-types"
-import { Context } from "../../index"
+import { AssetRegistry, ChainId, TransferRoute } from "@snowbridge/base-types"
+import { TransactionReceipt } from "ethers"
+import { TransferInterface } from "./transferInterface"
+import { EthersContext } from "../../index"
 import {
     buildMessageId,
     calculateRelayerFee,
     claimerFromBeneficiary,
     claimerLocationToBytes,
     DeliveryFee,
-    encodeNativeAsset,
+    getMessageReceipt as getSharedMessageReceipt,
     Transfer,
     ValidationKind,
     ValidationResult,
 } from "../../toPolkadotSnowbridgeV2"
 import { accountId32Location, DOT_LOCATION, erc20Location, isDOT } from "../../xcmBuilder"
 import { paraImplementation } from "../../parachains"
-import { erc20Balance, ETHER_TOKEN_ADDRESS } from "../../assets_v2"
-import { beneficiaryMultiAddress, padFeeByPercentage, paraIdToSovereignAccount } from "../../utils"
+import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
+import { padFeeByPercentage, paraIdToSovereignAccount } from "../../utils"
 import { FeeInfo, resolveInputs, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
 import {
     buildAssetHubPNAReceivedXcm,
@@ -30,23 +26,26 @@ import {
     sendMessageXCM,
     sendMessageXCMWithDOTDestFee,
 } from "../../xcmbuilders/toPolkadot/pnaToParachain"
-import { AbstractProvider, Contract } from "ethers"
 import { getOperatingStatus } from "../../status"
 import { hexToU8a } from "@polkadot/util"
 
 export class PNAToParachain implements TransferInterface {
+    constructor(
+        public readonly context: EthersContext,
+        public readonly registry: AssetRegistry,
+        public readonly route: TransferRoute,
+    ) {}
+
+    get from(): ChainId {
+        return this.route.from
+    }
+
+    get to(): ChainId {
+        return this.route.to
+    }
+
     async getDeliveryFee(
-        context:
-            | Context
-            | {
-                  gateway: IGateway
-                  assetHub: ApiPromise
-                  bridgeHub: ApiPromise
-                  destination: ApiPromise
-              },
-        registry: AssetRegistry,
         tokenAddress: string,
-        destinationParaId: number,
         options?: {
             paddFeeByPercentage?: bigint
             feeAsset?: any
@@ -54,19 +53,16 @@ export class PNAToParachain implements TransferInterface {
             overrideRelayerFee?: bigint
         },
     ): Promise<DeliveryFee> {
-        const { assetHub, bridgeHub, destination } =
-            context instanceof Context
-                ? {
-                      assetHub: await context.assetHub(),
-                      bridgeHub: await context.bridgeHub(),
-                      destination: await context.parachain(destinationParaId),
-                  }
-                : context
+        const context = this.context
+        const registry = this.registry
+        const assetHub = await context.assetHub()
+        const bridgeHub = await context.bridgeHub()
+        const destination = await context.parachain(this.to.id)
 
         const { destParachain, destAssetMetadata } = resolveInputs(
             registry,
             tokenAddress,
-            destinationParaId,
+            this.to.id,
         )
         // AssetHub fees
         let assetHubXcm = buildAssetHubPNAReceivedXcm(
@@ -82,7 +78,7 @@ export class PNAToParachain implements TransferInterface {
             ),
             "0x0000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000000000000000000000000000",
-            destinationParaId,
+            this.to.id,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
         )
         const bridgeHubImpl = await paraImplementation(bridgeHub)
@@ -141,7 +137,7 @@ export class PNAToParachain implements TransferInterface {
         const destinationImpl = await paraImplementation(destination)
         // Delivery fee AssetHub to Destination
         let destinationDeliveryFeeDOT = await assetHubImpl.calculateDeliveryFeeInDOT(
-            destinationParaId,
+            this.to.id,
             destinationXcm,
         )
         // Swap to ether
@@ -204,15 +200,6 @@ export class PNAToParachain implements TransferInterface {
     }
 
     async createTransfer(
-        context:
-            | Context
-            | {
-                  ethereum: AbstractProvider
-                  assetHub: ApiPromise
-                  destination: ApiPromise
-              },
-        registry: AssetRegistry,
-        destinationParaId: number,
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
@@ -220,30 +207,24 @@ export class PNAToParachain implements TransferInterface {
         fee: DeliveryFee,
         customXcm?: any[],
     ): Promise<Transfer> {
-        const { ethereum, assetHub, destination } =
-            context instanceof Context
-                ? {
-                      ethereum: context.ethereum(),
-                      assetHub: await context.assetHub(),
-                      destination: await context.parachain(destinationParaId),
-                  }
-                : context
+        const context = this.context
+        const registry = this.registry
+        const ethereum = context.ethereum()
+        const assetHub = await context.assetHub()
+        const destination = await context.parachain(this.to.id)
         if (!destination) {
-            throw Error(`Unable to connect to destination parachain with ID ${destinationParaId}.`)
+            throw Error(`Unable to connect to destination parachain with ID ${this.to.id}.`)
         }
         const { tokenErcMetadata, destParachain, ahAssetMetadata, destAssetMetadata } =
-            resolveInputs(registry, tokenAddress, destinationParaId)
+            resolveInputs(registry, tokenAddress, this.to.id)
         const minimalBalance =
             ahAssetMetadata.minimumBalance > destAssetMetadata.minimumBalance
                 ? ahAssetMetadata.minimumBalance
                 : destAssetMetadata.minimumBalance
 
         let { address: beneficiary, hexAddress: beneficiaryAddressHex } =
-            beneficiaryMultiAddress(beneficiaryAccount)
+            context.ethereumProvider.beneficiaryMultiAddress(beneficiaryAccount)
         let value = fee.totalFeeInWei
-
-        const ifce = IGateway__factory.createInterface()
-        const con = new Contract(registry.gatewayAddress, ifce)
 
         if (!ahAssetMetadata.foreignId) {
             throw Error("asset foreign ID not set in metadata")
@@ -251,7 +232,7 @@ export class PNAToParachain implements TransferInterface {
 
         const accountNonce = await ethereum.getTransactionCount(sourceAccount, "pending")
         const topic = buildMessageId(
-            destinationParaId,
+            this.to.id,
             sourceAccount,
             tokenAddress,
             beneficiaryAddressHex,
@@ -265,7 +246,7 @@ export class PNAToParachain implements TransferInterface {
                 sendMessageXCMWithDOTDestFee(
                     destination.registry,
                     registry.ethChainId,
-                    destinationParaId,
+                    this.to.id,
                     destAssetMetadata.location,
                     beneficiaryAddressHex,
                     amount,
@@ -280,7 +261,7 @@ export class PNAToParachain implements TransferInterface {
                 sendMessageXCM(
                     destination.registry,
                     registry.ethChainId,
-                    destinationParaId,
+                    this.to.id,
                     destAssetMetadata.location,
                     beneficiaryAddressHex,
                     amount,
@@ -290,22 +271,20 @@ export class PNAToParachain implements TransferInterface {
                 ).toHex(),
             )
         }
-        let assets = [encodeNativeAsset(tokenAddress, amount)]
+        let assets = [context.ethereumProvider.encodeNativeAsset(tokenAddress, amount)]
         let claimer = claimerFromBeneficiary(assetHub, beneficiaryAddressHex)
 
-        const tx = await con
-            .getFunction("v2_sendMessage")
-            .populateTransaction(
-                xcm,
-                assets,
-                claimerLocationToBytes(claimer),
-                fee.assetHubExecutionFeeEther + fee.destinationDeliveryFeeEther,
-                fee.relayerFee,
-                {
-                    value,
-                    from: sourceAccount,
-                },
-            )
+        const tx = await context.ethereumProvider.gatewayV2SendMessage(
+            context.ethereum(),
+            context.environment.gatewayContract,
+            sourceAccount,
+            xcm,
+            assets,
+            claimerLocationToBytes(claimer),
+            fee.assetHubExecutionFeeEther + fee.destinationDeliveryFeeEther,
+            fee.relayerFee,
+            value,
+        )
 
         return {
             input: {
@@ -313,7 +292,7 @@ export class PNAToParachain implements TransferInterface {
                 sourceAccount,
                 beneficiaryAccount,
                 tokenAddress,
-                destinationParaId,
+                destinationParaId: this.to.id,
                 amount,
                 fee,
                 customXcm,
@@ -336,27 +315,15 @@ export class PNAToParachain implements TransferInterface {
         }
     }
 
-    async validateTransfer(
-        context: Context | Connections,
-        transfer: Transfer,
-    ): Promise<ValidationResult> {
+    async validateTransfer(transfer: Transfer): Promise<ValidationResult> {
+        const context = this.context
         const { tx } = transfer
         const { amount, sourceAccount, tokenAddress, registry, destinationParaId } = transfer.input
-        const {
-            ethereum,
-            gateway,
-            bridgeHub,
-            assetHub,
-            destination: destParachainApi,
-        } = context instanceof Context
-            ? {
-                  ethereum: context.ethereum(),
-                  gateway: context.gateway(),
-                  bridgeHub: await context.bridgeHub(),
-                  assetHub: await context.assetHub(),
-                  destination: await context.parachain(destinationParaId),
-              }
-            : context
+        const ethereum = context.ethereum()
+        const gateway = context.gateway()
+        const bridgeHub = await context.bridgeHub()
+        const assetHub = await context.assetHub()
+        const destParachainApi = await context.parachain(destinationParaId)
 
         const {
             totalValue,
@@ -376,11 +343,11 @@ export class PNAToParachain implements TransferInterface {
                 message: "The amount transferred is less than the minimum amount.",
             })
         }
-        const etherBalance = await ethereum.getBalance(sourceAccount)
+        const etherBalance = await context.ethereumProvider.getBalance(ethereum, sourceAccount)
 
         let tokenBalance: { balance: bigint; gatewayAllowance: bigint }
         if (tokenAddress !== ETHER_TOKEN_ADDRESS) {
-            tokenBalance = await erc20Balance(
+            tokenBalance = await context.ethereumProvider.erc20Balance(
                 ethereum,
                 tokenAddress,
                 sourceAccount,
@@ -412,8 +379,8 @@ export class PNAToParachain implements TransferInterface {
         let feeInfo: FeeInfo | undefined
         if (logs.length === 0) {
             const [estimatedGas, feeData] = await Promise.all([
-                ethereum.estimateGas(tx),
-                ethereum.getFeeData(),
+                context.ethereumProvider.estimateGas(ethereum, tx),
+                context.ethereumProvider.getFeeData(ethereum),
             ])
             const executionFee = (feeData.gasPrice ?? 0n) * estimatedGas
             if (executionFee === 0n) {
@@ -638,5 +605,9 @@ export class PNAToParachain implements TransferInterface {
             },
             transfer,
         }
+    }
+
+    async getMessageReceipt(receipt: TransactionReceipt) {
+        return getSharedMessageReceipt(this.context.ethereumProvider, receipt)
     }
 }

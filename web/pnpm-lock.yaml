@@ -41,9 +41,6 @@ importers:
       '@snowbridge/base-types':
         specifier: workspace:*
         version: link:../base-types
-      '@snowbridge/contract-types':
-        specifier: workspace:*
-        version: link:../contract-types
       ethers:
         specifier: 6.16.0
         version: 6.16.0

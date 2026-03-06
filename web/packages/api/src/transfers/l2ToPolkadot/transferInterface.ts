@@ -1,15 +1,15 @@
-import { AssetRegistry } from "@snowbridge/base-types"
-import { Context } from "../../index"
-import { DeliveryFee, Transfer, ValidationResult } from "../../toPolkadotSnowbridgeV2"
+import { TransactionReceipt } from "ethers"
+import {
+    DeliveryFee,
+    MessageReceipt,
+    Transfer,
+    ValidationResult,
+} from "../../toPolkadotSnowbridgeV2"
 
 export interface TransferInterface {
     getDeliveryFee(
-        context: Context,
-        registry: AssetRegistry,
-        l2ChainId: number,
         tokenAddress: string,
         amount: bigint,
-        destinationParaId: number,
         options?: {
             paddFeeByPercentage?: bigint
             feeAsset?: any
@@ -21,12 +21,8 @@ export interface TransferInterface {
     ): Promise<DeliveryFee>
 
     createTransfer(
-        context: Context,
-        registry: AssetRegistry,
-        l2ChainId: number,
         tokenAddress: string,
         amount: bigint,
-        destinationParaId: number,
         sourceAccount: string,
         beneficiaryAccount: string,
         fee: DeliveryFee,
@@ -36,5 +32,7 @@ export interface TransferInterface {
         },
     ): Promise<Transfer>
 
-    validateTransfer(context: Context, transfer: Transfer): Promise<ValidationResult>
+    validateTransfer(transfer: Transfer): Promise<ValidationResult>
+
+    getMessageReceipt(receipt: TransactionReceipt): Promise<MessageReceipt | null>
 }

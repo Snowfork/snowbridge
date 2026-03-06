@@ -1,12 +1,13 @@
 import { ApiPromise } from "@polkadot/api"
 import { SubmittableExtrinsic } from "@polkadot/api/types"
 import { Codec, ISubmittableResult } from "@polkadot/types/types"
-import { AssetRegistry, ContractCall } from "@snowbridge/base-types"
+import { AssetRegistry, ChainId, ContractCall, TransferRoute } from "@snowbridge/base-types"
 import { CallDryRunEffects, XcmDryRunApiError, XcmDryRunEffects } from "@polkadot/types/interfaces"
 import { Result } from "@polkadot/types"
 import {
     DeliveryFee,
     dryRunBridgeHub,
+    MessageReceipt,
     resolveInputs,
     Transfer,
     ValidationKind,
@@ -16,9 +17,7 @@ import {
 } from "./toEthereum_v2"
 import { PNAFromAH } from "./transfers/toEthereum/pnaFromAH"
 import { TransferInterface } from "./transfers/toEthereum/transferInterface"
-import { TransferInterface as TransferInterfaceToL2 } from "./transfers/polkadotToL2/transferInterface"
 import { ERC20FromAH } from "./transfers/toEthereum/erc20FromAH"
-import { ERC20FromAH as ERC20FromAHToL2 } from "./transfers/polkadotToL2/erc20ToL2"
 import { PNAFromParachain } from "./transfers/toEthereum/pnaFromParachain"
 import { ERC20FromParachain } from "./transfers/toEthereum/erc20FromParachain"
 import {
@@ -32,51 +31,98 @@ import { xxhashAsHex } from "@polkadot/util-crypto"
 import { BN } from "@polkadot/util"
 import { padFeeByPercentage } from "./utils"
 import { paraImplementation } from "./parachains"
-import { Context } from "./index"
+import { Context, EthersContext } from "./index"
 import { ETHER_TOKEN_ADDRESS, findL2TokenAddress } from "./assets_v2"
 import { getOperatingStatus } from "./status"
-import { AbstractProvider, ethers, Wallet, TransactionReceipt } from "ethers"
-import { CreateAgent } from "./registration/agent/createAgent"
 import { estimateFees } from "./across/api"
-import { AgentCreation } from "./registration/agent/agentInterface"
 
-export { ValidationKind, signAndSend } from "./toEthereum_v2"
+export { ValidationKind, signAndSendTransfer } from "./toEthereum_v2"
 
-export function createTransferImplementation(
-    sourceParaId: number,
-    registry: AssetRegistry,
-    tokenAddress: string,
-): TransferInterface {
-    const { sourceAssetMetadata } = resolveInputs(registry, tokenAddress, sourceParaId)
+class TransferToEthereum implements TransferInterface {
+    #pnaImpl?: TransferInterface
+    #erc20Impl?: TransferInterface
 
-    let transferImpl
-    if (sourceParaId == registry.assetHubParaId) {
-        if (sourceAssetMetadata.location) {
-            transferImpl = new PNAFromAH()
-        } else {
-            transferImpl = new ERC20FromAH()
-        }
-    } else {
-        if (sourceAssetMetadata.location) {
-            transferImpl = new PNAFromParachain()
-        } else {
-            transferImpl = new ERC20FromParachain()
-        }
+    constructor(
+        private readonly context: EthersContext,
+        private readonly route: TransferRoute,
+        private readonly registry: AssetRegistry,
+    ) {}
+
+    get from(): ChainId {
+        return this.route.from
     }
-    return transferImpl
+
+    get to(): ChainId {
+        return this.route.to
+    }
+
+    #resolveByTokenAddress(tokenAddress: string): TransferInterface {
+        const sourceParaId = this.route.from.id
+        const { sourceAssetMetadata } = resolveInputs(this.registry, tokenAddress, sourceParaId)
+
+        if (sourceAssetMetadata.location) {
+            this.#pnaImpl ??=
+                sourceParaId == this.registry.assetHubParaId
+                    ? new PNAFromAH(this.context, this.registry, this.route)
+                    : new PNAFromParachain(this.context, this.registry, this.route)
+            return this.#pnaImpl
+        }
+
+        this.#erc20Impl ??=
+            sourceParaId == this.registry.assetHubParaId
+                ? new ERC20FromAH(this.context, this.registry, this.route)
+                : new ERC20FromParachain(this.context, this.registry, this.route)
+        return this.#erc20Impl
+    }
+
+    async getDeliveryFee(
+        tokenAddress: string,
+        options?: Parameters<TransferInterface["getDeliveryFee"]>[1],
+    ): Promise<DeliveryFee> {
+        return this.#resolveByTokenAddress(tokenAddress).getDeliveryFee(tokenAddress, options)
+    }
+
+    async createTransfer(
+        sourceAccount: string,
+        beneficiaryAccount: string,
+        tokenAddress: string,
+        amount: bigint,
+        fee: DeliveryFee,
+        options?: Parameters<TransferInterface["createTransfer"]>[5],
+    ): Promise<Transfer> {
+        return this.#resolveByTokenAddress(tokenAddress).createTransfer(
+            sourceAccount,
+            beneficiaryAccount,
+            tokenAddress,
+            amount,
+            fee,
+            options,
+        )
+    }
+
+    async validateTransfer(transfer: Transfer): Promise<ValidationResult> {
+        return this.#resolveByTokenAddress(transfer.input.tokenAddress).validateTransfer(transfer)
+    }
+
+    async signAndSend(
+        transfer: Transfer,
+        account: Parameters<TransferInterface["signAndSend"]>[1],
+        options: Parameters<TransferInterface["signAndSend"]>[2],
+    ): Promise<MessageReceipt> {
+        return this.#resolveByTokenAddress(transfer.input.tokenAddress).signAndSend(
+            transfer,
+            account,
+            options,
+        )
+    }
 }
 
-export function createL2TransferImplementation(
-    sourceParaId: number,
+export function createTransferImplementation(
+    context: EthersContext,
+    route: TransferRoute,
     registry: AssetRegistry,
-    tokenAddress: string,
-): TransferInterfaceToL2 {
-    // Todo: Support PNA transfers to L2
-    const { sourceAssetMetadata } = resolveInputs(registry, tokenAddress, sourceParaId)
-
-    let transferImpl = new ERC20FromAHToL2()
-
-    return transferImpl
+): TransferInterface {
+    return new TransferToEthereum(context, route, registry)
 }
 
 export async function dryRunOnSourceParachain(
@@ -233,7 +279,7 @@ export type DeliveryXcm = {
 }
 
 export const estimateEthereumExecutionFee = async (
-    context: Context,
+    context: EthersContext,
     registry: AssetRegistry,
     sourceParaId: number,
     tokenAddress: string,
@@ -247,7 +293,7 @@ export const estimateEthereumExecutionFee = async (
 
     // Calculate execution cost on ethereum
     let ethereumChain = registry.ethereumChains[`ethereum_${registry.ethChainId}`]
-    let feeData = await ethereum.getFeeData()
+    let feeData = await context.ethereumProvider.getFeeData(ethereum)
     let ethereumExecutionFee =
         (feeData.gasPrice ?? 2_000_000_000n) *
         ((tokenErcMetadata.deliveryGas ?? 80_000n) +
@@ -257,7 +303,7 @@ export const estimateEthereumExecutionFee = async (
 }
 
 export const estimateFeesFromAssetHub = async (
-    context: Context,
+    context: EthersContext,
     registry: AssetRegistry,
     tokenAddress: string,
     deliveryXcm: DeliveryXcm,
@@ -380,7 +426,7 @@ export const estimateFeesFromAssetHub = async (
 }
 
 export const estimateFeesFromParachains = async (
-    context: Context,
+    context: EthersContext,
     sourceParaId: number,
     registry: AssetRegistry,
     tokenAddress: string,
@@ -533,7 +579,7 @@ export const estimateFeesFromParachains = async (
 }
 
 export const validateTransferFromAssetHub = async (
-    context: Context,
+    context: EthersContext,
     transfer: Transfer,
 ): Promise<ValidationResult> => {
     const { registry, fee, tokenAddress, amount } = transfer.input
@@ -607,17 +653,15 @@ export const validateTransferFromAssetHub = async (
     }
     let contractCall = transfer.input.contractCall
     if (contractCall) {
-        try {
-            await checkContractAddress(ethereum, contractCall.target)
-        } catch (error) {
+        const isContractAddress = await context.ethereumProvider.isContractAddress(
+            ethereum,
+            contractCall.target,
+        )
+        if (!isContractAddress) {
             logs.push({
                 kind: ValidationKind.Error,
                 reason: ValidationReason.ContractCallInvalidTarget,
-                message:
-                    "Contract call with invalid target address: " +
-                    contractCall.target +
-                    " error: " +
-                    String(error),
+                message: "Contract call with invalid target address: " + contractCall.target,
             })
         }
         try {
@@ -719,7 +763,7 @@ export const validateTransferFromAssetHub = async (
 }
 
 export const validateTransferFromParachain = async (
-    context: Context,
+    context: EthersContext,
     transfer: Transfer,
 ): Promise<ValidationResult> => {
     const { registry, fee, tokenAddress, amount } = transfer.input
@@ -803,17 +847,15 @@ export const validateTransferFromParachain = async (
 
     let contractCall = transfer.input.contractCall
     if (contractCall) {
-        try {
-            await checkContractAddress(ethereum, contractCall.target)
-        } catch (error) {
+        const isContractAddress = await context.ethereumProvider.isContractAddress(
+            ethereum,
+            contractCall.target,
+        )
+        if (!isContractAddress) {
             logs.push({
                 kind: ValidationKind.Error,
                 reason: ValidationReason.ContractCallInvalidTarget,
-                message:
-                    "Contract call with invalid target address: " +
-                    contractCall.target +
-                    " error: " +
-                    String(error),
+                message: "Contract call with invalid target address: " + contractCall.target,
             })
         }
     }
@@ -910,7 +952,7 @@ export const validateTransferFromParachain = async (
     }
 }
 
-export async function buildContractCallHex(context: Context, contractCall: ContractCall) {
+export async function buildContractCallHex(context: EthersContext, contractCall: ContractCall) {
     const bridgeHub = await context.bridgeHub()
     const callHex = bridgeHub.createType("ContractCall", {
         target: contractCall.target,
@@ -933,24 +975,6 @@ export const mockDeliveryFee: DeliveryFee = {
     ethereumExecutionFee: 1n,
 }
 
-export const checkContractAddress = async (ethereum: AbstractProvider, address: string) => {
-    if (!ethers.isAddress(address)) {
-        throw new Error("Invalid contract address: " + address)
-    }
-    try {
-        const code = await ethereum.getCode(address)
-        if (code == "0x") {
-            throw new Error(
-                "Contract call with invalid target address: no contract deployed at " + address,
-            )
-        }
-    } catch (error) {
-        throw new Error(
-            "Contract call with invalid target address: " + address + " error: " + String(error),
-        )
-    }
-}
-
 // Agent creation exports
 export type {
     AgentCreation,
@@ -958,24 +982,8 @@ export type {
     AgentCreationInterface,
 } from "./registration/agent/agentInterface"
 
-export function createAgentCreationImplementation() {
-    return new CreateAgent()
-}
-
-export async function sendAgentCreation(
-    creation: AgentCreation,
-    wallet: Wallet,
-): Promise<TransactionReceipt> {
-    const response = await wallet.sendTransaction(creation.tx)
-    const receipt = await response.wait(1)
-    if (!receipt) {
-        throw Error(`Transaction ${response.hash} not included.`)
-    }
-    return receipt
-}
-
 export async function buildL2Call(
-    context: Context,
+    context: EthersContext,
     registry: AssetRegistry,
     tokenAddress: string,
     l2ChainId: number,
@@ -993,16 +1001,25 @@ export async function buildL2Call(
     if (!l2TokenAddress) {
         throw new Error("L2 token address not found")
     }
-    const l1Adapter = context.l1Adapter()
-    let l1AdapterAddress = await l1Adapter.getAddress()
+    const acrossApiUrl = context.environment.l2Bridge?.acrossAPIUrl
+    if (!acrossApiUrl) {
+        throw new Error("L2 bridge configuration is missing.")
+    }
+    const l1AdapterAddress = context.environment.l2Bridge?.l1AdapterAddress
+    if (!l1AdapterAddress) {
+        throw new Error("L2 bridge configuration is missing.")
+    }
     let l2BridgeFeeInL1Token: bigint
     let l2Call: ContractCall
     if (tokenAddress === ETHER_TOKEN_ADDRESS) {
-        let l1FeeTokenAddress = context.l1FeeTokenAddress()
-        let l2FeeTokenAddress = context.l2FeeTokenAddress(l2ChainId)
+        const l1FeeTokenAddress = context.environment.l2Bridge?.l1FeeTokenAddress
+        const l2FeeTokenAddress = context.environment.l2Bridge?.l2Chains[l2ChainId]?.feeTokenAddress
+        if (!l1FeeTokenAddress || !l2FeeTokenAddress) {
+            throw new Error("L2 chain configuration is missing.")
+        }
         l2BridgeFeeInL1Token = padFeeByPercentage(
             await estimateFees(
-                context.acrossApiUrl(),
+                acrossApiUrl,
                 l1FeeTokenAddress,
                 l2FeeTokenAddress,
                 registry.ethChainId,
@@ -1011,7 +1028,7 @@ export async function buildL2Call(
             ),
             options?.l2PadFeeByPercentage ?? 33n,
         )
-        let calldata = l1Adapter.interface.encodeFunctionData("depositNativeEther", [
+        const calldata = context.ethereumProvider.l1AdapterDepositNativeEther(
             {
                 inputToken: tokenAddress,
                 outputToken: l2FeeTokenAddress,
@@ -1022,7 +1039,7 @@ export async function buildL2Call(
             },
             destinationAddress,
             topic,
-        ])
+        )
         l2Call = {
             target: l1AdapterAddress,
             value: 0n,
@@ -1032,7 +1049,7 @@ export async function buildL2Call(
     } else {
         l2BridgeFeeInL1Token = padFeeByPercentage(
             await estimateFees(
-                context.acrossApiUrl(),
+                acrossApiUrl,
                 tokenAddress,
                 l2TokenAddress,
                 registry.ethChainId,
@@ -1041,7 +1058,7 @@ export async function buildL2Call(
             ),
             options?.l2PadFeeByPercentage ?? 33n,
         )
-        let calldata = l1Adapter.interface.encodeFunctionData("depositToken", [
+        const calldata = context.ethereumProvider.l1AdapterDepositToken(
             {
                 inputToken: tokenAddress,
                 outputToken: l2TokenAddress,
@@ -1052,7 +1069,7 @@ export async function buildL2Call(
             },
             destinationAddress,
             topic,
-        ])
+        )
         l2Call = {
             target: l1AdapterAddress,
             value: 0n,
@@ -1064,7 +1081,7 @@ export async function buildL2Call(
 }
 
 export async function sourceAgentId(
-    context: Context,
+    context: EthersContext,
     parachainId: number,
     sourceAccountHex: string,
 ) {
@@ -1080,7 +1097,7 @@ export async function sourceAgentId(
 }
 
 export async function sourceAgentAddress(
-    context: Context,
+    context: EthersContext,
     parachainId: number,
     sourceAccountHex: string,
 ): Promise<string> {

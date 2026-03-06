@@ -1,17 +1,11 @@
 import { AddressOrPair, SignerOptions } from "@polkadot/api/types"
-import { ContractCall } from "@snowbridge/base-types"
-import { DeliveryFee, MessageReceipt, Transfer, ValidationResult } from "../../toEthereum_v2"
+import { DeliveryFee, MessageReceipt, Transfer, ValidationResult } from "../../forInterParachain"
 
 export interface TransferInterface {
     getDeliveryFee(
         tokenAddress: string,
         options?: {
             padPercentage?: bigint
-            slippagePadPercentage?: bigint
-            defaultFee?: bigint
-            feeTokenLocation?: any
-            claimerLocation?: any
-            contractCall?: ContractCall
         },
     ): Promise<DeliveryFee>
 
@@ -21,10 +15,6 @@ export interface TransferInterface {
         tokenAddress: string,
         amount: bigint,
         fee: DeliveryFee,
-        options?: {
-            claimerLocation?: any
-            contractCall?: ContractCall
-        },
     ): Promise<Transfer>
 
     validateTransfer(transfer: Transfer): Promise<ValidationResult>

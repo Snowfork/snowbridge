@@ -1,17 +1,7 @@
-import { AssetRegistry } from "@snowbridge/base-types"
-import { Context } from "../../index"
-import { IGatewayV2 as IGateway } from "@snowbridge/contract-types"
-import { AbstractProvider, ContractTransaction } from "ethers"
 import { FeeInfo, ValidationLog } from "../../toPolkadot_v2"
 
-export interface AgentConnections {
-    ethereum: AbstractProvider
-    gateway: IGateway
-}
-
-export type AgentCreation = {
+export type AgentCreation<ContractTransaction> = {
     input: {
-        registry: AssetRegistry
         sourceAccount: string
         agentId: string
     }
@@ -21,7 +11,7 @@ export type AgentCreation = {
     tx: ContractTransaction
 }
 
-export type AgentCreationValidationResult = {
+export type AgentCreationValidationResult<ContractTransaction> = {
     logs: ValidationLog[]
     success: boolean
     data: {
@@ -30,23 +20,20 @@ export type AgentCreationValidationResult = {
         agentAlreadyExists: boolean
         agentAddress?: string
     }
-    creation: AgentCreation
+    creation: AgentCreation<ContractTransaction>
 }
 
-export interface AgentCreationInterface {
-    createAgentCreation(
-        context:
-            | Context
-            | {
-                  ethereum: AbstractProvider
-              },
-        registry: AssetRegistry,
+export interface AgentCreationInterface<Context, ContractTransaction> {
+    readonly context: Context
+
+    rawTx(sourceAccount: string, agentId: string): Promise<AgentCreation<ContractTransaction>>
+
+    validateTx(
+        creation: AgentCreation<ContractTransaction>,
+    ): Promise<AgentCreationValidationResult<ContractTransaction>>
+
+    tx(
         sourceAccount: string,
         agentId: string,
-    ): Promise<AgentCreation>
-
-    validateAgentCreation(
-        context: Context | AgentConnections,
-        creation: AgentCreation,
-    ): Promise<AgentCreationValidationResult>
+    ): Promise<AgentCreationValidationResult<ContractTransaction>>
 }

@@ -1,12 +1,9 @@
-import { AssetRegistry, ContractCall } from "@snowbridge/base-types"
-import { DeliveryFee, Transfer, ValidationResult } from "../../toEthereum_v2"
-import { Context } from "../../index"
+import { AddressOrPair, SignerOptions } from "@polkadot/api/types"
+import { ContractCall } from "@snowbridge/base-types"
+import { DeliveryFee, MessageReceipt, Transfer, ValidationResult } from "../../toEthereum_v2"
 
 export interface TransferInterface {
     getDeliveryFee(
-        context: Context,
-        registry: AssetRegistry,
-        l2ChainId: number,
         tokenAddress: string,
         amount: bigint,
         options?: {
@@ -22,9 +19,6 @@ export interface TransferInterface {
     ): Promise<DeliveryFee>
 
     createTransfer(
-        context: Context,
-        registry: AssetRegistry,
-        l2ChainId: number,
         tokenAddress: string,
         amount: bigint,
         sourceAccount: string,
@@ -37,5 +31,11 @@ export interface TransferInterface {
         },
     ): Promise<Transfer>
 
-    validateTransfer(context: Context, transfer: Transfer): Promise<ValidationResult>
+    validateTransfer(transfer: Transfer): Promise<ValidationResult>
+
+    signAndSend(
+        transfer: Transfer,
+        account: AddressOrPair,
+        options: Partial<SignerOptions>,
+    ): Promise<MessageReceipt>
 }

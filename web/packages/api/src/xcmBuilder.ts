@@ -1,6 +1,6 @@
 import { Registry } from "@polkadot/types/types"
-import { beneficiaryMultiAddress } from "./utils"
 import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
+import { resolveBeneficiary } from "./utils"
 
 export const HERE_LOCATION = { parents: 0, interior: "Here" }
 export const DOT_LOCATION = { parents: 1, interior: "Here" }
@@ -132,10 +132,7 @@ export function buildParachainERC20ReceivedXcmOnDestination(
     beneficiary: string,
     topic: string,
 ) {
-    let {
-        hexAddress,
-        address: { kind },
-    } = beneficiaryMultiAddress(beneficiary)
+    let { hexAddress, kind } = resolveBeneficiary(beneficiary)
     let beneficiaryLocation
     switch (kind) {
         case 1:
@@ -206,10 +203,7 @@ export function buildAssetHubERC20ReceivedXcm(
     beneficiary: string,
     topic: string,
 ) {
-    let {
-        hexAddress,
-        address: { kind },
-    } = beneficiaryMultiAddress(beneficiary)
+    let { hexAddress, kind } = resolveBeneficiary(beneficiary)
     let beneficiaryLocation
     switch (kind) {
         case 1:
@@ -292,10 +286,7 @@ export function buildParachainERC20ReceivedXcmOnAssetHub(
     beneficiary: string,
     topic: string,
 ) {
-    let {
-        hexAddress,
-        address: { kind },
-    } = beneficiaryMultiAddress(beneficiary)
+    let { hexAddress, kind } = resolveBeneficiary(beneficiary)
     let beneficiaryLocation
     switch (kind) {
         case 1:
@@ -438,10 +429,7 @@ function buildAssetHubXcmFromParachain(
     destinationFee: bigint,
     feeAssetId: any,
 ) {
-    let {
-        hexAddress,
-        address: { kind },
-    } = beneficiaryMultiAddress(sourceAccount)
+    let { hexAddress, kind } = resolveBeneficiary(sourceAccount)
     let sourceAccountLocation
     switch (kind) {
         case 1:
@@ -792,10 +780,7 @@ export function buildParachainPNAReceivedXcmOnDestination(
     beneficiary: string,
     topic: string,
 ) {
-    let {
-        hexAddress,
-        address: { kind },
-    } = beneficiaryMultiAddress(beneficiary)
+    let { hexAddress, kind } = resolveBeneficiary(beneficiary)
     let beneficiaryLocation
     switch (kind) {
         case 1:
@@ -891,10 +876,7 @@ export function buildParachainPNAReceivedXcmOnAssetHub(
     beneficiary: string,
     topic: string,
 ) {
-    let {
-        hexAddress,
-        address: { kind },
-    } = beneficiaryMultiAddress(beneficiary)
+    let { hexAddress, kind } = resolveBeneficiary(beneficiary)
     let beneficiaryLocation
     switch (kind) {
         case 1:
@@ -1028,10 +1010,7 @@ export function buildAssetHubPNAReceivedXcm(
     beneficiary: string,
     topic: string,
 ) {
-    let {
-        hexAddress,
-        address: { kind },
-    } = beneficiaryMultiAddress(beneficiary)
+    let { hexAddress, kind } = resolveBeneficiary(beneficiary)
     let beneficiaryLocation
     switch (kind) {
         case 1:
@@ -1112,10 +1091,7 @@ export function buildExportXcmForERC20(
     totalFeeInDot: bigint,
     assetHubParaId: number,
 ) {
-    let {
-        hexAddress,
-        address: { kind },
-    } = beneficiaryMultiAddress(beneficiary)
+    let { hexAddress, kind } = resolveBeneficiary(beneficiary)
     let beneficiaryLocation
     switch (kind) {
         case 1:
@@ -1227,10 +1203,7 @@ export function buildExportXcmForPNA(
     totalFeeInDot: bigint,
     assetHubParaId: number,
 ) {
-    let {
-        hexAddress,
-        address: { kind },
-    } = beneficiaryMultiAddress(beneficiary)
+    let { hexAddress, kind } = resolveBeneficiary(beneficiary)
     let beneficiaryLocation
     switch (kind) {
         case 1:
@@ -1413,10 +1386,7 @@ export function isEthereumNative(location: any, ethChainId: number) {
 }
 
 export const accountToLocation = (account: string) => {
-    let {
-        hexAddress,
-        address: { kind },
-    } = beneficiaryMultiAddress(account)
+    let { hexAddress, kind } = resolveBeneficiary(account)
     let beneficiaryLocation
     switch (kind) {
         case 1:
@@ -1438,10 +1408,7 @@ export const ROCOCO_GENESIS = "0x6408de7737c59c238890533af25896a2c20608d8b380bb0
 export const PASEO_GENESIS = "0x77afd6190f1554ad45fd0d31aee62aacc33c6db0ea801129acb813f913e0764f"
 
 export const accountToLocationWithNetwork = (account: string, envName: string) => {
-    let {
-        hexAddress,
-        address: { kind },
-    } = beneficiaryMultiAddress(account)
+    let { hexAddress, kind } = resolveBeneficiary(account)
     let beneficiaryLocation
     switch (kind) {
         case 1:
@@ -1540,10 +1507,7 @@ function buildAssetHubXcmFromParachainWithNativeAssetAsFee(
     destinationFeeInDot: bigint,
     feeAssetId: any,
 ) {
-    let {
-        hexAddress,
-        address: { kind },
-    } = beneficiaryMultiAddress(sourceAccount)
+    let { hexAddress, kind } = resolveBeneficiary(sourceAccount)
     let sourceAccountLocation
     switch (kind) {
         case 1:
@@ -1691,10 +1655,7 @@ export function buildERC20ToAssetHubFromParachain(
     destinationFee: bigint,
     feeAssetIdReanchored: any,
 ) {
-    let {
-        hexAddress,
-        address: { kind },
-    } = beneficiaryMultiAddress(beneficiary)
+    let { hexAddress, kind } = resolveBeneficiary(beneficiary)
     let beneficiaryAccountLocation
     switch (kind) {
         case 1:
@@ -1762,10 +1723,7 @@ export function buildDepositAllAssetsWithTopic(
     beneficiary: string,
     topic: string,
 ) {
-    let {
-        hexAddress,
-        address: { kind },
-    } = beneficiaryMultiAddress(beneficiary)
+    let { hexAddress, kind } = resolveBeneficiary(beneficiary)
     let beneficiaryAccountLocation
     switch (kind) {
         case 1:

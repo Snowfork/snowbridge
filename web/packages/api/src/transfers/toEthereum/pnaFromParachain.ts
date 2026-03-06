@@ -1,5 +1,5 @@
 import { ApiPromise } from "@polkadot/api"
-import { SubmittableExtrinsic } from "@polkadot/api/types"
+import { AddressOrPair, SignerOptions, SubmittableExtrinsic } from "@polkadot/api/types"
 import { ISubmittableResult } from "@polkadot/types/types"
 import { isHex, u8aToHex } from "@polkadot/util"
 import { decodeAddress } from "@polkadot/util-crypto"
@@ -12,29 +12,43 @@ import {
 } from "../../xcmbuilders/toEthereum/pnaFromParachain"
 import { buildTransferXcmFromParachainWithDOTAsFee } from "../../xcmbuilders/toEthereum/pnaFromParachainWithDotAsFee"
 import { buildTransferXcmFromParachainWithNativeAssetFee } from "../../xcmbuilders/toEthereum/pnaFromParachainWithNativeAsFee"
-import { Asset, AssetRegistry, ContractCall } from "@snowbridge/base-types"
+import { Asset, AssetRegistry, ChainId, ContractCall, TransferRoute } from "@snowbridge/base-types"
 import { paraImplementation } from "../../parachains"
 import {
     buildMessageId,
     DeliveryFee,
+    MessageReceipt,
     resolveInputs,
     Transfer,
     ValidationResult,
 } from "../../toEthereum_v2"
-import { Context } from "../.."
+import { EthersContext } from "../.."
 import { TransferInterface } from "./transferInterface"
 import {
     buildContractCallHex,
     estimateFeesFromParachains,
     MaxWeight,
     mockDeliveryFee,
+    signAndSendTransfer,
     validateTransferFromParachain,
 } from "../../toEthereumSnowbridgeV2"
 
 export class PNAFromParachain implements TransferInterface {
+    constructor(
+        public readonly context: EthersContext,
+        public readonly registry: AssetRegistry,
+        public readonly route: TransferRoute,
+    ) {}
+
+    get from(): ChainId {
+        return this.route.from
+    }
+
+    get to(): ChainId {
+        return this.route.to
+    }
+
     async getDeliveryFee(
-        source: { sourceParaId: number; context: Context },
-        registry: AssetRegistry,
         tokenAddress: string,
         options?: {
             padPercentage?: bigint
@@ -45,17 +59,12 @@ export class PNAFromParachain implements TransferInterface {
             contractCall?: ContractCall
         },
     ): Promise<DeliveryFee> {
-        const { assetHub, parachain } =
-            "sourceParaId" in source
-                ? {
-                      assetHub: await source.context.assetHub(),
-                      parachain: await source.context.parachain(source.sourceParaId),
-                  }
-                : source
+        const assetHub = await this.context.assetHub()
+        const parachain = await this.context.parachain(this.from.id)
 
         const sourceParachainImpl = await paraImplementation(parachain)
         const { sourceAssetMetadata } = resolveInputs(
-            registry,
+            this.registry,
             tokenAddress,
             sourceParachainImpl.parachainId,
         )
@@ -64,7 +73,7 @@ export class PNAFromParachain implements TransferInterface {
 
         forwardXcmToAH = buildResultXcmAssetHubPNATransferFromParachain(
             assetHub.registry,
-            registry.ethChainId,
+            this.registry.ethChainId,
             sourceAssetMetadata.locationOnAH,
             sourceAssetMetadata.locationOnEthereum,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -86,9 +95,9 @@ export class PNAFromParachain implements TransferInterface {
 
         localXcm = buildTransferXcmFromParachain(
             assetHub.registry,
-            registry.environment,
-            registry.ethChainId,
-            registry.assetHubParaId,
+            this.registry.environment,
+            this.registry.ethChainId,
+            this.registry.assetHubParaId,
             sourceParachainImpl.parachainId,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000",
@@ -100,7 +109,7 @@ export class PNAFromParachain implements TransferInterface {
 
         forwardedXcmToBH = buildExportXcm(
             assetHub.registry,
-            registry.ethChainId,
+            this.registry.ethChainId,
             sourceAssetMetadata,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000",
@@ -110,9 +119,9 @@ export class PNAFromParachain implements TransferInterface {
         )
 
         const fees = await estimateFeesFromParachains(
-            source.context,
-            source.sourceParaId,
-            registry,
+            this.context,
+            this.from.id,
+            this.registry,
             tokenAddress,
             {
                 localXcm,
@@ -126,8 +135,6 @@ export class PNAFromParachain implements TransferInterface {
     }
 
     async createTransfer(
-        source: { sourceParaId: number; context: Context },
-        registry: AssetRegistry,
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
@@ -138,16 +145,14 @@ export class PNAFromParachain implements TransferInterface {
             contractCall?: ContractCall
         },
     ): Promise<Transfer> {
+        const registry = this.registry
         const { ethChainId, assetHubParaId, environment } = registry
 
         let sourceAccountHex = sourceAccount
         if (!isHex(sourceAccountHex)) {
             sourceAccountHex = u8aToHex(decodeAddress(sourceAccount))
         }
-        const { parachain } =
-            "sourceParaId" in source
-                ? { parachain: await source.context.parachain(source.sourceParaId) }
-                : source
+        const parachain = await this.context.parachain(this.from.id)
 
         const sourceParachainImpl = await paraImplementation(parachain)
         const { tokenErcMetadata, sourceParachain, ahAssetMetadata, sourceAssetMetadata } =
@@ -162,21 +167,68 @@ export class PNAFromParachain implements TransferInterface {
             beneficiaryAccount,
             amount,
         )
-        let tx: SubmittableExtrinsic<"promise", ISubmittableResult> = await this.createTx(
-            source.context,
-            parachain,
-            environment,
-            ethChainId,
-            assetHubParaId,
-            sourceParachainImpl.parachainId,
-            sourceAccountHex,
-            beneficiaryAccount,
-            sourceAssetMetadata,
-            amount,
-            messageId,
-            fee,
-            options,
-        )
+        let claimerLocation = options?.claimerLocation
+        let callHex: string | undefined
+        if (options?.contractCall) {
+            callHex = await buildContractCallHex(this.context, options.contractCall)
+        }
+        let xcm: any
+        if (!fee.feeLocation) {
+            xcm = buildTransferXcmFromParachain(
+                parachain.registry,
+                environment,
+                ethChainId,
+                assetHubParaId,
+                sourceParachainImpl.parachainId,
+                sourceAccountHex,
+                beneficiaryAccount,
+                messageId,
+                sourceAssetMetadata,
+                amount,
+                fee,
+                claimerLocation,
+                callHex,
+            )
+        } else if (isRelaychainLocation(fee.feeLocation)) {
+            xcm = buildTransferXcmFromParachainWithDOTAsFee(
+                parachain.registry,
+                environment,
+                ethChainId,
+                assetHubParaId,
+                sourceParachainImpl.parachainId,
+                sourceAccountHex,
+                beneficiaryAccount,
+                messageId,
+                sourceAssetMetadata,
+                amount,
+                fee,
+                claimerLocation,
+                callHex,
+            )
+        } else if (isParachainNative(fee.feeLocation, sourceParachainImpl.parachainId)) {
+            xcm = buildTransferXcmFromParachainWithNativeAssetFee(
+                parachain.registry,
+                environment,
+                ethChainId,
+                assetHubParaId,
+                sourceParachainImpl.parachainId,
+                sourceAccountHex,
+                beneficiaryAccount,
+                messageId,
+                sourceAssetMetadata,
+                amount,
+                fee,
+                claimerLocation,
+                callHex,
+            )
+        } else {
+            throw new Error(
+                `Fee token as ${fee.feeLocation} is not supported. Only DOT or native asset is allowed.`,
+            )
+        }
+        console.log("xcm on source chain:", xcm.toHuman())
+        let tx: SubmittableExtrinsic<"promise", ISubmittableResult> =
+            parachain.tx.polkadotXcm.execute(xcm, MaxWeight)
 
         return {
             input: {
@@ -201,92 +253,16 @@ export class PNAFromParachain implements TransferInterface {
         }
     }
 
-    async validateTransfer(context: Context, transfer: Transfer): Promise<ValidationResult> {
-        return validateTransferFromParachain(context, transfer)
+    async validateTransfer(transfer: Transfer): Promise<ValidationResult> {
+        return validateTransferFromParachain(this.context, transfer)
     }
 
-    async createTx(
-        context: Context,
-        parachain: ApiPromise,
-        envName: string,
-        ethChainId: number,
-        assetHubParaId: number,
-        sourceParachainId: number,
-        sourceAccount: string,
-        beneficiaryAccount: string,
-        asset: Asset,
-        amount: bigint,
-        messageId: string,
-        fee: DeliveryFee,
-        options?: {
-            claimerLocation?: any
-            contractCall?: ContractCall
-        },
-    ): Promise<SubmittableExtrinsic<"promise", ISubmittableResult>> {
-        let claimerLocation = options?.claimerLocation
-        let callHex: string | undefined
-        if (options?.contractCall) {
-            callHex = await buildContractCallHex(context, options.contractCall)
-        }
-        let xcm: any
-        // No swap
-        if (!fee.feeLocation) {
-            xcm = buildTransferXcmFromParachain(
-                parachain.registry,
-                envName,
-                ethChainId,
-                assetHubParaId,
-                sourceParachainId,
-                sourceAccount,
-                beneficiaryAccount,
-                messageId,
-                asset,
-                amount,
-                fee,
-                claimerLocation,
-                callHex,
-            )
-        } // One swap from DOT to Ether on Asset Hub.
-        else if (isRelaychainLocation(fee.feeLocation)) {
-            xcm = buildTransferXcmFromParachainWithDOTAsFee(
-                parachain.registry,
-                envName,
-                ethChainId,
-                assetHubParaId,
-                sourceParachainId,
-                sourceAccount,
-                beneficiaryAccount,
-                messageId,
-                asset,
-                amount,
-                fee,
-                claimerLocation,
-                callHex,
-            )
-        }
-        // If the fee asset is in native asset, we need to swap it to DOT first, then a second swap from DOT to Ether
-        else if (isParachainNative(fee.feeLocation, sourceParachainId)) {
-            xcm = buildTransferXcmFromParachainWithNativeAssetFee(
-                parachain.registry,
-                envName,
-                ethChainId,
-                assetHubParaId,
-                sourceParachainId,
-                sourceAccount,
-                beneficiaryAccount,
-                messageId,
-                asset,
-                amount,
-                fee,
-                claimerLocation,
-                callHex,
-            )
-        } else {
-            throw new Error(
-                `Fee token as ${fee.feeLocation} is not supported. Only DOT or native asset is allowed.`,
-            )
-        }
-        console.log("xcm on source chain:", xcm.toHuman())
-        return parachain.tx.polkadotXcm.execute(xcm, MaxWeight)
+    async signAndSend(
+        transfer: Transfer,
+        account: AddressOrPair,
+        options: Partial<SignerOptions>,
+    ): Promise<MessageReceipt> {
+        const sourceParachain = await this.context.parachain(transfer.computed.sourceParaId)
+        return signAndSendTransfer(sourceParachain, transfer, account, options)
     }
 }

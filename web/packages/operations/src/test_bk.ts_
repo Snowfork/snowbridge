@@ -1,0 +1,175 @@
+import { BridgeInfo, ChainId } from "@snowbridge/base-types"
+import { polkadot_mainnet } from "@snowbridge/registry"
+
+type PolkadotChain = ChainId & { polkadot: boolean }
+type EthereumChain = ChainId & { ethereum: boolean }
+type EthereumL2Chain = EthereumChain & { l2: boolean }
+
+type Chain =
+    | ({ kind: "polkadot" } & PolkadotChain)
+    | ({ kind: "kusama" } & PolkadotChain)
+    | ({ kind: "ethereum" } & EthereumChain)
+    | ({ kind: "ethereum_l2" } & EthereumL2Chain)
+
+const chains: Chain[] = [
+    { kind: "ethereum", id: 1, ethereum: true },
+    { kind: "kusama", id: 1000, polkadot: true },
+    { kind: "polkadot", id: 1000, polkadot: true },
+    { kind: "ethereum_l2", id: 8551, ethereum: true, l2: true },
+]
+
+interface A {
+    f1(): void
+}
+interface B {
+    f2(): void
+}
+interface C {
+    f3(): void
+}
+interface D {
+    f4(): void
+}
+interface E {
+    f5(): void
+}
+interface F {
+    f6(): void
+}
+
+type Implementations =
+    | ({ kind: "ethereum->polkadot" } & A)
+    | ({ kind: "ethereum->kusama" } & F)
+    | ({ kind: "polkadot->ethereum" } & B)
+    | ({ kind: "polkadot->kusama" } & C)
+    | ({ kind: "polkadot->ethereum_l2" } & D)
+    | ({ kind: "ethereum_l2->polkadot" } & E)
+    | ({ kind: "kusama->polkadot" } & F)
+
+type IsUnion<T, U = T> = T extends any ? ([U] extends [T] ? false : true) : never
+type ImplementationKind = Implementations["kind"]
+type ImplementationFrom = ImplementationKind extends `${infer F}->${string}` ? F : never
+type ImplementationTo<F extends ImplementationFrom> = Extract<
+    Implementations,
+    { kind: `${F}->${string}` }
+>["kind"] extends `${F}->${infer T}`
+    ? T
+    : never
+type ImplementationFor<F extends ImplementationFrom, T extends ImplementationTo<F>> = Extract<
+    Implementations,
+    { kind: `${F}->${T}` }
+>
+type ImplementationForMaybe<F extends ImplementationFrom, T extends ImplementationTo<F>> =
+    IsUnion<F> extends true
+        ? Implementations
+        : IsUnion<T> extends true
+          ? Implementations
+          : ImplementationFor<F, T>
+
+type SnowbridgeApiParams = {
+    bridge: BridgeInfo
+}
+class SnowbridgeApi {
+    #bridge: BridgeInfo
+    constructor(params: SnowbridgeApiParams) {
+        this.#bridge = params.bridge
+    }
+
+    transfer<F extends ImplementationFrom, T extends ImplementationTo<F>>(
+        from: { kind: F; id: ChainId["id"] },
+        to: { kind: T; id: ChainId["id"] },
+    ): ImplementationForMaybe<F, T> {
+        const route = this.#bridge.routes.find(
+            (entry) =>
+                entry.from.kind === from.kind &&
+                entry.from.id === from.id &&
+                entry.to.kind === to.kind &&
+                entry.to.id === to.id,
+        )
+        if (!route) {
+            throw new Error(`No route for ${from.kind}:${from.id} -> ${to.kind}:${to.id}`)
+        }
+        const kind = `${from.kind}->${to.kind}` as Implementations["kind"]
+        switch (kind) {
+            case "ethereum->polkadot":
+                return { kind, f1: () => console.log("A", route.assets) } as ImplementationForMaybe<
+                    F,
+                    T
+                >
+            case "ethereum->kusama":
+                return { kind, f6: () => console.log("F", route.assets) } as ImplementationForMaybe<
+                    F,
+                    T
+                >
+            case "polkadot->ethereum":
+                return { kind, f2: () => console.log("B", route.assets) } as ImplementationForMaybe<
+                    F,
+                    T
+                >
+            case "polkadot->kusama":
+                return { kind, f3: () => console.log("C", route.assets) } as ImplementationForMaybe<
+                    F,
+                    T
+                >
+            case "polkadot->ethereum_l2":
+                return { kind, f4: () => console.log("D", route.assets) } as ImplementationForMaybe<
+                    F,
+                    T
+                >
+            case "ethereum_l2->polkadot":
+                return { kind, f5: () => console.log("E", route.assets) } as ImplementationForMaybe<
+                    F,
+                    T
+                >
+            case "kusama->polkadot":
+                return { kind, f6: () => console.log("F", route.assets) } as ImplementationForMaybe<
+                    F,
+                    T
+                >
+        }
+    }
+}
+function snowbridgeApi(params: SnowbridgeApiParams): SnowbridgeApi {
+    return new SnowbridgeApi(params)
+}
+
+function test_case1_non_constants(from: ChainId, to: ChainId) {
+    const api = snowbridgeApi({
+        bridge: polkadot_mainnet,
+    })
+
+    const b = api.transfer(from, to)
+    if (b.kind == "ethereum->polkadot") {
+        b.f1()
+    }
+}
+
+function test_case2_constants(paraId: number, l2chainId: number) {
+    const api = snowbridgeApi({
+        bridge: polkadot_mainnet,
+    })
+
+    const a = api.transfer({ kind: "polkadot", id: paraId }, { kind: "ethereum", id: l2chainId })
+    a.f2()
+}
+
+function test_case3_chains(chains: Chain[]) {
+    const api = snowbridgeApi({
+        bridge: polkadot_mainnet,
+    })
+
+    const ethereum = chains[0]
+    const polkadot = chains[2]
+
+    const b = api.transfer(ethereum, polkadot)
+    const b = api.addtip(etransferthereum, polkadot)
+    if (b.kind == "ethereum->polkadot") {
+        b.f1()
+    }
+}
+
+;(async () => {
+    test_case2_constants(1000, 1)
+    test_case1_non_constants({ kind: "ethereum", id: 1 }, { kind: "polkadot", id: 1000 })
+    test_case3_chains(chains)
+})()
