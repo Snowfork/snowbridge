@@ -108,14 +108,9 @@ export const transferToEthereum = async (
         }
         if (process.env["DRY_RUN"] != "true") {
             // Step 6. Submit transaction and get receipt for tracking
-            const response = await toEthereumSnowbridgeV2.signAndSend(
-                context,
-                transfer,
-                POLKADOT_ACCOUNT,
-                {
-                    withSignedTransaction: true,
-                },
-            )
+            const response = await transferImpl.signAndSend(context, transfer, POLKADOT_ACCOUNT, {
+                withSignedTransaction: true,
+            })
             if (!response) {
                 throw Error(`Transaction ${response} not included.`)
             }

@@ -1,5 +1,6 @@
+import { AddressOrPair, SignerOptions } from "@polkadot/api/types"
 import { AssetRegistry, ContractCall } from "@snowbridge/base-types"
-import { DeliveryFee, Transfer, ValidationResult } from "../../toEthereum_v2"
+import { DeliveryFee, MessageReceipt, Transfer, ValidationResult } from "../../toEthereum_v2"
 import { EthersContext } from "../../index"
 
 export interface TransferInterface {
@@ -32,4 +33,11 @@ export interface TransferInterface {
     ): Promise<Transfer>
 
     validateTransfer(context: EthersContext, transfer: Transfer): Promise<ValidationResult>
+
+    signAndSend(
+        context: EthersContext,
+        transfer: Transfer,
+        account: AddressOrPair,
+        options: Partial<SignerOptions>,
+    ): Promise<MessageReceipt>
 }

@@ -158,15 +158,9 @@ export interface EthereumProvider<
         recipient: string,
         topic: string,
     ): string
-    l1AdapterDepositToken(
-        params: L1AdapterDepositParams,
-        recipient: string,
-        topic: string,
-    ): string
+    l1AdapterDepositToken(params: L1AdapterDepositParams, recipient: string, topic: string): string
     l1SwapRouterExactOutputSingle(params: L1SwapRouterExactOutputSingleParams): string
-    l1LegacySwapRouterExactOutputSingle(
-        params: L1LegacySwapRouterExactOutputSingleParams,
-    ): string
+    l1LegacySwapRouterExactOutputSingle(params: L1LegacySwapRouterExactOutputSingleParams): string
     beneficiaryMultiAddress(beneficiary: string): EncodedMultiAddress
     estimateGas(provider: Connection, tx: ContractTransaction): Promise<bigint>
     gatewayV1SendToken(
@@ -490,9 +484,7 @@ export class EthersEthereumProvider
         return new Interface(SWAP_ROUTER_ABI).encodeFunctionData("exactOutputSingle", [params])
     }
 
-    l1LegacySwapRouterExactOutputSingle(
-        params: L1LegacySwapRouterExactOutputSingleParams,
-    ): string {
+    l1LegacySwapRouterExactOutputSingle(params: L1LegacySwapRouterExactOutputSingleParams): string {
         return new Interface(SWAP_LEGACY_ROUTER_ABI).encodeFunctionData("exactOutputSingle", [
             params,
         ])

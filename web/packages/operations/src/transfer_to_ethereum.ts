@@ -96,7 +96,7 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
         }
         if (process.env["DRY_RUN"] != "true") {
             // Step 6. Submit transaction and get receipt for tracking
-            const response = await toEthereumV2.signAndSend(context, transfer, POLKADOT_ACCOUNT, {
+            const response = await transferImpl.signAndSend(context, transfer, POLKADOT_ACCOUNT, {
                 withSignedTransaction: true,
             })
             if (!response) {

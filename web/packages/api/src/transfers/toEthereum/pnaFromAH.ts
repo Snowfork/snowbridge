@@ -1,5 +1,5 @@
 import { ApiPromise } from "@polkadot/api"
-import { SubmittableExtrinsic } from "@polkadot/api/types"
+import { AddressOrPair, SignerOptions, SubmittableExtrinsic } from "@polkadot/api/types"
 import { ISubmittableResult } from "@polkadot/types/types"
 import { isHex, u8aToHex } from "@polkadot/util"
 import { decodeAddress } from "@polkadot/util-crypto"
@@ -14,6 +14,7 @@ import { paraImplementation } from "../../parachains"
 import {
     buildMessageId,
     DeliveryFee,
+    MessageReceipt,
     resolveInputs,
     Transfer,
     ValidationResult,
@@ -25,6 +26,7 @@ import {
     estimateFeesFromAssetHub,
     MaxWeight,
     mockDeliveryFee,
+    signAndSendTransfer,
     validateTransferFromAssetHub,
 } from "../../toEthereumSnowbridgeV2"
 
@@ -191,5 +193,15 @@ export class PNAFromAH implements TransferInterface {
 
     async validateTransfer(context: EthersContext, transfer: Transfer): Promise<ValidationResult> {
         return validateTransferFromAssetHub(context, transfer)
+    }
+
+    async signAndSend(
+        context: EthersContext,
+        transfer: Transfer,
+        account: AddressOrPair,
+        options: Partial<SignerOptions>,
+    ): Promise<MessageReceipt> {
+        const sourceParachain = await context.parachain(transfer.computed.sourceParaId)
+        return signAndSendTransfer(sourceParachain, transfer, account, options)
     }
 }

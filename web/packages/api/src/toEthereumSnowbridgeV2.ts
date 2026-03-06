@@ -35,10 +35,9 @@ import { paraImplementation } from "./parachains"
 import { Context, EthersContext } from "./index"
 import { ETHER_TOKEN_ADDRESS, findL2TokenAddress } from "./assets_v2"
 import { getOperatingStatus } from "./status"
-import { CreateAgent } from "./registration/agent/createAgent"
 import { estimateFees } from "./across/api"
 
-export { ValidationKind, signAndSend } from "./toEthereum_v2"
+export { ValidationKind, signAndSendTransfer } from "./toEthereum_v2"
 
 export function createTransferImplementation(
     sourceParaId: number,
