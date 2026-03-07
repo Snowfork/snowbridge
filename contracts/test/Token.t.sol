@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.33;
 
-import "forge-std/Test.sol";
+import {Test} from "forge-std/Test.sol";
 
 import {IERC20} from "../src/interfaces/IERC20.sol";
 import {IERC20Permit} from "../src/interfaces/IERC20Permit.sol";

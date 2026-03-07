@@ -1,5 +1,5 @@
 pragma solidity ^0.8.28;
-import "forge-std/Test.sol";
+import {Test} from "forge-std/Test.sol";
 import {BeefyClient} from "../src/BeefyClient.sol";
 import {Bitfield} from "../src/utils/Bitfield.sol";
 import {ScaleCodec} from "../src/utils/ScaleCodec.sol";

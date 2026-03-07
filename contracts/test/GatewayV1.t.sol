@@ -49,8 +49,8 @@ import {
 
 import {WETH9} from "canonical-weth/WETH9.sol";
 import {UD60x18, ud60x18} from "prb/math/src/UD60x18.sol";
-import "./mocks/HighGasToken.sol";
-import "./mocks/FeeOnTransferToken.sol";
+import {HighGasToken} from "./mocks/HighGasToken.sol";
+import {FeeOnTransferToken} from "./mocks/FeeOnTransferToken.sol";
 
 contract GatewayV1Test is Test {
     // Emitted when token minted/burnt/transferred

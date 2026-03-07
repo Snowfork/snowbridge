@@ -3,6 +3,7 @@
 pragma solidity 0.8.33;
 
 import {Agent} from "./Agent.sol";
+// forge-lint: disable-next-line(unused-import)
 import {OperatingMode, ParaID, TokenInfo, Channel, ChannelID} from "./Types.sol";
 import {ERC1967} from "./utils/ERC1967.sol";
 

@@ -93,7 +93,7 @@ contract MockERC20 {
 contract PayableRecipient {
     receive() external payable {}
 }
-import "./mocks/FeeOnTransferToken.sol";
+import {FeeOnTransferToken} from "./mocks/FeeOnTransferToken.sol";
 
 contract GatewayV2Test is Test {
     // Emitted when token minted/burnt/transferred
