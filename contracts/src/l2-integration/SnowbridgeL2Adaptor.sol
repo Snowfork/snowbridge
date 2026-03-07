@@ -88,6 +88,7 @@ contract SnowbridgeL2Adaptor {
             );
             L2_WETH9.deposit{value: params.inputAmount}();
         } else {
+            require(msg.value == 0, "Sent value must be zero for WETH deposits");
             // Deposit WETH
             IERC20(address(L2_WETH9))
                 .safeTransferFrom(msg.sender, address(this), params.inputAmount);
