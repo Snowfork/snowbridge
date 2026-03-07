@@ -21,6 +21,18 @@ ignored_error_codes = [
 
 no_match_test = "testRegenerate*"
 
+[lint]
+exclude_lints = [
+    "mixed-case-function",
+    "mixed-case-variable",
+    "named-struct-fields",
+    "asm-keccak256",
+    "unsafe-cheatcode",
+    "screaming-snake-case-immutable",
+    "screaming-snake-case-const",
+    "pascal-case-struct",
+]
+
 # Production profile: via_ir enabled for deployment contracts
 [profile.production]
 via_ir = true
