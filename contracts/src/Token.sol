@@ -35,10 +35,14 @@ contract Token is IERC20, IERC20Metadata, IERC20Permit {
     }
 
     modifier onlyGateway() {
+        _onlyGateway();
+        _;
+    }
+
+    function _onlyGateway() internal view {
         if (msg.sender != gateway) {
             revert Unauthorized();
         }
-        _;
     }
 
     function mint(address account, uint256 amount) external onlyGateway {

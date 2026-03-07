@@ -52,10 +52,14 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
 
     // Message handlers can only be dispatched by the gateway itself
     modifier onlySelf() {
+        _onlySelf();
+        _;
+    }
+
+    function _onlySelf() internal view {
         if (msg.sender != address(this)) {
             revert IGatewayBase.Unauthorized();
         }
-        _;
     }
 
     // Makes functions nonreentrant
