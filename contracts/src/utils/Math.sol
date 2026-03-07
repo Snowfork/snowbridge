@@ -79,6 +79,7 @@ library Math {
     function log2(uint256 value, Rounding rounding) internal pure returns (uint256) {
         unchecked {
             uint256 result = log2(value);
+            // forge-lint: disable-next-line(incorrect-shift)
             return result + (unsignedRoundsUp(rounding) && 1 << result < value ? 1 : 0);
         }
     }
