@@ -18,6 +18,8 @@ import {
     SnowbridgeL1Adaptor__factory,
     SnowbridgeL2Adaptor,
     SnowbridgeL2Adaptor__factory,
+    Gateway,
+    Gateway__factory,
 } from "@snowbridge/contract-types"
 import { Environment } from "@snowbridge/base-types"
 
@@ -53,6 +55,7 @@ export class Context {
     #ethChains: EthereumChains
     #gateway?: IGatewayV1
     #gatewayV2?: IGatewayV2
+    #gatewayProxy?: Gateway
     #beefyClient?: BeefyClient
     #l1Adapter?: SnowbridgeL1Adaptor
     #l1SwapQuoter?: ISwapQuoter
@@ -278,6 +281,17 @@ export class Context {
             this.ethereum(),
         )
         return this.#gatewayV2
+    }
+
+    gatewayProxy(): Gateway {
+        if (this.#gatewayProxy) {
+            return this.#gatewayProxy
+        }
+        this.#gatewayProxy = Gateway__factory.connect(
+            this.environment.gatewayContract,
+            this.ethereum(),
+        )
+        return this.#gatewayProxy
     }
 
     beefyClient(): BeefyClient {

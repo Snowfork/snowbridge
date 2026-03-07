@@ -12,7 +12,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "rm -rf src && rm -rf dist && cd ../../../contracts && forge build && cd ../web/packages/contract-types && pnpm typechain && tsc --build --force",
-    "typechain": "typechain --target ethers-v6 '../../../contracts/out/?(IERC20.sol|IERC20Metadata.sol|IGateway.sol|BeefyClient.sol|WETH9.sol|SnowbridgeL1Adaptor.sol|SnowbridgeL2Adaptor.sol|ISwapQuoter.sol|ISwapRouter.sol|ISwapLegacyRouter.sol)/!(*.abi).json' --out-dir src"
+    "typechain": "typechain --target ethers-v6 '../../../contracts/out/?(IERC20.sol|IERC20Metadata.sol|IGateway.sol|Gateway.sol|BeefyClient.sol|WETH9.sol|SnowbridgeL1Adaptor.sol|SnowbridgeL2Adaptor.sol|ISwapQuoter.sol|ISwapRouter.sol|ISwapLegacyRouter.sol)/!(*.abi).json' --out-dir src"
   },
   "devDependencies": {
     "@typechain/ethers-v6": "0.5.1",
