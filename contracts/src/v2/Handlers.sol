@@ -10,7 +10,6 @@ import {AgentExecutor} from "../AgentExecutor.sol";
 import {Upgrade} from "../Upgrade.sol";
 import {Functions} from "../Functions.sol";
 import {Constants} from "../Constants.sol";
-import {IGatewayV2} from "./IGateway.sol";
 import {IGatewayBase} from "../interfaces/IGatewayBase.sol";
 
 import {

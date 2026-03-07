@@ -5,7 +5,6 @@ pragma solidity 0.8.33;
 import {SubstrateMerkleProof} from "./utils/SubstrateMerkleProof.sol";
 import {BeefyClient} from "./BeefyClient.sol";
 import {ScaleCodec} from "./utils/ScaleCodec.sol";
-import {SubstrateTypes} from "./SubstrateTypes.sol";
 
 library Verification {
     /// @dev Merkle proof for parachain header finalized by BEEFY
@@ -190,12 +189,15 @@ library Verification {
             );
         } else if (digestItem.kind == DIGEST_ITEM_OTHER) {
             return bytes.concat(
+                // forge-lint: disable-next-line(unsafe-typecast) // digest item kind is a small constant
                 bytes1(uint8(DIGEST_ITEM_OTHER)),
                 ScaleCodec.checkedEncodeCompactU32(digestItem.data.length),
                 digestItem.data
             );
         } else if (digestItem.kind == DIGEST_ITEM_RUNTIME_ENVIRONMENT_UPDATED) {
-            return bytes.concat(bytes1(uint8(DIGEST_ITEM_RUNTIME_ENVIRONMENT_UPDATED)));
+            return bytes.concat(
+                // forge-lint: disable-next-line(unsafe-typecast) // digest item kind is a small constant
+                bytes1(uint8(DIGEST_ITEM_RUNTIME_ENVIRONMENT_UPDATED)));
         } else {
             revert InvalidParachainHeader();
         }

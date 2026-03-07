@@ -39,6 +39,7 @@ contract BeefyClientTest is Test {
     BeefyClient.MMRLeaf emptyLeaf;
     bytes32[] emptyLeafProofs;
     uint256 emptyLeafProofOrder;
+    // forge-lint: disable-next-line(unsafe-typecast)
     bytes2 mmrRootID = bytes2("mh");
     string bitFieldFile;
     uint256[] fiatShamirFinalBitfield;
@@ -547,6 +548,7 @@ contract BeefyClientTest is Test {
 
     function testScaleEncodeCommit() public {
         BeefyClient.PayloadItem[] memory _payload = new BeefyClient.PayloadItem[](2);
+        // forge-lint: disable-next-line(unsafe-typecast)
         _payload[0] = BeefyClient.PayloadItem(bytes2("ab"), hex"000102");
         _payload[1] = BeefyClient.PayloadItem(
             mmrRootID, hex"3ac49cd24778522203e8bf40a4712ea3f07c3803bbd638cb53ebb3564ec13e8c"

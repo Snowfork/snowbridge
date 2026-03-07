@@ -974,7 +974,9 @@ contract GatewayV2Test is Test {
         PayableRecipient recipient = new PayableRecipient();
         bytes memory params = abi.encode(
             UnlockNativeTokenParams({
-                token: address(0), recipient: address(recipient), amount: uint128(amt)
+                token: address(0), recipient: address(recipient),
+                // forge-lint: disable-next-line(unsafe-typecast)
+                amount: uint128(amt)
             })
         );
 
@@ -998,7 +1000,9 @@ contract GatewayV2Test is Test {
         // build params for token transfer
         bytes memory params = abi.encode(
             UnlockNativeTokenParams({
-                token: address(token), recipient: address(this), amount: uint128(tAmt)
+                token: address(token), recipient: address(this),
+                // forge-lint: disable-next-line(unsafe-typecast)
+                amount: uint128(tAmt)
             })
         );
 
@@ -1062,6 +1066,7 @@ contract GatewayV2Test is Test {
 
         InboundMessageV2 memory m;
         m.nonce = 5;
+        // forge-lint: disable-next-line(unsafe-typecast)
         m.origin = bytes32("x");
         m.topic = bytes32(0);
         m.commands = new CommandV2[](0);
@@ -1143,6 +1148,7 @@ contract GatewayV2Test is Test {
         cmds[1] =
             CommandV2({kind: CommandKind.CallContract, gas: 200_000, payload: abi.encode(cc)});
         InboundMessageV2 memory msgv;
+        // forge-lint: disable-next-line(unsafe-typecast)
         msgv.origin = bytes32("orig");
         msgv.nonce = 1;
         msgv.topic = bytes32(0);

@@ -193,6 +193,7 @@ contract BeefyClient {
      * @dev Beefy payload id for MMR Root payload items:
      * https://github.com/paritytech/substrate/blob/fe1f8ba1c4f23931ae89c1ada35efb3d908b50f5/primitives/consensus/beefy/src/payload.rs#L33
      */
+    // forge-lint: disable-next-line(unsafe-typecast)
     bytes2 public constant MMR_ROOT_ID = bytes2("mh");
 
     /**

@@ -1048,7 +1048,7 @@ contract GatewayV1Test is Test {
     }
 
     function testUnlockNativeToken() public {
-        token.transfer(address(assetHubAgent), 200);
+        require(token.transfer(address(assetHubAgent), 200), "transfer failed");
 
         UnlockNativeTokenParams memory params = UnlockNativeTokenParams({
             agentID: assetHubAgentID, token: address(token), recipient: account2, amount: 10
@@ -1235,7 +1235,7 @@ contract GatewayV1Test is Test {
     }
 
     function testLegacyAgentExecutionForCompatibility() public {
-        token.transfer(address(assetHubAgent), 200);
+        require(token.transfer(address(assetHubAgent), 200), "transfer failed");
 
         AgentExecuteParams memory params = AgentExecuteParams({
             agentID: assetHubAgentID,

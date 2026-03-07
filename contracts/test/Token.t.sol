@@ -60,7 +60,7 @@ contract TokenTest is Test {
         uint256 initialTotalSupply = token.totalSupply();
 
         vm.prank(sender);
-        token.transfer(receiver, transferAmount);
+        require(token.transfer(receiver, transferAmount), "transfer failed");
 
         assertEq(token.balanceOf(sender), initialSenderBalance - transferAmount);
         assertEq(token.balanceOf(receiver), initialReceiverBalance + transferAmount);
@@ -99,7 +99,7 @@ contract TokenTest is Test {
 
         // Perform transferFrom as spender
         vm.prank(spender);
-        token.transferFrom(owner, receiver, transferAmount);
+        require(token.transferFrom(owner, receiver, transferAmount), "transferFrom failed");
 
         // Verify balances are updated correctly
         assertEq(token.balanceOf(owner), initialOwnerBalance - transferAmount);
@@ -137,7 +137,7 @@ contract TokenTest is Test {
         uint256 initialReceiverBalance = token.balanceOf(receiver);
 
         vm.prank(spender);
-        token.transferFrom(owner, receiver, transferAmount);
+        require(token.transferFrom(owner, receiver, transferAmount), "transferFrom failed");
 
         // Verify balances
         assertEq(token.balanceOf(owner), initialOwnerBalance - transferAmount);
@@ -162,6 +162,7 @@ contract TokenTest is Test {
         // Attempt transfer to zero address should revert
         vm.prank(spender);
         vm.expectRevert(abi.encodeWithSelector(IERC20.InvalidReceiver.selector, address(0)));
+        // forge-lint: disable-next-line(erc20-unchecked-transfer)
         token.transferFrom(owner, address(0), amount);
     }
 
@@ -193,6 +194,7 @@ contract TokenTest is Test {
                 IERC20.InsufficientAllowance.selector, spender, allowanceAmount, transferAmount
             )
         );
+        // forge-lint: disable-next-line(erc20-unchecked-transfer)
         token.transferFrom(owner, receiver, transferAmount);
 
         // Verify balances remain unchanged
@@ -202,7 +204,7 @@ contract TokenTest is Test {
 
         // Now try with exactly the allowance amount - should work
         vm.prank(spender);
-        token.transferFrom(owner, receiver, allowanceAmount);
+        require(token.transferFrom(owner, receiver, allowanceAmount), "transferFrom failed");
 
         // Verify the successful transfer
         assertEq(token.balanceOf(owner), mintAmount - allowanceAmount);
@@ -227,7 +229,7 @@ contract TokenTest is Test {
         token.approve(spender, allowanceAmount);
 
         vm.prank(spender);
-        token.transferFrom(owner, receiver, allowanceAmount);
+        require(token.transferFrom(owner, receiver, allowanceAmount), "transferFrom failed");
 
         // Verify the successful transfer
         assertEq(token.balanceOf(owner), mintAmount - allowanceAmount);
@@ -500,7 +502,7 @@ contract TokenTest is Test {
         uint256 swapAmount = 1000 * 10 ** 18;
 
         vm.prank(router);
-        token.transferFrom(owner, pool, swapAmount);
+        require(token.transferFrom(owner, pool, swapAmount), "transferFrom failed");
 
         // Verify balances after swap
         assertEq(token.balanceOf(owner), initialSupply - swapAmount);
@@ -525,12 +527,12 @@ contract TokenTest is Test {
         // First swap
         uint256 firstSwapAmount = 1000 * 10 ** 18;
         vm.prank(router);
-        token.transferFrom(owner, pool, firstSwapAmount);
+        require(token.transferFrom(owner, pool, firstSwapAmount), "transferFrom failed");
 
         // Second swap
         uint256 secondSwapAmount = 500 * 10 ** 18;
         vm.prank(router);
-        token.transferFrom(owner, pool, secondSwapAmount);
+        require(token.transferFrom(owner, pool, secondSwapAmount), "transferFrom failed");
 
         // Verify balances after both swaps
         assertEq(token.balanceOf(owner), initialSupply - firstSwapAmount - secondSwapAmount);
@@ -585,7 +587,7 @@ contract TokenTest is Test {
 
         // Simulate router using the permit
         vm.prank(router);
-        token.transferFrom(userAddress, pool, permitAmount);
+        require(token.transferFrom(userAddress, pool, permitAmount), "transferFrom failed");
 
         // Verify balances after permit-based transfer
         assertEq(token.balanceOf(userAddress), initialSupply - permitAmount);
@@ -616,7 +618,7 @@ contract TokenTest is Test {
 
         vm.startPrank(router);
         for (uint256 i = 0; i < recipients.length; i++) {
-            token.transferFrom(owner, recipients[i], transferAmount);
+            require(token.transferFrom(owner, recipients[i], transferAmount), "transferFrom failed");
             totalTransferred += transferAmount;
 
             // Verify each transfer
@@ -646,7 +648,7 @@ contract TokenTest is Test {
         // First transfer
         uint256 firstAmount = 1000 * 10 ** 18;
         vm.prank(router);
-        token.transferFrom(owner, pool, firstAmount);
+        require(token.transferFrom(owner, pool, firstAmount), "transferFrom failed");
 
         // Read state between transfers
         uint256 ownerBalance = token.balanceOf(owner);
@@ -655,7 +657,7 @@ contract TokenTest is Test {
         // Second transfer
         uint256 secondAmount = 500 * 10 ** 18;
         vm.prank(router);
-        token.transferFrom(owner, pool, secondAmount);
+        require(token.transferFrom(owner, pool, secondAmount), "transferFrom failed");
 
         // Verify state changes as expected
         assertEq(token.balanceOf(owner), ownerBalance - secondAmount);
@@ -702,8 +704,8 @@ contract TokenTest is Test {
         uint256 amount2 = 1200 * 10 ** 18;
 
         vm.startPrank(router);
-        token.transferFrom(user, pool, amount1);
-        token.transferFrom(user, pool2, amount2);
+        require(token.transferFrom(user, pool, amount1), "transferFrom failed");
+        require(token.transferFrom(user, pool2, amount2), "transferFrom failed");
         vm.stopPrank();
 
         // Verify all balances

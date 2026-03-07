@@ -11,9 +11,6 @@ import {PricingStorage} from "../storage/PricingStorage.sol";
 import {SubstrateTypes} from "../SubstrateTypes.sol";
 import {MultiAddress} from "./MultiAddress.sol";
 import {Address} from "../utils/Address.sol";
-import {AgentExecutor} from "../AgentExecutor.sol";
-import {Agent} from "../Agent.sol";
-import {Call} from "../utils/Call.sol";
 import {Token} from "../Token.sol";
 import {Functions} from "../Functions.sol";
 import {
@@ -22,13 +19,12 @@ import {
     ParaID,
     Channel,
     ChannelID,
-    AgentExecuteCommand,
     Ticket,
     Costs
 } from "./Types.sol";
 import {IGatewayBase} from "../interfaces/IGatewayBase.sol";
 import {IGatewayV1} from "./IGateway.sol";
-import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
+import {UD60x18, convert} from "prb/math/src/UD60x18.sol";
 
 /// @title Library for implementing Ethereum->Polkadot ERC20 transfers.
 library CallsV1 {

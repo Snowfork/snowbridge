@@ -10,7 +10,6 @@ import {AssetsStorage} from "../storage/AssetsStorage.sol";
 import {CoreStorage} from "../storage/CoreStorage.sol";
 import {PricingStorage} from "../storage/PricingStorage.sol";
 import {Address} from "../utils/Address.sol";
-import {AgentExecutor} from "../AgentExecutor.sol";
 import {Constants} from "../Constants.sol";
 import {Upgrade} from "../Upgrade.sol";
 import {Functions} from "../Functions.sol";

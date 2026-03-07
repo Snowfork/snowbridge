@@ -88,7 +88,7 @@ contract DeployLocal is Script {
 
         // Transfer WETH to the user
         address user = 0x90A987B944Cb1dCcE5564e5FDeCD7a54D3de27Fe;
-        weth.transfer(user, 10 ether);
+        require(weth.transfer(user, 10 ether), "WETH transfer failed");
 
         // For testing call contract
         new HelloWorld();

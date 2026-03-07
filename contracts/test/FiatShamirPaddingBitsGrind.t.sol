@@ -27,8 +27,10 @@ contract FiatShamirPaddingBitsGrindTest is Test {
         // 2) a standard balanced merkle root (N=16 is power-of-two => proof gen is simple)
         vsetRoot = _merkleRootPow2(leaves);
         BeefyClient.ValidatorSet memory initial =
+            // forge-lint: disable-next-line(unsafe-typecast)
             BeefyClient.ValidatorSet({id: 1, length: uint128(N), root: vsetRoot});
         BeefyClient.ValidatorSet memory next =
+            // forge-lint: disable-next-line(unsafe-typecast)
             BeefyClient.ValidatorSet({id: 2, length: uint128(N), root: vsetRoot});
         beefy = new BeefyClient(0, 0, 1, FIAT_REQUIRED, 0, initial, next);
     }

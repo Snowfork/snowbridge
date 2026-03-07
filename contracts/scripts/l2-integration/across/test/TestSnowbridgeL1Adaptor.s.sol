@@ -97,7 +97,7 @@ contract TestSnowbridgeL1Adaptor is Script {
             revert("Unsupported L1 network");
         }
 
-        IERC20(params.inputToken).transfer(l1SnowbridgeAdaptor, params.inputAmount);
+        require(IERC20(params.inputToken).transfer(l1SnowbridgeAdaptor, params.inputAmount), "transfer failed");
 
         SnowbridgeL1Adaptor(l1SnowbridgeAdaptor)
             .depositToken(params, recipient, keccak256("TestERC20Deposit"));
