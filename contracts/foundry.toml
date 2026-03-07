@@ -17,6 +17,10 @@ ignored_error_codes = [
     5574,
     # tstore
     2394,
+    # Natspec memory-safe-assembly special comment
+    2424,
+    # Too many warnings
+    4591,
 ]
 
 no_match_test = "testRegenerate*"
