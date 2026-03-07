@@ -234,16 +234,16 @@ contract GatewayV1Test is Test {
         hoax(relayer, 1 ether);
         IGatewayV1(address(gateway))
             .submitV1(
-                InboundMessage(
-                    assetHubParaID.into(),
-                    1,
-                    command,
-                    params,
-                    maxDispatchGas,
-                    maxRefund,
-                    reward,
-                    messageID
-                ),
+                InboundMessage({
+                    channelID: assetHubParaID.into(),
+                    nonce: 1,
+                    command: command,
+                    params: params,
+                    maxDispatchGas: maxDispatchGas,
+                    maxFeePerGas: maxRefund,
+                    reward: reward,
+                    id: messageID
+                }),
                 proof,
                 makeMockProof()
             );
@@ -276,16 +276,16 @@ contract GatewayV1Test is Test {
         hoax(relayer, 1 ether);
         IGatewayV1(address(gateway))
             .submitV1(
-                InboundMessage(
-                    assetHubParaID.into(),
-                    1,
-                    command,
-                    params,
-                    maxDispatchGas,
-                    maxRefund,
-                    reward,
-                    messageID
-                ),
+                InboundMessage({
+                    channelID: assetHubParaID.into(),
+                    nonce: 1,
+                    command: command,
+                    params: params,
+                    maxDispatchGas: maxDispatchGas,
+                    maxFeePerGas: maxRefund,
+                    reward: reward,
+                    id: messageID
+                }),
                 proof,
                 makeMockProof()
             );
@@ -313,16 +313,16 @@ contract GatewayV1Test is Test {
         hoax(relayer, 1 ether);
         IGatewayV1(address(gateway))
             .submitV1(
-                InboundMessage(
-                    assetHubParaID.into(),
-                    1,
-                    command,
-                    params,
-                    maxDispatchGas,
-                    maxRefund,
-                    reward,
-                    messageID
-                ),
+                InboundMessage({
+                    channelID: assetHubParaID.into(),
+                    nonce: 1,
+                    command: command,
+                    params: params,
+                    maxDispatchGas: maxDispatchGas,
+                    maxFeePerGas: maxRefund,
+                    reward: reward,
+                    id: messageID
+                }),
                 proof,
                 makeMockProof()
             );
@@ -348,16 +348,16 @@ contract GatewayV1Test is Test {
         hoax(relayer, 1 ether);
         IGatewayV1(address(gateway))
             .submitV1(
-                InboundMessage(
-                    assetHubParaID.into(),
-                    1,
-                    command,
-                    params,
-                    maxDispatchGas,
-                    maxRefund,
-                    reward,
-                    messageID
-                ),
+                InboundMessage({
+                    channelID: assetHubParaID.into(),
+                    nonce: 1,
+                    command: command,
+                    params: params,
+                    maxDispatchGas: maxDispatchGas,
+                    maxFeePerGas: maxRefund,
+                    reward: reward,
+                    id: messageID
+                }),
                 proof,
                 makeMockProof()
             );
@@ -376,16 +376,16 @@ contract GatewayV1Test is Test {
         hoax(relayer, 1 ether);
         IGatewayV1(address(gateway))
             .submitV1(
-                InboundMessage(
-                    assetHubParaID.into(),
-                    1,
-                    command,
-                    params,
-                    maxDispatchGas,
-                    maxRefund,
-                    reward,
-                    messageID
-                ),
+                InboundMessage({
+                    channelID: assetHubParaID.into(),
+                    nonce: 1,
+                    command: command,
+                    params: params,
+                    maxDispatchGas: maxDispatchGas,
+                    maxFeePerGas: maxRefund,
+                    reward: reward,
+                    id: messageID
+                }),
                 proof,
                 makeMockProof()
             );
@@ -395,16 +395,16 @@ contract GatewayV1Test is Test {
         hoax(relayer, 1 ether);
         IGatewayV1(address(gateway))
             .submitV1(
-                InboundMessage(
-                    assetHubParaID.into(),
-                    1,
-                    command,
-                    params,
-                    maxDispatchGas,
-                    maxRefund,
-                    reward,
-                    messageID
-                ),
+                InboundMessage({
+                    channelID: assetHubParaID.into(),
+                    nonce: 1,
+                    command: command,
+                    params: params,
+                    maxDispatchGas: maxDispatchGas,
+                    maxFeePerGas: maxRefund,
+                    reward: reward,
+                    id: messageID
+                }),
                 proof,
                 makeMockProof()
             );
@@ -421,16 +421,16 @@ contract GatewayV1Test is Test {
         hoax(relayer);
         IGatewayV1(address(gateway))
             .submitV1(
-                InboundMessage(
-                    ParaID.wrap(42).into(),
-                    1,
-                    command,
-                    params,
-                    maxDispatchGas,
-                    maxRefund,
-                    reward,
-                    messageID
-                ),
+                InboundMessage({
+                    channelID: ParaID.wrap(42).into(),
+                    nonce: 1,
+                    command: command,
+                    params: params,
+                    maxDispatchGas: maxDispatchGas,
+                    maxFeePerGas: maxRefund,
+                    reward: reward,
+                    id: messageID
+                }),
                 proof,
                 makeMockProof()
             );
@@ -449,16 +449,16 @@ contract GatewayV1Test is Test {
         hoax(relayer, 1 ether);
         IGatewayV1(address(gateway))
             .submitV1(
-                InboundMessage(
-                    assetHubParaID.into(),
-                    1,
-                    command,
-                    params,
-                    maxDispatchGas,
-                    maxRefund,
-                    reward,
-                    messageID
-                ),
+                InboundMessage({
+                    channelID: assetHubParaID.into(),
+                    nonce: 1,
+                    command: command,
+                    params: params,
+                    maxDispatchGas: maxDispatchGas,
+                    maxFeePerGas: maxRefund,
+                    reward: reward,
+                    id: messageID
+                }),
                 proof,
                 makeMockProof()
             );
@@ -503,16 +503,16 @@ contract GatewayV1Test is Test {
         uint256 startGas = gasleft();
         IGatewayV1(address(gateway))
             .submitV1(
-                InboundMessage(
-                    assetHubParaID.into(),
-                    1,
-                    command,
-                    params,
-                    maxDispatchGas,
-                    maxRefund,
-                    reward,
-                    messageID
-                ),
+                InboundMessage({
+                    channelID: assetHubParaID.into(),
+                    nonce: 1,
+                    command: command,
+                    params: params,
+                    maxDispatchGas: maxDispatchGas,
+                    maxFeePerGas: maxRefund,
+                    reward: reward,
+                    id: messageID
+                }),
                 proof,
                 makeMockProof()
             );
@@ -546,16 +546,16 @@ contract GatewayV1Test is Test {
         hoax(relayer, 1 ether);
         IGatewayV1(address(gateway))
             .submitV1(
-                InboundMessage(
-                    assetHubParaID.into(),
-                    1,
-                    command,
-                    params,
-                    maxDispatchGas,
-                    maxRefund,
-                    reward,
-                    messageID
-                ),
+                InboundMessage({
+                    channelID: assetHubParaID.into(),
+                    nonce: 1,
+                    command: command,
+                    params: params,
+                    maxDispatchGas: maxDispatchGas,
+                    maxFeePerGas: maxRefund,
+                    reward: reward,
+                    id: messageID
+                }),
                 proof,
                 makeMockProof()
             );
@@ -720,16 +720,16 @@ contract GatewayV1Test is Test {
 
         IGatewayV1(address(gateway))
             .submitV1(
-                InboundMessage(
-                    assetHubParaID.into(),
-                    1,
-                    CommandV1.Upgrade,
-                    abi.encode(params),
-                    maxDispatchGas,
-                    maxRefund,
-                    reward,
-                    messageID
-                ),
+                InboundMessage({
+                    channelID: assetHubParaID.into(),
+                    nonce: 1,
+                    command: CommandV1.Upgrade,
+                    params: abi.encode(params),
+                    maxDispatchGas: maxDispatchGas,
+                    maxFeePerGas: maxRefund,
+                    reward: reward,
+                    id: messageID
+                }),
                 proof,
                 makeMockProof()
             );
@@ -783,16 +783,16 @@ contract GatewayV1Test is Test {
 
         IGatewayV1(address(gateway))
             .submitV1(
-                InboundMessage(
-                    assetHubParaID.into(),
-                    1,
-                    CommandV1.SetOperatingMode,
-                    abi.encode(params),
-                    maxDispatchGas,
-                    maxRefund,
-                    reward,
-                    messageID
-                ),
+                InboundMessage({
+                    channelID: assetHubParaID.into(),
+                    nonce: 1,
+                    command: CommandV1.SetOperatingMode,
+                    params: abi.encode(params),
+                    maxDispatchGas: maxDispatchGas,
+                    maxFeePerGas: maxRefund,
+                    reward: reward,
+                    id: messageID
+                }),
                 proof,
                 makeMockProof()
             );
@@ -1052,16 +1052,16 @@ contract GatewayV1Test is Test {
 
         IGatewayV1(address(gateway))
             .submitV1(
-                InboundMessage(
-                    assetHubParaID.into(),
-                    1,
-                    CommandV1.RegisterForeignToken,
-                    abi.encode(params),
-                    maxDispatchGas,
-                    maxRefund,
-                    reward,
-                    messageID
-                ),
+                InboundMessage({
+                    channelID: assetHubParaID.into(),
+                    nonce: 1,
+                    command: CommandV1.RegisterForeignToken,
+                    params: abi.encode(params),
+                    maxDispatchGas: maxDispatchGas,
+                    maxFeePerGas: maxRefund,
+                    reward: reward,
+                    id: messageID
+                }),
                 proof,
                 makeMockProof()
             );
@@ -1285,16 +1285,16 @@ contract GatewayV1Test is Test {
         .submitV1{
             gas: relayerGas
         }(
-            InboundMessage(
-                assetHubParaID.into(),
-                1,
-                CommandV1.UnlockNativeToken,
-                abi.encode(params),
-                maxDispatchGas,
-                maxRefund,
-                reward,
-                messageID
-            ),
+            InboundMessage({
+                channelID: assetHubParaID.into(),
+                nonce: 1,
+                command: CommandV1.UnlockNativeToken,
+                params: abi.encode(params),
+                maxDispatchGas: maxDispatchGas,
+                maxFeePerGas: maxRefund,
+                reward: reward,
+                id: messageID
+            }),
             proof,
             makeMockProof()
         );

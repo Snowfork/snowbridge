@@ -29,7 +29,6 @@ no_match_test = "testRegenerate*"
 exclude_lints = [
     "mixed-case-function",
     "mixed-case-variable",
-    "named-struct-fields",
     "asm-keccak256",
     "unsafe-cheatcode",
     "screaming-snake-case-immutable",

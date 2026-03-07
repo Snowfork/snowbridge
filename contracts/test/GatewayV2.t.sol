@@ -232,7 +232,7 @@ contract GatewayV2Test is Test {
         uint8 decimals
     ) public pure returns (CommandV2[] memory) {
         RegisterForeignTokenParams memory params =
-            RegisterForeignTokenParams(id, name, symbol, decimals);
+            RegisterForeignTokenParams({foreignTokenID: id, name: name, symbol: symbol, decimals: decimals});
         bytes memory payload = abi.encode(params);
 
         CommandV2[] memory commands = new CommandV2[](1);
@@ -246,7 +246,7 @@ contract GatewayV2Test is Test {
         pure
         returns (CommandV2[] memory)
     {
-        MintForeignTokenParams memory params = MintForeignTokenParams(id, recipient, amount);
+        MintForeignTokenParams memory params = MintForeignTokenParams({foreignTokenID: id, recipient: recipient, amount: amount});
         bytes memory payload = abi.encode(params);
 
         CommandV2[] memory commands = new CommandV2[](1);
