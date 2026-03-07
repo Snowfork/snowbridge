@@ -6,10 +6,9 @@ import {AgentExecutor} from "../../src/AgentExecutor.sol";
 import {Gateway202602} from "../../src/upgrade/Gateway202602.sol";
 import {GatewaySepolia202603} from "../../src/upgrade/Gateway202603.sepolia.sol";
 import {Gateway} from "../../src/Gateway.sol";
-import {ParaID} from "../../src/Types.sol";
 import {Script} from "forge-std/Script.sol";
-import {stdJson} from "forge-std/StdJson.sol";
 import {console} from "forge-std/console.sol";
+import {stdJson} from "forge-std/StdJson.sol";
 
 contract DeployGateway is Script {
     using stdJson for string;

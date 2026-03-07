@@ -2,7 +2,6 @@
 pragma solidity 0.8.33;
 
 import {Test} from "forge-std/Test.sol";
-import {console} from "forge-std/console.sol";
 import {BitfieldWrapper} from "./mocks/BitfieldWrapper.sol";
 import {Bitfield} from "../src/utils/Bitfield.sol";
 

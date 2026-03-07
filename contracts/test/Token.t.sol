@@ -2,12 +2,10 @@
 pragma solidity 0.8.33;
 
 import "forge-std/Test.sol";
-import "forge-std/console.sol";
 
 import {IERC20} from "../src/interfaces/IERC20.sol";
 import {IERC20Permit} from "../src/interfaces/IERC20Permit.sol";
 import {Token} from "../src/Token.sol";
-import {TokenLib} from "../src/TokenLib.sol";
 
 contract TokenTest is Test {
     string public tokenName = "Test Token";

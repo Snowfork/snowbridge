@@ -6,7 +6,6 @@ import {BeefyClient} from "../src/BeefyClient.sol";
 import {BeefyClientMock} from "./mocks/BeefyClientMock.sol";
 import {Bitfield} from "../src/utils/Bitfield.sol";
 import {ScaleCodec} from "../src/utils/ScaleCodec.sol";
-import {SubstrateMerkleProof} from "../src/utils/SubstrateMerkleProof.sol";
 import {Math} from "../src/utils/Math.sol";
 import {MerkleLib, MerkleLibSubstrate} from "./utils/MerkleLib.sol";
 

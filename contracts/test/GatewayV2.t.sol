@@ -2,31 +2,18 @@
 pragma solidity 0.8.33;
 
 import {Test} from "forge-std/Test.sol";
-import {Strings} from "openzeppelin/utils/Strings.sol";
-import {console} from "forge-std/console.sol";
-
-import {BeefyClient} from "../src/BeefyClient.sol";
 
 import {IGatewayBase} from "../src/interfaces/IGatewayBase.sol";
 import {IGatewayV2} from "../src/v2/IGateway.sol";
-import {IInitializable} from "../src/interfaces/IInitializable.sol";
-import {IUpgradable} from "../src/interfaces/IUpgradable.sol";
-import {Gateway} from "../src/Gateway.sol";
 import {MockGateway} from "./mocks/MockGateway.sol";
-import {MockGatewayV2} from "./mocks/MockGatewayV2.sol";
 import {GatewayProxy} from "../src/GatewayProxy.sol";
 import {Token} from "../src/Token.sol";
 
 import {AgentExecutor} from "../src/AgentExecutor.sol";
-import {Agent} from "../src/Agent.sol";
 import {Verification} from "../src/Verification.sol";
-import {SubstrateTypes} from "./../src/SubstrateTypes.sol";
-import {OperatingMode, ParaID, CommandV2, CommandKind, InboundMessageV2} from "../src/Types.sol";
+import {OperatingMode, CommandV2, CommandKind, InboundMessageV2} from "../src/Types.sol";
 
-import {NativeTransferFailed} from "../src/utils/SafeTransfer.sol";
-import {PricingStorage} from "../src/storage/PricingStorage.sol";
 import {IERC20} from "../src/interfaces/IERC20.sol";
-import {TokenLib} from "../src/TokenLib.sol";
 import {Token} from "../src/Token.sol";
 
 import {Initializer} from "../src/Initializer.sol";
@@ -43,20 +30,11 @@ import {
     Asset,
     makeNativeAsset,
     makeForeignAsset,
-    Xcm,
     makeRawXCM
 } from "../src/v2/Types.sol";
 
-import {
-    AgentExecuteCommand,
-    InboundMessage,
-    OperatingMode,
-    ParaID,
-    Command
-} from "../src/v1/Types.sol";
-
 import {WETH9} from "canonical-weth/WETH9.sol";
-import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
+import {ud60x18} from "prb/math/src/UD60x18.sol";
 
 import {HelloWorld} from "./mocks/HelloWorld.sol";
 import {Upgrade} from "../src/Upgrade.sol";

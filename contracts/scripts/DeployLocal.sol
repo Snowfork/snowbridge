@@ -14,7 +14,7 @@ import {OperatingMode} from "../src/Types.sol";
 import {Initializer} from "../src/Initializer.sol";
 import {SafeNativeTransfer} from "../src/utils/SafeTransfer.sol";
 import {stdJson} from "forge-std/StdJson.sol";
-import {UD60x18, ud60x18} from "prb/math/src/UD60x18.sol";
+import {ud60x18} from "prb/math/src/UD60x18.sol";
 import {HelloWorld} from "../test/mocks/HelloWorld.sol";
 import {Token} from "../src/Token.sol";
 

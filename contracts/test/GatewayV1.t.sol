@@ -2,13 +2,9 @@
 pragma solidity 0.8.33;
 
 import {Test} from "forge-std/Test.sol";
-import {Strings} from "openzeppelin/utils/Strings.sol";
-import {console} from "forge-std/console.sol";
 
-import {BeefyClient} from "../src/BeefyClient.sol";
 import {IGatewayBase} from "../src/interfaces/IGatewayBase.sol";
 import {IGatewayV1} from "../src/v1/IGateway.sol";
-import {IInitializable} from "../src/interfaces/IInitializable.sol";
 import {IUpgradable} from "../src/interfaces/IUpgradable.sol";
 import {Gateway} from "../src/Gateway.sol";
 import {MockGateway} from "./mocks/MockGateway.sol";
@@ -17,45 +13,33 @@ import {ReantrantAttacker} from "./mocks/ReantrantAttacker.sol";
 import {GatewayProxy} from "../src/GatewayProxy.sol";
 
 import {AgentExecutor} from "../src/AgentExecutor.sol";
-import {Agent} from "../src/Agent.sol";
 import {Verification} from "../src/Verification.sol";
-import {SubstrateTypes} from "./../src/SubstrateTypes.sol";
 import {
-    Channel,
     InboundMessageV1,
     OperatingMode,
     ParaID,
-    CommandV1,
-    ChannelID
+    CommandV1
 } from "../src/Types.sol";
-
-import {NativeTransferFailed, SafeNativeTransfer} from "../src/utils/SafeTransfer.sol";
-import {PricingStorage} from "../src/storage/PricingStorage.sol";
-import {IERC20} from "../src/interfaces/IERC20.sol";
-import {TokenLib} from "../src/TokenLib.sol";
-import {Token} from "../src/Token.sol";
-
-import {Initializer} from "../src/Initializer.sol";
-import {Constants} from "../src/Constants.sol";
 
 import {
     UpgradeParams,
     AgentExecuteParams,
     SetOperatingModeParams,
-    SetTokenTransferFeesParams,
-    SetPricingParametersParams,
     UnlockNativeTokenParams,
     RegisterForeignTokenParams,
-    MintForeignTokenParams
-} from "../src/v1/Types.sol";
-
-import {
+    MintForeignTokenParams,
+    Command,
     AgentExecuteCommand,
     InboundMessage,
-    OperatingMode,
-    ParaID,
-    Command
+    ChannelID
 } from "../src/v1/Types.sol";
+
+import {SafeNativeTransfer, NativeTransferFailed} from "../src/utils/SafeTransfer.sol";
+import {IERC20} from "../src/interfaces/IERC20.sol";
+import {Token} from "../src/Token.sol";
+
+import {Initializer} from "../src/Initializer.sol";
+import {Constants} from "../src/Constants.sol";
 
 import {
     MultiAddress,
@@ -64,7 +48,7 @@ import {
 } from "../src/v1/MultiAddress.sol";
 
 import {WETH9} from "canonical-weth/WETH9.sol";
-import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
+import {UD60x18, ud60x18} from "prb/math/src/UD60x18.sol";
 import "./mocks/HighGasToken.sol";
 import "./mocks/FeeOnTransferToken.sol";
 

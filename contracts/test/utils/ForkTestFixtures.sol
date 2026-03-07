@@ -2,23 +2,13 @@
 pragma solidity 0.8.33;
 
 import {Vm} from "forge-std/Vm.sol";
-import {Test} from "forge-std/Test.sol";
 import {stdJson} from "forge-std/StdJson.sol";
-import {console} from "forge-std/console.sol";
 
-import {IUpgradable} from "../../src/interfaces/IUpgradable.sol";
 import {Verification} from "../../src/Verification.sol";
 import {
-    UpgradeParams,
-    SetOperatingModeParams,
-    OperatingMode,
-    RegisterForeignTokenParams,
     ChannelID,
-    ParaID,
-    OperatingMode,
     InboundMessage,
-    Command,
-    TokenInfo
+    Command
 } from "../../src/v1/Types.sol";
 
 struct SubmitMessageFixture {

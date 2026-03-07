@@ -2,7 +2,6 @@
 pragma solidity 0.8.33;
 
 import {Test} from "forge-std/Test.sol";
-import {console} from "forge-std/console.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 
 import {MMRProof} from "../src/utils/MMRProof.sol";

@@ -1,17 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.33;
 
-import {Script, console} from "forge-std/Script.sol";
-import {IERC20} from "openzeppelin/token/ERC20/IERC20.sol";
+import {Script} from "forge-std/Script.sol";
 
 import {SnowbridgeL1Adaptor} from "../../../../src/l2-integration/SnowbridgeL1Adaptor.sol";
-import {ISpokePool} from "../../../../src/l2-integration/interfaces/ISpokePool.sol";
-import {DepositParams, SendParams} from "../../../../src/l2-integration/Types.sol";
+import {DepositParams} from "../../../../src/l2-integration/Types.sol";
 import {
     BASE_CHAIN_ID as SEPOLIA_BASE_CHAIN_ID,
     TIME_BUFFER as SEPOLIA_TIME_BUFFER,
-    ARBITRUM_CHAIN_ID as SEPOLIA_ARBITRUM_CHAIN_ID,
     BASE_WETH9 as SEPOLIA_BASE_WETH9,
+    ARBITRUM_CHAIN_ID as SEPOLIA_ARBITRUM_CHAIN_ID,
     ARBITRUM_WETH9 as SEPOLIA_ARBITRUM_WETH9
 } from "../constants/Sepolia.sol";
 import {
