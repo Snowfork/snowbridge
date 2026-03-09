@@ -32,8 +32,10 @@ import {IGatewayV1} from "./v1/IGateway.sol";
 // forge-lint: disable-next-line(unused-import)
 import {
     // forge-lint: disable-next-line(unused-import)
-    InboundMessage as InboundMessageV2, // forge-lint: disable-next-line(unused-import)
-    Command as CommandV2, // forge-lint: disable-next-line(unused-import)
+    InboundMessage as InboundMessageV2,
+    // forge-lint: disable-next-line(unused-import)
+    Command as CommandV2,
+    // forge-lint: disable-next-line(unused-import)
     CommandKind
 } from "./v2/Types.sol";
 // forge-lint: disable-next-line(unused-import)
