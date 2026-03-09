@@ -12,7 +12,15 @@ import {
 } from "../../xcmbuilders/toEthereum/pnaFromParachain"
 import { buildTransferXcmFromParachainWithDOTAsFee } from "../../xcmbuilders/toEthereum/pnaFromParachainWithDotAsFee"
 import { buildTransferXcmFromParachainWithNativeAssetFee } from "../../xcmbuilders/toEthereum/pnaFromParachainWithNativeAsFee"
-import { Asset, AssetRegistry, ChainId, ContractCall, TransferRoute } from "@snowbridge/base-types"
+import {
+    Asset,
+    AssetRegistry,
+    ChainId,
+    ContractCall,
+    EthereumChain,
+    Parachain,
+    TransferRoute,
+} from "@snowbridge/base-types"
 import { paraImplementation } from "../../parachains"
 import {
     buildMessageId,
@@ -38,6 +46,8 @@ export class PNAFromParachain implements TransferInterface {
         public readonly context: EthersContext,
         public readonly registry: AssetRegistry,
         public readonly route: TransferRoute,
+        public readonly source: Parachain,
+        public readonly destination: EthereumChain,
     ) {}
 
     get from(): ChainId {

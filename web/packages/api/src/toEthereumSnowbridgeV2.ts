@@ -1,7 +1,14 @@
 import { ApiPromise } from "@polkadot/api"
 import { SubmittableExtrinsic } from "@polkadot/api/types"
 import { Codec, ISubmittableResult } from "@polkadot/types/types"
-import { AssetRegistry, ChainId, ContractCall, TransferRoute } from "@snowbridge/base-types"
+import {
+    AssetRegistry,
+    ChainId,
+    ContractCall,
+    EthereumChain,
+    Parachain,
+    TransferRoute,
+} from "@snowbridge/base-types"
 import { CallDryRunEffects, XcmDryRunApiError, XcmDryRunEffects } from "@polkadot/types/interfaces"
 import { Result } from "@polkadot/types"
 import {
@@ -46,6 +53,8 @@ class TransferToEthereum implements TransferInterface {
         private readonly context: EthersContext,
         private readonly route: TransferRoute,
         private readonly registry: AssetRegistry,
+        private readonly source: Parachain,
+        private readonly destination: EthereumChain,
     ) {}
 
     get from(): ChainId {
@@ -63,15 +72,39 @@ class TransferToEthereum implements TransferInterface {
         if (sourceAssetMetadata.location) {
             this.#pnaImpl ??=
                 sourceParaId == this.registry.assetHubParaId
-                    ? new PNAFromAH(this.context, this.registry, this.route)
-                    : new PNAFromParachain(this.context, this.registry, this.route)
+                    ? new PNAFromAH(
+                          this.context,
+                          this.registry,
+                          this.route,
+                          this.source,
+                          this.destination,
+                      )
+                    : new PNAFromParachain(
+                          this.context,
+                          this.registry,
+                          this.route,
+                          this.source,
+                          this.destination,
+                      )
             return this.#pnaImpl
         }
 
         this.#erc20Impl ??=
             sourceParaId == this.registry.assetHubParaId
-                ? new ERC20FromAH(this.context, this.registry, this.route)
-                : new ERC20FromParachain(this.context, this.registry, this.route)
+                ? new ERC20FromAH(
+                      this.context,
+                      this.registry,
+                      this.route,
+                      this.source,
+                      this.destination,
+                  )
+                : new ERC20FromParachain(
+                      this.context,
+                      this.registry,
+                      this.route,
+                      this.source,
+                      this.destination,
+                  )
         return this.#erc20Impl
     }
 
@@ -121,8 +154,10 @@ export function createTransferImplementation(
     context: EthersContext,
     route: TransferRoute,
     registry: AssetRegistry,
+    source: Parachain,
+    destination: EthereumChain,
 ): TransferInterface {
-    return new TransferToEthereum(context, route, registry)
+    return new TransferToEthereum(context, route, registry, source, destination)
 }
 
 export async function dryRunOnSourceParachain(

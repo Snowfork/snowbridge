@@ -154,11 +154,21 @@ export class KusamaTransfer implements KusamaTransferInterface {
     readonly info: BridgeInfo
     readonly context: EthersContext
     readonly route: TransferRoute
+    readonly source: Parachain
+    readonly destination: Parachain
 
-    constructor(info: BridgeInfo, context: EthersContext, route: TransferRoute) {
+    constructor(
+        info: BridgeInfo,
+        context: EthersContext,
+        route: TransferRoute,
+        source: Parachain,
+        destination: Parachain,
+    ) {
         this.info = info
         this.context = context
         this.route = route
+        this.source = source
+        this.destination = destination
     }
 
     get from(): ChainId {
