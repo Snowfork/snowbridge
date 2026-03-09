@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.33;
+pragma solidity 0.8.34;
 
 interface IXcm {
     /// @notice Weight v2 used for measurement for an XCM execution
