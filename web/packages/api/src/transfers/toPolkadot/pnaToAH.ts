@@ -1,4 +1,10 @@
-import { AssetRegistry, ChainId, TransferRoute } from "@snowbridge/base-types"
+import {
+    AssetRegistry,
+    ChainId,
+    EthereumChain,
+    Parachain,
+    TransferRoute,
+} from "@snowbridge/base-types"
 import { TransactionReceipt } from "ethers"
 import { TransferInterface } from "./transferInterface"
 import { EthersContext } from "../../index"
@@ -27,6 +33,8 @@ export class PNAToAH implements TransferInterface {
         public readonly context: EthersContext,
         public readonly registry: AssetRegistry,
         public readonly route: TransferRoute,
+        public readonly source: EthereumChain,
+        public readonly destination: Parachain,
     ) {}
 
     get from(): ChainId {

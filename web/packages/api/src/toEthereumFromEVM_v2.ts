@@ -5,7 +5,13 @@ import {
     buildAssetHubERC20TransferFromParachain,
     DOT_LOCATION,
 } from "./xcmBuilder"
-import { AssetRegistry, ChainId, ContractCall, TransferRoute } from "@snowbridge/base-types"
+import {
+    AssetRegistry,
+    ChainId,
+    ContractCall,
+    EthereumChain,
+    TransferRoute,
+} from "@snowbridge/base-types"
 import { getOperatingStatus } from "./status"
 import { EventRecord } from "@polkadot/types/interfaces"
 import { TransactionReceipt } from "ethers"
@@ -36,6 +42,8 @@ export class V1ToEthereumEvmAdapter implements ToEthereumEvmTransferInterface {
         public readonly context: EthersContext,
         public readonly registry: AssetRegistry,
         public readonly route: TransferRoute,
+        public readonly source: EthereumChain,
+        public readonly destination: EthereumChain,
     ) {}
 
     get from(): ChainId {
