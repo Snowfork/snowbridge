@@ -14,7 +14,6 @@ import {Verification} from "../src/Verification.sol";
 import {OperatingMode, CommandV2, CommandKind, InboundMessageV2} from "../src/Types.sol";
 
 import {IERC20} from "../src/interfaces/IERC20.sol";
-import {Token} from "../src/Token.sol";
 
 import {Initializer} from "../src/Initializer.sol";
 import {Constants} from "../src/Constants.sol";
@@ -231,8 +230,9 @@ contract GatewayV2Test is Test {
         string memory symbol,
         uint8 decimals
     ) public pure returns (CommandV2[] memory) {
-        RegisterForeignTokenParams memory params =
-            RegisterForeignTokenParams({foreignTokenID: id, name: name, symbol: symbol, decimals: decimals});
+        RegisterForeignTokenParams memory params = RegisterForeignTokenParams({
+            foreignTokenID: id, name: name, symbol: symbol, decimals: decimals
+        });
         bytes memory payload = abi.encode(params);
 
         CommandV2[] memory commands = new CommandV2[](1);
@@ -246,7 +246,8 @@ contract GatewayV2Test is Test {
         pure
         returns (CommandV2[] memory)
     {
-        MintForeignTokenParams memory params = MintForeignTokenParams({foreignTokenID: id, recipient: recipient, amount: amount});
+        MintForeignTokenParams memory params =
+            MintForeignTokenParams({foreignTokenID: id, recipient: recipient, amount: amount});
         bytes memory payload = abi.encode(params);
 
         CommandV2[] memory commands = new CommandV2[](1);
@@ -952,7 +953,8 @@ contract GatewayV2Test is Test {
         PayableRecipient recipient = new PayableRecipient();
         bytes memory params = abi.encode(
             UnlockNativeTokenParams({
-                token: address(0), recipient: address(recipient),
+                token: address(0),
+                recipient: address(recipient),
                 // forge-lint: disable-next-line(unsafe-typecast)
                 amount: uint128(amt)
             })
@@ -978,7 +980,8 @@ contract GatewayV2Test is Test {
         // build params for token transfer
         bytes memory params = abi.encode(
             UnlockNativeTokenParams({
-                token: address(token), recipient: address(this),
+                token: address(token),
+                recipient: address(this),
                 // forge-lint: disable-next-line(unsafe-typecast)
                 amount: uint128(tAmt)
             })
