@@ -183,9 +183,10 @@ fn parse_claimer(claimer_hex: &str) -> Result<Option<Location>, EstimatorError> 
     if claimer_bytes.len() < 2 {
         return Ok(None);
     }
-    let location = codec::Decode::decode(&mut &claimer_bytes[..])
-        .map_err(|_| EstimatorError::InvalidCommand("Failed to decode claimer".to_string()))?;
-    Ok(Some(location))
+    match codec::Decode::decode(&mut &claimer_bytes[..]) {
+        Ok(location) => Ok(Some(location)),
+        Err(_) => Ok(None),
+    }
 }
 
 fn parse_origin(origin_hex: &str) -> Result<[u8; 20], EstimatorError> {
