@@ -8,6 +8,7 @@ import {
     AssetRegistry,
     ChainId,
     ERC20Metadata,
+    EthereumChain,
     Parachain,
     TransferRoute,
 } from "@snowbridge/base-types"
@@ -119,6 +120,8 @@ class TransferToPolkadot implements TransferInterface {
         private readonly context: EthersContext,
         private readonly route: TransferRoute,
         private readonly registry: AssetRegistry,
+        private readonly source: EthereumChain,
+        private readonly destination: Parachain,
     ) {}
 
     get from(): ChainId {
@@ -136,15 +139,39 @@ class TransferToPolkadot implements TransferInterface {
         if (ahAssetMetadata.location) {
             this.#pnaImpl ??=
                 destinationParaId == this.registry.assetHubParaId
-                    ? new PNAToAH(this.context, this.registry, this.route)
-                    : new PNAToParachain(this.context, this.registry, this.route)
+                    ? new PNAToAH(
+                          this.context,
+                          this.registry,
+                          this.route,
+                          this.source,
+                          this.destination,
+                      )
+                    : new PNAToParachain(
+                          this.context,
+                          this.registry,
+                          this.route,
+                          this.source,
+                          this.destination,
+                      )
             return this.#pnaImpl
         }
 
         this.#erc20Impl ??=
             destinationParaId == this.registry.assetHubParaId
-                ? new ERC20ToAH(this.context, this.registry, this.route)
-                : new ERC20ToParachain(this.context, this.registry, this.route)
+                ? new ERC20ToAH(
+                      this.context,
+                      this.registry,
+                      this.route,
+                      this.source,
+                      this.destination,
+                  )
+                : new ERC20ToParachain(
+                      this.context,
+                      this.registry,
+                      this.route,
+                      this.source,
+                      this.destination,
+                  )
         return this.#erc20Impl
     }
 
@@ -186,8 +213,10 @@ export function createTransferImplementation(
     context: EthersContext,
     route: TransferRoute,
     registry: AssetRegistry,
+    source: EthereumChain,
+    destination: Parachain,
 ): TransferInterface {
-    return new TransferToPolkadot(context, route, registry)
+    return new TransferToPolkadot(context, route, registry, source, destination)
 }
 
 function resolveInputs(registry: AssetRegistry, tokenAddress: string, destinationParaId: number) {

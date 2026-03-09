@@ -12,7 +12,14 @@ import {
     SWAP_QUOTER_ABI,
 } from "./contracts"
 import { type EthereumProvider } from "./EthereumProvider"
-import { BridgeInfo, ChainId, Environment, TransferRoute } from "@snowbridge/base-types"
+import {
+    BridgeInfo,
+    ChainId,
+    Environment,
+    EthereumChain,
+    Parachain,
+    TransferRoute,
+} from "@snowbridge/base-types"
 import { CreateAgent } from "./registration/agent/createAgent"
 import type { AgentCreationInterface } from "./registration/agent/agentInterface"
 import * as kusamaTransfers from "./forKusama"
@@ -425,6 +432,35 @@ function withKind<K extends TransferImplementation["kind"], T>(
     return Object.assign(implementation as object, { kind }) as T & { kind: K }
 }
 
+type RegistryTransferChain = EthereumChain | Parachain
+
+function resolveRegistryTransferChain(info: BridgeInfo, chain: ChainId): RegistryTransferChain {
+    switch (chain.kind) {
+        case "polkadot": {
+            const parachain = info.registry.parachains[`polkadot_${chain.id}`]
+            if (!parachain) {
+                throw new Error(`Could not find polkadot parachain ${chain.id} in the registry.`)
+            }
+            return parachain
+        }
+        case "kusama": {
+            const parachain = info.registry.kusama?.parachains[`kusama_${chain.id}`]
+            if (!parachain) {
+                throw new Error(`Could not find kusama parachain ${chain.id} in the registry.`)
+            }
+            return parachain
+        }
+        case "ethereum":
+        case "ethereum_l2": {
+            const ethChain = info.registry.ethereumChains[`${chain.kind}_${chain.id}`]
+            if (!ethChain) {
+                throw new Error(`Could not find ${chain.kind} chain ${chain.id} in the registry.`)
+            }
+            return ethChain
+        }
+    }
+}
+
 export class SnowbridgeApi<
     EConnection,
     EContract,
@@ -487,62 +523,100 @@ export class SnowbridgeApi<
         }
 
         const kind = `${route.from.kind}->${route.to.kind}` as const
+        const sourceChain = resolveRegistryTransferChain(this.info, source)
+        const destinationChain = resolveRegistryTransferChain(this.info, destination)
 
         switch (kind) {
-            case "polkadot->polkadot":
+            case "polkadot->polkadot": {
+                const sourceParachain = sourceChain as Parachain
+                const destinationParachain = destinationChain as Parachain
                 return withKind(
                     new interParachainTransfers.InterParachainTransfer(
                         this.info,
                         this.context as any,
                         route,
+                        sourceParachain,
+                        destinationParachain,
                     ),
                     kind,
                 ) as unknown as TransferFromTo<F, T>
+            }
             case "kusama->polkadot":
-            case "polkadot->kusama":
+            case "polkadot->kusama": {
+                const sourceParachain = sourceChain as Parachain
+                const destinationParachain = destinationChain as Parachain
                 return withKind(
-                    new kusamaTransfers.KusamaTransfer(this.info, this.context as any, route),
+                    new kusamaTransfers.KusamaTransfer(
+                        this.info,
+                        this.context as any,
+                        route,
+                        sourceParachain,
+                        destinationParachain,
+                    ),
                     kind,
                 ) as unknown as TransferFromTo<F, T>
-            case "polkadot->ethereum":
+            }
+            case "polkadot->ethereum": {
+                const sourceParachain = sourceChain as Parachain
+                const destinationEthChain = destinationChain as EthereumChain
                 return withKind(
                     toEthereumTransfers.createTransferImplementation(
                         this.context as any,
                         route,
                         this.info.registry,
+                        sourceParachain,
+                        destinationEthChain,
                     ),
                     kind,
                 ) as TransferFromTo<F, T>
-            case "ethereum->polkadot":
+            }
+            case "ethereum->polkadot": {
+                const sourceEthChain = sourceChain as EthereumChain
+                const destinationParachain = destinationChain as Parachain
                 return withKind(
                     toPolkadotTransfers.createTransferImplementation(
                         this.context as any,
                         route,
                         this.info.registry,
+                        sourceEthChain,
+                        destinationParachain,
                     ),
                     kind,
                 ) as TransferFromTo<F, T>
+            }
             case "ethereum->ethereum": {
+                const sourceEthChain = sourceChain as EthereumChain
+                const destinationEthChain = destinationChain as EthereumChain
                 const tIface: ToEthereumEvmTransferInterface = new V1ToEthereumEvmAdapter(
                     this.context as any,
                     this.info.registry,
                     route,
+                    sourceEthChain,
+                    destinationEthChain,
                 )
                 return withKind(tIface, kind) as TransferFromTo<F, T>
             }
             case "polkadot->ethereum_l2": {
+                const sourceParachain = sourceChain as Parachain
+                const destinationEthChain = destinationChain as EthereumChain
                 const tIface: ToEthereumL2TransferInterface = new ERC20FromAHToL2(
                     this.context as any,
                     this.info.registry,
                     route,
+                    sourceParachain,
+                    destinationEthChain,
                 )
                 return withKind(tIface, kind) as TransferFromTo<F, T>
             }
             case "ethereum_l2->polkadot": {
+                const sourceEthChain = sourceChain as EthereumChain
+                const destinationParachain = destinationChain as Parachain
                 const tIface: ToPolkadotL2TransferInterface = new ERC20FromL2ToAH(
                     this.context as any,
                     this.info.registry,
                     route,
+                    sourceEthChain,
+                    destinationParachain,
                 )
                 return withKind(tIface, kind) as TransferFromTo<F, T>
             }
