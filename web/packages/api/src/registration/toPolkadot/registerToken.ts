@@ -16,7 +16,6 @@ import { getOperatingStatus } from "../../status"
 import { DOT_LOCATION, erc20Location } from "../../xcmBuilder"
 import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
 import { padFeeByPercentage } from "../../utils"
-import { paraImplementation } from "../../parachains"
 import {
     buildAssetHubRegisterTokenXcm,
     getBridgeOwnerAccount,
@@ -54,14 +53,14 @@ export class RegisterToken implements RegistrationInterface {
         )
 
         // Delivery fee BridgeHub to AssetHub
-        const bridgeHubImpl = await paraImplementation(bridgeHub)
+        const bridgeHubImpl = await context.paraImplementation(bridgeHub)
         const deliveryFeeInDOT = await bridgeHubImpl.calculateDeliveryFeeInDOT(
             registry.assetHubParaId,
             assetHubXcm,
         )
 
         // AssetHub Execution fee
-        const assetHubImpl = await paraImplementation(assetHub)
+        const assetHubImpl = await context.paraImplementation(assetHub)
 
         const deliveryFeeInEther = await assetHubImpl.swapAsset1ForAsset2(
             DOT_LOCATION,
@@ -225,7 +224,7 @@ export class RegisterToken implements RegistrationInterface {
                     getBridgeOwnerAccount(registry.ethChainId),
                 )
 
-                const assetHubImpl = await paraImplementation(assetHub)
+                const assetHubImpl = await context.paraImplementation(assetHub)
                 const result = await assetHubImpl.dryRunXcm(registry.bridgeHubParaId, xcm)
 
                 if (!result.success) {

@@ -21,7 +21,6 @@ import {
     buildAssetHubERC20ReceivedXcm,
 } from "../../xcmbuilders/toPolkadot/erc20ToAH"
 import { accountId32Location, DOT_LOCATION, erc20Location } from "../../xcmBuilder"
-import { paraImplementation } from "../../parachains"
 import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
 import { padFeeByPercentage } from "../../utils"
 import { FeeInfo, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
@@ -113,13 +112,13 @@ export class ERC20ToAH implements TransferInterface {
         }
 
         // Delivery fee BridgeHub to AssetHub
-        const bridgeHubImpl = await paraImplementation(bridgeHub)
+        const bridgeHubImpl = await this.context.paraImplementation(bridgeHub)
         const deliveryFeeInDOT = await bridgeHubImpl.calculateDeliveryFeeInDOT(
             registry.assetHubParaId,
             assetHubXcm,
         )
 
-        const assetHubImpl = await paraImplementation(assetHub)
+        const assetHubImpl = await this.context.paraImplementation(assetHub)
         const deliveryFeeInEther = await assetHubImpl.swapAsset1ForAsset2(
             DOT_LOCATION,
             ether,
@@ -521,7 +520,7 @@ export class ERC20ToAH implements TransferInterface {
             })
         }
 
-        const assetHubImpl = await paraImplementation(assetHub)
+        const assetHubImpl = await this.context.paraImplementation(assetHub)
 
         // Check if asset can be received on asset hub (dry run)
         const ahParachain = registry.parachains[`polkadot_${registry.assetHubParaId}`]

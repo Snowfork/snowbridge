@@ -15,7 +15,6 @@ import {
 import { getOperatingStatus } from "./status"
 import { EventRecord } from "@polkadot/types/interfaces"
 import { TransactionReceipt } from "ethers"
-import { paraImplementation } from "./parachains"
 import {
     buildMessageId,
     createERC20SourceParachainTx,
@@ -79,9 +78,11 @@ export class V1ToEthereumEvmAdapter implements ToEthereumEvmTransferInterface {
         if (!sourceParachain) {
             throw Error(`Could not find ${this.from.id} in the asset registry.`)
         }
+        const assetHubImpl = await this.context.paraImplementation(assetHub)
+        const sourceParachainImpl = await this.context.paraImplementation(parachain)
         return getDeliveryFeeV1(
-            assetHub,
-            parachain,
+            assetHubImpl,
+            sourceParachainImpl,
             this.from.id,
             sourceParachain,
             this.registry,
@@ -124,7 +125,7 @@ export class V1ToEthereumEvmAdapter implements ToEthereumEvmTransferInterface {
         }
 
         const parachain = await this.context.parachain(this.from.id)
-        const sourceParachainImpl = await paraImplementation(parachain)
+        const sourceParachainImpl = await this.context.paraImplementation(parachain)
         const sourceParachain = registry.parachains[`polkadot_${sourceParachainImpl.parachainId}`]
         if (!sourceParachain) {
             throw Error(`Could not find ${sourceParachainImpl.parachainId} in the asset registry.`)
@@ -254,7 +255,7 @@ export class V1ToEthereumEvmAdapter implements ToEthereumEvmTransferInterface {
         const sourceEthChain = context.ethChain(ethChain?.id!)
         const { tx } = transfer
 
-        const sourceParachainImpl = await paraImplementation(sourceParachain)
+        const sourceParachainImpl = await this.context.paraImplementation(sourceParachain)
         const logs: ValidationLog[] = []
         let dotBalance: bigint | undefined = undefined
         if (source.features.hasDotBalance) {
