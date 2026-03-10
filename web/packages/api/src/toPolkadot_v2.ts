@@ -7,6 +7,7 @@ import {
     AssetRegistry,
     ChainId,
     ERC20Metadata,
+    EthereumChain,
     Parachain,
     TransferRoute,
 } from "@snowbridge/base-types"
@@ -198,6 +199,8 @@ export class V1ToPolkadotAdapter implements ToPolkadotTransferInterface {
         public readonly context: EthersContext,
         public readonly registry: AssetRegistry,
         public readonly route: TransferRoute,
+        public readonly source: EthereumChain,
+        public readonly destination: Parachain,
     ) {}
 
     get from(): ChainId {
@@ -230,13 +233,14 @@ export class V1ToPolkadotAdapter implements ToPolkadotTransferInterface {
         const registry = this.registry
         const gateway = context.gateway()
         const assetHub = await context.assetHub()
-        const destination = await context.parachain(this.to.id)
-
-        const { destParachain, destAssetMetadata } = resolveInputs(
-            registry,
-            tokenAddress,
-            this.to.id,
-        )
+        const destinationApi = await context.parachain(this.destination.id)
+        const destParachain = this.destination
+        const destAssetMetadata = destParachain.assets[tokenAddress.toLowerCase()]
+        if (!destAssetMetadata) {
+            throw Error(
+                `Token ${tokenAddress} not registered on destination parachain ${destParachain.id}.`,
+            )
+        }
 
         let destinationDeliveryFeeDOT = 0n
         let destinationExecutionFeeDOT = 0n
@@ -244,7 +248,7 @@ export class V1ToPolkadotAdapter implements ToPolkadotTransferInterface {
             let destinationXcm: any
             if (destAssetMetadata.location) {
                 destinationXcm = buildParachainPNAReceivedXcmOnDestination(
-                    destination.registry,
+                    destinationApi.registry,
                     destAssetMetadata.location,
                     340282366920938463463374607431768211455n,
                     340282366920938463463374607431768211455n,
@@ -255,7 +259,7 @@ export class V1ToPolkadotAdapter implements ToPolkadotTransferInterface {
                 )
             } else {
                 destinationXcm = buildParachainERC20ReceivedXcmOnDestination(
-                    destination.registry,
+                    destinationApi.registry,
                     registry.ethChainId,
                     "0x0000000000000000000000000000000000000000",
                     340282366920938463463374607431768211455n,
@@ -272,7 +276,7 @@ export class V1ToPolkadotAdapter implements ToPolkadotTransferInterface {
                 this.to.id,
                 destinationXcm,
             )
-            const destinationImpl = await paraImplementation(destination)
+            const destinationImpl = await paraImplementation(destinationApi)
             destinationExecutionFeeDOT = padFeeByPercentage(
                 await destinationImpl.calculateXcmFee(destinationXcm, DOT_LOCATION),
                 options?.paddFeeByPercentage ?? 33n,
@@ -300,8 +304,29 @@ export class V1ToPolkadotAdapter implements ToPolkadotTransferInterface {
         const context = this.context
         const registry = this.registry
         const v1Fee = toV1DeliveryFee(fee)
-        const { tokenErcMetadata, destParachain, ahAssetMetadata, destAssetMetadata } =
-            resolveInputs(registry, tokenAddress, this.to.id)
+        const tokenErcMetadata =
+            registry.ethereumChains[`ethereum_${registry.ethChainId}`].assets[
+                tokenAddress.toLowerCase()
+            ]
+        if (!tokenErcMetadata) {
+            throw Error(
+                `No token ${tokenAddress} registered on ethereum chain ${registry.ethChainId}.`,
+            )
+        }
+        const ahAssetMetadata =
+            registry.parachains[`polkadot_${registry.assetHubParaId}`].assets[
+                tokenAddress.toLowerCase()
+            ]
+        if (!ahAssetMetadata) {
+            throw Error(`Token ${tokenAddress} not registered on asset hub.`)
+        }
+        const destParachain = this.destination
+        const destAssetMetadata = destParachain.assets[tokenAddress.toLowerCase()]
+        if (!destAssetMetadata) {
+            throw Error(
+                `Token ${tokenAddress} not registered on destination parachain ${destParachain.id}.`,
+            )
+        }
         const minimalBalance =
             ahAssetMetadata.minimumBalance > destAssetMetadata.minimumBalance
                 ? ahAssetMetadata.minimumBalance
@@ -546,43 +571,10 @@ export function createTransferImplementationV1(
     context: EthersContext,
     route: TransferRoute,
     registry: AssetRegistry,
-    _tokenAddress: string,
+    source: EthereumChain,
+    destination: Parachain,
 ): ToPolkadotTransferInterface {
-    return new V1ToPolkadotAdapter(context, registry, route)
-}
-
-export function resolveInputs(
-    registry: AssetRegistry,
-    tokenAddress: string,
-    destinationParaId: number,
-) {
-    const tokenErcMetadata =
-        registry.ethereumChains[`ethereum_${registry.ethChainId}`].assets[
-            tokenAddress.toLowerCase()
-        ]
-    if (!tokenErcMetadata) {
-        throw Error(`No token ${tokenAddress} registered on ethereum chain ${registry.ethChainId}.`)
-    }
-    const destParachain = registry.parachains[`polkadot_${destinationParaId}`]
-    if (!destParachain) {
-        throw Error(`Could not find ${destinationParaId} in the asset registry.`)
-    }
-    const ahAssetMetadata =
-        registry.parachains[`polkadot_${registry.assetHubParaId}`].assets[
-            tokenAddress.toLowerCase()
-        ]
-    if (!ahAssetMetadata) {
-        throw Error(`Token ${tokenAddress} not registered on asset hub.`)
-    }
-
-    const destAssetMetadata = destParachain.assets[tokenAddress.toLowerCase()]
-    if (!destAssetMetadata) {
-        throw Error(
-            `Token ${tokenAddress} not registered on destination parachain ${destinationParaId}.`,
-        )
-    }
-
-    return { tokenErcMetadata, destParachain, ahAssetMetadata, destAssetMetadata }
+    return new V1ToPolkadotAdapter(context, registry, route, source, destination)
 }
 
 async function dryRunAssetHub(context: EthersContext, assetHub: ApiPromise, transfer: Transfer) {

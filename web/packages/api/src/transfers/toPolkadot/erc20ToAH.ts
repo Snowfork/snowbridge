@@ -24,7 +24,7 @@ import { accountId32Location, DOT_LOCATION, erc20Location } from "../../xcmBuild
 import { paraImplementation } from "../../parachains"
 import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
 import { padFeeByPercentage } from "../../utils"
-import { FeeInfo, resolveInputs, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
+import { FeeInfo, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
 import { buildMessageId, Transfer, ValidationResult } from "../../toPolkadotSnowbridgeV2"
 import { getOperatingStatus } from "../../status"
 import { hexToU8a } from "@polkadot/util"
@@ -137,8 +137,29 @@ export class ERC20ToAH implements TransferInterface {
         const ethereum = context.ethereum()
         const assetHub = await context.assetHub()
 
-        const { tokenErcMetadata, destParachain, ahAssetMetadata, destAssetMetadata } =
-            resolveInputs(registry, tokenAddress, this.to.id)
+        const tokenErcMetadata =
+            registry.ethereumChains[`ethereum_${registry.ethChainId}`].assets[
+                tokenAddress.toLowerCase()
+            ]
+        if (!tokenErcMetadata) {
+            throw Error(
+                `No token ${tokenAddress} registered on ethereum chain ${registry.ethChainId}.`,
+            )
+        }
+        const ahAssetMetadata =
+            registry.parachains[`polkadot_${registry.assetHubParaId}`].assets[
+                tokenAddress.toLowerCase()
+            ]
+        if (!ahAssetMetadata) {
+            throw Error(`Token ${tokenAddress} not registered on asset hub.`)
+        }
+        const destParachain = this.destination
+        const destAssetMetadata = destParachain.assets[tokenAddress.toLowerCase()]
+        if (!destAssetMetadata) {
+            throw Error(
+                `Token ${tokenAddress} not registered on destination parachain ${destParachain.id}.`,
+            )
+        }
         const minimalBalance =
             ahAssetMetadata.minimumBalance > destAssetMetadata.minimumBalance
                 ? ahAssetMetadata.minimumBalance

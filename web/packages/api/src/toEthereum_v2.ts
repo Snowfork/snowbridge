@@ -26,6 +26,7 @@ import {
     ChainId,
     ContractCall,
     ERC20Metadata,
+    EthereumChain,
     Parachain,
     TransferRoute,
 } from "@snowbridge/base-types"
@@ -98,6 +99,8 @@ export class V1ToEthereumAdapter implements ToEthereumTransferInterface {
         public readonly context: EthersContext,
         public readonly registry: AssetRegistry,
         public readonly route: TransferRoute,
+        public readonly source: Parachain,
+        public readonly destination: EthereumChain,
     ) {}
 
     get from(): ChainId {
@@ -130,12 +133,20 @@ export class V1ToEthereumAdapter implements ToEthereumTransferInterface {
         }
 
         const assetHub = await this.context.assetHub()
-        const parachain = await this.context.parachain(this.from.id)
-        return getDeliveryFeeV1(assetHub, parachain, this.from.id, this.registry, tokenAddress, {
-            padPercentage: options?.padPercentage,
-            slippagePadPercentage: options?.slippagePadPercentage,
-            defaultFee: options?.defaultFee,
-        })
+        const parachain = await this.context.parachain(this.source.id)
+        return getDeliveryFeeV1(
+            assetHub,
+            parachain,
+            this.source.id,
+            this.source,
+            this.registry,
+            tokenAddress,
+            {
+                padPercentage: options?.padPercentage,
+                slippagePadPercentage: options?.slippagePadPercentage,
+                defaultFee: options?.defaultFee,
+            },
+        )
     }
 
     async createTransfer(
@@ -164,11 +175,32 @@ export class V1ToEthereumAdapter implements ToEthereumTransferInterface {
             sourceAccountHex = u8aToHex(decodeAddress(sourceAccount))
         }
 
-        const parachain = await this.context.parachain(this.from.id)
+        const parachain = await this.context.parachain(this.source.id)
 
         const sourceParachainImpl = await paraImplementation(parachain)
-        const { tokenErcMetadata, sourceParachain, ahAssetMetadata, sourceAssetMetadata } =
-            resolveInputs(registry, tokenAddress, sourceParachainImpl.parachainId)
+        const tokenErcMetadata =
+            registry.ethereumChains[`ethereum_${registry.ethChainId}`].assets[
+                tokenAddress.toLowerCase()
+            ]
+        if (!tokenErcMetadata) {
+            throw Error(
+                `No token ${tokenAddress} registered on ethereum chain ${registry.ethChainId}.`,
+            )
+        }
+        const ahAssetMetadata =
+            registry.parachains[`polkadot_${registry.assetHubParaId}`].assets[
+                tokenAddress.toLowerCase()
+            ]
+        if (!ahAssetMetadata) {
+            throw Error(`Token ${tokenAddress} not registered on asset hub.`)
+        }
+        const sourceAssetMetadata = this.source.assets[tokenAddress.toLowerCase()]
+        if (!sourceAssetMetadata) {
+            throw Error(
+                `Token ${tokenAddress} not registered on source parachain ${this.source.id}.`,
+            )
+        }
+        const sourceParachain = this.source
 
         let messageId: string | undefined
         let tx: SubmittableExtrinsic<"promise", ISubmittableResult>
@@ -592,9 +624,10 @@ export function createTransferImplementationV1(
     context: EthersContext,
     route: TransferRoute,
     registry: AssetRegistry,
-    _tokenAddress: string,
+    source: Parachain,
+    destination: EthereumChain,
 ): ToEthereumTransferInterface {
-    return new V1ToEthereumAdapter(context, registry, route)
+    return new V1ToEthereumAdapter(context, registry, route, source, destination)
 }
 
 export enum ValidationKind {
@@ -652,6 +685,7 @@ export async function getDeliveryFeeV1(
     assetHub: ApiPromise,
     parachain: ApiPromise,
     sourceParaId: number,
+    sourceParachain: Parachain,
     registry: AssetRegistry,
     tokenAddress: string,
     options?: {
@@ -675,11 +709,12 @@ export async function getDeliveryFeeV1(
         snowbridgeDeliveryFeeDOT = snowbridgeBaseFee
     }
 
-    const { sourceAssetMetadata, sourceParachain } = resolveInputs(
-        registry,
-        tokenAddress,
-        sourceParaId,
-    )
+    const sourceAssetMetadata = sourceParachain.assets[tokenAddress.toLowerCase()]
+    if (!sourceAssetMetadata) {
+        throw Error(
+            `Token ${tokenAddress} not registered on source parachain ${sourceParachain.id}.`,
+        )
+    }
     const sourceParachainImpl = await paraImplementation(parachain)
 
     let xcm: any, forwardedXcm: any
@@ -915,34 +950,6 @@ export async function signAndSendTransfer(
     result.messageId = transfer.computed.messageId ?? result.messageId
 
     return result
-}
-
-export function resolveInputs(registry: AssetRegistry, tokenAddress: string, sourceParaId: number) {
-    const tokenErcMetadata =
-        registry.ethereumChains[`ethereum_${registry.ethChainId}`].assets[
-            tokenAddress.toLowerCase()
-        ]
-    if (!tokenErcMetadata) {
-        throw Error(`No token ${tokenAddress} registered on ethereum chain ${registry.ethChainId}.`)
-    }
-    const sourceParachain = registry.parachains[`polkadot_${sourceParaId}`]
-    if (!sourceParachain) {
-        throw Error(`Could not find ${sourceParaId} in the asset registry.`)
-    }
-    const ahAssetMetadata =
-        registry.parachains[`polkadot_${registry.assetHubParaId}`].assets[
-            tokenAddress.toLowerCase()
-        ]
-    if (!ahAssetMetadata) {
-        throw Error(`Token ${tokenAddress} not registered on asset hub.`)
-    }
-
-    const sourceAssetMetadata = sourceParachain.assets[tokenAddress.toLowerCase()]
-    if (!sourceAssetMetadata) {
-        throw Error(`Token ${tokenAddress} not registered on source parachain ${sourceParaId}.`)
-    }
-
-    return { tokenErcMetadata, sourceParachain, ahAssetMetadata, sourceAssetMetadata }
 }
 
 function createAssetHubTx(

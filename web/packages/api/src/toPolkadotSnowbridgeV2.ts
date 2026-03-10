@@ -134,7 +134,13 @@ class TransferToPolkadot implements TransferInterface {
 
     #resolveByTokenAddress(tokenAddress: string): TransferInterface {
         const destinationParaId = this.route.to.id
-        const { ahAssetMetadata } = resolveInputs(this.registry, tokenAddress, destinationParaId)
+        const ahAssetMetadata =
+            this.registry.parachains[`polkadot_${this.registry.assetHubParaId}`].assets[
+                tokenAddress.toLowerCase()
+            ]
+        if (!ahAssetMetadata) {
+            throw Error(`Token ${tokenAddress} not registered on asset hub.`)
+        }
 
         if (ahAssetMetadata.location) {
             this.#pnaImpl ??=
@@ -217,36 +223,6 @@ export function createTransferImplementation(
     destination: Parachain,
 ): TransferInterface {
     return new TransferToPolkadot(context, route, registry, source, destination)
-}
-
-function resolveInputs(registry: AssetRegistry, tokenAddress: string, destinationParaId: number) {
-    const tokenErcMetadata =
-        registry.ethereumChains[`ethereum_${registry.ethChainId}`].assets[
-            tokenAddress.toLowerCase()
-        ]
-    if (!tokenErcMetadata) {
-        throw Error(`No token ${tokenAddress} registered on ethereum chain ${registry.ethChainId}.`)
-    }
-    const destParachain = registry.parachains[`polkadot_${destinationParaId}`]
-    if (!destParachain) {
-        throw Error(`Could not find ${destinationParaId} in the asset registry.`)
-    }
-    const ahAssetMetadata =
-        registry.parachains[`polkadot_${registry.assetHubParaId}`].assets[
-            tokenAddress.toLowerCase()
-        ]
-    if (!ahAssetMetadata) {
-        throw Error(`Token ${tokenAddress} not registered on asset hub.`)
-    }
-
-    const destAssetMetadata = destParachain.assets[tokenAddress.toLowerCase()]
-    if (!destAssetMetadata) {
-        throw Error(
-            `Token ${tokenAddress} not registered on destination parachain ${destinationParaId}.`,
-        )
-    }
-
-    return { tokenErcMetadata, destParachain, ahAssetMetadata, destAssetMetadata }
 }
 
 export function buildMessageId(

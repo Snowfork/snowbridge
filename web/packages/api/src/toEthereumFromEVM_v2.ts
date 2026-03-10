@@ -24,7 +24,6 @@ import {
     dryRunOnSourceParachain,
     FeeInfo,
     getDeliveryFeeV1,
-    resolveInputs,
     ValidationKind,
     ValidationLog,
     ValidationReason,
@@ -76,11 +75,23 @@ export class V1ToEthereumEvmAdapter implements ToEthereumEvmTransferInterface {
         }
         const assetHub = await this.context.assetHub()
         const parachain = await this.context.parachain(this.from.id)
-        return getDeliveryFeeV1(assetHub, parachain, this.from.id, this.registry, tokenAddress, {
-            padPercentage: options?.padPercentage,
-            slippagePadPercentage: options?.slippagePadPercentage,
-            defaultFee: options?.defaultFee,
-        })
+        const sourceParachain = this.registry.parachains[`polkadot_${this.from.id}`]
+        if (!sourceParachain) {
+            throw Error(`Could not find ${this.from.id} in the asset registry.`)
+        }
+        return getDeliveryFeeV1(
+            assetHub,
+            parachain,
+            this.from.id,
+            sourceParachain,
+            this.registry,
+            tokenAddress,
+            {
+                padPercentage: options?.padPercentage,
+                slippagePadPercentage: options?.slippagePadPercentage,
+                defaultFee: options?.defaultFee,
+            },
+        )
     }
 
     async createTransfer(
@@ -114,8 +125,32 @@ export class V1ToEthereumEvmAdapter implements ToEthereumEvmTransferInterface {
 
         const parachain = await this.context.parachain(this.from.id)
         const sourceParachainImpl = await paraImplementation(parachain)
-        const { tokenErcMetadata, sourceParachain, ahAssetMetadata, sourceAssetMetadata } =
-            resolveInputs(registry, tokenAddress, sourceParachainImpl.parachainId)
+        const sourceParachain = registry.parachains[`polkadot_${sourceParachainImpl.parachainId}`]
+        if (!sourceParachain) {
+            throw Error(`Could not find ${sourceParachainImpl.parachainId} in the asset registry.`)
+        }
+        const tokenErcMetadata =
+            registry.ethereumChains[`ethereum_${registry.ethChainId}`].assets[
+                tokenAddress.toLowerCase()
+            ]
+        if (!tokenErcMetadata) {
+            throw Error(
+                `No token ${tokenAddress} registered on ethereum chain ${registry.ethChainId}.`,
+            )
+        }
+        const ahAssetMetadata =
+            registry.parachains[`polkadot_${registry.assetHubParaId}`].assets[
+                tokenAddress.toLowerCase()
+            ]
+        if (!ahAssetMetadata) {
+            throw Error(`Token ${tokenAddress} not registered on asset hub.`)
+        }
+        const sourceAssetMetadata = sourceParachain.assets[tokenAddress.toLowerCase()]
+        if (!sourceAssetMetadata) {
+            throw Error(
+                `Token ${tokenAddress} not registered on source parachain ${sourceParachain.id}.`,
+            )
+        }
         if (!sourceParachain.info.evmChainId) {
             throw Error(`Parachain ${sourceParachainImpl.parachainId} is not an EVM chain.`)
         }

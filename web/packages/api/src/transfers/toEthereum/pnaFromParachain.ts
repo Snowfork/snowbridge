@@ -26,7 +26,6 @@ import {
     buildMessageId,
     DeliveryFee,
     MessageReceipt,
-    resolveInputs,
     Transfer,
     ValidationResult,
 } from "../../toEthereum_v2"
@@ -73,11 +72,12 @@ export class PNAFromParachain implements TransferInterface {
         const parachain = await this.context.parachain(this.from.id)
 
         const sourceParachainImpl = await paraImplementation(parachain)
-        const { sourceAssetMetadata } = resolveInputs(
-            this.registry,
-            tokenAddress,
-            sourceParachainImpl.parachainId,
-        )
+        const sourceAssetMetadata = this.source.assets[tokenAddress.toLowerCase()]
+        if (!sourceAssetMetadata) {
+            throw Error(
+                `Token ${tokenAddress} not registered on source parachain ${this.source.id}.`,
+            )
+        }
 
         let forwardXcmToAH: any, forwardedXcmToBH: any, returnToSenderXcm: any, localXcm: any
 
@@ -165,8 +165,29 @@ export class PNAFromParachain implements TransferInterface {
         const parachain = await this.context.parachain(this.from.id)
 
         const sourceParachainImpl = await paraImplementation(parachain)
-        const { tokenErcMetadata, sourceParachain, ahAssetMetadata, sourceAssetMetadata } =
-            resolveInputs(registry, tokenAddress, sourceParachainImpl.parachainId)
+        const tokenErcMetadata =
+            registry.ethereumChains[`ethereum_${registry.ethChainId}`].assets[
+                tokenAddress.toLowerCase()
+            ]
+        if (!tokenErcMetadata) {
+            throw Error(
+                `No token ${tokenAddress} registered on ethereum chain ${registry.ethChainId}.`,
+            )
+        }
+        const ahAssetMetadata =
+            registry.parachains[`polkadot_${registry.assetHubParaId}`].assets[
+                tokenAddress.toLowerCase()
+            ]
+        if (!ahAssetMetadata) {
+            throw Error(`Token ${tokenAddress} not registered on asset hub.`)
+        }
+        const sourceParachain = this.source
+        const sourceAssetMetadata = sourceParachain.assets[tokenAddress.toLowerCase()]
+        if (!sourceAssetMetadata) {
+            throw Error(
+                `Token ${tokenAddress} not registered on source parachain ${sourceParachain.id}.`,
+            )
+        }
 
         const accountNonce = await sourceParachainImpl.accountNonce(sourceAccountHex)
         let messageId: string | undefined = buildMessageId(
