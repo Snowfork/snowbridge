@@ -39,7 +39,6 @@ import {
 } from "@polkadot/types/interfaces"
 import { Result } from "@polkadot/types"
 import { padFeeByPercentage, u32ToLeBytes } from "./utils"
-import { paraImplementation } from "./parachains"
 import { TransferInterface as KusamaTransferInterface } from "./transfers/forKusama/transferInterface"
 import { EthersContext } from "."
 
@@ -289,13 +288,13 @@ export class KusamaTransfer implements KusamaTransferInterface {
                 "0x0000000000000000000000000000000000000000000000000000000000000000",
             )
         }
-        const destAssetHubImpl = await paraImplementation(destAssetHub)
+        const destAssetHubImpl = await this.context.paraImplementation(destAssetHub)
         let destinationFeeInDestNative = await destAssetHubImpl.calculateXcmFee(
             destXcm,
             DOT_LOCATION,
         )
 
-        const sourceAssetHubImpl = await paraImplementation(sourceAssetHub)
+        const sourceAssetHubImpl = await this.context.paraImplementation(sourceAssetHub)
         let bridgeHubDeliveryFee = await sourceAssetHubImpl.calculateDeliveryFeeInDOT(
             this.info.registry.bridgeHubParaId,
             forwardedXcm,
@@ -349,7 +348,7 @@ export class KusamaTransfer implements KusamaTransferInterface {
         const { assetHubParaId } = this.info.registry
         const destParaId = this.info.registry.kusama?.assetHubParaId
         let sourceParaId = assetHubParaId
-        const sourceParachainImpl = await paraImplementation(sourceAssetHub)
+        const sourceParachainImpl = await this.context.paraImplementation(sourceAssetHub)
 
         let sourceAccountHex = sourceAccount
         if (!isHex(sourceAccountHex)) {
@@ -445,7 +444,7 @@ export class KusamaTransfer implements KusamaTransferInterface {
 
         let tokenLocation = getTokenLocation(registry, this.#direction(), tokenAddress)
 
-        const sourceAssetHubImpl = await paraImplementation(sourceAssetHub)
+        const sourceAssetHubImpl = await this.context.paraImplementation(sourceAssetHub)
         let nativeBalance = await sourceAssetHubImpl.getNativeBalance(sourceAccountHex, true)
 
         let tokenAsset = getTransferAsset(this.#direction(), tokenAddress, transfer.input.registry)
@@ -541,7 +540,7 @@ export class KusamaTransfer implements KusamaTransferInterface {
             })
             assetHubDryRunError = dryRunAssetHubDest.errorMessage
 
-            const destAssetHubImpl = await paraImplementation(destAssetHub)
+            const destAssetHubImpl = await this.context.paraImplementation(destAssetHub)
             const { accountMaxConsumers, accountExists } = await destAssetHubImpl.validateAccount(
                 beneficiaryAddressHex,
                 registry.ethChainId,

@@ -21,7 +21,6 @@ import {
     Parachain,
     TransferRoute,
 } from "@snowbridge/base-types"
-import { paraImplementation } from "../../parachains"
 import {
     buildMessageId,
     DeliveryFee,
@@ -71,7 +70,7 @@ export class PNAFromParachain implements TransferInterface {
         const assetHub = await this.context.assetHub()
         const parachain = await this.context.parachain(this.from.id)
 
-        const sourceParachainImpl = await paraImplementation(parachain)
+        const sourceParachainImpl = await this.context.paraImplementation(parachain)
         const sourceAssetMetadata = this.source.assets[tokenAddress.toLowerCase()]
         if (!sourceAssetMetadata) {
             throw Error(
@@ -164,7 +163,7 @@ export class PNAFromParachain implements TransferInterface {
         }
         const parachain = await this.context.parachain(this.from.id)
 
-        const sourceParachainImpl = await paraImplementation(parachain)
+        const sourceParachainImpl = await this.context.paraImplementation(parachain)
         const tokenErcMetadata =
             registry.ethereumChains[`ethereum_${registry.ethChainId}`].assets[
                 tokenAddress.toLowerCase()

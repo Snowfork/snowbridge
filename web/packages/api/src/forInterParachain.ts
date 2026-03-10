@@ -18,7 +18,6 @@ import {
     TransferRoute,
 } from "@snowbridge/base-types"
 import { padFeeByPercentage } from "./utils"
-import { paraImplementation } from "./parachains"
 import { EthersContext } from "."
 import { buildMessageId } from "./toEthereum_v2"
 import { Result } from "@polkadot/types"
@@ -177,8 +176,8 @@ export class InterParachainTransfer implements InterParachainTransferInterface {
         const destParachain = await this.context.parachain(this.to.id)
 
         const [source, destination] = await Promise.all([
-            paraImplementation(sourceParachain),
-            paraImplementation(destParachain),
+            this.context.paraImplementation(sourceParachain),
+            this.context.paraImplementation(destParachain),
         ])
 
         resolveInputs(this.info.registry, tokenAddress, source.parachainId, destination.parachainId)
@@ -232,7 +231,7 @@ export class InterParachainTransfer implements InterParachainTransferInterface {
         fee: DeliveryFee,
     ): Promise<Transfer> {
         const sourceParachain = await this.context.parachain(this.from.id)
-        const source = await paraImplementation(sourceParachain)
+        const source = await this.context.paraImplementation(sourceParachain)
 
         let { hexAddress: beneficiaryAddressHex } =
             this.context.ethereumProvider.beneficiaryMultiAddress(beneficiaryAccount)
@@ -298,8 +297,8 @@ export class InterParachainTransfer implements InterParachainTransferInterface {
         const destParachain = await this.context.parachain(this.to.id)
 
         const [source, destination] = await Promise.all([
-            paraImplementation(sourceParachain),
-            paraImplementation(destParachain),
+            this.context.paraImplementation(sourceParachain),
+            this.context.paraImplementation(destParachain),
         ])
 
         const { registry, tokenAddress, amount, destinationParaId } = transfer.input

@@ -24,7 +24,6 @@ import {
 } from "./xcmBuilder"
 import { Result } from "@polkadot/types"
 import { XcmDryRunApiError, XcmDryRunEffects } from "@polkadot/types/interfaces"
-import { paraImplementation } from "./parachains"
 import { EthersContext } from "./index"
 import type { FeeData } from "./EthereumProvider"
 import { TransferInterface as ToPolkadotTransferInterface } from "./transfers/toPolkadot/transferInterface"
@@ -271,12 +270,12 @@ export class V1ToPolkadotAdapter implements ToPolkadotTransferInterface {
                 )
             }
 
-            const assetHubImpl = await paraImplementation(assetHub)
+            const assetHubImpl = await this.context.paraImplementation(assetHub)
             destinationDeliveryFeeDOT = await assetHubImpl.calculateDeliveryFeeInDOT(
                 this.to.id,
                 destinationXcm,
             )
-            const destinationImpl = await paraImplementation(destinationApi)
+            const destinationImpl = await this.context.paraImplementation(destinationApi)
             destinationExecutionFeeDOT = padFeeByPercentage(
                 await destinationImpl.calculateXcmFee(destinationXcm, DOT_LOCATION),
                 options?.paddFeeByPercentage ?? 33n,
@@ -500,7 +499,7 @@ export class V1ToPolkadotAdapter implements ToPolkadotTransferInterface {
                 message: "Dry run call on Asset Hub failed.",
             })
         } else if (destinationParaId !== registry.assetHubParaId) {
-            const paraImpl = await paraImplementation(destParachainApi)
+            const paraImpl = await this.context.paraImplementation(destParachainApi)
             const dryRunDestinationResult = await dryRunDestination(
                 destParachainApi,
                 v1Transfer,

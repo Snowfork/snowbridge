@@ -36,7 +36,6 @@ import {
 import { xxhashAsHex } from "@polkadot/util-crypto"
 import { BN } from "@polkadot/util"
 import { padFeeByPercentage } from "./utils"
-import { paraImplementation } from "./parachains"
 import { Context, EthersContext } from "./index"
 import { ETHER_TOKEN_ADDRESS, findL2TokenAddress } from "./assets_v2"
 import { getOperatingStatus } from "./status"
@@ -366,7 +365,7 @@ export const estimateFeesFromAssetHub = async (
     tokenAmount?: bigint,
 ): Promise<DeliveryFee> => {
     const assetHub = await context.parachain(registry.assetHubParaId)
-    const assetHubImpl = await paraImplementation(assetHub)
+    const assetHubImpl = await context.paraImplementation(assetHub)
 
     const feePadPercentage = options?.padPercentage ?? 33n
     const feeSlippagePadPercentage = options?.slippagePadPercentage ?? 20n
@@ -485,10 +484,12 @@ export const estimateFeesFromParachains = async (
     },
 ): Promise<DeliveryFee> => {
     const sourceParachain = registry.parachains[`polkadot_${sourceParaId}`]
-    const sourceParachainImpl = await paraImplementation(await context.parachain(sourceParaId))
+    const sourceParachainImpl = await context.paraImplementation(
+        await context.parachain(sourceParaId),
+    )
 
     const assetHub = await context.parachain(registry.assetHubParaId)
-    const assetHubImpl = await paraImplementation(assetHub)
+    const assetHubImpl = await context.paraImplementation(assetHub)
 
     const feePadPercentage = options?.padPercentage ?? 33n
     const feeSlippagePadPercentage = options?.slippagePadPercentage ?? 20n
@@ -642,7 +643,7 @@ export const validateTransferFromAssetHub = async (
             : context
 
     const logs: ValidationLog[] = []
-    const sourceParachainImpl = await paraImplementation(sourceParachain)
+    const sourceParachainImpl = await context.paraImplementation(sourceParachain)
     const nativeBalance = await sourceParachainImpl.getNativeBalance(sourceAccountHex, true)
     let dotBalance = await sourceParachainImpl.getDotBalance(sourceAccountHex)
     let tokenBalance: any
@@ -832,7 +833,7 @@ export const validateTransferFromParachain = async (
             : context
 
     const logs: ValidationLog[] = []
-    const sourceParachainImpl = await paraImplementation(sourceParachain)
+    const sourceParachainImpl = await context.paraImplementation(sourceParachain)
     const nativeBalance = await sourceParachainImpl.getNativeBalance(sourceAccountHex, true)
     let dotBalance: bigint | undefined = undefined
     if (source.features.hasDotBalance) {

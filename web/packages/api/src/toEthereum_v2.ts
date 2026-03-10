@@ -37,7 +37,6 @@ import {
     XcmDryRunEffects,
 } from "@polkadot/types/interfaces"
 import { Result } from "@polkadot/types"
-import { paraImplementation } from "./parachains"
 import { padFeeByPercentage, u32ToLeBytes } from "./utils"
 import { EthersContext } from "./index"
 import { ParachainBase } from "./parachains/parachainBase"
@@ -134,9 +133,11 @@ export class V1ToEthereumAdapter implements ToEthereumTransferInterface {
 
         const assetHub = await this.context.assetHub()
         const parachain = await this.context.parachain(this.source.id)
+        const assetHubImpl = await this.context.paraImplementation(assetHub)
+        const sourceParachainImpl = await this.context.paraImplementation(parachain)
         return getDeliveryFeeV1(
-            assetHub,
-            parachain,
+            assetHubImpl,
+            sourceParachainImpl,
             this.source.id,
             this.source,
             this.registry,
@@ -177,7 +178,7 @@ export class V1ToEthereumAdapter implements ToEthereumTransferInterface {
 
         const parachain = await this.context.parachain(this.source.id)
 
-        const sourceParachainImpl = await paraImplementation(parachain)
+        const sourceParachainImpl = await this.context.paraImplementation(parachain)
         const tokenErcMetadata =
             registry.ethereumChains[`ethereum_${registry.ethChainId}`].assets[
                 tokenAddress.toLowerCase()
@@ -304,7 +305,7 @@ export class V1ToEthereumAdapter implements ToEthereumTransferInterface {
         const { tx } = transfer
 
         const logs: ValidationLog[] = []
-        const sourceParachainImpl = await paraImplementation(sourceParachain)
+        const sourceParachainImpl = await this.context.paraImplementation(sourceParachain)
         const nativeBalance = await sourceParachainImpl.getNativeBalance(sourceAccountHex, true)
         let dotBalance: bigint | undefined = undefined
         if (source.features.hasDotBalance) {
@@ -682,8 +683,8 @@ export type MessageReceipt = {
 }
 
 export async function getDeliveryFeeV1(
-    assetHub: ApiPromise,
-    parachain: ApiPromise,
+    assetHubImpl: ParachainBase,
+    sourceParachainImpl: ParachainBase,
     sourceParaId: number,
     sourceParachain: Parachain,
     registry: AssetRegistry,
@@ -698,7 +699,6 @@ export async function getDeliveryFeeV1(
     const feePadPercentage = options?.padPercentage ?? 33n
     const feeSlippagePadPercentage = options?.slippagePadPercentage ?? 20n
     const feeStorageKey = xxhashAsHex(":BridgeHubEthereumBaseFee:", 128, true)
-    const assetHubImpl = await paraImplementation(assetHub)
     const snowbridgeBaseFee = await assetHubImpl.getDeliveryFeeFromStorage(feeStorageKey)
 
     let snowbridgeDeliveryFeeDOT = 0n
@@ -715,13 +715,11 @@ export async function getDeliveryFeeV1(
             `Token ${tokenAddress} not registered on source parachain ${sourceParachain.id}.`,
         )
     }
-    const sourceParachainImpl = await paraImplementation(parachain)
-
     let xcm: any, forwardedXcm: any
 
     if (sourceAssetMetadata.location) {
         xcm = buildResultXcmAssetHubPNATransferFromParachain(
-            assetHub.registry,
+            assetHubImpl.provider.registry,
             registry.ethChainId,
             sourceAssetMetadata.locationOnAH,
             sourceAssetMetadata.locationOnEthereum,
@@ -733,7 +731,7 @@ export async function getDeliveryFeeV1(
             340282366920938463463374607431768211455n,
         )
         forwardedXcm = buildExportXcmForPNA(
-            assetHub.registry,
+            assetHubImpl.provider.registry,
             registry.ethChainId,
             sourceAssetMetadata.locationOnEthereum,
             "0x0000000000000000000000000000000000000000",
@@ -745,7 +743,7 @@ export async function getDeliveryFeeV1(
     } else {
         if (sourceParachain.features.hasDotBalance) {
             xcm = buildResultXcmAssetHubERC20TransferFromParachain(
-                assetHub.registry,
+                assetHubImpl.provider.registry,
                 registry.ethChainId,
                 "0x0000000000000000000000000000000000000000000000000000000000000000",
                 "0x0000000000000000000000000000000000000000",
@@ -762,7 +760,7 @@ export async function getDeliveryFeeV1(
             )
         } else {
             xcm = buildResultXcmAssetHubERC20TransferFromParachain(
-                assetHub.registry,
+                assetHubImpl.provider.registry,
                 registry.ethChainId,
                 "0x0000000000000000000000000000000000000000000000000000000000000000",
                 "0x0000000000000000000000000000000000000000",
@@ -779,7 +777,7 @@ export async function getDeliveryFeeV1(
             )
         }
         forwardedXcm = buildExportXcmForERC20(
-            assetHub.registry,
+            assetHubImpl.provider.registry,
             registry.ethChainId,
             tokenAddress,
             "0x0000000000000000000000000000000000000000",
@@ -801,7 +799,7 @@ export async function getDeliveryFeeV1(
         let returnToSenderXcm: any
         if (sourceAssetMetadata.location) {
             returnToSenderXcm = buildParachainPNAReceivedXcmOnDestination(
-                parachain.registry,
+                sourceParachainImpl.provider.registry,
                 sourceAssetMetadata.location,
                 340282366920938463463374607431768211455n,
                 340282366920938463463374607431768211455n,
@@ -810,7 +808,7 @@ export async function getDeliveryFeeV1(
             )
         } else {
             returnToSenderXcm = buildParachainERC20ReceivedXcmOnDestination(
-                parachain.registry,
+                sourceParachainImpl.provider.registry,
                 registry.ethChainId,
                 "0x0000000000000000000000000000000000000000",
                 340282366920938463463374607431768211455n,

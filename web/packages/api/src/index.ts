@@ -39,6 +39,8 @@ import type { TransferInterface as ToEthereumEvmTransferInterface } from "./tran
 import { ERC20ToAH as ERC20FromL2ToAH } from "./transfers/l2ToPolkadot/erc20ToAH"
 import { ERC20FromAH as ERC20FromAHToL2 } from "./transfers/polkadotToL2/erc20ToL2"
 import { V1ToEthereumEvmAdapter } from "./toEthereumFromEVM_v2"
+import { paraImplementation as buildParaImplementation } from "./parachains"
+import { EthersEthereumProvider } from "./EthereumProvider"
 
 export * as toPolkadotV2 from "./toPolkadot_v2"
 export * as toEthereumV2 from "./toEthereum_v2"
@@ -255,6 +257,14 @@ export class Context<
             }
         })
         return await this.#kusamaParachains[paraIdKey]
+    }
+
+    async paraImplementation(provider: ApiPromise) {
+        const ethereumProvider =
+            this.ethereumProvider instanceof EthersEthereumProvider
+                ? this.ethereumProvider
+                : undefined
+        return buildParaImplementation(provider, ethereumProvider)
     }
 
     setEthProvider(ethChainId: number, provider: EConnection) {

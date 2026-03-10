@@ -20,7 +20,6 @@ import {
     ValidationResult,
 } from "../../toPolkadotSnowbridgeV2"
 import { accountId32Location, DOT_LOCATION, erc20Location, isDOT } from "../../xcmBuilder"
-import { paraImplementation } from "../../parachains"
 import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
 import { padFeeByPercentage, paraIdToSovereignAccount } from "../../utils"
 import { FeeInfo, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
@@ -93,8 +92,8 @@ export class ERC20ToParachain implements TransferInterface {
             1000000000000n,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
         )
-        const bridgeHubImpl = await paraImplementation(bridgeHub)
-        const assetHubImpl = await paraImplementation(assetHub)
+        const bridgeHubImpl = await this.context.paraImplementation(bridgeHub)
+        const assetHubImpl = await this.context.paraImplementation(assetHub)
         let ether = erc20Location(registry.ethChainId, ETHER_TOKEN_ADDRESS)
         const paddFeeByPercentage = options?.paddFeeByPercentage
         const feeAsset = options?.feeAsset || ether
@@ -147,7 +146,7 @@ export class ERC20ToParachain implements TransferInterface {
             )
         }
 
-        const destinationImpl = await paraImplementation(destination)
+        const destinationImpl = await this.context.paraImplementation(destination)
         // Delivery fee AssetHub to Destination
         let destinationDeliveryFeeDOT = await assetHubImpl.calculateDeliveryFeeInDOT(
             this.to.id,
@@ -455,7 +454,7 @@ export class ERC20ToParachain implements TransferInterface {
 
         // Check if asset can be received on asset hub (dry run)
         const ahParachain = registry.parachains[`polkadot_${registry.assetHubParaId}`]
-        const assetHubImpl = await paraImplementation(assetHub)
+        const assetHubImpl = await this.context.paraImplementation(assetHub)
         let dryRunAhSuccess, forwardedDestination, assetHubDryRunError
         if (!ahParachain.features.hasDryRunApi) {
             logs.push({
@@ -575,7 +574,8 @@ export class ERC20ToParachain implements TransferInterface {
                                 "Dry run on Asset Hub did not produce an XCM to be forwarded to the destination parachain.",
                         })
                     }
-                    const destParachainImpl = await paraImplementation(destParachainApi)
+                    const destParachainImpl =
+                        await this.context.paraImplementation(destParachainApi)
                     const { success: dryRunDestinationSuccess, errorMessage: destMessage } =
                         await destParachainImpl.dryRunXcm(registry.assetHubParaId, xcm[0])
                     if (!dryRunDestinationSuccess) {
@@ -600,7 +600,7 @@ export class ERC20ToParachain implements TransferInterface {
                 ((destParachain.features.hasDryRunApi && destinationParachainDryRunError) ||
                     !destParachain.features.hasDryRunApi)
             ) {
-                const destParachainImpl = await paraImplementation(destParachainApi)
+                const destParachainImpl = await this.context.paraImplementation(destParachainApi)
                 // Check if the account is created
                 const { accountMaxConsumers, accountExists } =
                     await destParachainImpl.validateAccount(
