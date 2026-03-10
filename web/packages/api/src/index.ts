@@ -11,7 +11,11 @@ import {
     SNOWBRIDGE_L2_ADAPTOR_ABI,
     SWAP_QUOTER_ABI,
 } from "./contracts"
-import { type EthereumProvider } from "./EthereumProvider"
+import {
+    type EthereumProvider,
+    type EthereumProviderTypes,
+    type EthersEthereumProvider,
+} from "./EthereumProvider"
 import {
     BridgeInfo,
     ChainId,
@@ -59,33 +63,25 @@ export * as neuroWeb from "./parachains/neuroweb"
 export * as toPolkadotSnowbridgeV2 from "./toPolkadotSnowbridgeV2"
 export * as addTip from "./addTip"
 export { EthersEthereumProvider } from "./EthereumProvider"
-export type { EthereumProvider, EthersContext } from "./EthereumProvider"
+export type {
+    EthereumProvider,
+    EthereumProviderTypes,
+    EthersProviderTypes,
+    ProviderContext,
+    EthersContext,
+} from "./EthereumProvider"
 
-export class Context<
-    EConnection,
-    EContract,
-    EAbi,
-    EInterface,
-    ETransactionReceipt,
-    EContractTransaction,
-> {
+export class Context<T extends EthereumProviderTypes> {
     readonly environment: Environment
-    readonly ethereumProvider: EthereumProvider<
-        EConnection,
-        EContract,
-        EAbi,
-        EInterface,
-        ETransactionReceipt,
-        EContractTransaction
-    >
+    readonly ethereumProvider: EthereumProvider<T>
 
     // Ethereum
-    #ethChains: Record<string, EConnection>
-    #gateway?: EContract & IGatewayV1
-    #gatewayV2?: EContract & IGatewayV2
-    #beefyClient?: EContract & BeefyClient
-    #l1SwapQuoter?: EContract & ISwapQuoter
-    #l2Adapters: { [l2ChainId: number]: EContract } = {}
+    #ethChains: Record<string, T["Connection"]>
+    #gateway?: T["Contract"] & IGatewayV1
+    #gatewayV2?: T["Contract"] & IGatewayV2
+    #beefyClient?: T["Contract"] & BeefyClient
+    #l1SwapQuoter?: T["Contract"] & ISwapQuoter
+    #l2Adapters: { [l2ChainId: number]: T["Contract"] } = {}
 
     // Substrate
     #polkadotParachains: Record<string, Promise<ApiPromise>>
@@ -95,17 +91,7 @@ export class Context<
     static #rpcInitTimeoutMs = 40_000
     static #wsRequestTimeoutMs = 30_000
 
-    constructor(
-        environment: Environment,
-        ethereumProvider: EthereumProvider<
-            EConnection,
-            EContract,
-            EAbi,
-            EInterface,
-            ETransactionReceipt,
-            EContractTransaction
-        >,
-    ) {
+    constructor(environment: Environment, ethereumProvider: EthereumProvider<T>) {
         this.environment = environment
         this.ethereumProvider = ethereumProvider
         this.#polkadotParachains = {}
@@ -262,7 +248,7 @@ export class Context<
         return buildParaImplementation(provider, this.ethereumProvider)
     }
 
-    setEthProvider(ethChainId: number, provider: EConnection) {
+    setEthProvider(ethChainId: number, provider: T["Connection"]) {
         const ethChainKey = ethChainId.toString()
         if (ethChainKey in this.#ethChains) {
             this.ethereumProvider.destroyProvider(this.#ethChains[ethChainKey])
@@ -270,7 +256,7 @@ export class Context<
         this.#ethChains[ethChainKey] = provider
     }
 
-    ethChain(ethChainId: number): EConnection {
+    ethChain(ethChainId: number): T["Connection"] {
         const ethChainKey = ethChainId.toString()
         if (ethChainKey in this.#ethChains) {
             return this.#ethChains[ethChainKey]
@@ -287,43 +273,43 @@ export class Context<
         }
     }
 
-    ethereum(): EConnection {
+    ethereum(): T["Connection"] {
         return this.ethChain(this.environment.ethChainId)
     }
 
-    gateway(): EContract & IGatewayV1 {
+    gateway(): T["Contract"] & IGatewayV1 {
         if (this.#gateway) {
             return this.#gateway
         }
-        this.#gateway = this.ethereumProvider.connectContract<EContract & IGatewayV1>(
+        this.#gateway = this.ethereumProvider.connectContract(
             this.environment.gatewayContract,
-            IGATEWAY_V1_ABI as EAbi,
+            IGATEWAY_V1_ABI as T["Abi"],
             this.ethereum(),
-        )
+        ) as T["Contract"] & IGatewayV1
         return this.#gateway!
     }
 
-    gatewayV2(): EContract & IGatewayV2 {
+    gatewayV2(): T["Contract"] & IGatewayV2 {
         if (this.#gatewayV2) {
             return this.#gatewayV2
         }
-        this.#gatewayV2 = this.ethereumProvider.connectContract<EContract & IGatewayV2>(
+        this.#gatewayV2 = this.ethereumProvider.connectContract(
             this.environment.gatewayContract,
-            IGATEWAY_V2_ABI as EAbi,
+            IGATEWAY_V2_ABI as T["Abi"],
             this.ethereum(),
-        )
+        ) as T["Contract"] & IGatewayV2
         return this.#gatewayV2!
     }
 
-    beefyClient(): EContract & BeefyClient {
+    beefyClient(): T["Contract"] & BeefyClient {
         if (this.#beefyClient) {
             return this.#beefyClient
         }
-        this.#beefyClient = this.ethereumProvider.connectContract<EContract & BeefyClient>(
+        this.#beefyClient = this.ethereumProvider.connectContract(
             this.environment.beefyContract,
-            BEEFY_CLIENT_ABI as EAbi,
+            BEEFY_CLIENT_ABI as T["Abi"],
             this.ethereum(),
-        )
+        ) as T["Contract"] & BeefyClient
         return this.#beefyClient!
     }
 
@@ -365,55 +351,41 @@ export class Context<
         }
     }
 
-    l1SwapQuoter(): EContract {
+    l1SwapQuoter(): T["Contract"] {
         if (!this.environment.l2Bridge) {
             throw new Error("L2 bridge configuration is missing.")
         }
         if (this.#l1SwapQuoter) {
             return this.#l1SwapQuoter
         }
-        this.#l1SwapQuoter = this.ethereumProvider.connectContract<EContract & ISwapQuoter>(
+        this.#l1SwapQuoter = this.ethereumProvider.connectContract(
             this.environment.l2Bridge.l1SwapQuoterAddress,
-            SWAP_QUOTER_ABI as EAbi,
+            SWAP_QUOTER_ABI as T["Abi"],
             this.ethereum(),
-        )
+        ) as T["Contract"] & ISwapQuoter
         return this.#l1SwapQuoter!
     }
 
-    l2Adapter(l2ChainId: number): EContract {
+    l2Adapter(l2ChainId: number): T["Contract"] {
         if (!this.environment.l2Bridge) {
             throw new Error("L2 bridge configuration is missing.")
         }
         if (this.#l2Adapters[l2ChainId]) {
             return this.#l2Adapters[l2ChainId]
         }
-        const adapter = this.ethereumProvider.connectContract<EContract>(
+        const adapter = this.ethereumProvider.connectContract(
             this.environment.l2Bridge.l2Chains[l2ChainId].adapterAddress,
-            SNOWBRIDGE_L2_ADAPTOR_ABI as EAbi,
+            SNOWBRIDGE_L2_ADAPTOR_ABI as T["Abi"],
             this.ethChain(l2ChainId),
-        )
+        ) as T["Contract"]
         this.#l2Adapters[l2ChainId] = adapter
         return adapter
     }
 }
 
-export type ApiOptions<
-    EConnection,
-    EContract,
-    EAbi,
-    EInterface,
-    ETransactionReceipt,
-    EContractTransaction,
-> = {
+export type ApiOptions<P extends EthereumProvider<any>> = {
     info: BridgeInfo
-    ethereumProvider: EthereumProvider<
-        EConnection,
-        EContract,
-        EAbi,
-        EInterface,
-        ETransactionReceipt,
-        EContractTransaction
-    >
+    ethereumProvider: P
 }
 
 export type TransferImplementation =
@@ -431,6 +403,7 @@ type TransferForKind<K extends TransferKind> = Extract<TransferImplementation, {
 type TransferFromTo<F extends ChainId, T extends ChainId> = TransferForKind<
     Extract<`${F["kind"]}->${T["kind"]}`, TransferKind>
 >
+type ProviderTypesFor<P extends EthereumProvider<any>> = P["providerTypes"]
 
 function withKind<K extends TransferImplementation["kind"], T>(
     implementation: T,
@@ -468,47 +441,17 @@ function resolveRegistryTransferChain(info: BridgeInfo, chain: ChainId): Registr
     }
 }
 
-export class SnowbridgeApi<
-    EConnection,
-    EContract,
-    EAbi,
-    EInterface,
-    ETransactionReceipt,
-    EContractTransaction,
-> {
+export class SnowbridgeApi<P extends EthereumProvider<any>> {
     readonly info: BridgeInfo
-    readonly context: Context<
-        EConnection,
-        EContract,
-        EAbi,
-        EInterface,
-        ETransactionReceipt,
-        EContractTransaction
-    >
-    constructor(
-        options: ApiOptions<
-            EConnection,
-            EContract,
-            EAbi,
-            EInterface,
-            ETransactionReceipt,
-            EContractTransaction
-        >,
-    ) {
+    readonly context: Context<ProviderTypesFor<P>>
+    constructor(options: ApiOptions<P>) {
         this.info = options.info
-        this.context = new Context(options.info.environment, options.ethereumProvider)
+        this.context = new Context<ProviderTypesFor<P>>(
+            options.info.environment,
+            options.ethereumProvider as unknown as EthereumProvider<ProviderTypesFor<P>>,
+        )
     }
-    createAgent(): AgentCreationInterface<
-        Context<
-            EConnection,
-            EContract,
-            EAbi,
-            EInterface,
-            ETransactionReceipt,
-            EContractTransaction
-        >,
-        EContractTransaction
-    > {
+    createAgent(): AgentCreationInterface<ProviderTypesFor<P>["ContractTransaction"]> {
         return new CreateAgent(this.context, this.info.registry)
     }
     transfer<F extends ChainId, T extends ChainId>(from: F, to: T): TransferFromTo<F, T>
@@ -649,29 +592,12 @@ export class SnowbridgeApi<
     }
 }
 
-export function createApi<
-    EConnection,
-    EContract,
-    EAbi,
-    EInterface,
-    ETransactionReceipt,
-    EContractTransaction,
->(
-    options: ApiOptions<
-        EConnection,
-        EContract,
-        EAbi,
-        EInterface,
-        ETransactionReceipt,
-        EContractTransaction
-    >,
-): SnowbridgeApi<
-    EConnection,
-    EContract,
-    EAbi,
-    EInterface,
-    ETransactionReceipt,
-    EContractTransaction
-> {
+export function createApi(options: {
+    info: BridgeInfo
+    ethereumProvider: EthersEthereumProvider
+}): SnowbridgeApi<EthersEthereumProvider>
+export function createApi<P extends EthereumProvider<any>>(
+    options: ApiOptions<P>,
+): SnowbridgeApi<P> {
     return new SnowbridgeApi(options)
 }

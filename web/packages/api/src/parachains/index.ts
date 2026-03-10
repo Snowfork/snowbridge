@@ -14,11 +14,11 @@ import { PenpalParachain } from "./penpal"
 import { JamtonParachain } from "./jamton"
 import { NeurowebParachain } from "./neuroweb"
 import { ParachainBase } from "./parachainBase"
-import type { EthereumProvider } from "../EthereumProvider"
+import type { EthereumProvider, EthereumProviderTypes } from "../EthereumProvider"
 
-export async function paraImplementation<EContract>(
+export async function paraImplementation<T extends EthereumProviderTypes>(
     provider: ApiPromise,
-    ethereumProvider?: EthereumProvider<unknown, EContract, unknown, unknown, unknown, unknown>,
+    ethereumProvider?: EthereumProvider<T>,
 ): Promise<ParachainBase> {
     let parachainId = 0
     if (provider.query.parachainInfo) {

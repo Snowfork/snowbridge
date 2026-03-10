@@ -128,30 +128,20 @@ const PALLET_XCM_PRECOMPILE_ABI: InterfaceAbi = [
     },
 ]
 
-export interface EthereumProvider<
-    Connection,
-    Contract,
-    Abi,
-    Interface,
-    TransactionReceipt,
-    ContractTransaction,
-> {
-    createProvider(url: string): Connection
-    destroyProvider(provider: Connection): void
-    destroyContract(contract: Contract): Promise<void>
-    connectContract<T extends Contract>(
-        address: string,
-        abi: Abi,
-        provider: Connection,
-    ): Contract & T
+export interface EthereumProvider<T extends EthereumProviderTypes> {
+    readonly providerTypes: T
+    createProvider(url: string): T["Connection"]
+    destroyProvider(provider: T["Connection"]): void
+    destroyContract(contract: T["Contract"]): Promise<void>
+    connectContract(address: string, abi: T["Abi"], provider: T["Connection"]): T["Contract"]
     erc20Balance(
-        provider: Connection,
+        provider: T["Connection"],
         tokenAddress: string,
         owner: string,
         spender: string,
     ): Promise<{ balance: bigint; gatewayAllowance: bigint }>
-    encodeFunctionData(abi: Abi, method: string, args: readonly unknown[]): string
-    decodeFunctionResult<T = unknown>(abi: Abi, method: string, data: string): T
+    encodeFunctionData(abi: T["Abi"], method: string, args: readonly unknown[]): string
+    decodeFunctionResult<U = unknown>(abi: T["Abi"], method: string, data: string): U
     encodeNativeAsset(tokenAddress: string, amount: bigint): string
     l1AdapterDepositNativeEther(
         params: L1AdapterDepositParams,
@@ -162,9 +152,9 @@ export interface EthereumProvider<
     l1SwapRouterExactOutputSingle(params: L1SwapRouterExactOutputSingleParams): string
     l1LegacySwapRouterExactOutputSingle(params: L1LegacySwapRouterExactOutputSingleParams): string
     beneficiaryMultiAddress(beneficiary: string): EncodedMultiAddress
-    estimateGas(provider: Connection, tx: ContractTransaction): Promise<bigint>
+    estimateGas(provider: T["Connection"], tx: T["ContractTransaction"]): Promise<bigint>
     gatewayV1SendToken(
-        provider: Connection,
+        provider: T["Connection"],
         gatewayAddress: string,
         sourceAccount: string,
         tokenAddress: string,
@@ -173,9 +163,9 @@ export interface EthereumProvider<
         totalFeeDot: bigint,
         amount: bigint,
         value: bigint,
-    ): Promise<ContractTransaction>
+    ): Promise<T["ContractTransaction"]>
     gatewayV2RegisterToken(
-        provider: Connection,
+        provider: T["Connection"],
         gatewayAddress: string,
         sourceAccount: string,
         tokenAddress: string,
@@ -183,14 +173,14 @@ export interface EthereumProvider<
         assetHubExecutionFeeEther: bigint,
         relayerFee: bigint,
         totalValue: bigint,
-    ): Promise<ContractTransaction>
+    ): Promise<T["ContractTransaction"]>
     gatewayV2CreateAgent(
-        provider: Connection,
+        provider: T["Connection"],
         gatewayAddress: string,
         agentId: string,
-    ): Promise<ContractTransaction>
+    ): Promise<T["ContractTransaction"]>
     gatewayV2SendMessage(
-        provider: Connection,
+        provider: T["Connection"],
         gatewayAddress: string,
         sourceAccount: string,
         xcm: Uint8Array,
@@ -199,9 +189,9 @@ export interface EthereumProvider<
         assetHubExecutionFeeEther: bigint,
         relayerFee: bigint,
         value: bigint,
-    ): Promise<ContractTransaction>
+    ): Promise<T["ContractTransaction"]>
     l2AdapterSendEtherAndCall(
-        provider: Connection,
+        provider: T["Connection"],
         adapterAddress: string,
         sourceAccount: string,
         depositParams: any,
@@ -209,9 +199,9 @@ export interface EthereumProvider<
         refundAddress: string,
         topic: string,
         value?: bigint,
-    ): Promise<ContractTransaction>
+    ): Promise<T["ContractTransaction"]>
     l2AdapterSendTokenAndCall(
-        provider: Connection,
+        provider: T["Connection"],
         adapterAddress: string,
         sourceAccount: string,
         depositParams: any,
@@ -219,9 +209,9 @@ export interface EthereumProvider<
         sendParams: any,
         refundAddress: string,
         topic: string,
-    ): Promise<ContractTransaction>
+    ): Promise<T["ContractTransaction"]>
     evmParachainTransferAssetsUsingTypeAndThenAddress(
-        provider: Connection,
+        provider: T["Connection"],
         precompileAddress: string,
         sourceAccount: string,
         destination: [number, string[]],
@@ -230,30 +220,22 @@ export interface EthereumProvider<
         remoteFeesIdIndex: number,
         feesTransferType: number,
         customXcmHex: string,
-    ): Promise<ContractTransaction>
-    getBalance(provider: Connection, address: string): Promise<bigint>
-    getFeeData(provider: Connection): Promise<FeeData>
+    ): Promise<T["ContractTransaction"]>
+    getBalance(provider: T["Connection"], address: string): Promise<bigint>
+    getFeeData(provider: T["Connection"]): Promise<FeeData>
     parseUnits(value: string, decimals: number): bigint
-    isContractAddress(provider: Connection, address: string): Promise<boolean>
+    isContractAddress(provider: T["Connection"], address: string): Promise<boolean>
     scanGatewayV1OutboundMessageAccepted(
-        receipt: TransactionReceipt,
+        receipt: T["TransactionReceipt"],
     ): GatewayV1OutboundMessageAccepted | null
     scanGatewayV2OutboundMessageAccepted(
-        receipt: TransactionReceipt,
+        receipt: T["TransactionReceipt"],
     ): GatewayV2OutboundMessageAccepted | null
 }
 
-export class EthersEthereumProvider
-    implements
-        EthereumProvider<
-            AbstractProvider,
-            Contract,
-            InterfaceAbi,
-            Interface,
-            TransactionReceipt,
-            ContractTransaction
-        >
-{
+export class EthersEthereumProvider implements EthereumProvider<EthersProviderTypes> {
+    declare readonly providerTypes: EthersProviderTypes
+
     static gatewayV1Interface = new Interface(IGATEWAY_V1_ABI)
     static gatewayV2Interface = new Interface(IGATEWAY_V2_ABI)
 
@@ -272,12 +254,8 @@ export class EthersEthereumProvider
         await contract.removeAllListeners()
     }
 
-    connectContract<T extends Contract>(
-        address: string,
-        abi: InterfaceAbi,
-        provider: AbstractProvider,
-    ): Contract & T {
-        return new Contract(address, abi, provider) as T
+    connectContract(address: string, abi: InterfaceAbi, provider: AbstractProvider): Contract {
+        return new Contract(address, abi, provider)
     }
 
     async erc20Balance(
@@ -286,11 +264,8 @@ export class EthersEthereumProvider
         owner: string,
         spender: string,
     ): Promise<{ balance: bigint; gatewayAllowance: bigint }> {
-        const tokenContract = this.connectContract<Contract & IERC20>(
-            tokenAddress,
-            IERC20_ABI,
-            provider,
-        )
+        const tokenContract = this.connectContract(tokenAddress, IERC20_ABI, provider) as Contract &
+            IERC20
         const [balance, gatewayAllowance] = await Promise.all([
             tokenContract.balanceOf(owner),
             tokenContract.allowance(owner, spender),
@@ -604,11 +579,24 @@ export class EthersEthereumProvider
     }
 }
 
-export type EthersContext = Context<
-    AbstractProvider,
-    Contract,
-    InterfaceAbi,
-    Interface,
-    TransactionReceipt,
-    ContractTransaction
->
+export interface EthereumProviderTypes {
+    Connection: unknown
+    Contract: unknown
+    Abi: unknown
+    Interface: unknown
+    TransactionReceipt: unknown
+    ContractTransaction: unknown
+}
+
+export interface EthersProviderTypes extends EthereumProviderTypes {
+    Connection: AbstractProvider
+    Contract: Contract
+    Abi: InterfaceAbi
+    Interface: Interface
+    TransactionReceipt: TransactionReceipt
+    ContractTransaction: ContractTransaction
+}
+
+export type ProviderContext<T extends EthereumProviderTypes> = Context<T>
+
+export type EthersContext = ProviderContext<EthersProviderTypes>
