@@ -14,11 +14,11 @@ import { PenpalParachain } from "./penpal"
 import { JamtonParachain } from "./jamton"
 import { NeurowebParachain } from "./neuroweb"
 import { ParachainBase } from "./parachainBase"
-import { EthersEthereumProvider } from "../EthereumProvider"
+import type { EthereumProvider } from "../EthereumProvider"
 
-export async function paraImplementation(
+export async function paraImplementation<EContract>(
     provider: ApiPromise,
-    ethereumProvider?: EthersEthereumProvider,
+    ethereumProvider?: EthereumProvider<unknown, EContract, unknown, unknown, unknown, unknown>,
 ): Promise<ParachainBase> {
     let parachainId = 0
     if (provider.query.parachainInfo) {
@@ -47,7 +47,7 @@ export async function paraImplementation(
         case "moonriver":
         case "moonbeam":
             if (!ethereumProvider) {
-                throw Error("Moonbeam parachain implementation requires an EthersEthereumProvider.")
+                throw Error("Moonbeam parachain implementation requires an EthereumProvider.")
             }
             return new MoonbeamParachain(
                 provider,
