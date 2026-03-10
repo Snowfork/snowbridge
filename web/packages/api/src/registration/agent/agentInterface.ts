@@ -23,9 +23,7 @@ export type AgentCreationValidationResult<ContractTransaction> = {
     creation: AgentCreation<ContractTransaction>
 }
 
-export interface AgentCreationInterface<Context, ContractTransaction> {
-    readonly context: Context
-
+export interface AgentCreationInterface<ContractTransaction> {
     rawTx(sourceAccount: string, agentId: string): Promise<AgentCreation<ContractTransaction>>
 
     validateTx(

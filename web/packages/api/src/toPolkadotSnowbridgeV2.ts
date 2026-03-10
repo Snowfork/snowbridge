@@ -26,7 +26,7 @@ import { accountToLocation, DOT_LOCATION, erc20Location } from "./xcmBuilder"
 import { Codec } from "@polkadot/types/types"
 import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
 import { padFeeByPercentage } from "./utils"
-import { EthereumProvider, EthersContext } from "./index"
+import { EthereumProvider, EthereumProviderTypes, EthersContext } from "./index"
 export { ValidationKind } from "./toPolkadot_v2"
 import { ParachainBase } from "./parachains/parachainBase"
 
@@ -246,16 +246,9 @@ export function buildMessageId(
     return blake2AsHex(entropy)
 }
 
-export async function getMessageReceipt<ETransactionReceipt>(
-    ethereumProvider: EthereumProvider<
-        unknown,
-        unknown,
-        unknown,
-        unknown,
-        ETransactionReceipt,
-        unknown
-    >,
-    receipt: ETransactionReceipt,
+export async function getMessageReceipt<T extends EthereumProviderTypes>(
+    ethereumProvider: EthereumProvider<T>,
+    receipt: T["TransactionReceipt"],
 ): Promise<MessageReceipt | null> {
     const messageAccepted = ethereumProvider.scanGatewayV2OutboundMessageAccepted(receipt)
     if (!messageAccepted) return null
