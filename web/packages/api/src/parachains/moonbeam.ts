@@ -2,7 +2,9 @@ import { ApiPromise } from "@polkadot/api"
 import { ParachainBase } from "./parachainBase"
 import { AssetMap, PNAMap } from "@snowbridge/base-types"
 import { DOT_LOCATION, getTokenFromLocation } from "../xcmBuilder"
-import { EthersEthereumProvider } from "../EthereumProvider"
+import type { EthereumProvider } from "../EthereumProvider"
+
+type BaseEthereumProvider = EthereumProvider<unknown, unknown, unknown, unknown, unknown, unknown>
 
 const MOONBEAM_ERC20_ABI = [
     "function name() view returns (string)",
@@ -16,7 +18,7 @@ function toMoonbeamXC20(assetId: bigint) {
 }
 
 async function getMoonbeamEvmForeignAssetBalanceWithProvider(
-    ethereumProvider: EthersEthereumProvider,
+    ethereumProvider: BaseEthereumProvider,
     api: ApiPromise,
     token: string,
     account: string,
@@ -52,7 +54,7 @@ async function getMoonbeamEvmForeignAssetBalanceWithProvider(
 }
 
 async function getMoonbeamEvmAssetMetadataWithProvider(
-    ethereumProvider: EthersEthereumProvider,
+    ethereumProvider: BaseEthereumProvider,
     api: ApiPromise,
     method: string,
     token: string,
@@ -88,14 +90,14 @@ async function getMoonbeamEvmAssetMetadataWithProvider(
 
 export class MoonbeamParachain extends ParachainBase {
     #xcDOT?: string
-    #ethereumProvider: EthersEthereumProvider
+    #ethereumProvider: BaseEthereumProvider
 
     constructor(
         provider: ApiPromise,
         parachainId: number,
         specName: string,
         specVersion: number,
-        ethereumProvider: EthersEthereumProvider,
+        ethereumProvider: BaseEthereumProvider,
     ) {
         super(provider, parachainId, specName, specVersion)
         this.#ethereumProvider = ethereumProvider
