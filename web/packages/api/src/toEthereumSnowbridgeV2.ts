@@ -15,7 +15,6 @@ import {
     DeliveryFee,
     dryRunBridgeHub,
     MessageReceipt,
-    resolveInputs,
     Transfer,
     ValidationKind,
     ValidationLog,
@@ -67,7 +66,12 @@ class TransferToEthereum implements TransferInterface {
 
     #resolveByTokenAddress(tokenAddress: string): TransferInterface {
         const sourceParaId = this.route.from.id
-        const { sourceAssetMetadata } = resolveInputs(this.registry, tokenAddress, sourceParaId)
+        const sourceAssetMetadata = this.source.assets[tokenAddress.toLowerCase()]
+        if (!sourceAssetMetadata) {
+            throw Error(
+                `Token ${tokenAddress} not registered on source parachain ${this.source.id}.`,
+            )
+        }
 
         if (sourceAssetMetadata.location) {
             this.#pnaImpl ??=
@@ -316,7 +320,7 @@ export type DeliveryXcm = {
 export const estimateEthereumExecutionFee = async (
     context: EthersContext,
     registry: AssetRegistry,
-    sourceParaId: number,
+    sourceParachain: Parachain,
     tokenAddress: string,
     options?: {
         contractCall?: ContractCall
@@ -324,7 +328,13 @@ export const estimateEthereumExecutionFee = async (
     },
 ): Promise<bigint> => {
     const ethereum = await context.ethereum()
-    const { tokenErcMetadata } = resolveInputs(registry, tokenAddress, sourceParaId)
+    const tokenErcMetadata =
+        registry.ethereumChains[`ethereum_${registry.ethChainId}`].assets[
+            tokenAddress.toLowerCase()
+        ]
+    if (!tokenErcMetadata) {
+        throw Error(`No token ${tokenAddress} registered on ethereum chain ${registry.ethChainId}.`)
+    }
 
     // Calculate execution cost on ethereum
     let ethereumChain = registry.ethereumChains[`ethereum_${registry.ethChainId}`]
@@ -412,7 +422,7 @@ export const estimateFeesFromAssetHub = async (
         await estimateEthereumExecutionFee(
             context,
             registry,
-            registry.assetHubParaId,
+            registry.parachains[`polkadot_${registry.assetHubParaId}`],
             tokenAddress,
             options,
         ),
@@ -542,7 +552,7 @@ export const estimateFeesFromParachains = async (
     let ethereumExecutionFee = await estimateEthereumExecutionFee(
         context,
         registry,
-        sourceParaId,
+        sourceParachain,
         tokenAddress,
         options,
     )

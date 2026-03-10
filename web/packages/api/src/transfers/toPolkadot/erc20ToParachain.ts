@@ -23,7 +23,7 @@ import { accountId32Location, DOT_LOCATION, erc20Location, isDOT } from "../../x
 import { paraImplementation } from "../../parachains"
 import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
 import { padFeeByPercentage, paraIdToSovereignAccount } from "../../utils"
-import { FeeInfo, resolveInputs, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
+import { FeeInfo, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
 import {
     buildAssetHubERC20ReceivedXcm,
     buildParachainERC20ReceivedXcmOnDestWithDOTFee,
@@ -68,8 +68,13 @@ export class ERC20ToParachain implements TransferInterface {
         const assetHub = await context.assetHub()
         const bridgeHub = await context.bridgeHub()
         const destination = await context.parachain(this.to.id)
-
-        const { destParachain } = resolveInputs(registry, tokenAddress, this.to.id)
+        const destParachain = this.destination
+        const destAssetMetadata = destParachain.assets[tokenAddress.toLowerCase()]
+        if (!destAssetMetadata) {
+            throw Error(
+                `Token ${tokenAddress} not registered on destination parachain ${destParachain.id}.`,
+            )
+        }
 
         // AssetHub fees
         let assetHubXcm = buildAssetHubERC20ReceivedXcm(
@@ -225,8 +230,29 @@ export class ERC20ToParachain implements TransferInterface {
         if (!destination) {
             throw Error(`Unable to connect to destination parachain with ID ${this.to.id}.`)
         }
-        const { tokenErcMetadata, destParachain, ahAssetMetadata, destAssetMetadata } =
-            resolveInputs(registry, tokenAddress, this.to.id)
+        const tokenErcMetadata =
+            registry.ethereumChains[`ethereum_${registry.ethChainId}`].assets[
+                tokenAddress.toLowerCase()
+            ]
+        if (!tokenErcMetadata) {
+            throw Error(
+                `No token ${tokenAddress} registered on ethereum chain ${registry.ethChainId}.`,
+            )
+        }
+        const ahAssetMetadata =
+            registry.parachains[`polkadot_${registry.assetHubParaId}`].assets[
+                tokenAddress.toLowerCase()
+            ]
+        if (!ahAssetMetadata) {
+            throw Error(`Token ${tokenAddress} not registered on asset hub.`)
+        }
+        const destParachain = this.destination
+        const destAssetMetadata = destParachain.assets[tokenAddress.toLowerCase()]
+        if (!destAssetMetadata) {
+            throw Error(
+                `Token ${tokenAddress} not registered on destination parachain ${destParachain.id}.`,
+            )
+        }
         const minimalBalance =
             ahAssetMetadata.minimumBalance > destAssetMetadata.minimumBalance
                 ? ahAssetMetadata.minimumBalance
