@@ -4,46 +4,23 @@ import {
     AgentCreationValidationResult,
 } from "./agentInterface"
 import type { Context } from "../../index"
+import type { EthereumProviderTypes } from "../../EthereumProvider"
 import { ValidationKind } from "../../toPolkadotSnowbridgeV2"
 import { ValidationLog, ValidationReason } from "../../toPolkadot_v2"
 import { AssetRegistry } from "@snowbridge/base-types"
 
-export class CreateAgent<
-    EConnection,
-    EContract,
-    EAbi,
-    EInterface,
-    ETransactionReceipt,
-    EContractTransaction,
-> implements
-        AgentCreationInterface<
-            Context<
-                EConnection,
-                EContract,
-                EAbi,
-                EInterface,
-                ETransactionReceipt,
-                EContractTransaction
-            >,
-            EContractTransaction
-        >
+export class CreateAgent<T extends EthereumProviderTypes>
+    implements AgentCreationInterface<T["ContractTransaction"]>
 {
     constructor(
-        readonly context: Context<
-            EConnection,
-            EContract,
-            EAbi,
-            EInterface,
-            ETransactionReceipt,
-            EContractTransaction
-        >,
+        readonly context: Context<T>,
         private readonly registry: AssetRegistry,
     ) {}
 
     async rawTx(
         sourceAccount: string,
         agentId: string,
-    ): Promise<AgentCreation<EContractTransaction>> {
+    ): Promise<AgentCreation<T["ContractTransaction"]>> {
         const tx = await this.context.ethereumProvider.gatewayV2CreateAgent(
             this.context.ethereum(),
             this.context.environment.gatewayContract,
@@ -63,8 +40,8 @@ export class CreateAgent<
     }
 
     async validateTx(
-        creation: AgentCreation<EContractTransaction>,
-    ): Promise<AgentCreationValidationResult<EContractTransaction>> {
+        creation: AgentCreation<T["ContractTransaction"]>,
+    ): Promise<AgentCreationValidationResult<T["ContractTransaction"]>> {
         const { tx } = creation
         const { sourceAccount, agentId } = creation.input
         const ethereum = this.context.ethereum()
@@ -138,7 +115,7 @@ export class CreateAgent<
     async tx(
         sourceAccount: string,
         agentId: string,
-    ): Promise<AgentCreationValidationResult<EContractTransaction>> {
+    ): Promise<AgentCreationValidationResult<T["ContractTransaction"]>> {
         const creation = await this.rawTx(sourceAccount, agentId)
         return this.validateTx(creation)
     }
