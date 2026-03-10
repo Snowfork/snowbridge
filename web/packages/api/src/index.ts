@@ -27,6 +27,8 @@ import * as interParachainTransfers from "./forInterParachain"
 import * as toEthereumTransfers from "./toEthereumSnowbridgeV2"
 import * as toPolkadotTransfers from "./toPolkadotSnowbridgeV2"
 import * as toEthereumEvmTransfers from "./toEthereumFromEVM_v2"
+import * as toEthereumTransfersV1 from "./toEthereum_v2"
+import * as toPolkadotTransfersV1 from "./toPolkadot_v2"
 import type { TransferInterface as ForInterParachainTransferInterface } from "./transfers/forInterParachain/transferInterface"
 import type { TransferInterface as ForKusamaTransferInterface } from "./transfers/forKusama/transferInterface"
 import type { TransferInterface as ToPolkadotTransferInterface } from "./transfers/toPolkadot/transferInterface"
@@ -560,13 +562,21 @@ export class SnowbridgeApi<
                 const sourceParachain = sourceChain as Parachain
                 const destinationEthChain = destinationChain as EthereumChain
                 return withKind(
-                    toEthereumTransfers.createTransferImplementation(
-                        this.context as any,
-                        route,
-                        this.info.registry,
-                        sourceParachain,
-                        destinationEthChain,
-                    ),
+                    sourceParachain.features.supportsV2
+                        ? toEthereumTransfers.createTransferImplementation(
+                              this.context as any,
+                              route,
+                              this.info.registry,
+                              sourceParachain,
+                              destinationEthChain,
+                          )
+                        : toEthereumTransfersV1.createTransferImplementationV1(
+                              this.context as any,
+                              route,
+                              this.info.registry,
+                              sourceParachain,
+                              destinationEthChain,
+                          ),
                     kind,
                 ) as TransferFromTo<F, T>
             }
@@ -574,13 +584,21 @@ export class SnowbridgeApi<
                 const sourceEthChain = sourceChain as EthereumChain
                 const destinationParachain = destinationChain as Parachain
                 return withKind(
-                    toPolkadotTransfers.createTransferImplementation(
-                        this.context as any,
-                        route,
-                        this.info.registry,
-                        sourceEthChain,
-                        destinationParachain,
-                    ),
+                    destinationParachain.features.supportsV2
+                        ? toPolkadotTransfers.createTransferImplementation(
+                              this.context as any,
+                              route,
+                              this.info.registry,
+                              sourceEthChain,
+                              destinationParachain,
+                          )
+                        : toPolkadotTransfersV1.createTransferImplementationV1(
+                              this.context as any,
+                              route,
+                              this.info.registry,
+                              sourceEthChain,
+                              destinationParachain,
+                          ),
                     kind,
                 ) as TransferFromTo<F, T>
             }
