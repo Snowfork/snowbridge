@@ -3,6 +3,7 @@ import { ApiPromise, HttpProvider, WsProvider } from "@polkadot/api"
 import {
     BeefyClient,
     BEEFY_CLIENT_ABI,
+    BridgeInfo,
     IGatewayV1,
     IGATEWAY_V1_ABI,
     IGatewayV2,
@@ -10,9 +11,6 @@ import {
     ISwapQuoter,
     SNOWBRIDGE_L2_ADAPTOR_ABI,
     SWAP_QUOTER_ABI,
-} from "./contracts"
-import {
-    BridgeInfo,
     ChainId,
     Environment,
     EthereumChain,
@@ -488,7 +486,7 @@ export class SnowbridgeApi<P extends EthereumProvider<any>> {
                 return withKind(
                     new interParachainTransfers.InterParachainTransfer(
                         this.info,
-                        this.context as any,
+                        this.context,
                         route,
                         sourceParachain,
                         destinationParachain,
@@ -503,7 +501,7 @@ export class SnowbridgeApi<P extends EthereumProvider<any>> {
                 return withKind(
                     new kusamaTransfers.KusamaTransfer(
                         this.info,
-                        this.context as any,
+                        this.context,
                         route,
                         sourceParachain,
                         destinationParachain,
@@ -517,14 +515,14 @@ export class SnowbridgeApi<P extends EthereumProvider<any>> {
                 return withKind(
                     sourceParachain.features.supportsV2
                         ? new TransferToEthereum(
-                              this.context as any,
+                              this.context,
                               route,
                               this.info.registry,
                               sourceParachain,
                               destinationEthChain,
                           )
                         : new V1ToEthereumAdapter(
-                              this.context as any,
+                              this.context,
                               this.info.registry,
                               route,
                               sourceParachain,
@@ -539,14 +537,14 @@ export class SnowbridgeApi<P extends EthereumProvider<any>> {
                 return withKind(
                     destinationParachain.features.supportsV2
                         ? new TransferToPolkadot(
-                              this.context as any,
+                              this.context,
                               route,
                               this.info.registry,
                               sourceEthChain,
                               destinationParachain,
                           )
                         : new V1ToPolkadotAdapter(
-                              this.context as any,
+                              this.context,
                               this.info.registry,
                               route,
                               sourceEthChain,
@@ -560,7 +558,7 @@ export class SnowbridgeApi<P extends EthereumProvider<any>> {
                 const destinationEthChain = destinationChain as EthereumChain
                 const tIface: ToEthereumEvmTransferInterface<ProviderTypesFor<P>> =
                     new V1ToEthereumEvmAdapter(
-                        this.context as any,
+                        this.context,
                         this.info.registry,
                         route,
                         sourceEthChain,
@@ -573,7 +571,7 @@ export class SnowbridgeApi<P extends EthereumProvider<any>> {
                 const destinationEthChain = destinationChain as EthereumChain
                 const tIface: ToEthereumL2TransferInterface<ProviderTypesFor<P>> =
                     new ERC20FromAHToL2(
-                        this.context as any,
+                        this.context,
                         this.info.registry,
                         route,
                         sourceParachain,
@@ -586,7 +584,7 @@ export class SnowbridgeApi<P extends EthereumProvider<any>> {
                 const destinationParachain = destinationChain as Parachain
                 const tIface: ToPolkadotL2TransferInterface<ProviderTypesFor<P>> =
                     new ERC20FromL2ToAH(
-                        this.context as any,
+                        this.context,
                         this.info.registry,
                         route,
                         sourceEthChain,

@@ -1,4 +1,3 @@
-import { MultiAddressStruct } from "./contracts"
 import { padFeeByPercentage } from "./utils"
 import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
 import {
@@ -9,6 +8,7 @@ import {
     EthereumChain,
     EthereumProviderTypes,
     FeeData,
+    MultiAddressStruct,
     Parachain,
     TransferRoute,
 } from "@snowbridge/base-types"
