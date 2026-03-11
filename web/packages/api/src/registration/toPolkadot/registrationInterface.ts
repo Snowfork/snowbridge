@@ -1,10 +1,10 @@
-import { AssetRegistry } from "@snowbridge/base-types"
-import { Context, EthereumProviderTypes } from "../../index"
+import { AssetRegistry, EthereumProviderTypes } from "@snowbridge/base-types"
+import { Context } from "../../index"
 import { OperationStatus } from "../../status"
 import { FeeInfo, ValidationLog } from "../../toPolkadot_v2"
 import type { MessageReceipt } from "../../toPolkadotSnowbridgeV2"
 
-export type TokenRegistration<T extends EthereumProviderTypes = EthereumProviderTypes> = {
+export type TokenRegistration<T extends EthereumProviderTypes> = {
     input: {
         registry: AssetRegistry
         sourceAccount: string
@@ -18,19 +18,18 @@ export type TokenRegistration<T extends EthereumProviderTypes = EthereumProvider
     tx: T["ContractTransaction"]
 }
 
-export type RegistrationValidationResult<T extends EthereumProviderTypes = EthereumProviderTypes> =
-    {
-        logs: ValidationLog[]
-        success: boolean
-        data: {
-            etherBalance: bigint
-            feeInfo?: FeeInfo
-            bridgeStatus: OperationStatus
-            isTokenAlreadyRegistered: boolean
-            assetHubDryRunError?: string
-        }
-        registration: TokenRegistration<T>
+export type RegistrationValidationResult<T extends EthereumProviderTypes> = {
+    logs: ValidationLog[]
+    success: boolean
+    data: {
+        etherBalance: bigint
+        feeInfo?: FeeInfo
+        bridgeStatus: OperationStatus
+        isTokenAlreadyRegistered: boolean
+        assetHubDryRunError?: string
     }
+    registration: TokenRegistration<T>
+}
 
 export type RegistrationFee = {
     assetHubDeliveryFeeEther: bigint
@@ -41,7 +40,7 @@ export type RegistrationFee = {
     totalFeeInWei: bigint
 }
 
-export interface RegistrationInterface<T extends EthereumProviderTypes = EthereumProviderTypes> {
+export interface RegistrationInterface<T extends EthereumProviderTypes> {
     getRegistrationFee(
         context: Context<T>,
         registry: AssetRegistry,

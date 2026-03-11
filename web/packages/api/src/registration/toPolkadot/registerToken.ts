@@ -1,12 +1,12 @@
 import { ApiPromise } from "@polkadot/api"
-import { AssetRegistry } from "@snowbridge/base-types"
+import { AssetRegistry, EthereumProviderTypes } from "@snowbridge/base-types"
 import {
     RegistrationInterface,
     RegistrationFee,
     TokenRegistration,
     RegistrationValidationResult,
 } from "./registrationInterface"
-import { Context, EthereumProviderTypes } from "../../index"
+import { Context } from "../../index"
 import {
     getMessageReceipt as getSharedMessageReceipt,
     ValidationKind,

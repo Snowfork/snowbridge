@@ -12,15 +12,12 @@ import {
     SWAP_QUOTER_ABI,
 } from "./contracts"
 import {
-    type EthereumProvider,
-    type EthereumProviderTypes,
-    type EthersEthereumProvider,
-} from "./EthereumProvider"
-import {
     BridgeInfo,
     ChainId,
     Environment,
     EthereumChain,
+    EthereumProvider,
+    EthereumProviderTypes,
     Parachain,
     TransferRoute,
 } from "@snowbridge/base-types"
@@ -64,12 +61,6 @@ export * as toEthereumSnowbridgeV2 from "./toEthereumSnowbridgeV2"
 export * as neuroWeb from "./parachains/neuroweb"
 export * as toPolkadotSnowbridgeV2 from "./toPolkadotSnowbridgeV2"
 export * as addTip from "./addTip"
-export { EthersEthereumProvider } from "./EthereumProvider"
-export type {
-    EthereumProvider,
-    EthereumProviderTypes,
-    EthersProviderTypes,
-} from "./EthereumProvider"
 
 export class Context<T extends EthereumProviderTypes> {
     readonly environment: Environment
@@ -567,37 +558,40 @@ export class SnowbridgeApi<P extends EthereumProvider<any>> {
             case "ethereum->ethereum": {
                 const sourceEthChain = sourceChain as EthereumChain
                 const destinationEthChain = destinationChain as EthereumChain
-                const tIface: ToEthereumEvmTransferInterface = new V1ToEthereumEvmAdapter(
-                    this.context as any,
-                    this.info.registry,
-                    route,
-                    sourceEthChain,
-                    destinationEthChain,
-                )
+                const tIface: ToEthereumEvmTransferInterface<ProviderTypesFor<P>> =
+                    new V1ToEthereumEvmAdapter(
+                        this.context as any,
+                        this.info.registry,
+                        route,
+                        sourceEthChain,
+                        destinationEthChain,
+                    )
                 return withKind(tIface, kind) as TransferFromTo<F, T, ProviderTypesFor<P>>
             }
             case "polkadot->ethereum_l2": {
                 const sourceParachain = sourceChain as Parachain
                 const destinationEthChain = destinationChain as EthereumChain
-                const tIface: ToEthereumL2TransferInterface = new ERC20FromAHToL2(
-                    this.context as any,
-                    this.info.registry,
-                    route,
-                    sourceParachain,
-                    destinationEthChain,
-                )
+                const tIface: ToEthereumL2TransferInterface<ProviderTypesFor<P>> =
+                    new ERC20FromAHToL2(
+                        this.context as any,
+                        this.info.registry,
+                        route,
+                        sourceParachain,
+                        destinationEthChain,
+                    )
                 return withKind(tIface, kind) as TransferFromTo<F, T, ProviderTypesFor<P>>
             }
             case "ethereum_l2->polkadot": {
                 const sourceEthChain = sourceChain as EthereumChain
                 const destinationParachain = destinationChain as Parachain
-                const tIface: ToPolkadotL2TransferInterface = new ERC20FromL2ToAH(
-                    this.context as any,
-                    this.info.registry,
-                    route,
-                    sourceEthChain,
-                    destinationParachain,
-                )
+                const tIface: ToPolkadotL2TransferInterface<ProviderTypesFor<P>> =
+                    new ERC20FromL2ToAH(
+                        this.context as any,
+                        this.info.registry,
+                        route,
+                        sourceEthChain,
+                        destinationParachain,
+                    )
                 return withKind(tIface, kind) as TransferFromTo<F, T, ProviderTypesFor<P>>
             }
             default:
@@ -606,10 +600,6 @@ export class SnowbridgeApi<P extends EthereumProvider<any>> {
     }
 }
 
-export function createApi(options: {
-    info: BridgeInfo
-    ethereumProvider: EthersEthereumProvider
-}): SnowbridgeApi<EthersEthereumProvider>
 export function createApi<P extends EthereumProvider<any>>(
     options: ApiOptions<P>,
 ): SnowbridgeApi<P> {

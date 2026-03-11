@@ -2,11 +2,12 @@ import {
     AssetRegistry,
     ChainId,
     EthereumChain,
+    EthereumProviderTypes,
     Parachain,
     TransferRoute,
 } from "@snowbridge/base-types"
 import { TransferInterface } from "./transferInterface"
-import { Context, EthereumProviderTypes } from "../../index"
+import { Context } from "../../index"
 import {
     buildMessageId,
     calculateRelayerFee,

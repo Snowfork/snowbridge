@@ -27,13 +27,8 @@ import { isFunction } from "@polkadot/util"
 import { writeFile } from "fs/promises"
 import { AbstractProvider, Contract, ethers } from "ethers"
 import { IGatewayV1__factory as IGateway__factory } from "@snowbridge/contract-types"
-import {
-    parachains as ParaImpl,
-    xcmBuilder,
-    assetsV2,
-    EthersEthereumProvider,
-    EthersProviderTypes,
-} from "@snowbridge/api"
+import { parachains as ParaImpl, xcmBuilder, assetsV2 } from "@snowbridge/api"
+import { EthersEthereumProvider, EthersProviderTypes } from "@snowbridge/provider-ethers"
 
 export type Path = {
     source: ChainId

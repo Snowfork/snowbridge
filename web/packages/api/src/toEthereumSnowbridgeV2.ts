@@ -6,6 +6,7 @@ import {
     ChainId,
     ContractCall,
     EthereumChain,
+    EthereumProviderTypes,
     Parachain,
     TransferRoute,
 } from "@snowbridge/base-types"
@@ -36,7 +37,7 @@ import {
 import { xxhashAsHex } from "@polkadot/util-crypto"
 import { BN } from "@polkadot/util"
 import { padFeeByPercentage } from "./utils"
-import { Context, EthereumProviderTypes } from "./index"
+import { Context } from "./index"
 import { ETHER_TOKEN_ADDRESS, findL2TokenAddress } from "./assets_v2"
 import { getOperatingStatus } from "./status"
 import { estimateFees } from "./across/api"

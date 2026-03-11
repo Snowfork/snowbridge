@@ -10,6 +10,7 @@ import {
     ChainId,
     ContractCall,
     EthereumChain,
+    EthereumProviderTypes,
     TransferRoute,
 } from "@snowbridge/base-types"
 import { getOperatingStatus } from "./status"
@@ -26,7 +27,7 @@ import {
     ValidationLog,
     ValidationReason,
 } from "./toEthereum_v2"
-import { Context, EthereumProviderTypes } from "./index"
+import { Context } from "./index"
 import {
     MessageReceiptEvm,
     TransferEvm,

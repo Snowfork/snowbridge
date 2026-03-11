@@ -1,5 +1,6 @@
 import "dotenv/config"
-import { EthersEthereumProvider, createApi } from "@snowbridge/api"
+import { createApi } from "@snowbridge/api"
+import { EthersEthereumProvider } from "@snowbridge/provider-ethers"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { SnowbridgeL1Adaptor, SnowbridgeL1Adaptor__factory } from "@snowbridge/contract-types"
 import { Wallet } from "ethers"
