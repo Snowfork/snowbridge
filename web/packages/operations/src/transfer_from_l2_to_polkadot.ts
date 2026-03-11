@@ -4,8 +4,8 @@ import { EthersEthereumProvider, EthersProviderTypes } from "@snowbridge/provide
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { formatEther, Wallet } from "ethers"
 import { bridgeInfoFor } from "@snowbridge/registry"
-import { IERC20__factory } from "@snowbridge/contract-types"
 import { ETHER_TOKEN_ADDRESS } from "@snowbridge/api/dist/assets_v2"
+import { IERC20__factory } from "@snowbridge/contract-types"
 
 export const transferToPolkadot = async (
     l2ChainId: number,
