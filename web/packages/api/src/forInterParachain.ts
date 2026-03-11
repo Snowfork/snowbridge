@@ -14,11 +14,12 @@ import {
     AssetRegistry,
     BridgeInfo,
     ChainId,
+    EthereumProviderTypes,
     Parachain,
     TransferRoute,
 } from "@snowbridge/base-types"
 import { padFeeByPercentage } from "./utils"
-import { Context, EthereumProviderTypes } from "."
+import { Context } from "."
 import { buildMessageId } from "./toEthereum_v2"
 import { Result } from "@polkadot/types"
 import {

@@ -9,6 +9,8 @@ import {
     ChainId,
     ERC20Metadata,
     EthereumChain,
+    EthereumProvider,
+    EthereumProviderTypes,
     Parachain,
     TransferRoute,
 } from "@snowbridge/base-types"
@@ -25,7 +27,7 @@ import { accountToLocation, DOT_LOCATION, erc20Location } from "./xcmBuilder"
 import { Codec } from "@polkadot/types/types"
 import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
 import { padFeeByPercentage } from "./utils"
-import { Context, EthereumProvider, EthereumProviderTypes } from "./index"
+import { Context } from "./index"
 export { ValidationKind } from "./toPolkadot_v2"
 import { ParachainBase } from "./parachains/parachainBase"
 
@@ -44,7 +46,7 @@ export type DeliveryFee = {
     swapFeeInL1Token?: bigint // Fee for Gateway.v2_sendMessage in the output L1 token.
 }
 
-export type Transfer<T extends EthereumProviderTypes = EthereumProviderTypes> = {
+export type Transfer<T extends EthereumProviderTypes> = {
     input: {
         registry: AssetRegistry
         sourceAccount: string
@@ -75,7 +77,7 @@ export type Transfer<T extends EthereumProviderTypes = EthereumProviderTypes> = 
     tx: T["ContractTransaction"]
 }
 
-export type ValidationResult<T extends EthereumProviderTypes = EthereumProviderTypes> = {
+export type ValidationResult<T extends EthereumProviderTypes> = {
     logs: ValidationLog[]
     success: boolean
     data: {

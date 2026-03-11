@@ -27,6 +27,8 @@ import {
     ContractCall,
     ERC20Metadata,
     EthereumChain,
+    EthereumProviderTypes,
+    FeeData,
     Parachain,
     TransferRoute,
 } from "@snowbridge/base-types"
@@ -38,9 +40,8 @@ import {
 } from "@polkadot/types/interfaces"
 import { Result } from "@polkadot/types"
 import { padFeeByPercentage, u32ToLeBytes } from "./utils"
-import { Context, EthereumProviderTypes } from "./index"
+import { Context } from "./index"
 import { ParachainBase } from "./parachains/parachainBase"
-import type { FeeData } from "./EthereumProvider"
 import { TransferInterface as ToEthereumTransferInterface } from "./transfers/toEthereum/transferInterface"
 
 export type Transfer = {

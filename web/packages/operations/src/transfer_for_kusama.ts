@@ -1,6 +1,7 @@
 import "dotenv/config"
 import { Keyring } from "@polkadot/keyring"
-import { EthersEthereumProvider, createApi } from "@snowbridge/api"
+import { createApi } from "@snowbridge/api"
+import { EthersEthereumProvider } from "@snowbridge/provider-ethers"
 import { Direction } from "@snowbridge/api/dist/forKusama"
 import { bridgeInfoFor } from "@snowbridge/registry"
 

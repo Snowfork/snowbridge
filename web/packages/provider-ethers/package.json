@@ -1,12 +1,12 @@
 {
-  "name": "@snowbridge/api",
+  "name": "@snowbridge/provider-ethers",
   "version": "0.4.0",
-  "description": "Snowbridge API client",
+  "description": "Snowbridge ethers provider implementation",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/Snowfork/snowbridge.git",
-    "directory": "web/packages/api"
+    "directory": "web/packages/provider-ethers"
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -16,7 +16,6 @@
     "format": "prettier src --write"
   },
   "devDependencies": {
-    "@typechain/ethers-v6": "0.5.1",
     "@types/node": "24.6.2",
     "@typescript-eslint/eslint-plugin": "8.45.0",
     "@typescript-eslint/parser": "8.45.0",
@@ -28,11 +27,7 @@
     "typescript": "5.9.3"
   },
   "dependencies": {
-    "@polkadot/api": "16.4.8",
-    "@polkadot/keyring": "13.5.6",
-    "@polkadot/types": "16.4.8",
-    "@polkadot/util": "13.5.6",
-    "@polkadot/util-crypto": "13.5.6",
-    "@snowbridge/base-types": "workspace:*"
+    "@snowbridge/base-types": "workspace:*",
+    "ethers": "6.16.0"
   }
 }

@@ -7,6 +7,8 @@ import {
     ChainId,
     ERC20Metadata,
     EthereumChain,
+    EthereumProviderTypes,
+    FeeData,
     Parachain,
     TransferRoute,
 } from "@snowbridge/base-types"
@@ -23,8 +25,7 @@ import {
 } from "./xcmBuilder"
 import { Result } from "@polkadot/types"
 import { XcmDryRunApiError, XcmDryRunEffects } from "@polkadot/types/interfaces"
-import { Context, EthereumProviderTypes } from "./index"
-import type { FeeData } from "./EthereumProvider"
+import { Context } from "./index"
 import { TransferInterface as ToPolkadotTransferInterface } from "./transfers/toPolkadot/transferInterface"
 import type {
     DeliveryFee as ToPolkadotV2DeliveryFee,
@@ -32,7 +33,7 @@ import type {
     ValidationResult as ToPolkadotV2ValidationResult,
 } from "./toPolkadotSnowbridgeV2"
 
-export type Transfer<T extends EthereumProviderTypes = EthereumProviderTypes> = {
+export type Transfer<T extends EthereumProviderTypes> = {
     input: {
         registry: AssetRegistry
         sourceAccount: string
@@ -95,7 +96,7 @@ export type DeliveryFee = {
     totalFeeInWei: bigint
 }
 
-export type ValidationResult<T extends EthereumProviderTypes = EthereumProviderTypes> = {
+export type ValidationResult<T extends EthereumProviderTypes> = {
     logs: ValidationLog[]
     success: boolean
     data: {
@@ -178,7 +179,7 @@ function toV2Transfer<T extends EthereumProviderTypes>(
 }
 
 function toV1Transfer<T extends EthereumProviderTypes>(
-    transfer: ToPolkadotV2Transfer,
+    transfer: ToPolkadotV2Transfer<T>,
 ): Transfer<T> {
     const candidate = transfer as unknown as Transfer<T>
     const v1Fee = toV1DeliveryFee(transfer.input.fee)
@@ -670,7 +671,7 @@ async function dryRunAssetHub<T extends EthereumProviderTypes>(
     }
 }
 
-async function dryRunDestination(destination: ApiPromise, transfer: Transfer, xcm: any) {
+async function dryRunDestination(destination: ApiPromise, transfer: Transfer<EthereumProviderTypes>, xcm: any) {
     const { registry } = transfer.input
     const assetHubOrigin = {
         v4: { parents: 1, interior: { x1: [{ parachain: registry.assetHubParaId }] } },
