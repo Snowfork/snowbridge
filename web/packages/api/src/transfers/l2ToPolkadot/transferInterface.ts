@@ -32,9 +32,9 @@ export interface TransferInterface<T extends EthereumProviderTypes = EthereumPro
             customXcm?: any[] // Optional custom XCM instructions to append
             fillDeadlineBuffer?: bigint // Optional buffer added to the relay fill deadline for L2 calls.
         },
-    ): Promise<Transfer>
+    ): Promise<Transfer<T>>
 
-    validateTransfer(transfer: Transfer): Promise<ValidationResult>
+    validateTransfer(transfer: Transfer<T>): Promise<ValidationResult<T>>
 
     getMessageReceipt(receipt: T["TransactionReceipt"]): Promise<MessageReceipt | null>
 }
