@@ -58,7 +58,6 @@ export interface EthersProviderTypes extends EthereumProviderTypes {
   Connection: AbstractProvider;
   Contract: Contract;
   Abi: InterfaceAbi;
-  Interface: Interface;
   TransactionReceipt: TransactionReceipt;
   ContractTransaction: ContractTransaction;
 }

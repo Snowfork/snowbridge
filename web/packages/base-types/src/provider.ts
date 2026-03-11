@@ -67,7 +67,6 @@ export interface EthereumProviderTypes {
   Connection: unknown;
   Contract: unknown;
   Abi: unknown;
-  Interface: unknown;
   TransactionReceipt: unknown;
   ContractTransaction: unknown;
 }
