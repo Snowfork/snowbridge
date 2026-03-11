@@ -1,3 +1,4 @@
+import { Context, EthereumProviderTypes } from "../.."
 import {
     Asset,
     AssetRegistry,
@@ -7,11 +8,10 @@ import {
     Parachain,
 } from "@snowbridge/base-types"
 import { EventRecord } from "@polkadot/types/interfaces"
-import { ContractTransaction, TransactionReceipt } from "ethers"
 import { OperationStatus } from "../../status"
 import { DeliveryFee, FeeInfo, ValidationLog } from "../../toEthereum_v2"
 
-export type TransferEvm = {
+export type TransferEvm<T extends EthereumProviderTypes = EthereumProviderTypes> = {
     input: {
         registry: AssetRegistry
         sourceAccount: string
@@ -32,10 +32,10 @@ export type TransferEvm = {
         customXcmHex?: string
         xcTokenAddress?: string
     }
-    tx: ContractTransaction
+    tx: T["ContractTransaction"]
 }
 
-export type ValidationResultEvm = {
+export type ValidationResultEvm<T extends EthereumProviderTypes = EthereumProviderTypes> = {
     logs: ValidationLog[]
     success: boolean
     data: {
@@ -47,7 +47,7 @@ export type ValidationResultEvm = {
         sourceDryRunError: any
         assetHubDryRunError: any
     }
-    transfer: TransferEvm
+    transfer: TransferEvm<T>
 }
 
 export type MessageReceiptEvm = {
@@ -62,7 +62,9 @@ export type MessageReceiptEvm = {
     messageId?: string
 }
 
-export interface TransferInterface {
+export interface TransferInterface<T extends EthereumProviderTypes = EthereumProviderTypes> {
+    readonly context: Context<T>
+
     getDeliveryFee(
         tokenAddress: string,
         options?: {
@@ -85,9 +87,9 @@ export interface TransferInterface {
             claimerLocation?: any
             contractCall?: ContractCall
         },
-    ): Promise<TransferEvm>
+    ): Promise<TransferEvm<T>>
 
-    validateTransfer(transfer: TransferEvm): Promise<ValidationResultEvm>
+    validateTransfer(transfer: TransferEvm<T>): Promise<ValidationResultEvm<T>>
 
-    getMessageReceipt(receipt: TransactionReceipt): Promise<MessageReceiptEvm>
+    getMessageReceipt(receipt: T["TransactionReceipt"]): Promise<MessageReceiptEvm>
 }

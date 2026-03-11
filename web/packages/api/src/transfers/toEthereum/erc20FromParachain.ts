@@ -27,7 +27,7 @@ import {
     Transfer,
     ValidationResult,
 } from "../../toEthereum_v2"
-import { EthersContext } from "../.."
+import { Context, EthereumProviderTypes } from "../.."
 import { TransferInterface } from "./transferInterface"
 import {
     buildContractCallHex,
@@ -38,9 +38,9 @@ import {
     validateTransferFromParachain,
 } from "../../toEthereumSnowbridgeV2"
 
-export class ERC20FromParachain implements TransferInterface {
+export class ERC20FromParachain<T extends EthereumProviderTypes> implements TransferInterface<T> {
     constructor(
-        public readonly context: EthersContext,
+        public readonly context: Context<T>,
         public readonly registry: AssetRegistry,
         public readonly route: TransferRoute,
         public readonly source: Parachain,

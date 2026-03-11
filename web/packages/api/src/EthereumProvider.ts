@@ -596,7 +596,3 @@ export interface EthersProviderTypes extends EthereumProviderTypes {
     TransactionReceipt: TransactionReceipt
     ContractTransaction: ContractTransaction
 }
-
-export type ProviderContext<T extends EthereumProviderTypes> = Context<T>
-
-export type EthersContext = ProviderContext<EthersProviderTypes>

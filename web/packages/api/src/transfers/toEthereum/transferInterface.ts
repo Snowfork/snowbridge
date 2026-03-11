@@ -1,8 +1,11 @@
+import { Context, EthereumProviderTypes } from "../.."
 import { AddressOrPair, SignerOptions } from "@polkadot/api/types"
 import { ContractCall } from "@snowbridge/base-types"
 import { DeliveryFee, MessageReceipt, Transfer, ValidationResult } from "../../toEthereum_v2"
 
-export interface TransferInterface {
+export interface TransferInterface<T extends EthereumProviderTypes = EthereumProviderTypes> {
+    readonly context: Context<T>
+
     getDeliveryFee(
         tokenAddress: string,
         options?: {

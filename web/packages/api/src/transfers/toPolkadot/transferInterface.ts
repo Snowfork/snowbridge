@@ -1,4 +1,4 @@
-import { TransactionReceipt } from "ethers"
+import { Context, EthereumProviderTypes } from "../.."
 import type { MessageReceipt as ToPolkadotV1MessageReceipt } from "../../toPolkadot_v2"
 import { DeliveryFee } from "../../toPolkadotSnowbridgeV2"
 import type { MessageReceipt as ToPolkadotV2MessageReceipt } from "../../toPolkadotSnowbridgeV2"
@@ -7,7 +7,9 @@ import { ValidationResult } from "../../toPolkadotSnowbridgeV2"
 
 export type MessageReceipt = ToPolkadotV1MessageReceipt | ToPolkadotV2MessageReceipt
 
-export interface TransferInterface {
+export interface TransferInterface<T extends EthereumProviderTypes = EthereumProviderTypes> {
+    readonly context: Context<T>
+
     getDeliveryFee(
         tokenAddress: string,
         options?: {
@@ -29,5 +31,5 @@ export interface TransferInterface {
 
     validateTransfer(transfer: Transfer): Promise<ValidationResult>
 
-    getMessageReceipt(receipt: TransactionReceipt): Promise<MessageReceipt | null>
+    getMessageReceipt(receipt: T["TransactionReceipt"]): Promise<MessageReceipt | null>
 }

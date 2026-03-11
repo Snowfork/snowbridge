@@ -67,8 +67,6 @@ export type {
     EthereumProvider,
     EthereumProviderTypes,
     EthersProviderTypes,
-    ProviderContext,
-    EthersContext,
 } from "./EthereumProvider"
 
 export class Context<T extends EthereumProviderTypes> {
