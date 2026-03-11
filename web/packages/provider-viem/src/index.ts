@@ -68,7 +68,6 @@ type ReadonlyFunction = ((...args: unknown[]) => Promise<unknown>) & {
 
 export type ViemContractTransaction = TransactionRequest & {
   account?: Address;
-  from?: Address;
 };
 
 export type ViemContract = {
@@ -91,13 +90,6 @@ function toAddress(value: string): Address {
 
 function asAbi(abi: unknown): Abi {
   return abi as unknown as Abi;
-}
-
-function asTxRequest(
-  tx: ViemContractTransaction,
-): TransactionRequest & { account?: Address } {
-  const account = tx.account ?? tx.from;
-  return account ? { ...tx, account } : tx;
 }
 
 function createReadOnlyContract(
@@ -212,7 +204,6 @@ export class ViemEthereumProvider
     return {
       to: toAddress(gatewayAddress),
       account: toAddress(sourceAccount),
-      from: toAddress(sourceAccount),
       value,
       data: this.encodeFunctionData(asAbi(IGATEWAY_V1_ABI), "sendToken", [
         toAddress(tokenAddress),
@@ -237,7 +228,6 @@ export class ViemEthereumProvider
     return {
       to: toAddress(gatewayAddress),
       account: toAddress(sourceAccount),
-      from: toAddress(sourceAccount),
       value: totalValue,
       data: this.encodeFunctionData(
         asAbi(IGATEWAY_V2_ABI),
@@ -279,7 +269,6 @@ export class ViemEthereumProvider
     return {
       to: toAddress(gatewayAddress),
       account: toAddress(sourceAccount),
-      from: toAddress(sourceAccount),
       value,
       data: this.encodeFunctionData(asAbi(IGATEWAY_V2_ABI), "v2_sendMessage", [
         xcm,
@@ -304,7 +293,6 @@ export class ViemEthereumProvider
     return {
       to: toAddress(adapterAddress),
       account: toAddress(sourceAccount),
-      from: toAddress(sourceAccount),
       value,
       data: this.encodeFunctionData(
         asAbi(SNOWBRIDGE_L2_ADAPTOR_ABI),
@@ -327,7 +315,6 @@ export class ViemEthereumProvider
     return {
       to: toAddress(adapterAddress),
       account: toAddress(sourceAccount),
-      from: toAddress(sourceAccount),
       data: this.encodeFunctionData(
         asAbi(SNOWBRIDGE_L2_ADAPTOR_ABI),
         "sendTokenAndCall",
@@ -356,7 +343,6 @@ export class ViemEthereumProvider
     return {
       to: toAddress(precompileAddress),
       account: toAddress(sourceAccount),
-      from: toAddress(sourceAccount),
       data: this.encodeFunctionData(
         asAbi(MOONBEAM_PALLET_XCM_PRECOMPILE_ABI),
         "transferAssetsUsingTypeAndThenAddress",
@@ -470,7 +456,7 @@ export class ViemEthereumProvider
     provider: PublicClient,
     tx: ViemContractTransaction,
   ): Promise<bigint> {
-    return await provider.estimateGas(asTxRequest(tx));
+    return await provider.estimateGas(tx);
   }
 
   async getTransactionCount(
