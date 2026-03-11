@@ -82,8 +82,8 @@ export const transferToPolkadot = async (
     {
         // Step 0. Create a transfer implementation
         const transferImpl = api.transfer(
-            { kind: "ethereum_l2", id: l2ChainId } as const,
-            { kind: "polkadot", id: destParaId } as const,
+            { kind: "ethereum_l2", id: l2ChainId },
+            { kind: "polkadot", id: destParaId },
         )
         // Step 1. Get the delivery fee for the transaction
         let fee = await transferImpl.getDeliveryFee(TOKEN_CONTRACT, amount)
