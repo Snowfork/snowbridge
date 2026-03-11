@@ -1,22 +1,11 @@
 import { Context, EthereumProviderTypes } from "../.."
 import { AddressOrPair, SignerOptions } from "@polkadot/api/types"
-import { ContractCall } from "@snowbridge/base-types"
-import { DeliveryFee, MessageReceipt, Transfer, ValidationResult } from "../../toEthereum_v2"
+import { DeliveryFee, MessageReceipt, Transfer, ValidationResult } from "../../forKusama"
 
 export interface TransferInterface<T extends EthereumProviderTypes = EthereumProviderTypes> {
     readonly context: Context<T>
 
-    getDeliveryFee(
-        tokenAddress: string,
-        options?: {
-            padPercentage?: bigint
-            slippagePadPercentage?: bigint
-            defaultFee?: bigint
-            feeTokenLocation?: any
-            claimerLocation?: any
-            contractCall?: ContractCall
-        },
-    ): Promise<DeliveryFee>
+    getDeliveryFee(tokenAddress: string): Promise<DeliveryFee>
 
     createTransfer(
         sourceAccount: string,
@@ -24,10 +13,6 @@ export interface TransferInterface<T extends EthereumProviderTypes = EthereumPro
         tokenAddress: string,
         amount: bigint,
         fee: DeliveryFee,
-        options?: {
-            claimerLocation?: any
-            contractCall?: ContractCall
-        },
     ): Promise<Transfer>
 
     validateTransfer(transfer: Transfer): Promise<ValidationResult>

@@ -1,5 +1,5 @@
 import { ApiPromise } from "@polkadot/api"
-import { SubmittableExtrinsic } from "@polkadot/api/types"
+import { AddressOrPair, SignerOptions, SubmittableExtrinsic } from "@polkadot/api/types"
 import { ISubmittableResult } from "@polkadot/types/types"
 import { isHex, u8aToHex } from "@polkadot/util"
 import { decodeAddress } from "@polkadot/util-crypto"
@@ -9,29 +9,51 @@ import {
     buildTransferXcmFromAssetHub,
 } from "../../xcmbuilders/toEthereum/pnaFromAH"
 import { buildTransferXcmFromAssetHubWithDOTAsFee } from "../../xcmbuilders/toEthereum/pnaFromAHWithDotAsFee"
-import { Asset, AssetRegistry, ContractCall } from "@snowbridge/base-types"
-import { paraImplementation } from "../../parachains"
+import {
+    Asset,
+    AssetRegistry,
+    ChainId,
+    ContractCall,
+    EthereumChain,
+    Parachain,
+    TransferRoute,
+} from "@snowbridge/base-types"
 import {
     buildMessageId,
     DeliveryFee,
-    resolveInputs,
+    MessageReceipt,
     Transfer,
     ValidationResult,
 } from "../../toEthereum_v2"
-import { Context } from "../.."
+import { Context, EthereumProviderTypes } from "../.."
 import { TransferInterface } from "./transferInterface"
 import {
     buildContractCallHex,
     estimateFeesFromAssetHub,
     MaxWeight,
     mockDeliveryFee,
+    signAndSendTransfer,
     validateTransferFromAssetHub,
 } from "../../toEthereumSnowbridgeV2"
 
-export class PNAFromAH implements TransferInterface {
+export class PNAFromAH<T extends EthereumProviderTypes> implements TransferInterface<T> {
+    constructor(
+        public readonly context: Context<T>,
+        public readonly registry: AssetRegistry,
+        public readonly route: TransferRoute,
+        public readonly source: Parachain,
+        public readonly destination: EthereumChain,
+    ) {}
+
+    get from(): ChainId {
+        return this.route.from
+    }
+
+    get to(): ChainId {
+        return this.route.to
+    }
+
     async getDeliveryFee(
-        source: { sourceParaId: number; context: Context },
-        registry: AssetRegistry,
         tokenAddress: string,
         options?: {
             padPercentage?: bigint
@@ -41,26 +63,22 @@ export class PNAFromAH implements TransferInterface {
             contractCall?: ContractCall
         },
     ): Promise<DeliveryFee> {
-        const { assetHub, parachain } =
-            "sourceParaId" in source
-                ? {
-                      assetHub: await source.context.assetHub(),
-                      parachain: await source.context.parachain(source.sourceParaId),
-                  }
-                : source
+        const assetHub = await this.context.assetHub()
+        const parachain = await this.context.parachain(this.from.id)
 
-        const sourceParachainImpl = await paraImplementation(parachain)
-        const { sourceAssetMetadata } = resolveInputs(
-            registry,
-            tokenAddress,
-            sourceParachainImpl.parachainId,
-        )
+        const sourceParachainImpl = await this.context.paraImplementation(parachain)
+        const sourceAssetMetadata = this.source.assets[tokenAddress.toLowerCase()]
+        if (!sourceAssetMetadata) {
+            throw Error(
+                `Token ${tokenAddress} not registered on source parachain ${this.source.id}.`,
+            )
+        }
 
         let forwardedXcmToBH, localXcm: any
 
         localXcm = buildTransferXcmFromAssetHub(
             assetHub.registry,
-            registry.ethChainId,
+            this.registry.ethChainId,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -71,7 +89,7 @@ export class PNAFromAH implements TransferInterface {
 
         forwardedXcmToBH = buildExportXcm(
             assetHub.registry,
-            registry.ethChainId,
+            this.registry.ethChainId,
             sourceAssetMetadata,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000",
@@ -81,8 +99,8 @@ export class PNAFromAH implements TransferInterface {
         )
 
         const fees = await estimateFeesFromAssetHub(
-            source.context,
-            registry,
+            this.context,
+            this.registry,
             tokenAddress,
             {
                 localXcm,
@@ -94,8 +112,6 @@ export class PNAFromAH implements TransferInterface {
     }
 
     async createTransfer(
-        source: { sourceParaId: number; context: Context },
-        registry: AssetRegistry,
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
@@ -106,20 +122,39 @@ export class PNAFromAH implements TransferInterface {
             contractCall?: ContractCall
         },
     ): Promise<Transfer> {
+        const registry = this.registry
         const { ethChainId } = registry
 
         let sourceAccountHex = sourceAccount
         if (!isHex(sourceAccountHex)) {
             sourceAccountHex = u8aToHex(decodeAddress(sourceAccount))
         }
-        const { parachain } =
-            "sourceParaId" in source
-                ? { parachain: await source.context.parachain(source.sourceParaId) }
-                : source
+        const parachain = await this.context.parachain(this.from.id)
 
-        const sourceParachainImpl = await paraImplementation(parachain)
-        const { tokenErcMetadata, sourceParachain, ahAssetMetadata, sourceAssetMetadata } =
-            resolveInputs(registry, tokenAddress, sourceParachainImpl.parachainId)
+        const sourceParachainImpl = await this.context.paraImplementation(parachain)
+        const tokenErcMetadata =
+            registry.ethereumChains[`ethereum_${registry.ethChainId}`].assets[
+                tokenAddress.toLowerCase()
+            ]
+        if (!tokenErcMetadata) {
+            throw Error(
+                `No token ${tokenAddress} registered on ethereum chain ${registry.ethChainId}.`,
+            )
+        }
+        const ahAssetMetadata =
+            registry.parachains[`polkadot_${registry.assetHubParaId}`].assets[
+                tokenAddress.toLowerCase()
+            ]
+        if (!ahAssetMetadata) {
+            throw Error(`Token ${tokenAddress} not registered on asset hub.`)
+        }
+        const sourceParachain = this.source
+        const sourceAssetMetadata = sourceParachain.assets[tokenAddress.toLowerCase()]
+        if (!sourceAssetMetadata) {
+            throw Error(
+                `Token ${tokenAddress} not registered on source parachain ${sourceParachain.id}.`,
+            )
+        }
 
         const accountNonce = await sourceParachainImpl.accountNonce(sourceAccountHex)
         let messageId: string | undefined = buildMessageId(
@@ -130,18 +165,41 @@ export class PNAFromAH implements TransferInterface {
             beneficiaryAccount,
             amount,
         )
-        let tx: SubmittableExtrinsic<"promise", ISubmittableResult> = await this.createTx(
-            source.context,
-            parachain,
-            ethChainId,
-            sourceAccount,
-            beneficiaryAccount,
-            ahAssetMetadata,
-            amount,
-            messageId,
-            fee,
-            options,
-        )
+        let callHex: string | undefined
+        if (options?.contractCall) {
+            callHex = await buildContractCallHex(this.context, options.contractCall)
+        }
+        let xcm: any
+        if (!fee.feeLocation) {
+            xcm = buildTransferXcmFromAssetHub(
+                parachain.registry,
+                ethChainId,
+                sourceAccount,
+                beneficiaryAccount,
+                messageId,
+                ahAssetMetadata,
+                amount,
+                fee,
+                callHex,
+            )
+        } else if (isRelaychainLocation(fee.feeLocation)) {
+            xcm = buildTransferXcmFromAssetHubWithDOTAsFee(
+                parachain.registry,
+                ethChainId,
+                sourceAccount,
+                beneficiaryAccount,
+                messageId,
+                ahAssetMetadata,
+                amount,
+                fee,
+                callHex,
+            )
+        } else {
+            throw new Error(`Fee token as ${fee.feeLocation} is not supported yet.`)
+        }
+        console.log("xcm on AH:", xcm.toHuman())
+        let tx: SubmittableExtrinsic<"promise", ISubmittableResult> =
+            parachain.tx.polkadotXcm.execute(xcm, MaxWeight)
 
         return {
             input: {
@@ -166,61 +224,16 @@ export class PNAFromAH implements TransferInterface {
         }
     }
 
-    async validateTransfer(context: Context, transfer: Transfer): Promise<ValidationResult> {
-        return validateTransferFromAssetHub(context, transfer)
+    async validateTransfer(transfer: Transfer): Promise<ValidationResult> {
+        return validateTransferFromAssetHub(this.context, transfer)
     }
 
-    async createTx(
-        context: Context,
-        parachain: ApiPromise,
-        ethChainId: number,
-        sourceAccount: string,
-        beneficiaryAccount: string,
-        asset: Asset,
-        amount: bigint,
-        messageId: string,
-        fee: DeliveryFee,
-        options?: {
-            claimerLocation?: any
-            contractCall?: ContractCall
-        },
-    ): Promise<SubmittableExtrinsic<"promise", ISubmittableResult>> {
-        let callHex: string | undefined
-        if (options?.contractCall) {
-            callHex = await buildContractCallHex(context, options.contractCall)
-        }
-        let xcm: any
-        // If there is no fee specified, we assume that Ether is available in user's wallet on source chain,
-        // thus no swap required on Asset Hub.
-        if (!fee.feeLocation) {
-            xcm = buildTransferXcmFromAssetHub(
-                parachain.registry,
-                ethChainId,
-                sourceAccount,
-                beneficiaryAccount,
-                messageId,
-                asset,
-                amount,
-                fee,
-                callHex,
-            )
-        } // If the fee asset is in DOT, we need to swap it to Ether on Asset Hub.
-        else if (isRelaychainLocation(fee.feeLocation)) {
-            xcm = buildTransferXcmFromAssetHubWithDOTAsFee(
-                parachain.registry,
-                ethChainId,
-                sourceAccount,
-                beneficiaryAccount,
-                messageId,
-                asset,
-                amount,
-                fee,
-                callHex,
-            )
-        } else {
-            throw new Error(`Fee token as ${fee.feeLocation} is not supported yet.`)
-        }
-        console.log("xcm on AH:", xcm.toHuman())
-        return parachain.tx.polkadotXcm.execute(xcm, MaxWeight)
+    async signAndSend(
+        transfer: Transfer,
+        account: AddressOrPair,
+        options: Partial<SignerOptions>,
+    ): Promise<MessageReceipt> {
+        const sourceParachain = await this.context.parachain(transfer.computed.sourceParaId)
+        return signAndSendTransfer(sourceParachain, transfer, account, options)
     }
 }

@@ -1,19 +1,10 @@
 import { AssetRegistry } from "@snowbridge/base-types"
-import { Context } from "../../index"
-import { IGatewayV2 as IGateway } from "@snowbridge/contract-types"
-import { ApiPromise } from "@polkadot/api"
-import { AbstractProvider, ContractTransaction } from "ethers"
+import { Context, EthereumProviderTypes } from "../../index"
 import { OperationStatus } from "../../status"
 import { FeeInfo, ValidationLog } from "../../toPolkadot_v2"
+import type { MessageReceipt } from "../../toPolkadotSnowbridgeV2"
 
-export interface Connections {
-    ethereum: AbstractProvider
-    gateway: IGateway
-    bridgeHub: ApiPromise
-    assetHub: ApiPromise
-}
-
-export type TokenRegistration = {
+export type TokenRegistration<T extends EthereumProviderTypes = EthereumProviderTypes> = {
     input: {
         registry: AssetRegistry
         sourceAccount: string
@@ -24,21 +15,22 @@ export type TokenRegistration = {
         gatewayAddress: string
         totalValue: bigint
     }
-    tx: ContractTransaction
+    tx: T["ContractTransaction"]
 }
 
-export type RegistrationValidationResult = {
-    logs: ValidationLog[]
-    success: boolean
-    data: {
-        etherBalance: bigint
-        feeInfo?: FeeInfo
-        bridgeStatus: OperationStatus
-        isTokenAlreadyRegistered: boolean
-        assetHubDryRunError?: string
+export type RegistrationValidationResult<T extends EthereumProviderTypes = EthereumProviderTypes> =
+    {
+        logs: ValidationLog[]
+        success: boolean
+        data: {
+            etherBalance: bigint
+            feeInfo?: FeeInfo
+            bridgeStatus: OperationStatus
+            isTokenAlreadyRegistered: boolean
+            assetHubDryRunError?: string
+        }
+        registration: TokenRegistration<T>
     }
-    registration: TokenRegistration
-}
 
 export type RegistrationFee = {
     assetHubDeliveryFeeEther: bigint
@@ -49,14 +41,9 @@ export type RegistrationFee = {
     totalFeeInWei: bigint
 }
 
-export interface RegistrationInterface {
+export interface RegistrationInterface<T extends EthereumProviderTypes = EthereumProviderTypes> {
     getRegistrationFee(
-        context:
-            | Context
-            | {
-                  assetHub: ApiPromise
-                  bridgeHub: ApiPromise
-              },
+        context: Context<T>,
         registry: AssetRegistry,
         relayerFee: bigint,
         options?: {
@@ -65,19 +52,20 @@ export interface RegistrationInterface {
     ): Promise<RegistrationFee>
 
     createRegistration(
-        context:
-            | Context
-            | {
-                  ethereum: AbstractProvider
-              },
+        context: Context<T>,
         registry: AssetRegistry,
         sourceAccount: string,
         tokenAddress: string,
         fee: RegistrationFee,
-    ): Promise<TokenRegistration>
+    ): Promise<TokenRegistration<T>>
 
     validateRegistration(
-        context: Context | Connections,
-        registration: TokenRegistration,
-    ): Promise<RegistrationValidationResult>
+        context: Context<T>,
+        registration: TokenRegistration<T>,
+    ): Promise<RegistrationValidationResult<T>>
+
+    getMessageReceipt(
+        context: Context<T>,
+        receipt: T["TransactionReceipt"],
+    ): Promise<MessageReceipt | null>
 }

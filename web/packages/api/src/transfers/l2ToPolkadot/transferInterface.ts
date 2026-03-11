@@ -1,15 +1,17 @@
-import { AssetRegistry } from "@snowbridge/base-types"
-import { Context } from "../../index"
-import { DeliveryFee, Transfer, ValidationResult } from "../../toPolkadotSnowbridgeV2"
+import { Context, EthereumProviderTypes } from "../.."
+import {
+    DeliveryFee,
+    MessageReceipt,
+    Transfer,
+    ValidationResult,
+} from "../../toPolkadotSnowbridgeV2"
 
-export interface TransferInterface {
+export interface TransferInterface<T extends EthereumProviderTypes = EthereumProviderTypes> {
+    readonly context: Context<T>
+
     getDeliveryFee(
-        context: Context,
-        registry: AssetRegistry,
-        l2ChainId: number,
         tokenAddress: string,
         amount: bigint,
-        destinationParaId: number,
         options?: {
             paddFeeByPercentage?: bigint
             feeAsset?: any
@@ -21,12 +23,8 @@ export interface TransferInterface {
     ): Promise<DeliveryFee>
 
     createTransfer(
-        context: Context,
-        registry: AssetRegistry,
-        l2ChainId: number,
         tokenAddress: string,
         amount: bigint,
-        destinationParaId: number,
         sourceAccount: string,
         beneficiaryAccount: string,
         fee: DeliveryFee,
@@ -34,7 +32,9 @@ export interface TransferInterface {
             customXcm?: any[] // Optional custom XCM instructions to append
             fillDeadlineBuffer?: bigint // Optional buffer added to the relay fill deadline for L2 calls.
         },
-    ): Promise<Transfer>
+    ): Promise<Transfer<T>>
 
-    validateTransfer(context: Context, transfer: Transfer): Promise<ValidationResult>
+    validateTransfer(transfer: Transfer<T>): Promise<ValidationResult<T>>
+
+    getMessageReceipt(receipt: T["TransactionReceipt"]): Promise<MessageReceipt | null>
 }

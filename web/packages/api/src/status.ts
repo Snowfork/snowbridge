@@ -1,7 +1,7 @@
-import { Context, subsquidV2 } from "./index"
+import { Context, EthereumProviderTypes, subsquidV2 } from "./index"
 import { fetchBeaconSlot, fetchFinalityUpdate } from "./utils"
 import { ApiPromise } from "@polkadot/api"
-import { IGatewayV1, IGatewayV2 } from "@snowbridge/contract-types"
+import { IGatewayV1, IGatewayV2 } from "./contracts"
 
 export type OperatingMode = "Normal" | "Halted"
 export type BridgeStatusInfo = {
@@ -122,7 +122,7 @@ export async function getOperatingStatus({
 }
 
 export const bridgeStatusInfo = async (
-    context: Context,
+    context: Context<EthereumProviderTypes>,
     options = {
         polkadotBlockTimeInSeconds: 6,
         ethereumBlockTimeInSeconds: 12,
@@ -190,7 +190,7 @@ export const ASSET_HUB_CHANNEL_ID =
     "0xc173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539"
 
 export const channelStatusInfo = async (
-    context: Context,
+    context: Context<EthereumProviderTypes>,
     channelId: string,
 ): Promise<ChannelStatusInfo> => {
     const [bridgeHub, gateway, gatewayV2] = await Promise.all([

@@ -1,13 +1,20 @@
 import { ApiPromise } from "@polkadot/api"
-import { SubmittableExtrinsic } from "@polkadot/api/types"
+import { AddressOrPair, SignerOptions, SubmittableExtrinsic } from "@polkadot/api/types"
 import { Codec, ISubmittableResult } from "@polkadot/types/types"
-import { AssetRegistry, ContractCall } from "@snowbridge/base-types"
+import {
+    AssetRegistry,
+    ChainId,
+    ContractCall,
+    EthereumChain,
+    Parachain,
+    TransferRoute,
+} from "@snowbridge/base-types"
 import { CallDryRunEffects, XcmDryRunApiError, XcmDryRunEffects } from "@polkadot/types/interfaces"
 import { Result } from "@polkadot/types"
 import {
     DeliveryFee,
     dryRunBridgeHub,
-    resolveInputs,
+    MessageReceipt,
     Transfer,
     ValidationKind,
     ValidationLog,
@@ -16,9 +23,7 @@ import {
 } from "./toEthereum_v2"
 import { PNAFromAH } from "./transfers/toEthereum/pnaFromAH"
 import { TransferInterface } from "./transfers/toEthereum/transferInterface"
-import { TransferInterface as TransferInterfaceToL2 } from "./transfers/polkadotToL2/transferInterface"
 import { ERC20FromAH } from "./transfers/toEthereum/erc20FromAH"
-import { ERC20FromAH as ERC20FromAHToL2 } from "./transfers/polkadotToL2/erc20ToL2"
 import { PNAFromParachain } from "./transfers/toEthereum/pnaFromParachain"
 import { ERC20FromParachain } from "./transfers/toEthereum/erc20FromParachain"
 import {
@@ -31,52 +36,131 @@ import {
 import { xxhashAsHex } from "@polkadot/util-crypto"
 import { BN } from "@polkadot/util"
 import { padFeeByPercentage } from "./utils"
-import { paraImplementation } from "./parachains"
-import { Context } from "./index"
+import { Context, EthereumProviderTypes } from "./index"
 import { ETHER_TOKEN_ADDRESS, findL2TokenAddress } from "./assets_v2"
 import { getOperatingStatus } from "./status"
-import { AbstractProvider, ethers, Wallet, TransactionReceipt } from "ethers"
-import { CreateAgent } from "./registration/agent/createAgent"
 import { estimateFees } from "./across/api"
-import { AgentCreation } from "./registration/agent/agentInterface"
 
-export { ValidationKind, signAndSend } from "./toEthereum_v2"
+export { ValidationKind, signAndSendTransfer } from "./toEthereum_v2"
 
-export function createTransferImplementation(
-    sourceParaId: number,
-    registry: AssetRegistry,
-    tokenAddress: string,
-): TransferInterface {
-    const { sourceAssetMetadata } = resolveInputs(registry, tokenAddress, sourceParaId)
+export class TransferToEthereum<T extends EthereumProviderTypes> implements TransferInterface<T> {
+    #pnaImpl?: TransferInterface<T>
+    #erc20Impl?: TransferInterface<T>
 
-    let transferImpl
-    if (sourceParaId == registry.assetHubParaId) {
-        if (sourceAssetMetadata.location) {
-            transferImpl = new PNAFromAH()
-        } else {
-            transferImpl = new ERC20FromAH()
-        }
-    } else {
-        if (sourceAssetMetadata.location) {
-            transferImpl = new PNAFromParachain()
-        } else {
-            transferImpl = new ERC20FromParachain()
-        }
+    constructor(
+        public readonly context: Context<T>,
+        private readonly route: TransferRoute,
+        private readonly registry: AssetRegistry,
+        private readonly source: Parachain,
+        private readonly destination: EthereumChain,
+    ) {}
+
+    get from(): ChainId {
+        return this.route.from
     }
-    return transferImpl
-}
 
-export function createL2TransferImplementation(
-    sourceParaId: number,
-    registry: AssetRegistry,
-    tokenAddress: string,
-): TransferInterfaceToL2 {
-    // Todo: Support PNA transfers to L2
-    const { sourceAssetMetadata } = resolveInputs(registry, tokenAddress, sourceParaId)
+    get to(): ChainId {
+        return this.route.to
+    }
 
-    let transferImpl = new ERC20FromAHToL2()
+    #resolveByTokenAddress(tokenAddress: string): TransferInterface<T> {
+        const sourceParaId = this.route.from.id
+        const sourceAssetMetadata = this.source.assets[tokenAddress.toLowerCase()]
+        if (!sourceAssetMetadata) {
+            throw Error(
+                `Token ${tokenAddress} not registered on source parachain ${this.source.id}.`,
+            )
+        }
 
-    return transferImpl
+        if (sourceAssetMetadata.location) {
+            this.#pnaImpl ??=
+                sourceParaId == this.registry.assetHubParaId
+                    ? new PNAFromAH(
+                          this.context,
+                          this.registry,
+                          this.route,
+                          this.source,
+                          this.destination,
+                      )
+                    : new PNAFromParachain(
+                          this.context,
+                          this.registry,
+                          this.route,
+                          this.source,
+                          this.destination,
+                      )
+            return this.#pnaImpl
+        }
+
+        this.#erc20Impl ??=
+            sourceParaId == this.registry.assetHubParaId
+                ? new ERC20FromAH(
+                      this.context,
+                      this.registry,
+                      this.route,
+                      this.source,
+                      this.destination,
+                  )
+                : new ERC20FromParachain(
+                      this.context,
+                      this.registry,
+                      this.route,
+                      this.source,
+                      this.destination,
+                  )
+        return this.#erc20Impl
+    }
+
+    async getDeliveryFee(
+        tokenAddress: string,
+        options?: {
+            padPercentage?: bigint
+            slippagePadPercentage?: bigint
+            defaultFee?: bigint
+            feeTokenLocation?: any
+            claimerLocation?: any
+            contractCall?: ContractCall
+        },
+    ): Promise<DeliveryFee> {
+        return this.#resolveByTokenAddress(tokenAddress).getDeliveryFee(tokenAddress, options)
+    }
+
+    async createTransfer(
+        sourceAccount: string,
+        beneficiaryAccount: string,
+        tokenAddress: string,
+        amount: bigint,
+        fee: DeliveryFee,
+        options?: {
+            claimerLocation?: any
+            contractCall?: ContractCall
+        },
+    ): Promise<Transfer> {
+        return this.#resolveByTokenAddress(tokenAddress).createTransfer(
+            sourceAccount,
+            beneficiaryAccount,
+            tokenAddress,
+            amount,
+            fee,
+            options,
+        )
+    }
+
+    async validateTransfer(transfer: Transfer): Promise<ValidationResult> {
+        return this.#resolveByTokenAddress(transfer.input.tokenAddress).validateTransfer(transfer)
+    }
+
+    async signAndSend(
+        transfer: Transfer,
+        account: AddressOrPair,
+        options: Partial<SignerOptions>,
+    ): Promise<MessageReceipt> {
+        return this.#resolveByTokenAddress(transfer.input.tokenAddress).signAndSend(
+            transfer,
+            account,
+            options,
+        )
+    }
 }
 
 export async function dryRunOnSourceParachain(
@@ -232,10 +316,10 @@ export type DeliveryXcm = {
     returnToSenderXcm?: any
 }
 
-export const estimateEthereumExecutionFee = async (
-    context: Context,
+export const estimateEthereumExecutionFee = async <T extends EthereumProviderTypes>(
+    context: Context<T>,
     registry: AssetRegistry,
-    sourceParaId: number,
+    sourceParachain: Parachain,
     tokenAddress: string,
     options?: {
         contractCall?: ContractCall
@@ -243,11 +327,17 @@ export const estimateEthereumExecutionFee = async (
     },
 ): Promise<bigint> => {
     const ethereum = await context.ethereum()
-    const { tokenErcMetadata } = resolveInputs(registry, tokenAddress, sourceParaId)
+    const tokenErcMetadata =
+        registry.ethereumChains[`ethereum_${registry.ethChainId}`].assets[
+            tokenAddress.toLowerCase()
+        ]
+    if (!tokenErcMetadata) {
+        throw Error(`No token ${tokenAddress} registered on ethereum chain ${registry.ethChainId}.`)
+    }
 
     // Calculate execution cost on ethereum
     let ethereumChain = registry.ethereumChains[`ethereum_${registry.ethChainId}`]
-    let feeData = await ethereum.getFeeData()
+    let feeData = await context.ethereumProvider.getFeeData(ethereum)
     let ethereumExecutionFee =
         (feeData.gasPrice ?? 2_000_000_000n) *
         ((tokenErcMetadata.deliveryGas ?? 80_000n) +
@@ -256,8 +346,8 @@ export const estimateEthereumExecutionFee = async (
     return ethereumExecutionFee
 }
 
-export const estimateFeesFromAssetHub = async (
-    context: Context,
+export const estimateFeesFromAssetHub = async <T extends EthereumProviderTypes>(
+    context: Context<T>,
     registry: AssetRegistry,
     tokenAddress: string,
     deliveryXcm: DeliveryXcm,
@@ -275,7 +365,7 @@ export const estimateFeesFromAssetHub = async (
     tokenAmount?: bigint,
 ): Promise<DeliveryFee> => {
     const assetHub = await context.parachain(registry.assetHubParaId)
-    const assetHubImpl = await paraImplementation(assetHub)
+    const assetHubImpl = await context.paraImplementation(assetHub)
 
     const feePadPercentage = options?.padPercentage ?? 33n
     const feeSlippagePadPercentage = options?.slippagePadPercentage ?? 20n
@@ -331,7 +421,7 @@ export const estimateFeesFromAssetHub = async (
         await estimateEthereumExecutionFee(
             context,
             registry,
-            registry.assetHubParaId,
+            registry.parachains[`polkadot_${registry.assetHubParaId}`],
             tokenAddress,
             options,
         ),
@@ -379,8 +469,8 @@ export const estimateFeesFromAssetHub = async (
     }
 }
 
-export const estimateFeesFromParachains = async (
-    context: Context,
+export const estimateFeesFromParachains = async <T extends EthereumProviderTypes>(
+    context: Context<T>,
     sourceParaId: number,
     registry: AssetRegistry,
     tokenAddress: string,
@@ -394,10 +484,12 @@ export const estimateFeesFromParachains = async (
     },
 ): Promise<DeliveryFee> => {
     const sourceParachain = registry.parachains[`polkadot_${sourceParaId}`]
-    const sourceParachainImpl = await paraImplementation(await context.parachain(sourceParaId))
+    const sourceParachainImpl = await context.paraImplementation(
+        await context.parachain(sourceParaId),
+    )
 
     const assetHub = await context.parachain(registry.assetHubParaId)
-    const assetHubImpl = await paraImplementation(assetHub)
+    const assetHubImpl = await context.paraImplementation(assetHub)
 
     const feePadPercentage = options?.padPercentage ?? 33n
     const feeSlippagePadPercentage = options?.slippagePadPercentage ?? 20n
@@ -461,7 +553,7 @@ export const estimateFeesFromParachains = async (
     let ethereumExecutionFee = await estimateEthereumExecutionFee(
         context,
         registry,
-        sourceParaId,
+        sourceParachain,
         tokenAddress,
         options,
     )
@@ -532,8 +624,8 @@ export const estimateFeesFromParachains = async (
     }
 }
 
-export const validateTransferFromAssetHub = async (
-    context: Context,
+export const validateTransferFromAssetHub = async <T extends EthereumProviderTypes>(
+    context: Context<T>,
     transfer: Transfer,
 ): Promise<ValidationResult> => {
     const { registry, fee, tokenAddress, amount } = transfer.input
@@ -551,7 +643,7 @@ export const validateTransferFromAssetHub = async (
             : context
 
     const logs: ValidationLog[] = []
-    const sourceParachainImpl = await paraImplementation(sourceParachain)
+    const sourceParachainImpl = await context.paraImplementation(sourceParachain)
     const nativeBalance = await sourceParachainImpl.getNativeBalance(sourceAccountHex, true)
     let dotBalance = await sourceParachainImpl.getDotBalance(sourceAccountHex)
     let tokenBalance: any
@@ -607,17 +699,15 @@ export const validateTransferFromAssetHub = async (
     }
     let contractCall = transfer.input.contractCall
     if (contractCall) {
-        try {
-            await checkContractAddress(ethereum, contractCall.target)
-        } catch (error) {
+        const isContractAddress = await context.ethereumProvider.isContractAddress(
+            ethereum,
+            contractCall.target,
+        )
+        if (!isContractAddress) {
             logs.push({
                 kind: ValidationKind.Error,
                 reason: ValidationReason.ContractCallInvalidTarget,
-                message:
-                    "Contract call with invalid target address: " +
-                    contractCall.target +
-                    " error: " +
-                    String(error),
+                message: "Contract call with invalid target address: " + contractCall.target,
             })
         }
         try {
@@ -718,8 +808,8 @@ export const validateTransferFromAssetHub = async (
     }
 }
 
-export const validateTransferFromParachain = async (
-    context: Context,
+export const validateTransferFromParachain = async <T extends EthereumProviderTypes>(
+    context: Context<T>,
     transfer: Transfer,
 ): Promise<ValidationResult> => {
     const { registry, fee, tokenAddress, amount } = transfer.input
@@ -743,7 +833,7 @@ export const validateTransferFromParachain = async (
             : context
 
     const logs: ValidationLog[] = []
-    const sourceParachainImpl = await paraImplementation(sourceParachain)
+    const sourceParachainImpl = await context.paraImplementation(sourceParachain)
     const nativeBalance = await sourceParachainImpl.getNativeBalance(sourceAccountHex, true)
     let dotBalance: bigint | undefined = undefined
     if (source.features.hasDotBalance) {
@@ -803,17 +893,15 @@ export const validateTransferFromParachain = async (
 
     let contractCall = transfer.input.contractCall
     if (contractCall) {
-        try {
-            await checkContractAddress(ethereum, contractCall.target)
-        } catch (error) {
+        const isContractAddress = await context.ethereumProvider.isContractAddress(
+            ethereum,
+            contractCall.target,
+        )
+        if (!isContractAddress) {
             logs.push({
                 kind: ValidationKind.Error,
                 reason: ValidationReason.ContractCallInvalidTarget,
-                message:
-                    "Contract call with invalid target address: " +
-                    contractCall.target +
-                    " error: " +
-                    String(error),
+                message: "Contract call with invalid target address: " + contractCall.target,
             })
         }
     }
@@ -910,7 +998,10 @@ export const validateTransferFromParachain = async (
     }
 }
 
-export async function buildContractCallHex(context: Context, contractCall: ContractCall) {
+export async function buildContractCallHex<T extends EthereumProviderTypes>(
+    context: Context<T>,
+    contractCall: ContractCall,
+) {
     const bridgeHub = await context.bridgeHub()
     const callHex = bridgeHub.createType("ContractCall", {
         target: contractCall.target,
@@ -933,24 +1024,6 @@ export const mockDeliveryFee: DeliveryFee = {
     ethereumExecutionFee: 1n,
 }
 
-export const checkContractAddress = async (ethereum: AbstractProvider, address: string) => {
-    if (!ethers.isAddress(address)) {
-        throw new Error("Invalid contract address: " + address)
-    }
-    try {
-        const code = await ethereum.getCode(address)
-        if (code == "0x") {
-            throw new Error(
-                "Contract call with invalid target address: no contract deployed at " + address,
-            )
-        }
-    } catch (error) {
-        throw new Error(
-            "Contract call with invalid target address: " + address + " error: " + String(error),
-        )
-    }
-}
-
 // Agent creation exports
 export type {
     AgentCreation,
@@ -958,24 +1031,8 @@ export type {
     AgentCreationInterface,
 } from "./registration/agent/agentInterface"
 
-export function createAgentCreationImplementation() {
-    return new CreateAgent()
-}
-
-export async function sendAgentCreation(
-    creation: AgentCreation,
-    wallet: Wallet,
-): Promise<TransactionReceipt> {
-    const response = await wallet.sendTransaction(creation.tx)
-    const receipt = await response.wait(1)
-    if (!receipt) {
-        throw Error(`Transaction ${response.hash} not included.`)
-    }
-    return receipt
-}
-
-export async function buildL2Call(
-    context: Context,
+export async function buildL2Call<T extends EthereumProviderTypes>(
+    context: Context<T>,
     registry: AssetRegistry,
     tokenAddress: string,
     l2ChainId: number,
@@ -993,16 +1050,25 @@ export async function buildL2Call(
     if (!l2TokenAddress) {
         throw new Error("L2 token address not found")
     }
-    const l1Adapter = context.l1Adapter()
-    let l1AdapterAddress = await l1Adapter.getAddress()
+    const acrossApiUrl = context.environment.l2Bridge?.acrossAPIUrl
+    if (!acrossApiUrl) {
+        throw new Error("L2 bridge configuration is missing.")
+    }
+    const l1AdapterAddress = context.environment.l2Bridge?.l1AdapterAddress
+    if (!l1AdapterAddress) {
+        throw new Error("L2 bridge configuration is missing.")
+    }
     let l2BridgeFeeInL1Token: bigint
     let l2Call: ContractCall
     if (tokenAddress === ETHER_TOKEN_ADDRESS) {
-        let l1FeeTokenAddress = context.l1FeeTokenAddress()
-        let l2FeeTokenAddress = context.l2FeeTokenAddress(l2ChainId)
+        const l1FeeTokenAddress = context.environment.l2Bridge?.l1FeeTokenAddress
+        const l2FeeTokenAddress = context.environment.l2Bridge?.l2Chains[l2ChainId]?.feeTokenAddress
+        if (!l1FeeTokenAddress || !l2FeeTokenAddress) {
+            throw new Error("L2 chain configuration is missing.")
+        }
         l2BridgeFeeInL1Token = padFeeByPercentage(
             await estimateFees(
-                context.acrossApiUrl(),
+                acrossApiUrl,
                 l1FeeTokenAddress,
                 l2FeeTokenAddress,
                 registry.ethChainId,
@@ -1011,7 +1077,7 @@ export async function buildL2Call(
             ),
             options?.l2PadFeeByPercentage ?? 33n,
         )
-        let calldata = l1Adapter.interface.encodeFunctionData("depositNativeEther", [
+        const calldata = context.ethereumProvider.l1AdapterDepositNativeEther(
             {
                 inputToken: tokenAddress,
                 outputToken: l2FeeTokenAddress,
@@ -1022,7 +1088,7 @@ export async function buildL2Call(
             },
             destinationAddress,
             topic,
-        ])
+        )
         l2Call = {
             target: l1AdapterAddress,
             value: 0n,
@@ -1032,7 +1098,7 @@ export async function buildL2Call(
     } else {
         l2BridgeFeeInL1Token = padFeeByPercentage(
             await estimateFees(
-                context.acrossApiUrl(),
+                acrossApiUrl,
                 tokenAddress,
                 l2TokenAddress,
                 registry.ethChainId,
@@ -1041,7 +1107,7 @@ export async function buildL2Call(
             ),
             options?.l2PadFeeByPercentage ?? 33n,
         )
-        let calldata = l1Adapter.interface.encodeFunctionData("depositToken", [
+        const calldata = context.ethereumProvider.l1AdapterDepositToken(
             {
                 inputToken: tokenAddress,
                 outputToken: l2TokenAddress,
@@ -1052,7 +1118,7 @@ export async function buildL2Call(
             },
             destinationAddress,
             topic,
-        ])
+        )
         l2Call = {
             target: l1AdapterAddress,
             value: 0n,
@@ -1063,8 +1129,8 @@ export async function buildL2Call(
     return { l2Call, fee: l2BridgeFeeInL1Token }
 }
 
-export async function sourceAgentId(
-    context: Context,
+export async function sourceAgentId<T extends EthereumProviderTypes>(
+    context: Context<T>,
     parachainId: number,
     sourceAccountHex: string,
 ) {
@@ -1079,8 +1145,8 @@ export async function sourceAgentId(
     return (await bridgeHub.call.controlV2Api.agentId(versionedLocation)).toHex()
 }
 
-export async function sourceAgentAddress(
-    context: Context,
+export async function sourceAgentAddress<T extends EthereumProviderTypes>(
+    context: Context<T>,
     parachainId: number,
     sourceAccountHex: string,
 ): Promise<string> {

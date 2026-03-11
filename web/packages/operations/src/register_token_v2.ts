@@ -1,5 +1,5 @@
 import "dotenv/config"
-import { Context, toPolkadotSnowbridgeV2 } from "@snowbridge/api"
+import { EthersEthereumProvider, createApi, toPolkadotSnowbridgeV2 } from "@snowbridge/api"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { Wallet } from "ethers"
 import { bridgeInfoFor } from "@snowbridge/registry"
@@ -13,8 +13,10 @@ export const registerTokenV2 = async (tokenAddress: string) => {
     }
     console.log(`Using environment '${env}'`)
 
-    const { environment, registry } = bridgeInfoFor(env)
-    const context = new Context(environment)
+    const info = bridgeInfoFor(env)
+    const { registry } = info
+    const api = createApi({ info, ethereumProvider: new EthersEthereumProvider() })
+    const context = api.context
 
     const ETHEREUM_ACCOUNT = new Wallet(
         process.env.ETHEREUM_KEY ?? "Your Key Goes Here",
@@ -32,17 +34,15 @@ export const registerTokenV2 = async (tokenAddress: string) => {
 
     console.log("Token Registration on Snowbridge V2")
     {
-        // Step 0. Create a registration implementation
-        const registrationImpl = toPolkadotSnowbridgeV2.createRegistrationImplementation()
+        // Step 0. Create a registration interface from the API
+        const registrationImpl = api.registerToken()
 
         // Step 1. Get the registration fee for the transaction
         let fee = await registrationImpl.getRegistrationFee(context, registry, relayerFee)
 
         // Step 2. Create a registration tx
         const registration = await registrationImpl.createRegistration(
-            {
-                ethereum: context.ethereum(),
-            },
+            context,
             registry,
             ETHEREUM_ACCOUNT_PUBLIC,
             TOKEN_CONTRACT,
@@ -50,15 +50,7 @@ export const registerTokenV2 = async (tokenAddress: string) => {
         )
 
         // Step 3. Validate the transaction.
-        const validation = await registrationImpl.validateRegistration(
-            {
-                ethereum: context.ethereum(),
-                gateway: context.gatewayV2(),
-                bridgeHub: await context.bridgeHub(),
-                assetHub: await context.assetHub(),
-            },
-            registration,
-        )
+        const validation = await registrationImpl.validateRegistration(context, registration)
 
         // Check validation logs for errors
         if (validation.logs.find((l) => l.kind == toPolkadotSnowbridgeV2.ValidationKind.Error)) {
@@ -84,7 +76,7 @@ export const registerTokenV2 = async (tokenAddress: string) => {
             }
 
             // Step 6. Get the message receipt for tracking purposes
-            const message = await toPolkadotSnowbridgeV2.getMessageReceipt(receipt)
+            const message = await registrationImpl.getMessageReceipt(context, receipt)
             if (!message) {
                 throw Error(`Transaction ${receipt.hash} did not emit a message.`)
             }

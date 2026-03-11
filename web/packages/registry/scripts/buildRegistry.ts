@@ -27,7 +27,13 @@ import { isFunction } from "@polkadot/util"
 import { writeFile } from "fs/promises"
 import { AbstractProvider, Contract, ethers } from "ethers"
 import { IGatewayV1__factory as IGateway__factory } from "@snowbridge/contract-types"
-import { parachains as ParaImpl, xcmBuilder, assetsV2 } from "@snowbridge/api"
+import {
+    parachains as ParaImpl,
+    xcmBuilder,
+    assetsV2,
+    EthersEthereumProvider,
+    EthersProviderTypes,
+} from "@snowbridge/api"
 
 export type Path = {
     source: ChainId
@@ -698,7 +704,10 @@ async function buildRegistry(environment: Environment): Promise<AssetRegistry> {
                 ? new HttpProvider(assetHubUrl)
                 : new WsProvider(assetHubUrl),
         })
-        const accessor = await ParaImpl.paraImplementation(provider)
+        const accessor = await ParaImpl.paraImplementation<EthersProviderTypes>(
+            provider,
+            new EthersEthereumProvider(),
+        )
 
         const para = await indexParachain(
             accessor,
