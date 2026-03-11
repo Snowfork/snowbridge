@@ -6,7 +6,7 @@ import {
     TransferRoute,
 } from "@snowbridge/base-types"
 import { TransferInterface } from "./transferInterface"
-import { Context, EthersProviderTypes } from "../../index"
+import { Context, EthereumProviderTypes } from "../../index"
 import {
     buildSwapCallData,
     calculateRelayerFee,
@@ -29,17 +29,16 @@ import { getOperatingStatus } from "../../status"
 import { hexToU8a } from "@polkadot/util"
 import {
     DepositParamsStruct,
+    ISwapQuoter,
     QuoteExactOutputSingleParamsStruct,
     SendParamsStruct,
     SwapParamsStruct,
 } from "../../contracts"
 import { estimateFees } from "../../across/api"
-import { ContractTransaction } from "ethers/lib.commonjs/contract/types"
-import { TransactionReceipt } from "ethers"
 
-export class ERC20ToAH implements TransferInterface<EthersProviderTypes> {
+export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInterface<T> {
     constructor(
-        public readonly context: Context<EthersProviderTypes>,
+        public readonly context: Context<T>,
         public readonly registry: AssetRegistry,
         public readonly route: TransferRoute,
         public readonly source: EthereumChain,
@@ -173,7 +172,7 @@ export class ERC20ToAH implements TransferInterface<EthersProviderTypes> {
             let swapFee =
                 registry.ethereumChains?.[`ethereum_l2_${this.from.id}`]?.assets[l2TokenAddress]
                     ?.swapFee
-            let swapQuoter = context.l1SwapQuoter()
+            const swapQuoter = context.l1SwapQuoter() as T["Contract"] & ISwapQuoter
             const l1FeeTokenAddress = context.environment.l2Bridge?.l1FeeTokenAddress
             if (!l1FeeTokenAddress) {
                 throw new Error("L2 bridge configuration is missing.")
@@ -230,7 +229,7 @@ export class ERC20ToAH implements TransferInterface<EthersProviderTypes> {
             customXcm?: any[]
             fillDeadlineBuffer?: bigint
         },
-    ): Promise<Transfer> {
+    ): Promise<Transfer<T>> {
         const context = this.context
         const registry = this.registry
         const assetHub = await context.assetHub()
@@ -278,7 +277,11 @@ export class ERC20ToAH implements TransferInterface<EthersProviderTypes> {
         let value: bigint
         let inputAmount: bigint = amount
 
-        const accountNonce = await l2Chain.getTransactionCount(sourceAccount, "pending")
+        const accountNonce = await context.ethereumProvider.getTransactionCount(
+            l2Chain,
+            sourceAccount,
+            "pending",
+        )
 
         const topic = buildMessageId(
             this.to.id,
@@ -299,7 +302,7 @@ export class ERC20ToAH implements TransferInterface<EthersProviderTypes> {
         )
         let claimer = claimerFromBeneficiary(assetHub, beneficiaryAddressHex)
 
-        let depositParams: DepositParamsStruct, tx: ContractTransaction
+        let depositParams: DepositParamsStruct, tx: T["ContractTransaction"]
 
         let sendParams: SendParamsStruct = {
             xcm: xcm,
@@ -405,7 +408,7 @@ export class ERC20ToAH implements TransferInterface<EthersProviderTypes> {
         }
     }
 
-    async validateTransfer(transfer: Transfer): Promise<ValidationResult> {
+    async validateTransfer(transfer: Transfer<T>): Promise<ValidationResult<T>> {
         const context = this.context
         const { tx } = transfer
         const { amount, sourceAccount, tokenAddress, registry, l2TokenAddress, sourceChainId } =
@@ -605,7 +608,7 @@ export class ERC20ToAH implements TransferInterface<EthersProviderTypes> {
         }
     }
 
-    async getMessageReceipt(receipt: TransactionReceipt) {
+    async getMessageReceipt(receipt: T["TransactionReceipt"]) {
         return getSharedMessageReceipt(this.context.ethereumProvider, receipt)
     }
 }

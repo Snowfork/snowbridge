@@ -26,13 +26,15 @@ import {
 } from "@snowbridge/base-types"
 import { CreateAgent } from "./registration/agent/createAgent"
 import type { AgentCreationInterface } from "./registration/agent/agentInterface"
+import { RegisterToken } from "./registration/toPolkadot/registerToken"
+import type { RegistrationInterface } from "./registration/toPolkadot/registrationInterface"
 import * as kusamaTransfers from "./forKusama"
 import * as interParachainTransfers from "./forInterParachain"
-import * as toEthereumTransfers from "./toEthereumSnowbridgeV2"
-import * as toPolkadotTransfers from "./toPolkadotSnowbridgeV2"
 import * as toEthereumEvmTransfers from "./toEthereumFromEVM_v2"
-import * as toEthereumTransfersV1 from "./toEthereum_v2"
-import * as toPolkadotTransfersV1 from "./toPolkadot_v2"
+import { TransferToEthereum } from "./toEthereumSnowbridgeV2"
+import { V1ToEthereumAdapter } from "./toEthereum_v2"
+import { TransferToPolkadot } from "./toPolkadotSnowbridgeV2"
+import { V1ToPolkadotAdapter } from "./toPolkadot_v2"
 import type { TransferInterface as ForInterParachainTransferInterface } from "./transfers/forInterParachain/transferInterface"
 import type { TransferInterface as ForKusamaTransferInterface } from "./transfers/forKusama/transferInterface"
 import type { TransferInterface as ToPolkadotTransferInterface } from "./transfers/toPolkadot/transferInterface"
@@ -386,21 +388,26 @@ export type ApiOptions<P extends EthereumProvider<any>> = {
     ethereumProvider: P
 }
 
-export type TransferImplementation =
-    | ({ kind: "polkadot->polkadot" } & ForInterParachainTransferInterface)
-    | ({ kind: "kusama->polkadot" } & ForKusamaTransferInterface)
-    | ({ kind: "polkadot->kusama" } & ForKusamaTransferInterface)
-    | ({ kind: "polkadot->ethereum" } & ToEthereumTransferInterface)
-    | ({ kind: "ethereum->polkadot" } & ToPolkadotTransferInterface)
-    | ({ kind: "ethereum->ethereum" } & ToEthereumEvmTransferInterface)
-    | ({ kind: "polkadot->ethereum_l2" } & ToEthereumL2TransferInterface)
-    | ({ kind: "ethereum_l2->polkadot" } & ToPolkadotL2TransferInterface)
+export type TransferImplementation<T extends EthereumProviderTypes = EthereumProviderTypes> =
+    | ({ kind: "polkadot->polkadot" } & ForInterParachainTransferInterface<T>)
+    | ({ kind: "kusama->polkadot" } & ForKusamaTransferInterface<T>)
+    | ({ kind: "polkadot->kusama" } & ForKusamaTransferInterface<T>)
+    | ({ kind: "polkadot->ethereum" } & ToEthereumTransferInterface<T>)
+    | ({ kind: "ethereum->polkadot" } & ToPolkadotTransferInterface<T>)
+    | ({ kind: "ethereum->ethereum" } & ToEthereumEvmTransferInterface<T>)
+    | ({ kind: "polkadot->ethereum_l2" } & ToEthereumL2TransferInterface<T>)
+    | ({ kind: "ethereum_l2->polkadot" } & ToPolkadotL2TransferInterface<T>)
 
-type TransferKind = TransferImplementation["kind"]
-type TransferForKind<K extends TransferKind> = Extract<TransferImplementation, { kind: K }>
-type TransferFromTo<F extends ChainId, T extends ChainId> = TransferForKind<
-    Extract<`${F["kind"]}->${T["kind"]}`, TransferKind>
+type TransferKind<T extends EthereumProviderTypes> = TransferImplementation<T>["kind"]
+type TransferForKind<K extends TransferKind<T>, T extends EthereumProviderTypes> = Extract<
+    TransferImplementation<T>,
+    { kind: K }
 >
+type TransferFromTo<
+    F extends ChainId,
+    To extends ChainId,
+    T extends EthereumProviderTypes,
+> = TransferForKind<Extract<`${F["kind"]}->${To["kind"]}`, TransferKind<T>>, T>
 type ProviderTypesFor<P extends EthereumProvider<any>> = P["providerTypes"]
 
 function withKind<K extends TransferImplementation["kind"], T>(
@@ -452,8 +459,17 @@ export class SnowbridgeApi<P extends EthereumProvider<any>> {
     createAgent(): AgentCreationInterface<ProviderTypesFor<P>["ContractTransaction"]> {
         return new CreateAgent(this.context, this.info.registry)
     }
-    transfer<F extends ChainId, T extends ChainId>(from: F, to: T): TransferFromTo<F, T>
-    transfer<F extends ChainId, T extends ChainId>(from: F, to: T): TransferFromTo<F, T> {
+    registerToken(): RegistrationInterface<ProviderTypesFor<P>> {
+        return new RegisterToken<ProviderTypesFor<P>>()
+    }
+    transfer<F extends ChainId, T extends ChainId>(
+        from: F,
+        to: T,
+    ): TransferFromTo<F, T, ProviderTypesFor<P>>
+    transfer<F extends ChainId, T extends ChainId>(
+        from: F,
+        to: T,
+    ): TransferFromTo<F, T, ProviderTypesFor<P>> {
         const source = from
         const destination = to
 
@@ -487,7 +503,7 @@ export class SnowbridgeApi<P extends EthereumProvider<any>> {
                         destinationParachain,
                     ),
                     kind,
-                ) as unknown as TransferFromTo<F, T>
+                ) as unknown as TransferFromTo<F, T, ProviderTypesFor<P>>
             }
             case "kusama->polkadot":
             case "polkadot->kusama": {
@@ -502,51 +518,51 @@ export class SnowbridgeApi<P extends EthereumProvider<any>> {
                         destinationParachain,
                     ),
                     kind,
-                ) as unknown as TransferFromTo<F, T>
+                ) as unknown as TransferFromTo<F, T, ProviderTypesFor<P>>
             }
             case "polkadot->ethereum": {
                 const sourceParachain = sourceChain as Parachain
                 const destinationEthChain = destinationChain as EthereumChain
                 return withKind(
                     sourceParachain.features.supportsV2
-                        ? toEthereumTransfers.createTransferImplementation(
+                        ? new TransferToEthereum(
                               this.context as any,
                               route,
                               this.info.registry,
                               sourceParachain,
                               destinationEthChain,
                           )
-                        : toEthereumTransfersV1.createTransferImplementationV1(
+                        : new V1ToEthereumAdapter(
                               this.context as any,
-                              route,
                               this.info.registry,
+                              route,
                               sourceParachain,
                               destinationEthChain,
                           ),
                     kind,
-                ) as TransferFromTo<F, T>
+                ) as unknown as TransferFromTo<F, T, ProviderTypesFor<P>>
             }
             case "ethereum->polkadot": {
                 const sourceEthChain = sourceChain as EthereumChain
                 const destinationParachain = destinationChain as Parachain
                 return withKind(
                     destinationParachain.features.supportsV2
-                        ? toPolkadotTransfers.createTransferImplementation(
+                        ? new TransferToPolkadot(
                               this.context as any,
                               route,
                               this.info.registry,
                               sourceEthChain,
                               destinationParachain,
                           )
-                        : toPolkadotTransfersV1.createTransferImplementationV1(
+                        : new V1ToPolkadotAdapter(
                               this.context as any,
-                              route,
                               this.info.registry,
+                              route,
                               sourceEthChain,
                               destinationParachain,
                           ),
                     kind,
-                ) as TransferFromTo<F, T>
+                ) as unknown as TransferFromTo<F, T, ProviderTypesFor<P>>
             }
             case "ethereum->ethereum": {
                 const sourceEthChain = sourceChain as EthereumChain
@@ -558,7 +574,7 @@ export class SnowbridgeApi<P extends EthereumProvider<any>> {
                     sourceEthChain,
                     destinationEthChain,
                 )
-                return withKind(tIface, kind) as TransferFromTo<F, T>
+                return withKind(tIface, kind) as TransferFromTo<F, T, ProviderTypesFor<P>>
             }
             case "polkadot->ethereum_l2": {
                 const sourceParachain = sourceChain as Parachain
@@ -570,7 +586,7 @@ export class SnowbridgeApi<P extends EthereumProvider<any>> {
                     sourceParachain,
                     destinationEthChain,
                 )
-                return withKind(tIface, kind) as TransferFromTo<F, T>
+                return withKind(tIface, kind) as TransferFromTo<F, T, ProviderTypesFor<P>>
             }
             case "ethereum_l2->polkadot": {
                 const sourceEthChain = sourceChain as EthereumChain
@@ -582,7 +598,7 @@ export class SnowbridgeApi<P extends EthereumProvider<any>> {
                     sourceEthChain,
                     destinationParachain,
                 )
-                return withKind(tIface, kind) as TransferFromTo<F, T>
+                return withKind(tIface, kind) as TransferFromTo<F, T, ProviderTypesFor<P>>
             }
             default:
                 throw new Error(`No implementation for route ${route.from.kind}:${route.to.kind}.`)

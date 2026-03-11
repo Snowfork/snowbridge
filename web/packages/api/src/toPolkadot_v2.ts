@@ -1,5 +1,4 @@
 import { MultiAddressStruct } from "./contracts"
-import { ContractTransaction, TransactionReceipt } from "ethers"
 import { padFeeByPercentage } from "./utils"
 import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
 import {
@@ -24,7 +23,7 @@ import {
 } from "./xcmBuilder"
 import { Result } from "@polkadot/types"
 import { XcmDryRunApiError, XcmDryRunEffects } from "@polkadot/types/interfaces"
-import { Context, EthersProviderTypes } from "./index"
+import { Context, EthereumProviderTypes } from "./index"
 import type { FeeData } from "./EthereumProvider"
 import { TransferInterface as ToPolkadotTransferInterface } from "./transfers/toPolkadot/transferInterface"
 import type {
@@ -33,7 +32,7 @@ import type {
     ValidationResult as ToPolkadotV2ValidationResult,
 } from "./toPolkadotSnowbridgeV2"
 
-export type Transfer = {
+export type Transfer<T extends EthereumProviderTypes = EthereumProviderTypes> = {
     input: {
         registry: AssetRegistry
         sourceAccount: string
@@ -55,7 +54,7 @@ export type Transfer = {
         destinationFeeInDOT: bigint
         minimalBalance: bigint
     }
-    tx: ContractTransaction
+    tx: T["ContractTransaction"]
 }
 
 export enum ValidationKind {
@@ -96,7 +95,7 @@ export type DeliveryFee = {
     totalFeeInWei: bigint
 }
 
-export type ValidationResult = {
+export type ValidationResult<T extends EthereumProviderTypes = EthereumProviderTypes> = {
     logs: ValidationLog[]
     success: boolean
     data: {
@@ -110,7 +109,7 @@ export type ValidationResult = {
         assetHubDryRunError?: string
         destinationParachainDryRunError?: string
     }
-    transfer: Transfer
+    transfer: Transfer<T>
 }
 
 export type MessageReceipt = {
@@ -160,7 +159,9 @@ function toV1DeliveryFee(fee: ToPolkadotV2DeliveryFee): DeliveryFee {
     }
 }
 
-function toV2Transfer(transfer: Transfer): ToPolkadotV2Transfer {
+function toV2Transfer<T extends EthereumProviderTypes>(
+    transfer: Transfer<T>,
+): ToPolkadotV2Transfer<T> {
     return {
         ...transfer,
         input: {
@@ -173,11 +174,13 @@ function toV2Transfer(transfer: Transfer): ToPolkadotV2Transfer {
             topic: "",
             totalInputAmount: transfer.input.amount,
         },
-    } as unknown as ToPolkadotV2Transfer
+    } as unknown as ToPolkadotV2Transfer<T>
 }
 
-function toV1Transfer(transfer: ToPolkadotV2Transfer): Transfer {
-    const candidate = transfer as unknown as Transfer
+function toV1Transfer<T extends EthereumProviderTypes>(
+    transfer: ToPolkadotV2Transfer,
+): Transfer<T> {
+    const candidate = transfer as unknown as Transfer<T>
     const v1Fee = toV1DeliveryFee(transfer.input.fee)
     if (typeof candidate.computed?.destinationFeeInDOT !== "bigint") {
         throw new Error(
@@ -193,9 +196,11 @@ function toV1Transfer(transfer: ToPolkadotV2Transfer): Transfer {
     }
 }
 
-export class V1ToPolkadotAdapter implements ToPolkadotTransferInterface<EthersProviderTypes> {
+export class V1ToPolkadotAdapter<T extends EthereumProviderTypes>
+    implements ToPolkadotTransferInterface<T>
+{
     constructor(
-        public readonly context: Context<EthersProviderTypes>,
+        public readonly context: Context<T>,
         public readonly registry: AssetRegistry,
         public readonly route: TransferRoute,
         public readonly source: EthereumChain,
@@ -296,7 +301,7 @@ export class V1ToPolkadotAdapter implements ToPolkadotTransferInterface<EthersPr
         amount: bigint,
         fee: ToPolkadotV2DeliveryFee,
         customXcm?: any[],
-    ): Promise<ToPolkadotV2Transfer> {
+    ): Promise<ToPolkadotV2Transfer<T>> {
         if (customXcm !== undefined) {
             throw new Error("v1 toPolkadot adapter does not support customXcm.")
         }
@@ -375,9 +380,11 @@ export class V1ToPolkadotAdapter implements ToPolkadotTransferInterface<EthersPr
         })
     }
 
-    async validateTransfer(transfer: ToPolkadotV2Transfer): Promise<ToPolkadotV2ValidationResult> {
+    async validateTransfer(
+        transfer: ToPolkadotV2Transfer<T>,
+    ): Promise<ToPolkadotV2ValidationResult<T>> {
         const context = this.context
-        const v1Transfer = toV1Transfer(transfer)
+        const v1Transfer = toV1Transfer<T>(transfer)
         const { tx } = v1Transfer
         const { amount, sourceAccount, tokenAddress, registry, destinationParaId } =
             v1Transfer.input
@@ -538,7 +545,7 @@ export class V1ToPolkadotAdapter implements ToPolkadotTransferInterface<EthersPr
             }
         }
 
-        const v1Result: ValidationResult = {
+        const v1Result: ValidationResult<T> = {
             logs,
             success: logs.find((l) => l.kind === ValidationKind.Error) === undefined,
             data: {
@@ -554,10 +561,10 @@ export class V1ToPolkadotAdapter implements ToPolkadotTransferInterface<EthersPr
         return {
             ...v1Result,
             transfer: toV2Transfer(v1Result.transfer),
-        } as ToPolkadotV2ValidationResult
+        } as ToPolkadotV2ValidationResult<T>
     }
 
-    async getMessageReceipt(receipt: TransactionReceipt): Promise<MessageReceipt | null> {
+    async getMessageReceipt(receipt: T["TransactionReceipt"]): Promise<MessageReceipt | null> {
         const context = this.context
         const messageAccepted =
             context.ethereumProvider.scanGatewayV1OutboundMessageAccepted(receipt)
@@ -566,20 +573,10 @@ export class V1ToPolkadotAdapter implements ToPolkadotTransferInterface<EthersPr
     }
 }
 
-export function createTransferImplementationV1(
-    context: Context<EthersProviderTypes>,
-    route: TransferRoute,
-    registry: AssetRegistry,
-    source: EthereumChain,
-    destination: Parachain,
-): ToPolkadotTransferInterface {
-    return new V1ToPolkadotAdapter(context, registry, route, source, destination)
-}
-
-async function dryRunAssetHub(
-    context: Context<EthersProviderTypes>,
+async function dryRunAssetHub<T extends EthereumProviderTypes>(
+    context: Context<T>,
     assetHub: ApiPromise,
-    transfer: Transfer,
+    transfer: Transfer<T>,
 ) {
     const { registry, amount, tokenAddress, beneficiaryAccount, destinationParaId } = transfer.input
     const { destinationFeeInDOT, destAssetMetadata } = transfer.computed

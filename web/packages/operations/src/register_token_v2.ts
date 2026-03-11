@@ -15,7 +15,8 @@ export const registerTokenV2 = async (tokenAddress: string) => {
 
     const info = bridgeInfoFor(env)
     const { registry } = info
-    const context = createApi({ info, ethereumProvider: new EthersEthereumProvider() }).context
+    const api = createApi({ info, ethereumProvider: new EthersEthereumProvider() })
+    const context = api.context
 
     const ETHEREUM_ACCOUNT = new Wallet(
         process.env.ETHEREUM_KEY ?? "Your Key Goes Here",
@@ -33,8 +34,8 @@ export const registerTokenV2 = async (tokenAddress: string) => {
 
     console.log("Token Registration on Snowbridge V2")
     {
-        // Step 0. Create a registration implementation
-        const registrationImpl = toPolkadotSnowbridgeV2.createRegistrationImplementation()
+        // Step 0. Create a registration interface from the API
+        const registrationImpl = api.registerToken()
 
         // Step 1. Get the registration fee for the transaction
         let fee = await registrationImpl.getRegistrationFee(context, registry, relayerFee)

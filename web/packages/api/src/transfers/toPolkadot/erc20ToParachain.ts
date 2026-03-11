@@ -5,9 +5,8 @@ import {
     Parachain,
     TransferRoute,
 } from "@snowbridge/base-types"
-import { TransactionReceipt } from "ethers"
 import { TransferInterface } from "./transferInterface"
-import { Context, EthersProviderTypes } from "../../index"
+import { Context, EthereumProviderTypes } from "../../index"
 import {
     buildMessageId,
     calculateRelayerFee,
@@ -36,9 +35,9 @@ import {
 import { getOperatingStatus } from "../../status"
 import { hexToU8a } from "@polkadot/util"
 
-export class ERC20ToParachain implements TransferInterface<EthersProviderTypes> {
+export class ERC20ToParachain<T extends EthereumProviderTypes> implements TransferInterface<T> {
     constructor(
-        public readonly context: Context<EthersProviderTypes>,
+        public readonly context: Context<T>,
         public readonly registry: AssetRegistry,
         public readonly route: TransferRoute,
         public readonly source: EthereumChain,
@@ -219,7 +218,7 @@ export class ERC20ToParachain implements TransferInterface<EthersProviderTypes> 
         amount: bigint,
         fee: DeliveryFee,
         customXcm?: any[],
-    ): Promise<Transfer> {
+    ): Promise<Transfer<T>> {
         const context = this.context
         const registry = this.registry
         const ethereum = context.ethereum()
@@ -268,7 +267,11 @@ export class ERC20ToParachain implements TransferInterface<EthersProviderTypes> 
         } else {
             assets.push(context.ethereumProvider.encodeNativeAsset(tokenAddress, amount))
         }
-        const accountNonce = await ethereum.getTransactionCount(sourceAccount, "pending")
+        const accountNonce = await context.ethereumProvider.getTransactionCount(
+            ethereum,
+            sourceAccount,
+            "pending",
+        )
         const topic = buildMessageId(
             this.to.id,
             sourceAccount,
@@ -351,7 +354,7 @@ export class ERC20ToParachain implements TransferInterface<EthersProviderTypes> 
         }
     }
 
-    async validateTransfer(transfer: Transfer): Promise<ValidationResult> {
+    async validateTransfer(transfer: Transfer<T>): Promise<ValidationResult<T>> {
         const context = this.context
         const { tx } = transfer
         const { amount, sourceAccount, tokenAddress, registry, destinationParaId } = transfer.input
@@ -644,7 +647,7 @@ export class ERC20ToParachain implements TransferInterface<EthersProviderTypes> 
         }
     }
 
-    async getMessageReceipt(receipt: TransactionReceipt) {
+    async getMessageReceipt(receipt: T["TransactionReceipt"]) {
         return getSharedMessageReceipt(this.context.ethereumProvider, receipt)
     }
 }

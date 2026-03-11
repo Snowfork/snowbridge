@@ -43,7 +43,7 @@ import { estimateFees } from "./across/api"
 
 export { ValidationKind, signAndSendTransfer } from "./toEthereum_v2"
 
-class TransferToEthereum<T extends EthereumProviderTypes> implements TransferInterface<T> {
+export class TransferToEthereum<T extends EthereumProviderTypes> implements TransferInterface<T> {
     #pnaImpl?: TransferInterface<T>
     #erc20Impl?: TransferInterface<T>
 
@@ -161,16 +161,6 @@ class TransferToEthereum<T extends EthereumProviderTypes> implements TransferInt
             options,
         )
     }
-}
-
-export function createTransferImplementation<T extends EthereumProviderTypes>(
-    context: Context<T>,
-    route: TransferRoute,
-    registry: AssetRegistry,
-    source: Parachain,
-    destination: EthereumChain,
-): TransferInterface<T> {
-    return new TransferToEthereum(context, route, registry, source, destination)
 }
 
 export async function dryRunOnSourceParachain(

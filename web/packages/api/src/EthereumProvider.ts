@@ -153,6 +153,11 @@ export interface EthereumProvider<T extends EthereumProviderTypes> {
     l1LegacySwapRouterExactOutputSingle(params: L1LegacySwapRouterExactOutputSingleParams): string
     beneficiaryMultiAddress(beneficiary: string): EncodedMultiAddress
     estimateGas(provider: T["Connection"], tx: T["ContractTransaction"]): Promise<bigint>
+    getTransactionCount(
+        provider: T["Connection"],
+        address: string,
+        blockTag?: "latest" | "pending",
+    ): Promise<number>
     gatewayV1SendToken(
         provider: T["Connection"],
         gatewayAddress: string,
@@ -493,6 +498,14 @@ export class EthersEthereumProvider implements EthereumProvider<EthersProviderTy
 
     async estimateGas(provider: AbstractProvider, tx: ContractTransaction): Promise<bigint> {
         return await provider.estimateGas(tx)
+    }
+
+    async getTransactionCount(
+        provider: AbstractProvider,
+        address: string,
+        blockTag: "latest" | "pending" = "latest",
+    ): Promise<number> {
+        return await provider.getTransactionCount(address, blockTag)
     }
 
     async getBalance(provider: AbstractProvider, address: string): Promise<bigint> {

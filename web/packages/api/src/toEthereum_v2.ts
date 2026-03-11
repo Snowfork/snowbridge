@@ -623,16 +623,6 @@ export class V1ToEthereumAdapter<T extends EthereumProviderTypes>
     }
 }
 
-export function createTransferImplementationV1<T extends EthereumProviderTypes>(
-    context: Context<T>,
-    route: TransferRoute,
-    registry: AssetRegistry,
-    source: Parachain,
-    destination: EthereumChain,
-): ToEthereumTransferInterface<T> {
-    return new V1ToEthereumAdapter(context, registry, route, source, destination)
-}
-
 export enum ValidationKind {
     Warning,
     Error,
