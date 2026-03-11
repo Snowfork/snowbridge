@@ -2,6 +2,7 @@ packages:
   - "packages/test"
   - "packages/base-types"
   - "packages/provider-ethers"
+  - "packages/provider-viem"
   - "packages/api"
   - "packages/contracts"
   - "packages/contract-types"
