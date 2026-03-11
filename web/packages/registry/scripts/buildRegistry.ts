@@ -636,7 +636,7 @@ async function buildRegistry(environment: Environment): Promise<AssetRegistry> {
                         ? new HttpProvider(parachainUrl)
                         : new WsProvider(parachainUrl),
                 })
-                const accessor = await ParaImpl.paraImplementation(provider)
+                const accessor = await ParaImpl.paraImplementation(provider, new EthersEthereumProvider())
                 return { parachainId: accessor.parachainId, accessor }
             }),
         )) {
