@@ -12,7 +12,7 @@ import {
 } from "../../xcmBuilder"
 import { Asset } from "@snowbridge/base-types"
 import { DeliveryFee } from "../../toEthereum_v2"
-import { resolveBeneficiary } from "src/utils"
+import { resolveBeneficiary } from "../../utils"
 
 function buildAssetHubXcmFromParachain(
     ethChainId: number,
