@@ -42,8 +42,8 @@ import { bridgeInfoFor } from "@snowbridge/registry"
 
     console.log("# Ethereum to Asset Hub")
     const transferImpl = api.transfer(
-        { kind: "ethereum", id: registry.ethChainId } as const,
-        { kind: "polkadot", id: DESTINATION_PARACHAIN } as const,
+        { kind: "ethereum", id: registry.ethChainId },
+        { kind: "polkadot", id: DESTINATION_PARACHAIN },
     )
     // Step 1. Get the delivery fee for the transaction
     const fee = await transferImpl.getDeliveryFee(TOKEN_CONTRACT)
