@@ -40,7 +40,7 @@ import {
 import { Result } from "@polkadot/types"
 import { padFeeByPercentage, u32ToLeBytes } from "./utils"
 import { TransferInterface as KusamaTransferInterface } from "./transfers/forKusama/transferInterface"
-import { EthersContext } from "."
+import { Context, EthereumProviderTypes } from "."
 
 export type Transfer = {
     input: {
@@ -149,16 +149,16 @@ export type MessageReceipt = {
     messageId?: string
 }
 
-export class KusamaTransfer implements KusamaTransferInterface {
+export class KusamaTransfer<T extends EthereumProviderTypes> implements KusamaTransferInterface<T> {
     readonly info: BridgeInfo
-    readonly context: EthersContext
+    readonly context: Context<T>
     readonly route: TransferRoute
     readonly source: Parachain
     readonly destination: Parachain
 
     constructor(
         info: BridgeInfo,
-        context: EthersContext,
+        context: Context<T>,
         route: TransferRoute,
         source: Parachain,
         destination: Parachain,

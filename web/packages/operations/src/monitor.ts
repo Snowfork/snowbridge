@@ -1,8 +1,9 @@
 import { u8aToHex } from "@polkadot/util"
 import { blake2AsU8a } from "@polkadot/util-crypto"
 import {
-    EthersContext,
+    Context,
     EthersEthereumProvider,
+    EthersProviderTypes,
     createApi,
     status,
     subsquidV2,
@@ -317,7 +318,7 @@ export const monitor = async (): Promise<status.AllMetrics> => {
     return allMetrics
 }
 
-const fetchChannelStatus = async (context: EthersContext, env: Environment) => {
+const fetchChannelStatus = async (context: Context<EthersProviderTypes>, env: Environment) => {
     let assethubChannelStatus = await status.channelStatusInfo(
         context,
         utils.paraIdToChannelId(env.assetHubParaId),
@@ -339,7 +340,7 @@ const fetchChannelStatus = async (context: EthersContext, env: Environment) => {
     return [assethubChannelStatus, primaryGov, secondaryGov]
 }
 
-const fetchBalances = async (context: EthersContext, env: Environment) => {
+const fetchBalances = async (context: Context<EthersProviderTypes>, env: Environment) => {
     const [bridgeHub, ethereum] = await Promise.all([context.bridgeHub(), context.ethereum()])
 
     let relayers = []
@@ -406,7 +407,10 @@ const fetchBalances = async (context: EthersContext, env: Environment) => {
     return { relayers, sovereigns }
 }
 
-export const fetchIndexerStatus = async (context: EthersContext, env: Environment) => {
+export const fetchIndexerStatus = async (
+    context: Context<EthersProviderTypes>,
+    env: Environment,
+) => {
     let indexerInfos: status.IndexerServiceStatusInfo[] = []
     // Allow runtime override of monitored parachains without changing defaults.
     let monitorChains = monitorParams[env.name].TO_MONITOR_CHAINS

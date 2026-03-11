@@ -6,7 +6,7 @@ import {
     TokenRegistration,
     RegistrationValidationResult,
 } from "./registrationInterface"
-import { EthersContext } from "../../index"
+import { Context, EthersProviderTypes } from "../../index"
 import {
     getMessageReceipt as getSharedMessageReceipt,
     ValidationKind,
@@ -28,7 +28,7 @@ const getAssetDeposit = (assetHub: ApiPromise): bigint => {
 
 export class RegisterToken implements RegistrationInterface {
     async getRegistrationFee(
-        context: EthersContext,
+        context: Context<EthersProviderTypes>,
         registry: AssetRegistry,
         relayerFee: bigint,
         options?: {
@@ -98,7 +98,7 @@ export class RegisterToken implements RegistrationInterface {
     }
 
     async createRegistration(
-        context: EthersContext,
+        context: Context<EthersProviderTypes>,
         registry: AssetRegistry,
         sourceAccount: string,
         tokenAddress: string,
@@ -135,7 +135,7 @@ export class RegisterToken implements RegistrationInterface {
     }
 
     async validateRegistration(
-        context: EthersContext,
+        context: Context<EthersProviderTypes>,
         registration: TokenRegistration,
     ): Promise<RegistrationValidationResult> {
         const { tx } = registration
@@ -261,7 +261,7 @@ export class RegisterToken implements RegistrationInterface {
         }
     }
 
-    async getMessageReceipt(context: EthersContext, receipt: TransactionReceipt) {
+    async getMessageReceipt(context: Context<EthersProviderTypes>, receipt: TransactionReceipt) {
         return getSharedMessageReceipt(context.ethereumProvider, receipt)
     }
 }

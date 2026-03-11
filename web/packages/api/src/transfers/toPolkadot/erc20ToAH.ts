@@ -7,7 +7,7 @@ import {
 } from "@snowbridge/base-types"
 import { TransactionReceipt } from "ethers"
 import { TransferInterface } from "./transferInterface"
-import { EthersContext } from "../../index"
+import { Context, EthersProviderTypes } from "../../index"
 import {
     calculateRelayerFee,
     claimerFromBeneficiary,
@@ -28,9 +28,9 @@ import { buildMessageId, Transfer, ValidationResult } from "../../toPolkadotSnow
 import { getOperatingStatus } from "../../status"
 import { hexToU8a } from "@polkadot/util"
 
-export class ERC20ToAH implements TransferInterface {
+export class ERC20ToAH implements TransferInterface<EthersProviderTypes> {
     constructor(
-        public readonly context: EthersContext,
+        public readonly context: Context<EthersProviderTypes>,
         public readonly registry: AssetRegistry,
         public readonly route: TransferRoute,
         public readonly source: EthereumChain,

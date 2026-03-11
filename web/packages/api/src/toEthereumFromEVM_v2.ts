@@ -14,7 +14,6 @@ import {
 } from "@snowbridge/base-types"
 import { getOperatingStatus } from "./status"
 import { EventRecord } from "@polkadot/types/interfaces"
-import { TransactionReceipt } from "ethers"
 import {
     buildMessageId,
     createERC20SourceParachainTx,
@@ -27,7 +26,7 @@ import {
     ValidationLog,
     ValidationReason,
 } from "./toEthereum_v2"
-import { EthersContext } from "./index"
+import { Context, EthereumProviderTypes } from "./index"
 import {
     MessageReceiptEvm,
     TransferEvm,
@@ -35,9 +34,11 @@ import {
     ValidationResultEvm,
 } from "./transfers/toEthereumEvm/transferInterface"
 
-export class V1ToEthereumEvmAdapter implements ToEthereumEvmTransferInterface {
+export class V1ToEthereumEvmAdapter<T extends EthereumProviderTypes>
+    implements ToEthereumEvmTransferInterface<T>
+{
     constructor(
-        public readonly context: EthersContext,
+        public readonly context: Context<T>,
         public readonly registry: AssetRegistry,
         public readonly route: TransferRoute,
         public readonly source: EthereumChain,
@@ -105,7 +106,7 @@ export class V1ToEthereumEvmAdapter implements ToEthereumEvmTransferInterface {
             claimerLocation?: any
             contractCall?: ContractCall
         },
-    ): Promise<TransferEvm> {
+    ): Promise<TransferEvm<T>> {
         if (options?.claimerLocation !== undefined) {
             throw new Error("v1 toEthereumEVM adapter does not support options.claimerLocation.")
         }
@@ -236,7 +237,7 @@ export class V1ToEthereumEvmAdapter implements ToEthereumEvmTransferInterface {
         }
     }
 
-    async validateTransfer(transfer: TransferEvm): Promise<ValidationResultEvm> {
+    async validateTransfer(transfer: TransferEvm<T>): Promise<ValidationResultEvm<T>> {
         const context = this.context
         const { registry, fee, tokenAddress, amount, beneficiaryAccount } = transfer.input
         const {
@@ -472,9 +473,16 @@ export class V1ToEthereumEvmAdapter implements ToEthereumEvmTransferInterface {
         }
     }
 
-    async getMessageReceipt(receipt: TransactionReceipt): Promise<MessageReceiptEvm> {
+    async getMessageReceipt(receipt: T["TransactionReceipt"]): Promise<MessageReceiptEvm> {
+        const evmReceipt = receipt as {
+            blockNumber: number
+            blockHash: string
+            hash: string
+            index: number
+            status: number
+        }
         const sourceParachain = await this.context.parachain(this.from.id)
-        const blockHash = await sourceParachain.rpc.chain.getBlockHash(receipt.blockNumber)
+        const blockHash = await sourceParachain.rpc.chain.getBlockHash(evmReceipt.blockNumber)
         const events = await (
             await sourceParachain.at(blockHash)
         ).query.system.events<EventRecord[]>()
@@ -485,10 +493,12 @@ export class V1ToEthereumEvmAdapter implements ToEthereumEvmTransferInterface {
             (e) =>
                 sourceParachain.events.ethereum.Executed.is(e.event) &&
                 e.event.data[2].toPrimitive()?.toString().toLowerCase() ===
-                    receipt.hash.toLowerCase(),
+                    evmReceipt.hash.toLowerCase(),
         )
         if (!(eventTx && eventTx.phase.isApplyExtrinsic)) {
-            throw Error(`Could not find tx hash ${receipt.hash} in block ${receipt.blockNumber}.`)
+            throw Error(
+                `Could not find tx hash ${evmReceipt.hash} in block ${evmReceipt.blockNumber}.`,
+            )
         }
         const matchedEvents: EventRecord[] = events.filter(
             (e) =>
@@ -514,12 +524,12 @@ export class V1ToEthereumEvmAdapter implements ToEthereumEvmTransferInterface {
         }
         return {
             messageId: messageId,
-            blockNumber: receipt.blockNumber,
+            blockNumber: evmReceipt.blockNumber,
             substrateBlockHash: blockHash.toHex(),
-            blockHash: receipt.blockHash,
-            txHash: receipt.hash,
-            txIndex: receipt.index,
-            success: success && receipt.status === 1,
+            blockHash: evmReceipt.blockHash,
+            txHash: evmReceipt.hash,
+            txIndex: evmReceipt.index,
+            success: success && evmReceipt.status === 1,
             dispatchError,
             events: matchedEvents.map((x) => x.toPrimitive() as any as EventRecord),
         }

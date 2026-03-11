@@ -38,7 +38,7 @@ import {
 } from "@polkadot/types/interfaces"
 import { Result } from "@polkadot/types"
 import { padFeeByPercentage, u32ToLeBytes } from "./utils"
-import { EthersContext } from "./index"
+import { Context, EthereumProviderTypes } from "./index"
 import { ParachainBase } from "./parachains/parachainBase"
 import type { FeeData } from "./EthereumProvider"
 import { TransferInterface as ToEthereumTransferInterface } from "./transfers/toEthereum/transferInterface"
@@ -93,9 +93,11 @@ export type FeeInfo = {
     totalTxCost: bigint
 }
 
-export class V1ToEthereumAdapter implements ToEthereumTransferInterface {
+export class V1ToEthereumAdapter<T extends EthereumProviderTypes>
+    implements ToEthereumTransferInterface<T>
+{
     constructor(
-        public readonly context: EthersContext,
+        public readonly context: Context<T>,
         public readonly registry: AssetRegistry,
         public readonly route: TransferRoute,
         public readonly source: Parachain,
@@ -621,13 +623,13 @@ export class V1ToEthereumAdapter implements ToEthereumTransferInterface {
     }
 }
 
-export function createTransferImplementationV1(
-    context: EthersContext,
+export function createTransferImplementationV1<T extends EthereumProviderTypes>(
+    context: Context<T>,
     route: TransferRoute,
     registry: AssetRegistry,
     source: Parachain,
     destination: EthereumChain,
-): ToEthereumTransferInterface {
+): ToEthereumTransferInterface<T> {
     return new V1ToEthereumAdapter(context, registry, route, source, destination)
 }
 

@@ -18,7 +18,7 @@ import {
     TransferRoute,
 } from "@snowbridge/base-types"
 import { padFeeByPercentage } from "./utils"
-import { EthersContext } from "."
+import { Context, EthereumProviderTypes } from "."
 import { buildMessageId } from "./toEthereum_v2"
 import { Result } from "@polkadot/types"
 import {
@@ -137,16 +137,18 @@ export type MessageReceipt = {
     messageId?: string
 }
 
-export class InterParachainTransfer implements InterParachainTransferInterface {
+export class InterParachainTransfer<T extends EthereumProviderTypes>
+    implements InterParachainTransferInterface<T>
+{
     readonly info: BridgeInfo
-    readonly context: EthersContext
+    readonly context: Context<T>
     readonly route: TransferRoute
     readonly source: Parachain
     readonly destination: Parachain
 
     constructor(
         info: BridgeInfo,
-        context: EthersContext,
+        context: Context<T>,
         route: TransferRoute,
         source: Parachain,
         destination: Parachain,
