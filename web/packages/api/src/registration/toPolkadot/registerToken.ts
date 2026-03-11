@@ -6,7 +6,7 @@ import {
     TokenRegistration,
     RegistrationValidationResult,
 } from "./registrationInterface"
-import { Context, EthersProviderTypes } from "../../index"
+import { Context, EthereumProviderTypes } from "../../index"
 import {
     getMessageReceipt as getSharedMessageReceipt,
     ValidationKind,
@@ -20,15 +20,14 @@ import {
     buildAssetHubRegisterTokenXcm,
     getBridgeOwnerAccount,
 } from "../../xcmbuilders/toPolkadot/registerToken"
-import { TransactionReceipt } from "ethers"
 
 const getAssetDeposit = (assetHub: ApiPromise): bigint => {
     return BigInt(assetHub.consts.foreignAssets.assetDeposit.toString())
 }
 
-export class RegisterToken implements RegistrationInterface {
+export class RegisterToken<T extends EthereumProviderTypes> implements RegistrationInterface<T> {
     async getRegistrationFee(
-        context: Context<EthersProviderTypes>,
+        context: Context<T>,
         registry: AssetRegistry,
         relayerFee: bigint,
         options?: {
@@ -98,12 +97,12 @@ export class RegisterToken implements RegistrationInterface {
     }
 
     async createRegistration(
-        context: Context<EthersProviderTypes>,
+        context: Context<T>,
         registry: AssetRegistry,
         sourceAccount: string,
         tokenAddress: string,
         fee: RegistrationFee,
-    ): Promise<TokenRegistration> {
+    ): Promise<TokenRegistration<T>> {
         const totalValue = fee.totalFeeInWei
 
         const network = 0
@@ -135,9 +134,9 @@ export class RegisterToken implements RegistrationInterface {
     }
 
     async validateRegistration(
-        context: Context<EthersProviderTypes>,
-        registration: TokenRegistration,
-    ): Promise<RegistrationValidationResult> {
+        context: Context<T>,
+        registration: TokenRegistration<T>,
+    ): Promise<RegistrationValidationResult<T>> {
         const { tx } = registration
         const { sourceAccount, tokenAddress, registry } = registration.input
         const ethereum = context.ethereum()
@@ -261,7 +260,7 @@ export class RegisterToken implements RegistrationInterface {
         }
     }
 
-    async getMessageReceipt(context: Context<EthersProviderTypes>, receipt: TransactionReceipt) {
+    async getMessageReceipt(context: Context<T>, receipt: T["TransactionReceipt"]) {
         return getSharedMessageReceipt(context.ethereumProvider, receipt)
     }
 }

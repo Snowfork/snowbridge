@@ -107,8 +107,8 @@ export const transferToPolkadot = async (
     console.log("# Ethereum to Asset Hub")
     {
         const transferImpl = api.transfer(
-            { kind: "ethereum", id: registry.ethChainId },
-            { kind: "polkadot", id: destinationChainId },
+            { kind: "ethereum", id: registry.ethChainId } as const,
+            { kind: "polkadot", id: destinationChainId } as const,
         )
         // Step 1. Get the delivery fee for the transaction
         const fee = await transferImpl.getDeliveryFee(TOKEN_CONTRACT!)

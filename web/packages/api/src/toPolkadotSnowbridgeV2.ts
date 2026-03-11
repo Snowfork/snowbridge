@@ -16,7 +16,6 @@ import { PNAToAH } from "./transfers/toPolkadot/pnaToAH"
 import { ERC20ToParachain } from "./transfers/toPolkadot/erc20ToParachain"
 import { PNAToParachain } from "./transfers/toPolkadot/pnaToParachain"
 import { MultiAddressStruct } from "./contracts"
-import { ContractTransaction, TransactionReceipt } from "ethers"
 import { hexToU8a, stringToU8a } from "@polkadot/util"
 import { blake2AsHex } from "@polkadot/util-crypto"
 import { OperationStatus } from "./status"
@@ -26,7 +25,7 @@ import { accountToLocation, DOT_LOCATION, erc20Location } from "./xcmBuilder"
 import { Codec } from "@polkadot/types/types"
 import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
 import { padFeeByPercentage } from "./utils"
-import { Context, EthereumProvider, EthereumProviderTypes, EthersProviderTypes } from "./index"
+import { Context, EthereumProvider, EthereumProviderTypes } from "./index"
 export { ValidationKind } from "./toPolkadot_v2"
 import { ParachainBase } from "./parachains/parachainBase"
 
@@ -45,7 +44,7 @@ export type DeliveryFee = {
     swapFeeInL1Token?: bigint // Fee for Gateway.v2_sendMessage in the output L1 token.
 }
 
-export type Transfer = {
+export type Transfer<T extends EthereumProviderTypes = EthereumProviderTypes> = {
     input: {
         registry: AssetRegistry
         sourceAccount: string
@@ -73,10 +72,10 @@ export type Transfer = {
         l2AdapterAddress?: string
         totalInputAmount: bigint
     }
-    tx: ContractTransaction
+    tx: T["ContractTransaction"]
 }
 
-export type ValidationResult = {
+export type ValidationResult<T extends EthereumProviderTypes = EthereumProviderTypes> = {
     logs: ValidationLog[]
     success: boolean
     data: {
@@ -92,7 +91,7 @@ export type ValidationResult = {
         destinationParachainDryRunError?: string
         l2BridgeDryRunError?: string
     }
-    transfer: Transfer
+    transfer: Transfer<T>
 }
 
 export type MessageReceipt = {
@@ -112,12 +111,12 @@ export type {
     RegistrationInterface,
 } from "./registration/toPolkadot/registrationInterface"
 
-class TransferToPolkadot implements TransferInterface<EthersProviderTypes> {
-    #pnaImpl?: TransferInterface<EthersProviderTypes>
-    #erc20Impl?: TransferInterface<EthersProviderTypes>
+export class TransferToPolkadot<T extends EthereumProviderTypes> implements TransferInterface<T> {
+    #pnaImpl?: TransferInterface<T>
+    #erc20Impl?: TransferInterface<T>
 
     constructor(
-        public readonly context: Context<EthersProviderTypes>,
+        public readonly context: Context<T>,
         private readonly route: TransferRoute,
         private readonly registry: AssetRegistry,
         private readonly source: EthereumChain,
@@ -132,7 +131,7 @@ class TransferToPolkadot implements TransferInterface<EthersProviderTypes> {
         return this.route.to
     }
 
-    #resolveByTokenAddress(tokenAddress: string): TransferInterface<EthersProviderTypes> {
+    #resolveByTokenAddress(tokenAddress: string): TransferInterface<T> {
         const destinationParaId = this.route.to.id
         const ahAssetMetadata =
             this.registry.parachains[`polkadot_${this.registry.assetHubParaId}`].assets[
@@ -200,7 +199,7 @@ class TransferToPolkadot implements TransferInterface<EthersProviderTypes> {
         amount: bigint,
         fee: DeliveryFee,
         customXcm?: any[],
-    ): Promise<Transfer> {
+    ): Promise<Transfer<T>> {
         return this.#resolveByTokenAddress(tokenAddress).createTransfer(
             sourceAccount,
             beneficiaryAccount,
@@ -211,23 +210,13 @@ class TransferToPolkadot implements TransferInterface<EthersProviderTypes> {
         )
     }
 
-    async validateTransfer(transfer: Transfer): Promise<ValidationResult> {
+    async validateTransfer(transfer: Transfer<T>): Promise<ValidationResult<T>> {
         return this.#resolveByTokenAddress(transfer.input.tokenAddress).validateTransfer(transfer)
     }
 
-    async getMessageReceipt(receipt: TransactionReceipt): Promise<MessageReceipt | null> {
-        return getMessageReceipt(this.context.ethereumProvider as any, receipt)
+    async getMessageReceipt(receipt: T["TransactionReceipt"]): Promise<MessageReceipt | null> {
+        return getMessageReceipt(this.context.ethereumProvider, receipt)
     }
-}
-
-export function createTransferImplementation(
-    context: Context<EthersProviderTypes>,
-    route: TransferRoute,
-    registry: AssetRegistry,
-    source: EthereumChain,
-    destination: Parachain,
-): TransferInterface<EthersProviderTypes> {
-    return new TransferToPolkadot(context, route, registry, source, destination)
 }
 
 export function buildMessageId(
@@ -270,10 +259,6 @@ export function claimerFromBeneficiary(assetHub: ApiPromise, beneficiaryAddressH
 
 export function claimerLocationToBytes(claimerLocation: Codec) {
     return hexToU8a(claimerLocation.toHex())
-}
-
-export function createRegistrationImplementation() {
-    return new RegisterToken()
 }
 
 export async function inboundMessageExtrinsicFee(
@@ -319,8 +304,8 @@ export async function calculateRelayerFee(
     return { relayerFee, extrinsicFeeDot, extrinsicFeeEther }
 }
 
-export async function buildSwapCallData(
-    context: Context<EthersProviderTypes>,
+export async function buildSwapCallData<T extends EthereumProviderTypes>(
+    context: Context<T>,
     registry: AssetRegistry,
     l2ChainId: number,
     l2TokenAddress: string,

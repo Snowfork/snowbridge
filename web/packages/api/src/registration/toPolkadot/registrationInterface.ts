@@ -1,11 +1,10 @@
 import { AssetRegistry } from "@snowbridge/base-types"
-import { Context, EthersProviderTypes } from "../../index"
-import { ContractTransaction, TransactionReceipt } from "ethers"
+import { Context, EthereumProviderTypes } from "../../index"
 import { OperationStatus } from "../../status"
 import { FeeInfo, ValidationLog } from "../../toPolkadot_v2"
 import type { MessageReceipt } from "../../toPolkadotSnowbridgeV2"
 
-export type TokenRegistration = {
+export type TokenRegistration<T extends EthereumProviderTypes = EthereumProviderTypes> = {
     input: {
         registry: AssetRegistry
         sourceAccount: string
@@ -16,21 +15,22 @@ export type TokenRegistration = {
         gatewayAddress: string
         totalValue: bigint
     }
-    tx: ContractTransaction
+    tx: T["ContractTransaction"]
 }
 
-export type RegistrationValidationResult = {
-    logs: ValidationLog[]
-    success: boolean
-    data: {
-        etherBalance: bigint
-        feeInfo?: FeeInfo
-        bridgeStatus: OperationStatus
-        isTokenAlreadyRegistered: boolean
-        assetHubDryRunError?: string
+export type RegistrationValidationResult<T extends EthereumProviderTypes = EthereumProviderTypes> =
+    {
+        logs: ValidationLog[]
+        success: boolean
+        data: {
+            etherBalance: bigint
+            feeInfo?: FeeInfo
+            bridgeStatus: OperationStatus
+            isTokenAlreadyRegistered: boolean
+            assetHubDryRunError?: string
+        }
+        registration: TokenRegistration<T>
     }
-    registration: TokenRegistration
-}
 
 export type RegistrationFee = {
     assetHubDeliveryFeeEther: bigint
@@ -41,9 +41,9 @@ export type RegistrationFee = {
     totalFeeInWei: bigint
 }
 
-export interface RegistrationInterface {
+export interface RegistrationInterface<T extends EthereumProviderTypes = EthereumProviderTypes> {
     getRegistrationFee(
-        context: Context<EthersProviderTypes>,
+        context: Context<T>,
         registry: AssetRegistry,
         relayerFee: bigint,
         options?: {
@@ -52,20 +52,20 @@ export interface RegistrationInterface {
     ): Promise<RegistrationFee>
 
     createRegistration(
-        context: Context<EthersProviderTypes>,
+        context: Context<T>,
         registry: AssetRegistry,
         sourceAccount: string,
         tokenAddress: string,
         fee: RegistrationFee,
-    ): Promise<TokenRegistration>
+    ): Promise<TokenRegistration<T>>
 
     validateRegistration(
-        context: Context<EthersProviderTypes>,
-        registration: TokenRegistration,
-    ): Promise<RegistrationValidationResult>
+        context: Context<T>,
+        registration: TokenRegistration<T>,
+    ): Promise<RegistrationValidationResult<T>>
 
     getMessageReceipt(
-        context: Context<EthersProviderTypes>,
-        receipt: TransactionReceipt,
+        context: Context<T>,
+        receipt: T["TransactionReceipt"],
     ): Promise<MessageReceipt | null>
 }
