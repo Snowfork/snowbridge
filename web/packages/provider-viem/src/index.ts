@@ -520,7 +520,7 @@ export class ViemEthereumProvider
       return false;
     }
     try {
-      const code = await provider.getBytecode({ address: toAddress(address) });
+      const code = await provider.getCode({ address: toAddress(address) });
       return code !== undefined && code !== "0x";
     } catch {
       return false;
