@@ -1,4 +1,3 @@
-import { MultiAddressStruct } from "./contracts"
 import { padFeeByPercentage } from "./utils"
 import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
 import {
@@ -9,6 +8,7 @@ import {
     EthereumChain,
     EthereumProviderTypes,
     FeeData,
+    MultiAddressStruct,
     Parachain,
     TransferRoute,
 } from "@snowbridge/base-types"
@@ -671,7 +671,11 @@ async function dryRunAssetHub<T extends EthereumProviderTypes>(
     }
 }
 
-async function dryRunDestination(destination: ApiPromise, transfer: Transfer<EthereumProviderTypes>, xcm: any) {
+async function dryRunDestination(
+    destination: ApiPromise,
+    transfer: Transfer<EthereumProviderTypes>,
+    xcm: any,
+) {
     const { registry } = transfer.input
     const assetHubOrigin = {
         v4: { parents: 1, interior: { x1: [{ parachain: registry.assetHubParaId }] } },

@@ -11,13 +11,13 @@ import {
     EthereumChain,
     EthereumProvider,
     EthereumProviderTypes,
+    MultiAddressStruct,
     Parachain,
     TransferRoute,
 } from "@snowbridge/base-types"
 import { PNAToAH } from "./transfers/toPolkadot/pnaToAH"
 import { ERC20ToParachain } from "./transfers/toPolkadot/erc20ToParachain"
 import { PNAToParachain } from "./transfers/toPolkadot/pnaToParachain"
-import { MultiAddressStruct } from "./contracts"
 import { hexToU8a, stringToU8a } from "@polkadot/util"
 import { blake2AsHex } from "@polkadot/util-crypto"
 import { OperationStatus } from "./status"

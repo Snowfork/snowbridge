@@ -1,9 +1,14 @@
 import {
     AssetRegistry,
     ChainId,
+    DepositParamsStruct,
     EthereumChain,
     EthereumProviderTypes,
+    ISwapQuoter,
     Parachain,
+    QuoteExactOutputSingleParamsStruct,
+    SendParamsStruct,
+    SwapParamsStruct,
     TransferRoute,
 } from "@snowbridge/base-types"
 import { TransferInterface } from "./transferInterface"
@@ -28,13 +33,6 @@ import { FeeInfo, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
 import { buildMessageId, Transfer, ValidationResult } from "../../toPolkadotSnowbridgeV2"
 import { getOperatingStatus } from "../../status"
 import { hexToU8a } from "@polkadot/util"
-import {
-    DepositParamsStruct,
-    ISwapQuoter,
-    QuoteExactOutputSingleParamsStruct,
-    SendParamsStruct,
-    SwapParamsStruct,
-} from "../../contracts"
 import { estimateFees } from "../../across/api"
 
 export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInterface<T> {

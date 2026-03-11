@@ -1,8 +1,7 @@
 import { Context, subsquidV2 } from "./index"
 import { fetchBeaconSlot, fetchFinalityUpdate } from "./utils"
 import { ApiPromise } from "@polkadot/api"
-import { IGatewayV1, IGatewayV2 } from "./contracts"
-import { EthereumProviderTypes } from "@snowbridge/base-types"
+import { EthereumProviderTypes, IGatewayV1, IGatewayV2 } from "@snowbridge/base-types"
 
 export type OperatingMode = "Normal" | "Halted"
 export type BridgeStatusInfo = {

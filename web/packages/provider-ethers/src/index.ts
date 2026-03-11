@@ -12,67 +12,31 @@ import {
   WebSocketProvider,
 } from "ethers";
 import type {
+  BeefyClient,
   EncodedMultiAddress,
   EthereumProvider,
   EthereumProviderTypes,
   FeeData,
   GatewayV1OutboundMessageAccepted,
   GatewayV2OutboundMessageAccepted,
+  IERC20,
+  IGatewayV1,
+  IGatewayV2,
+  ISwapQuoter,
   L1AdapterDepositParams,
   L1LegacySwapRouterExactOutputSingleParams,
   L1SwapRouterExactOutputSingleParams,
 } from "@snowbridge/base-types";
 import {
-  IERC20,
   IERC20_ABI,
   IGATEWAY_V1_ABI,
   IGATEWAY_V2_ABI,
+  MOONBEAM_PALLET_XCM_PRECOMPILE_ABI,
   SNOWBRIDGE_L1_ADAPTOR_ABI,
   SNOWBRIDGE_L2_ADAPTOR_ABI,
   SWAP_LEGACY_ROUTER_ABI,
   SWAP_ROUTER_ABI,
-} from "./contracts";
-
-const PALLET_XCM_PRECOMPILE_ABI: InterfaceAbi = [
-  {
-    inputs: [
-      {
-        components: [
-          { internalType: "uint8", name: "parents", type: "uint8" },
-          { internalType: "bytes[]", name: "interior", type: "bytes[]" },
-        ],
-        internalType: "struct XCM.Location",
-        name: "dest",
-        type: "tuple",
-      },
-      {
-        components: [
-          { internalType: "address", name: "asset", type: "address" },
-          { internalType: "uint256", name: "amount", type: "uint256" },
-        ],
-        internalType: "struct XCM.AssetAddressInfo[]",
-        name: "assets",
-        type: "tuple[]",
-      },
-      {
-        internalType: "enum XCM.TransferType",
-        name: "assetsTransferType",
-        type: "uint8",
-      },
-      { internalType: "uint8", name: "remoteFeesIdIndex", type: "uint8" },
-      {
-        internalType: "enum XCM.TransferType",
-        name: "feesTransferType",
-        type: "uint8",
-      },
-      { internalType: "bytes", name: "customXcmOnDest", type: "bytes" },
-    ],
-    name: "transferAssetsUsingTypeAndThenAddress",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-];
+} from "@snowbridge/base-types";
 
 function resolveBeneficiary(address: string) {
   if (/^0x[a-fA-F0-9]{40}$/.test(address)) {
@@ -323,7 +287,7 @@ export class EthersEthereumProvider
   ): Promise<ContractTransaction> {
     const precompile = this.connectContract(
       precompileAddress,
-      PALLET_XCM_PRECOMPILE_ABI,
+      MOONBEAM_PALLET_XCM_PRECOMPILE_ABI,
       provider,
     );
     const tx = await precompile

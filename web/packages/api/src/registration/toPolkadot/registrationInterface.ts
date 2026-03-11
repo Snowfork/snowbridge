@@ -18,19 +18,18 @@ export type TokenRegistration<T extends EthereumProviderTypes> = {
     tx: T["ContractTransaction"]
 }
 
-export type RegistrationValidationResult<T extends EthereumProviderTypes> =
-    {
-        logs: ValidationLog[]
-        success: boolean
-        data: {
-            etherBalance: bigint
-            feeInfo?: FeeInfo
-            bridgeStatus: OperationStatus
-            isTokenAlreadyRegistered: boolean
-            assetHubDryRunError?: string
-        }
-        registration: TokenRegistration<T>
+export type RegistrationValidationResult<T extends EthereumProviderTypes> = {
+    logs: ValidationLog[]
+    success: boolean
+    data: {
+        etherBalance: bigint
+        feeInfo?: FeeInfo
+        bridgeStatus: OperationStatus
+        isTokenAlreadyRegistered: boolean
+        assetHubDryRunError?: string
     }
+    registration: TokenRegistration<T>
+}
 
 export type RegistrationFee = {
     assetHubDeliveryFeeEther: bigint
