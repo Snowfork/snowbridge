@@ -1,4 +1,5 @@
-import { EthersEthereumProvider, createApi } from "@snowbridge/api"
+import { createApi } from "@snowbridge/api"
+import { EthersEthereumProvider } from "@snowbridge/provider-ethers"
 import { BeefyClient, BeefyClient__factory } from "@snowbridge/contract-types"
 import { AbstractProvider } from "ethers"
 import { existsSync } from "fs"

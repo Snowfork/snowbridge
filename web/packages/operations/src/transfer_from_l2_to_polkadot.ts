@@ -1,5 +1,6 @@
 import { Keyring } from "@polkadot/keyring"
-import { Context, EthersEthereumProvider, EthersProviderTypes, createApi } from "@snowbridge/api"
+import { Context, createApi } from "@snowbridge/api"
+import { EthersEthereumProvider, EthersProviderTypes } from "@snowbridge/provider-ethers"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { formatEther, Wallet } from "ethers"
 import { bridgeInfoFor } from "@snowbridge/registry"

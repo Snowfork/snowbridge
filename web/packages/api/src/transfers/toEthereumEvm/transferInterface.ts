@@ -1,17 +1,18 @@
-import { Context, EthereumProviderTypes } from "../.."
+import { Context } from "../.."
 import {
     Asset,
     AssetRegistry,
     ContractCall,
     ERC20Metadata,
     EthereumChain,
+    EthereumProviderTypes,
     Parachain,
 } from "@snowbridge/base-types"
 import { EventRecord } from "@polkadot/types/interfaces"
 import { OperationStatus } from "../../status"
 import { DeliveryFee, FeeInfo, ValidationLog } from "../../toEthereum_v2"
 
-export type TransferEvm<T extends EthereumProviderTypes = EthereumProviderTypes> = {
+export type TransferEvm<T extends EthereumProviderTypes> = {
     input: {
         registry: AssetRegistry
         sourceAccount: string
@@ -35,7 +36,7 @@ export type TransferEvm<T extends EthereumProviderTypes = EthereumProviderTypes>
     tx: T["ContractTransaction"]
 }
 
-export type ValidationResultEvm<T extends EthereumProviderTypes = EthereumProviderTypes> = {
+export type ValidationResultEvm<T extends EthereumProviderTypes> = {
     logs: ValidationLog[]
     success: boolean
     data: {
@@ -62,7 +63,7 @@ export type MessageReceiptEvm = {
     messageId?: string
 }
 
-export interface TransferInterface<T extends EthereumProviderTypes = EthereumProviderTypes> {
+export interface TransferInterface<T extends EthereumProviderTypes> {
     readonly context: Context<T>
 
     getDeliveryFee(

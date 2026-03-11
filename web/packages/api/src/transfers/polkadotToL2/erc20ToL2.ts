@@ -15,6 +15,7 @@ import {
     ChainId,
     ContractCall,
     EthereumChain,
+    EthereumProviderTypes,
     Parachain,
     TransferRoute,
 } from "@snowbridge/base-types"
@@ -25,7 +26,7 @@ import {
     Transfer,
     ValidationResult,
 } from "../../toEthereum_v2"
-import { Context, EthereumProviderTypes } from "../.."
+import { Context } from "../.."
 import { TransferInterface } from "./transferInterface"
 import {
     buildContractCallHex,

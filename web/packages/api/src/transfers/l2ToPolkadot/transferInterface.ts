@@ -1,4 +1,5 @@
-import { Context, EthereumProviderTypes } from "../.."
+import { EthereumProviderTypes } from "@snowbridge/base-types"
+import { Context } from "../.."
 import {
     DeliveryFee,
     MessageReceipt,
@@ -6,7 +7,7 @@ import {
     ValidationResult,
 } from "../../toPolkadotSnowbridgeV2"
 
-export interface TransferInterface<T extends EthereumProviderTypes = EthereumProviderTypes> {
+export interface TransferInterface<T extends EthereumProviderTypes> {
     readonly context: Context<T>
 
     getDeliveryFee(

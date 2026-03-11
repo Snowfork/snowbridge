@@ -4,10 +4,9 @@ import {
     AgentCreationValidationResult,
 } from "./agentInterface"
 import type { Context } from "../../index"
-import type { EthereumProviderTypes } from "../../EthereumProvider"
 import { ValidationKind } from "../../toPolkadotSnowbridgeV2"
 import { ValidationLog, ValidationReason } from "../../toPolkadot_v2"
-import { AssetRegistry } from "@snowbridge/base-types"
+import { AssetRegistry, EthereumProviderTypes } from "@snowbridge/base-types"
 
 export class CreateAgent<T extends EthereumProviderTypes>
     implements AgentCreationInterface<T["ContractTransaction"]>

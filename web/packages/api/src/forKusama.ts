@@ -30,6 +30,7 @@ import {
     ChainId,
     Parachain,
     TransferRoute,
+    EthereumProviderTypes,
 } from "@snowbridge/base-types"
 import {
     CallDryRunEffects,
@@ -40,7 +41,7 @@ import {
 import { Result } from "@polkadot/types"
 import { padFeeByPercentage, u32ToLeBytes } from "./utils"
 import { TransferInterface as KusamaTransferInterface } from "./transfers/forKusama/transferInterface"
-import { Context, EthereumProviderTypes } from "."
+import { Context } from "."
 
 export type Transfer = {
     input: {

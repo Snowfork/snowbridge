@@ -1,14 +1,7 @@
 import { u8aToHex } from "@polkadot/util"
 import { blake2AsU8a } from "@polkadot/util-crypto"
-import {
-    Context,
-    EthersEthereumProvider,
-    EthersProviderTypes,
-    createApi,
-    status,
-    subsquidV2,
-    utils,
-} from "@snowbridge/api"
+import { Context, createApi, status, subsquidV2, utils } from "@snowbridge/api"
+import { EthersEthereumProvider, EthersProviderTypes } from "@snowbridge/provider-ethers"
 import { sendMetrics } from "./alarm"
 import { Environment } from "../../base-types/dist"
 import { bridgeInfoFor } from "@snowbridge/registry"

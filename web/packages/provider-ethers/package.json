@@ -1,33 +1,26 @@
 {
-  "name": "@snowbridge/registry",
+  "name": "@snowbridge/provider-ethers",
   "version": "0.4.0",
-  "description": "Snowbridge Asset Registry",
+  "description": "Snowbridge ethers provider implementation",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/Snowfork/snowbridge.git",
-    "directory": "web/packages/registry"
+    "directory": "web/packages/provider-ethers"
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc --build --force && tsc -p tsconfig.scripts.json",
-    "build-registry": "npx ts-node scripts/buildRegistry.ts && pnpm format",
+    "build": "tsc --build --force",
     "lint": "eslint .",
-    "format": "prettier src --write && prettier scripts --write"
+    "format": "prettier src --write"
   },
   "devDependencies": {
-    "@polkadot/api": "16.5.4",
-    "@polkadot/util": "14.0.1",
-    "@snowbridge/api": "workspace:*",
-    "@snowbridge/contract-types": "workspace:*",
     "@types/node": "24.6.2",
     "@typescript-eslint/eslint-plugin": "8.45.0",
     "@typescript-eslint/parser": "8.45.0",
-    "dotenv": "^17.2.3",
     "eslint": "9.37.0",
     "eslint-config-prettier": "10.1.8",
-    "ethers": "6.16.0",
     "prettier": "3.6.2",
     "ts-node": "10.9.2",
     "tsconfig-paths": "4.2.0",
@@ -35,6 +28,6 @@
   },
   "dependencies": {
     "@snowbridge/base-types": "workspace:*",
-    "@snowbridge/provider-ethers": "workspace:*"
+    "ethers": "6.16.0"
   }
 }

@@ -219,6 +219,19 @@ export type AssetRegistry = {
   kusama?: KusamaConfig;
 };
 
+export type {
+  EncodedMultiAddress,
+  EthereumProvider,
+  EthereumProviderTypes,
+  FeeData,
+  GatewayV1OutboundMessageAccepted,
+  GatewayV2OutboundMessageAccepted,
+  L1AdapterDepositParams,
+  L1LegacySwapRouterExactOutputSingleParams,
+  L1SwapRouterExactOutputSingleParams,
+  MultiAddressStruct,
+} from "./provider";
+
 export type ContractCall = {
   target: string;
   calldata: string;

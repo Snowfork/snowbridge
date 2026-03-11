@@ -14,7 +14,7 @@ import { PenpalParachain } from "./penpal"
 import { JamtonParachain } from "./jamton"
 import { NeurowebParachain } from "./neuroweb"
 import { ParachainBase } from "./parachainBase"
-import type { EthereumProvider, EthereumProviderTypes } from "../EthereumProvider"
+import { EthereumProvider, EthereumProviderTypes } from "@snowbridge/base-types"
 
 export async function paraImplementation<T extends EthereumProviderTypes>(
     provider: ApiPromise,
