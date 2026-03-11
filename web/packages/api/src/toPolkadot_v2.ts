@@ -24,7 +24,7 @@ import {
 } from "./xcmBuilder"
 import { Result } from "@polkadot/types"
 import { XcmDryRunApiError, XcmDryRunEffects } from "@polkadot/types/interfaces"
-import { EthersContext } from "./index"
+import { Context, EthersProviderTypes } from "./index"
 import type { FeeData } from "./EthereumProvider"
 import { TransferInterface as ToPolkadotTransferInterface } from "./transfers/toPolkadot/transferInterface"
 import type {
@@ -193,9 +193,9 @@ function toV1Transfer(transfer: ToPolkadotV2Transfer): Transfer {
     }
 }
 
-export class V1ToPolkadotAdapter implements ToPolkadotTransferInterface {
+export class V1ToPolkadotAdapter implements ToPolkadotTransferInterface<EthersProviderTypes> {
     constructor(
-        public readonly context: EthersContext,
+        public readonly context: Context<EthersProviderTypes>,
         public readonly registry: AssetRegistry,
         public readonly route: TransferRoute,
         public readonly source: EthereumChain,
@@ -567,7 +567,7 @@ export class V1ToPolkadotAdapter implements ToPolkadotTransferInterface {
 }
 
 export function createTransferImplementationV1(
-    context: EthersContext,
+    context: Context<EthersProviderTypes>,
     route: TransferRoute,
     registry: AssetRegistry,
     source: EthereumChain,
@@ -576,7 +576,11 @@ export function createTransferImplementationV1(
     return new V1ToPolkadotAdapter(context, registry, route, source, destination)
 }
 
-async function dryRunAssetHub(context: EthersContext, assetHub: ApiPromise, transfer: Transfer) {
+async function dryRunAssetHub(
+    context: Context<EthersProviderTypes>,
+    assetHub: ApiPromise,
+    transfer: Transfer,
+) {
     const { registry, amount, tokenAddress, beneficiaryAccount, destinationParaId } = transfer.input
     const { destinationFeeInDOT, destAssetMetadata } = transfer.computed
     const bridgeHubLocation = {

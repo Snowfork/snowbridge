@@ -1,7 +1,10 @@
+import { Context, EthereumProviderTypes } from "../.."
 import { AddressOrPair, SignerOptions } from "@polkadot/api/types"
 import { DeliveryFee, MessageReceipt, Transfer, ValidationResult } from "../../forInterParachain"
 
-export interface TransferInterface {
+export interface TransferInterface<T extends EthereumProviderTypes = EthereumProviderTypes> {
+    readonly context: Context<T>
+
     getDeliveryFee(
         tokenAddress: string,
         options?: {

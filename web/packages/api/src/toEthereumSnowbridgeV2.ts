@@ -1,5 +1,5 @@
 import { ApiPromise } from "@polkadot/api"
-import { SubmittableExtrinsic } from "@polkadot/api/types"
+import { AddressOrPair, SignerOptions, SubmittableExtrinsic } from "@polkadot/api/types"
 import { Codec, ISubmittableResult } from "@polkadot/types/types"
 import {
     AssetRegistry,
@@ -36,19 +36,19 @@ import {
 import { xxhashAsHex } from "@polkadot/util-crypto"
 import { BN } from "@polkadot/util"
 import { padFeeByPercentage } from "./utils"
-import { Context, EthersContext } from "./index"
+import { Context, EthereumProviderTypes } from "./index"
 import { ETHER_TOKEN_ADDRESS, findL2TokenAddress } from "./assets_v2"
 import { getOperatingStatus } from "./status"
 import { estimateFees } from "./across/api"
 
 export { ValidationKind, signAndSendTransfer } from "./toEthereum_v2"
 
-class TransferToEthereum implements TransferInterface {
-    #pnaImpl?: TransferInterface
-    #erc20Impl?: TransferInterface
+class TransferToEthereum<T extends EthereumProviderTypes> implements TransferInterface<T> {
+    #pnaImpl?: TransferInterface<T>
+    #erc20Impl?: TransferInterface<T>
 
     constructor(
-        private readonly context: EthersContext,
+        public readonly context: Context<T>,
         private readonly route: TransferRoute,
         private readonly registry: AssetRegistry,
         private readonly source: Parachain,
@@ -63,7 +63,7 @@ class TransferToEthereum implements TransferInterface {
         return this.route.to
     }
 
-    #resolveByTokenAddress(tokenAddress: string): TransferInterface {
+    #resolveByTokenAddress(tokenAddress: string): TransferInterface<T> {
         const sourceParaId = this.route.from.id
         const sourceAssetMetadata = this.source.assets[tokenAddress.toLowerCase()]
         if (!sourceAssetMetadata) {
@@ -113,7 +113,14 @@ class TransferToEthereum implements TransferInterface {
 
     async getDeliveryFee(
         tokenAddress: string,
-        options?: Parameters<TransferInterface["getDeliveryFee"]>[1],
+        options?: {
+            padPercentage?: bigint
+            slippagePadPercentage?: bigint
+            defaultFee?: bigint
+            feeTokenLocation?: any
+            claimerLocation?: any
+            contractCall?: ContractCall
+        },
     ): Promise<DeliveryFee> {
         return this.#resolveByTokenAddress(tokenAddress).getDeliveryFee(tokenAddress, options)
     }
@@ -124,7 +131,10 @@ class TransferToEthereum implements TransferInterface {
         tokenAddress: string,
         amount: bigint,
         fee: DeliveryFee,
-        options?: Parameters<TransferInterface["createTransfer"]>[5],
+        options?: {
+            claimerLocation?: any
+            contractCall?: ContractCall
+        },
     ): Promise<Transfer> {
         return this.#resolveByTokenAddress(tokenAddress).createTransfer(
             sourceAccount,
@@ -142,8 +152,8 @@ class TransferToEthereum implements TransferInterface {
 
     async signAndSend(
         transfer: Transfer,
-        account: Parameters<TransferInterface["signAndSend"]>[1],
-        options: Parameters<TransferInterface["signAndSend"]>[2],
+        account: AddressOrPair,
+        options: Partial<SignerOptions>,
     ): Promise<MessageReceipt> {
         return this.#resolveByTokenAddress(transfer.input.tokenAddress).signAndSend(
             transfer,
@@ -153,13 +163,13 @@ class TransferToEthereum implements TransferInterface {
     }
 }
 
-export function createTransferImplementation(
-    context: EthersContext,
+export function createTransferImplementation<T extends EthereumProviderTypes>(
+    context: Context<T>,
     route: TransferRoute,
     registry: AssetRegistry,
     source: Parachain,
     destination: EthereumChain,
-): TransferInterface {
+): TransferInterface<T> {
     return new TransferToEthereum(context, route, registry, source, destination)
 }
 
@@ -316,8 +326,8 @@ export type DeliveryXcm = {
     returnToSenderXcm?: any
 }
 
-export const estimateEthereumExecutionFee = async (
-    context: EthersContext,
+export const estimateEthereumExecutionFee = async <T extends EthereumProviderTypes>(
+    context: Context<T>,
     registry: AssetRegistry,
     sourceParachain: Parachain,
     tokenAddress: string,
@@ -346,8 +356,8 @@ export const estimateEthereumExecutionFee = async (
     return ethereumExecutionFee
 }
 
-export const estimateFeesFromAssetHub = async (
-    context: EthersContext,
+export const estimateFeesFromAssetHub = async <T extends EthereumProviderTypes>(
+    context: Context<T>,
     registry: AssetRegistry,
     tokenAddress: string,
     deliveryXcm: DeliveryXcm,
@@ -469,8 +479,8 @@ export const estimateFeesFromAssetHub = async (
     }
 }
 
-export const estimateFeesFromParachains = async (
-    context: EthersContext,
+export const estimateFeesFromParachains = async <T extends EthereumProviderTypes>(
+    context: Context<T>,
     sourceParaId: number,
     registry: AssetRegistry,
     tokenAddress: string,
@@ -624,8 +634,8 @@ export const estimateFeesFromParachains = async (
     }
 }
 
-export const validateTransferFromAssetHub = async (
-    context: EthersContext,
+export const validateTransferFromAssetHub = async <T extends EthereumProviderTypes>(
+    context: Context<T>,
     transfer: Transfer,
 ): Promise<ValidationResult> => {
     const { registry, fee, tokenAddress, amount } = transfer.input
@@ -808,8 +818,8 @@ export const validateTransferFromAssetHub = async (
     }
 }
 
-export const validateTransferFromParachain = async (
-    context: EthersContext,
+export const validateTransferFromParachain = async <T extends EthereumProviderTypes>(
+    context: Context<T>,
     transfer: Transfer,
 ): Promise<ValidationResult> => {
     const { registry, fee, tokenAddress, amount } = transfer.input
@@ -998,7 +1008,10 @@ export const validateTransferFromParachain = async (
     }
 }
 
-export async function buildContractCallHex(context: EthersContext, contractCall: ContractCall) {
+export async function buildContractCallHex<T extends EthereumProviderTypes>(
+    context: Context<T>,
+    contractCall: ContractCall,
+) {
     const bridgeHub = await context.bridgeHub()
     const callHex = bridgeHub.createType("ContractCall", {
         target: contractCall.target,
@@ -1028,8 +1041,8 @@ export type {
     AgentCreationInterface,
 } from "./registration/agent/agentInterface"
 
-export async function buildL2Call(
-    context: EthersContext,
+export async function buildL2Call<T extends EthereumProviderTypes>(
+    context: Context<T>,
     registry: AssetRegistry,
     tokenAddress: string,
     l2ChainId: number,
@@ -1126,8 +1139,8 @@ export async function buildL2Call(
     return { l2Call, fee: l2BridgeFeeInL1Token }
 }
 
-export async function sourceAgentId(
-    context: EthersContext,
+export async function sourceAgentId<T extends EthereumProviderTypes>(
+    context: Context<T>,
     parachainId: number,
     sourceAccountHex: string,
 ) {
@@ -1142,8 +1155,8 @@ export async function sourceAgentId(
     return (await bridgeHub.call.controlV2Api.agentId(versionedLocation)).toHex()
 }
 
-export async function sourceAgentAddress(
-    context: EthersContext,
+export async function sourceAgentAddress<T extends EthereumProviderTypes>(
+    context: Context<T>,
     parachainId: number,
     sourceAccountHex: string,
 ): Promise<string> {

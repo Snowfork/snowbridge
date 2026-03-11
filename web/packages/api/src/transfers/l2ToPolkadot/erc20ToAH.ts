@@ -6,7 +6,7 @@ import {
     TransferRoute,
 } from "@snowbridge/base-types"
 import { TransferInterface } from "./transferInterface"
-import { EthersContext } from "../../index"
+import { Context, EthersProviderTypes } from "../../index"
 import {
     buildSwapCallData,
     calculateRelayerFee,
@@ -37,9 +37,9 @@ import { estimateFees } from "../../across/api"
 import { ContractTransaction } from "ethers/lib.commonjs/contract/types"
 import { TransactionReceipt } from "ethers"
 
-export class ERC20ToAH implements TransferInterface {
+export class ERC20ToAH implements TransferInterface<EthersProviderTypes> {
     constructor(
-        public readonly context: EthersContext,
+        public readonly context: Context<EthersProviderTypes>,
         public readonly registry: AssetRegistry,
         public readonly route: TransferRoute,
         public readonly source: EthereumChain,

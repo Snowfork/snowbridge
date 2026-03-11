@@ -26,7 +26,7 @@ import { accountToLocation, DOT_LOCATION, erc20Location } from "./xcmBuilder"
 import { Codec } from "@polkadot/types/types"
 import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
 import { padFeeByPercentage } from "./utils"
-import { EthereumProvider, EthereumProviderTypes, EthersContext } from "./index"
+import { Context, EthereumProvider, EthereumProviderTypes, EthersProviderTypes } from "./index"
 export { ValidationKind } from "./toPolkadot_v2"
 import { ParachainBase } from "./parachains/parachainBase"
 
@@ -112,12 +112,12 @@ export type {
     RegistrationInterface,
 } from "./registration/toPolkadot/registrationInterface"
 
-class TransferToPolkadot implements TransferInterface {
-    #pnaImpl?: TransferInterface
-    #erc20Impl?: TransferInterface
+class TransferToPolkadot implements TransferInterface<EthersProviderTypes> {
+    #pnaImpl?: TransferInterface<EthersProviderTypes>
+    #erc20Impl?: TransferInterface<EthersProviderTypes>
 
     constructor(
-        private readonly context: EthersContext,
+        public readonly context: Context<EthersProviderTypes>,
         private readonly route: TransferRoute,
         private readonly registry: AssetRegistry,
         private readonly source: EthereumChain,
@@ -132,7 +132,7 @@ class TransferToPolkadot implements TransferInterface {
         return this.route.to
     }
 
-    #resolveByTokenAddress(tokenAddress: string): TransferInterface {
+    #resolveByTokenAddress(tokenAddress: string): TransferInterface<EthersProviderTypes> {
         const destinationParaId = this.route.to.id
         const ahAssetMetadata =
             this.registry.parachains[`polkadot_${this.registry.assetHubParaId}`].assets[
@@ -183,7 +183,12 @@ class TransferToPolkadot implements TransferInterface {
 
     async getDeliveryFee(
         tokenAddress: string,
-        options?: Parameters<TransferInterface["getDeliveryFee"]>[1],
+        options?: {
+            paddFeeByPercentage?: bigint
+            feeAsset?: any
+            customXcm?: any[]
+            overrideRelayerFee?: bigint
+        },
     ): Promise<DeliveryFee> {
         return this.#resolveByTokenAddress(tokenAddress).getDeliveryFee(tokenAddress, options)
     }
@@ -194,7 +199,7 @@ class TransferToPolkadot implements TransferInterface {
         tokenAddress: string,
         amount: bigint,
         fee: DeliveryFee,
-        customXcm?: Parameters<TransferInterface["createTransfer"]>[5],
+        customXcm?: any[],
     ): Promise<Transfer> {
         return this.#resolveByTokenAddress(tokenAddress).createTransfer(
             sourceAccount,
@@ -216,12 +221,12 @@ class TransferToPolkadot implements TransferInterface {
 }
 
 export function createTransferImplementation(
-    context: EthersContext,
+    context: Context<EthersProviderTypes>,
     route: TransferRoute,
     registry: AssetRegistry,
     source: EthereumChain,
     destination: Parachain,
-): TransferInterface {
+): TransferInterface<EthersProviderTypes> {
     return new TransferToPolkadot(context, route, registry, source, destination)
 }
 
@@ -315,7 +320,7 @@ export async function calculateRelayerFee(
 }
 
 export async function buildSwapCallData(
-    context: EthersContext,
+    context: Context<EthersProviderTypes>,
     registry: AssetRegistry,
     l2ChainId: number,
     l2TokenAddress: string,
