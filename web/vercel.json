@@ -1,0 +1,15 @@
+{
+  "installCommand": "pnpm install && bash scripts/install-foundry.sh",
+  "buildCommand": "pnpm run build:vercel",
+  "crons": [
+    {
+      "path": "/api/monitor",
+      "schedule": "*/15 * * * *"
+    }
+  ],
+  "functions": {
+    "api/monitor.ts": {
+      "maxDuration": 60
+    }
+  }
+}

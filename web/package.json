@@ -8,6 +8,8 @@
   "scripts": {
     "preinstall": "npx only-allow pnpm",
     "build": "turbo run build --concurrency=1 --no-cache",
+    "build:vercel": "export PATH=\"${HOME}/.foundry/bin:${PATH}\" && pnpm run build",
+    "build:vercel:full": "bash scripts/install-foundry.sh && pnpm run build:vercel",
     "test": "turbo run test",
     "lint": "turbo run lint",
     "format": "turbo run format",
@@ -16,6 +18,7 @@
     "remixd": "./node_modules/.bin/remixd"
   },
   "devDependencies": {
+    "@vercel/node": "^3.2.0",
     "ts-node": "10.9.2",
     "tsconfig-paths": "4.2.0",
     "turbo": "2.5.8",
