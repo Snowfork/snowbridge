@@ -27,6 +27,8 @@ CONTRACTS_DIR=""
 if [ -n "$CONTRACTS_DIR" ]; then
   echo "Installing forge dependencies in $CONTRACTS_DIR"
   pushd "$CONTRACTS_DIR"
+    # Remove existing lib so forge install does not hit "destination path already exists"
+    [ -d "lib" ] && rm -rf lib
     forge install foundry-rs/forge-std --no-git
     forge install https://github.com/dapphub/ds-test --no-git
     forge install https://github.com/Snowfork/canonical-weth --no-git

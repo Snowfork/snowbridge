@@ -1,0 +1,8 @@
+# Keep deployment under Vercel 10MB limit
+node_modules/
+.turbo/
+**/dist/
+**/.next/
+*.log
+.env*.local
+.vercel/
