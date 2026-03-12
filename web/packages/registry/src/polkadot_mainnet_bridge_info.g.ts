@@ -2526,5 +2526,72 @@ const registry = {
             bridgeHubParaId: 1002,
         },
     },
+    chains: {
+        ethereum: {
+            key: "ethereum_1",
+            kind: "ethereum",
+            id: 1,
+        },
+        optimism: {
+            key: "ethereum_l2_10",
+            kind: "ethereum_l2",
+            id: 10,
+        },
+        moonbeam: {
+            key: "ethereum_1284",
+            kind: "ethereum",
+            id: 1284,
+        },
+        base: {
+            key: "ethereum_l2_8453",
+            kind: "ethereum_l2",
+            id: 8453,
+        },
+        arbitrum: {
+            key: "ethereum_l2_42161",
+            kind: "ethereum_l2",
+            id: 42161,
+        },
+        assetHub: {
+            key: "polkadot_1000",
+            kind: "polkadot",
+            id: 1000,
+        },
+        acala: {
+            key: "polkadot_2000",
+            kind: "polkadot",
+            id: 2000,
+        },
+        moonbeamSubstrate: {
+            key: "polkadot_2004",
+            kind: "polkadot",
+            id: 2004,
+        },
+        bifrostPolkadot: {
+            key: "polkadot_2030",
+            kind: "polkadot",
+            id: 2030,
+        },
+        hydration: {
+            key: "polkadot_2034",
+            kind: "polkadot",
+            id: 2034,
+        },
+        neuroWeb: {
+            key: "polkadot_2043",
+            kind: "polkadot",
+            id: 2043,
+        },
+        mythos: {
+            key: "polkadot_3369",
+            kind: "polkadot",
+            id: 3369,
+        },
+        kusamaAssetHub: {
+            key: "kusama_1000",
+            kind: "kusama",
+            id: 1000,
+        },
+    },
 } as const
 export default registry

@@ -41,6 +41,8 @@ import { ERC20ToAH as ERC20FromL2ToAH } from "./transfers/l2ToPolkadot/erc20ToAH
 import { ERC20FromAH as ERC20FromAHToL2 } from "./transfers/polkadotToL2/erc20ToL2"
 import { V1ToEthereumEvmAdapter } from "./toEthereumFromEVM_v2"
 import { paraImplementation as buildParaImplementation } from "./parachains"
+import { toEthereumTransferById, toPolkadotTransferById } from "./history_v2"
+import type { ToEthereumTransferResult, ToPolkadotTransferResult } from "./history"
 
 export * as toPolkadotV2 from "./toPolkadot_v2"
 export * as toEthereumV2 from "./toEthereum_v2"
@@ -49,6 +51,7 @@ export * as status from "./status"
 export * as assetsV2 from "./assets_v2"
 export * as history from "./history"
 export * as historyV2 from "./history_v2"
+export { TransferStatus } from "./history_v2"
 export * as subsquidV2 from "./subsquid_v2"
 export * as forKusama from "./forKusama"
 export * as forInterParachain from "./forInterParachain"
@@ -595,6 +598,21 @@ export class SnowbridgeApi<P extends EthereumProvider<any>> {
             default:
                 throw new Error(`No implementation for route ${route.from.kind}:${route.to.kind}.`)
         }
+    }
+
+    async destroy(): Promise<void> {
+        await this.context.destroyContext()
+    }
+
+    async checkTxStatus(
+        messageId: string,
+    ): Promise<ToPolkadotTransferResult | ToEthereumTransferResult | undefined> {
+        const graphqlApiUrl = this.context.graphqlApiUrl()
+        const [toPolkadot, toEthereum] = await Promise.all([
+            toPolkadotTransferById(graphqlApiUrl, messageId),
+            toEthereumTransferById(graphqlApiUrl, messageId),
+        ])
+        return toPolkadot ?? toEthereum
     }
 }
 
