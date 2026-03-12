@@ -4,6 +4,7 @@ node_modules/
 **/dist/
 **/.next/
 .foundry/
+scripts/.foundry/
 *.log
 .env*.local
 .vercel/
