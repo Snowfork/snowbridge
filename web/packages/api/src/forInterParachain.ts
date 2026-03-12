@@ -16,9 +16,10 @@ import {
     ChainId,
     EthereumProviderTypes,
     Parachain,
+    TransferKind,
     TransferRoute,
 } from "@snowbridge/base-types"
-import { padFeeByPercentage } from "./utils"
+import { ensureValidationSuccess, padFeeByPercentage } from "./utils"
 import { Context } from "."
 import { buildMessageId } from "./toEthereum_v2"
 import { Result } from "@polkadot/types"
@@ -32,6 +33,7 @@ import { u8aToHex } from "@polkadot/util"
 import { TransferInterface as InterParachainTransferInterface } from "./transfers/forInterParachain/transferInterface"
 
 export type Transfer = {
+    kind: Extract<TransferKind, "polkadot->polkadot">
     input: {
         registry: AssetRegistry
         sourceAccount: string
@@ -115,7 +117,7 @@ export type ValidationLog = {
     message: string
 }
 
-export type ValidationResult = {
+export type ValidatedTransfer = Transfer & {
     logs: ValidationLog[]
     success: boolean
     data: {
@@ -124,7 +126,6 @@ export type ValidationResult = {
         tokenBalance: bigint
         dryRunError: any
     }
-    transfer: Transfer
 }
 
 export type MessageReceipt = {
@@ -226,7 +227,7 @@ export class InterParachainTransfer<T extends EthereumProviderTypes>
         }
     }
 
-    async rawTx(
+    async tx(
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
@@ -272,6 +273,7 @@ export class InterParachainTransfer<T extends EthereumProviderTypes>
         )
 
         return {
+            kind: "polkadot->polkadot",
             input: {
                 registry: this.info.registry,
                 sourceAccount,
@@ -295,7 +297,23 @@ export class InterParachainTransfer<T extends EthereumProviderTypes>
         }
     }
 
-    async validate(transfer: Transfer): Promise<ValidationResult> {
+    async build(
+        sourceAccount: string,
+        beneficiaryAccount: string,
+        tokenAddress: string,
+        amount: bigint,
+        options?: {
+            fee?: {
+                padPercentage?: bigint
+            }
+        },
+    ): Promise<ValidatedTransfer> {
+        const fee = await this.fee(tokenAddress, options?.fee)
+        const transfer = await this.tx(sourceAccount, beneficiaryAccount, tokenAddress, amount, fee)
+        return ensureValidationSuccess(await this.validate(transfer))
+    }
+
+    async validate(transfer: Transfer): Promise<ValidatedTransfer> {
         const sourceParachain = await this.context.parachain(this.from.id)
         const destParachain = await this.context.parachain(this.to.id)
 
@@ -414,7 +432,7 @@ export class InterParachainTransfer<T extends EthereumProviderTypes>
                 tokenBalance,
                 dryRunError,
             },
-            transfer,
+            ...transfer,
         }
     }
 

@@ -22,9 +22,9 @@ import {
 } from "../../xcmbuilders/toPolkadot/erc20ToAH"
 import { accountId32Location, DOT_LOCATION, erc20Location } from "../../xcmBuilder"
 import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
-import { padFeeByPercentage } from "../../utils"
+import { ensureValidationSuccess, padFeeByPercentage } from "../../utils"
 import { FeeInfo, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
-import { buildMessageId, Transfer, ValidationResult } from "../../toPolkadotSnowbridgeV2"
+import { buildMessageId, Transfer, ValidatedTransfer } from "../../toPolkadotSnowbridgeV2"
 import { getOperatingStatus } from "../../status"
 import { hexToU8a } from "@polkadot/util"
 
@@ -51,7 +51,7 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             paddFeeByPercentage?: bigint
             feeAsset?: any
             customXcm?: any[]
-            overrideRelayerFee: bigint
+            overrideRelayerFee?: bigint
         },
     ): Promise<DeliveryFee> {
         const context = this.context
@@ -123,7 +123,7 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
         }
     }
 
-    async rawTx(
+    async tx(
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
@@ -208,6 +208,7 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
         )
 
         return {
+            kind: "ethereum->polkadot",
             input: {
                 registry,
                 sourceAccount,
@@ -236,7 +237,34 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
         }
     }
 
-    async validate(transfer: Transfer<T>): Promise<ValidationResult<T>> {
+    async build(
+        sourceAccount: string,
+        beneficiaryAccount: string,
+        tokenAddress: string,
+        amount: bigint,
+        options?: {
+            fee?: {
+                paddFeeByPercentage?: bigint
+                feeAsset?: any
+                customXcm?: any[]
+                overrideRelayerFee?: bigint
+            }
+            customXcm?: any[]
+        },
+    ): Promise<ValidatedTransfer<T>> {
+        const fee = await this.fee(tokenAddress, options?.fee)
+        const transfer = await this.tx(
+            sourceAccount,
+            beneficiaryAccount,
+            tokenAddress,
+            amount,
+            fee,
+            options?.customXcm,
+        )
+        return ensureValidationSuccess(await this.validate(transfer))
+    }
+
+    async validate(transfer: Transfer<T>): Promise<ValidatedTransfer<T>> {
         const context = this.context
         const { tx } = transfer
         const { amount, sourceAccount, tokenAddress, registry } = transfer.input
@@ -409,7 +437,7 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
                 bridgeStatus,
                 assetHubDryRunError,
             },
-            transfer,
+            ...transfer,
         }
     }
 

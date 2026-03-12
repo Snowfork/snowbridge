@@ -17,11 +17,11 @@ import {
     messageId as getSharedMessageReceipt,
     Transfer,
     ValidationKind,
-    ValidationResult,
+    ValidatedTransfer,
 } from "../../toPolkadotSnowbridgeV2"
 import { accountId32Location, DOT_LOCATION, erc20Location, isDOT } from "../../xcmBuilder"
 import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
-import { padFeeByPercentage, paraIdToSovereignAccount } from "../../utils"
+import { ensureValidationSuccess, padFeeByPercentage, paraIdToSovereignAccount } from "../../utils"
 import { FeeInfo, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
 import {
     buildAssetHubPNAReceivedXcm,
@@ -208,7 +208,7 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
         }
     }
 
-    async rawTx(
+    async tx(
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
@@ -321,6 +321,7 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
         )
 
         return {
+            kind: "ethereum->polkadot",
             input: {
                 registry,
                 sourceAccount,
@@ -349,7 +350,34 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
         }
     }
 
-    async validate(transfer: Transfer<T>): Promise<ValidationResult<T>> {
+    async build(
+        sourceAccount: string,
+        beneficiaryAccount: string,
+        tokenAddress: string,
+        amount: bigint,
+        options?: {
+            fee?: {
+                paddFeeByPercentage?: bigint
+                feeAsset?: any
+                customXcm?: any[]
+                overrideRelayerFee?: bigint
+            }
+            customXcm?: any[]
+        },
+    ): Promise<ValidatedTransfer<T>> {
+        const fee = await this.fee(tokenAddress, options?.fee)
+        const transfer = await this.tx(
+            sourceAccount,
+            beneficiaryAccount,
+            tokenAddress,
+            amount,
+            fee,
+            options?.customXcm,
+        )
+        return ensureValidationSuccess(await this.validate(transfer))
+    }
+
+    async validate(transfer: Transfer<T>): Promise<ValidatedTransfer<T>> {
         const context = this.context
         const { tx } = transfer
         const { amount, sourceAccount, tokenAddress, registry, destinationParaId } = transfer.input
@@ -638,7 +666,7 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
                 assetHubDryRunError,
                 destinationParachainDryRunError,
             },
-            transfer,
+            ...transfer,
         }
     }
 

@@ -39,10 +39,10 @@ export const registerTokenV2 = async (tokenAddress: string) => {
         const registrationImpl = api.registerToken()
 
         // Step 1. Get the registration fee for the transaction
-        let fee = await registrationImpl.getRegistrationFee(context, registry, relayerFee)
+        let fee = await registrationImpl.fee(context, registry, relayerFee)
 
         // Step 2. Create a registration tx
-        const registration = await registrationImpl.createRegistration(
+        const registration = await registrationImpl.tx(
             context,
             registry,
             ETHEREUM_ACCOUNT_PUBLIC,
@@ -51,7 +51,7 @@ export const registerTokenV2 = async (tokenAddress: string) => {
         )
 
         // Step 3. Validate the transaction.
-        const validation = await registrationImpl.validateRegistration(context, registration)
+        const validation = await registrationImpl.validate(context, registration)
 
         // Check validation logs for errors
         if (validation.logs.find((l) => l.kind == toPolkadotSnowbridgeV2.ValidationKind.Error)) {

@@ -1,12 +1,9 @@
-import {
-    AgentCreationInterface,
-    AgentCreation,
-    AgentCreationValidationResult,
-} from "./agentInterface"
+import { AgentCreationInterface, AgentCreation, ValidatedCreateAgent } from "./agentInterface"
 import type { Context } from "../../index"
 import { ValidationKind } from "../../toPolkadotSnowbridgeV2"
 import { ValidationLog, ValidationReason } from "../../toPolkadot_v2"
 import { AssetRegistry, EthereumProviderTypes } from "@snowbridge/base-types"
+import { ensureValidationSuccess } from "../../utils"
 
 export class CreateAgent<T extends EthereumProviderTypes>
     implements AgentCreationInterface<T["ContractTransaction"]>
@@ -16,7 +13,7 @@ export class CreateAgent<T extends EthereumProviderTypes>
         private readonly registry: AssetRegistry,
     ) {}
 
-    async rawTx(
+    async tx(
         sourceAccount: string,
         agentId: string,
     ): Promise<AgentCreation<T["ContractTransaction"]>> {
@@ -38,9 +35,9 @@ export class CreateAgent<T extends EthereumProviderTypes>
         }
     }
 
-    async validateTx(
+    async validate(
         creation: AgentCreation<T["ContractTransaction"]>,
-    ): Promise<AgentCreationValidationResult<T["ContractTransaction"]>> {
+    ): Promise<ValidatedCreateAgent<T["ContractTransaction"]>> {
         const { tx } = creation
         const { sourceAccount, agentId } = creation.input
         const ethereum = this.context.ethereum()
@@ -107,15 +104,15 @@ export class CreateAgent<T extends EthereumProviderTypes>
                 agentAlreadyExists,
                 agentAddress: agentAlreadyExists ? existingAgent : undefined,
             },
-            creation,
+            ...creation,
         }
     }
 
-    async tx(
+    async build(
         sourceAccount: string,
         agentId: string,
-    ): Promise<AgentCreationValidationResult<T["ContractTransaction"]>> {
-        const creation = await this.rawTx(sourceAccount, agentId)
-        return this.validateTx(creation)
+    ): Promise<ValidatedCreateAgent<T["ContractTransaction"]>> {
+        const creation = await this.tx(sourceAccount, agentId)
+        return ensureValidationSuccess(await this.validate(creation))
     }
 }

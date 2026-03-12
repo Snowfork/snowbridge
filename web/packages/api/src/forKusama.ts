@@ -29,6 +29,7 @@ import {
     BridgeInfo,
     ChainId,
     Parachain,
+    TransferKind,
     TransferRoute,
     EthereumProviderTypes,
 } from "@snowbridge/base-types"
@@ -39,11 +40,12 @@ import {
     XcmDryRunEffects,
 } from "@polkadot/types/interfaces"
 import { Result } from "@polkadot/types"
-import { padFeeByPercentage, u32ToLeBytes } from "./utils"
+import { ensureValidationSuccess, padFeeByPercentage, u32ToLeBytes } from "./utils"
 import { TransferInterface as KusamaTransferInterface } from "./transfers/forKusama/transferInterface"
 import { Context } from "."
 
 export type Transfer = {
+    kind: Extract<TransferKind, "kusama->polkadot" | "polkadot->kusama">
     input: {
         registry: AssetRegistry
         sourceAccount: string
@@ -127,7 +129,7 @@ export type ValidationLog = {
     message: string
 }
 
-export type ValidationResult = {
+export type ValidatedTransfer = Transfer & {
     logs: ValidationLog[]
     success: boolean
     data: {
@@ -136,7 +138,6 @@ export type ValidationResult = {
         tokenBalance: bigint
         assetHubDryRunError: any
     }
-    transfer: Transfer
 }
 
 export type MessageReceipt = {
@@ -338,7 +339,7 @@ export class KusamaTransfer<T extends EthereumProviderTypes> implements KusamaTr
         }
     }
 
-    async rawTx(
+    async tx(
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
@@ -408,6 +409,7 @@ export class KusamaTransfer<T extends EthereumProviderTypes> implements KusamaTr
         }
 
         return {
+            kind: `${this.from.kind}->${this.to.kind}` as Transfer["kind"],
             input: {
                 registry: this.info.registry,
                 sourceAccount,
@@ -429,7 +431,18 @@ export class KusamaTransfer<T extends EthereumProviderTypes> implements KusamaTr
         }
     }
 
-    async validate(transfer: Transfer): Promise<ValidationResult> {
+    async build(
+        sourceAccount: string,
+        beneficiaryAccount: string,
+        tokenAddress: string,
+        amount: bigint,
+    ): Promise<ValidatedTransfer> {
+        const fee = await this.fee(tokenAddress)
+        const transfer = await this.tx(sourceAccount, beneficiaryAccount, tokenAddress, amount, fee)
+        return ensureValidationSuccess(await this.validate(transfer))
+    }
+
+    async validate(transfer: Transfer): Promise<ValidatedTransfer> {
         const connections = await this.#connections()
         let sourceAssetHub = connections.sourceAssetHub
         let destAssetHub = connections.destAssetHub
@@ -576,7 +589,7 @@ export class KusamaTransfer<T extends EthereumProviderTypes> implements KusamaTr
                 tokenBalance,
                 assetHubDryRunError,
             },
-            transfer,
+            ...transfer,
         }
     }
 

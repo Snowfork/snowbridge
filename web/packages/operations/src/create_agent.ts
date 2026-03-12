@@ -36,10 +36,10 @@ export const createAgent = async (agentId: string) => {
         const agentCreationImpl = api.createAgent()
 
         // Step 1. Create an agent creation tx
-        const creation = await agentCreationImpl.rawTx(ETHEREUM_ACCOUNT_PUBLIC, agentId)
+        const creation = await agentCreationImpl.tx(ETHEREUM_ACCOUNT_PUBLIC, agentId)
 
         // Step 2. Validate the transaction.
-        const validation = await agentCreationImpl.validateTx(creation)
+        const validation = await agentCreationImpl.validate(creation)
 
         // Check validation logs for errors
         const errorLogs = validation.logs.filter(

@@ -24,10 +24,11 @@ import {
     DeliveryFee,
     MessageReceipt,
     Transfer,
-    ValidationResult,
+    ValidatedTransfer,
 } from "../../toEthereum_v2"
 import { Context } from "../.."
 import { TransferInterface } from "./transferInterface"
+import { ensureValidationSuccess } from "../../utils"
 import {
     buildContractCallHex,
     estimateFeesFromAssetHub,
@@ -108,7 +109,7 @@ export class ERC20FromAH<T extends EthereumProviderTypes> implements TransferInt
         return fees
     }
 
-    async rawTx(
+    async tx(
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
@@ -201,6 +202,7 @@ export class ERC20FromAH<T extends EthereumProviderTypes> implements TransferInt
             parachain.tx.polkadotXcm.execute(xcm, MaxWeight)
 
         return {
+            kind: "polkadot->ethereum",
             input: {
                 registry,
                 sourceAccount,
@@ -223,7 +225,39 @@ export class ERC20FromAH<T extends EthereumProviderTypes> implements TransferInt
         }
     }
 
-    async validate(transfer: Transfer): Promise<ValidationResult> {
+    async build(
+        sourceAccount: string,
+        beneficiaryAccount: string,
+        tokenAddress: string,
+        amount: bigint,
+        options?: {
+            fee?: {
+                padPercentage?: bigint
+                slippagePadPercentage?: bigint
+                defaultFee?: bigint
+                feeTokenLocation?: any
+                claimerLocation?: any
+                contractCall?: ContractCall
+            }
+            tx?: {
+                claimerLocation?: any
+                contractCall?: ContractCall
+            }
+        },
+    ): Promise<ValidatedTransfer> {
+        const fee = await this.fee(tokenAddress, options?.fee)
+        const transfer = await this.tx(
+            sourceAccount,
+            beneficiaryAccount,
+            tokenAddress,
+            amount,
+            fee,
+            options?.tx,
+        )
+        return ensureValidationSuccess(await this.validate(transfer))
+    }
+
+    async validate(transfer: Transfer): Promise<ValidatedTransfer> {
         return validateTransferFromAssetHub(this.context, transfer)
     }
 

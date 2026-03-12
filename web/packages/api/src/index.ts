@@ -17,6 +17,7 @@ import {
     EthereumProvider,
     EthereumProviderTypes,
     Parachain,
+    TransferKind as BaseTransferKind,
     TransferRoute,
 } from "@snowbridge/base-types"
 import { CreateAgent } from "./registration/agent/createAgent"
@@ -390,8 +391,11 @@ export type TransferImplementation<T extends EthereumProviderTypes = EthereumPro
     | ({ kind: "polkadot->ethereum_l2" } & ToEthereumL2TransferInterface<T>)
     | ({ kind: "ethereum_l2->polkadot" } & ToPolkadotL2TransferInterface<T>)
 
-type TransferKind<T extends EthereumProviderTypes> = TransferImplementation<T>["kind"]
-type TransferForKind<K extends TransferKind<T>, T extends EthereumProviderTypes> = Extract<
+type TransferKindFor<T extends EthereumProviderTypes> = Extract<
+    TransferImplementation<T>["kind"],
+    BaseTransferKind
+>
+type TransferForKind<K extends TransferKindFor<T>, T extends EthereumProviderTypes> = Extract<
     TransferImplementation<T>,
     { kind: K }
 >
@@ -399,7 +403,7 @@ type TransferFromTo<
     F extends ChainId,
     To extends ChainId,
     T extends EthereumProviderTypes,
-> = TransferForKind<Extract<`${F["kind"]}->${To["kind"]}`, TransferKind<T>>, T>
+> = TransferForKind<Extract<`${F["kind"]}->${To["kind"]}`, TransferKindFor<T>>, T>
 type ProviderTypesFor<P extends EthereumProvider<any>> = P["providerTypes"]
 
 function withKind<K extends TransferImplementation["kind"], T>(

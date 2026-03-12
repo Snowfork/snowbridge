@@ -4,7 +4,7 @@ import {
     DeliveryFee,
     MessageReceipt,
     Transfer,
-    ValidationResult,
+    ValidatedTransfer,
 } from "../../toPolkadotSnowbridgeV2"
 
 export interface TransferInterface<T extends EthereumProviderTypes> {
@@ -23,7 +23,7 @@ export interface TransferInterface<T extends EthereumProviderTypes> {
         },
     ): Promise<DeliveryFee>
 
-    rawTx(
+    tx(
         tokenAddress: string,
         amount: bigint,
         sourceAccount: string,
@@ -35,7 +35,28 @@ export interface TransferInterface<T extends EthereumProviderTypes> {
         },
     ): Promise<Transfer<T>>
 
-    validate(transfer: Transfer<T>): Promise<ValidationResult<T>>
+    validate(transfer: Transfer<T>): Promise<ValidatedTransfer<T>>
+
+    build(
+        tokenAddress: string,
+        amount: bigint,
+        sourceAccount: string,
+        beneficiaryAccount: string,
+        options?: {
+            fee?: {
+                paddFeeByPercentage?: bigint
+                feeAsset?: any
+                customXcm?: any[]
+                overrideRelayerFee?: bigint
+                l2PadFeeByPercentage?: bigint
+                fillDeadlineBuffer?: bigint
+            }
+            tx?: {
+                customXcm?: any[]
+                fillDeadlineBuffer?: bigint
+            }
+        },
+    ): Promise<ValidatedTransfer<T>>
 
     messageId(receipt: T["TransactionReceipt"]): Promise<MessageReceipt | null>
 }

@@ -116,6 +116,27 @@ export function padFeeByPercentage(fee: bigint, padPercent: bigint) {
     return (fee * (100n + padPercent)) / 100n
 }
 
+export class ValidationError<
+    T extends { success: boolean; logs: { message: string }[] },
+> extends Error {
+    readonly validation: T
+
+    constructor(validation: T) {
+        super("Validation failed.")
+        this.name = "ValidationError"
+        this.validation = validation
+    }
+}
+
+export function ensureValidationSuccess<
+    T extends { success: boolean; logs: { message: string }[] },
+>(validation: T): T {
+    if (validation.success) {
+        return validation
+    }
+    throw new ValidationError(validation)
+}
+
 export function u32ToLeBytes(value: number): Uint8Array {
     if (!Number.isInteger(value) || value < 0 || value > 0xffffffff) {
         throw new Error(`Value out of u32 range: ${value}`)
