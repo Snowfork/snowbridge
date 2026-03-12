@@ -14,7 +14,7 @@ import {
     claimerFromBeneficiary,
     claimerLocationToBytes,
     DeliveryFee,
-    getMessageReceipt as getSharedMessageReceipt,
+    messageId as getSharedMessageReceipt,
     Transfer,
     ValidationKind,
     ValidationResult,
@@ -53,7 +53,7 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
         return this.route.to
     }
 
-    async getDeliveryFee(
+    async fee(
         tokenAddress: string,
         options?: {
             paddFeeByPercentage?: bigint
@@ -212,7 +212,7 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
         }
     }
 
-    async createTransfer(
+    async rawTx(
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
@@ -355,7 +355,7 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
         }
     }
 
-    async validateTransfer(transfer: Transfer<T>): Promise<ValidationResult<T>> {
+    async validate(transfer: Transfer<T>): Promise<ValidationResult<T>> {
         const context = this.context
         const { tx } = transfer
         const { amount, sourceAccount, tokenAddress, registry, destinationParaId } = transfer.input
@@ -648,7 +648,7 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
         }
     }
 
-    async getMessageReceipt(receipt: T["TransactionReceipt"]) {
+    async messageId(receipt: T["TransactionReceipt"]) {
         return getSharedMessageReceipt(this.context.ethereumProvider, receipt)
     }
 }

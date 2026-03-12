@@ -66,7 +66,7 @@ export type MessageReceiptEvm = {
 export interface TransferInterface<T extends EthereumProviderTypes> {
     readonly context: Context<T>
 
-    getDeliveryFee(
+    fee(
         tokenAddress: string,
         options?: {
             padPercentage?: bigint
@@ -78,7 +78,7 @@ export interface TransferInterface<T extends EthereumProviderTypes> {
         },
     ): Promise<DeliveryFee>
 
-    createTransfer(
+    rawTx(
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
@@ -90,7 +90,7 @@ export interface TransferInterface<T extends EthereumProviderTypes> {
         },
     ): Promise<TransferEvm<T>>
 
-    validateTransfer(transfer: TransferEvm<T>): Promise<ValidationResultEvm<T>>
+    validate(transfer: TransferEvm<T>): Promise<ValidationResultEvm<T>>
 
-    getMessageReceipt(receipt: T["TransactionReceipt"]): Promise<MessageReceiptEvm>
+    messageId(receipt: T["TransactionReceipt"]): Promise<MessageReceiptEvm>
 }

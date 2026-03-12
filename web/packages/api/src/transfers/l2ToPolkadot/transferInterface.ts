@@ -10,7 +10,7 @@ import {
 export interface TransferInterface<T extends EthereumProviderTypes> {
     readonly context: Context<T>
 
-    getDeliveryFee(
+    fee(
         tokenAddress: string,
         amount: bigint,
         options?: {
@@ -23,7 +23,7 @@ export interface TransferInterface<T extends EthereumProviderTypes> {
         },
     ): Promise<DeliveryFee>
 
-    createTransfer(
+    rawTx(
         tokenAddress: string,
         amount: bigint,
         sourceAccount: string,
@@ -35,7 +35,7 @@ export interface TransferInterface<T extends EthereumProviderTypes> {
         },
     ): Promise<Transfer<T>>
 
-    validateTransfer(transfer: Transfer<T>): Promise<ValidationResult<T>>
+    validate(transfer: Transfer<T>): Promise<ValidationResult<T>>
 
-    getMessageReceipt(receipt: T["TransactionReceipt"]): Promise<MessageReceipt | null>
+    messageId(receipt: T["TransactionReceipt"]): Promise<MessageReceipt | null>
 }

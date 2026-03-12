@@ -194,7 +194,7 @@ export class KusamaTransfer<T extends EthereumProviderTypes> implements KusamaTr
         return { sourceAssetHub: polkadotAssetHub, destAssetHub: kusamaAssetHub }
     }
 
-    async getDeliveryFee(tokenAddress: string): Promise<DeliveryFee> {
+    async fee(tokenAddress: string): Promise<DeliveryFee> {
         const { sourceAssetHub, destAssetHub } = await this.#connections()
         let baseFeeInStorage = await getStorageItem(sourceAssetHub, ":XcmBridgeHubRouterBaseFee:")
         let xcmBridgeBaseFee: bigint
@@ -338,7 +338,7 @@ export class KusamaTransfer<T extends EthereumProviderTypes> implements KusamaTr
         }
     }
 
-    async createTransfer(
+    async rawTx(
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
@@ -429,7 +429,7 @@ export class KusamaTransfer<T extends EthereumProviderTypes> implements KusamaTr
         }
     }
 
-    async validateTransfer(transfer: Transfer): Promise<ValidationResult> {
+    async validate(transfer: Transfer): Promise<ValidationResult> {
         const connections = await this.#connections()
         let sourceAssetHub = connections.sourceAssetHub
         let destAssetHub = connections.destAssetHub

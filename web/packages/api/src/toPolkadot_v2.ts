@@ -216,7 +216,7 @@ export class V1ToPolkadotAdapter<T extends EthereumProviderTypes>
         return this.route.to
     }
 
-    async getDeliveryFee(
+    async fee(
         tokenAddress: string,
         options?: {
             paddFeeByPercentage?: bigint
@@ -295,7 +295,7 @@ export class V1ToPolkadotAdapter<T extends EthereumProviderTypes>
         })
     }
 
-    async createTransfer(
+    async rawTx(
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
@@ -381,9 +381,7 @@ export class V1ToPolkadotAdapter<T extends EthereumProviderTypes>
         })
     }
 
-    async validateTransfer(
-        transfer: ToPolkadotV2Transfer<T>,
-    ): Promise<ToPolkadotV2ValidationResult<T>> {
+    async validate(transfer: ToPolkadotV2Transfer<T>): Promise<ToPolkadotV2ValidationResult<T>> {
         const context = this.context
         const v1Transfer = toV1Transfer<T>(transfer)
         const { tx } = v1Transfer
@@ -565,7 +563,7 @@ export class V1ToPolkadotAdapter<T extends EthereumProviderTypes>
         } as ToPolkadotV2ValidationResult<T>
     }
 
-    async getMessageReceipt(receipt: T["TransactionReceipt"]): Promise<MessageReceipt | null> {
+    async messageId(receipt: T["TransactionReceipt"]): Promise<MessageReceipt | null> {
         const context = this.context
         const messageAccepted =
             context.ethereumProvider.scanGatewayV1OutboundMessageAccepted(receipt)

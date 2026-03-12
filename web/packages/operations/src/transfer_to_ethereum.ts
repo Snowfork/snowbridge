@@ -41,15 +41,15 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
 
     console.log("Asset Hub to Ethereum")
     {
-        const transferImpl = api.transfer(
+        const transferImpl = api.sender(
             { kind: "polkadot", id: sourceParaId },
             { kind: "ethereum", id: registry.ethChainId },
         )
         // Step 1. Get the delivery fee for the transaction
-        const fee = await transferImpl.getDeliveryFee(TOKEN_CONTRACT!)
+        const fee = await transferImpl.fee(TOKEN_CONTRACT!)
 
         // Step 2. Create a transfer tx
-        const transfer = await transferImpl.createTransfer(
+        const transfer = await transferImpl.rawTx(
             POLKADOT_ACCOUNT_PUBLIC,
             ETHEREUM_ACCOUNT_PUBLIC,
             TOKEN_CONTRACT!,
@@ -80,7 +80,7 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
         // )
 
         // Step 4. Validate the transaction.
-        const validation = await transferImpl.validateTransfer(transfer)
+        const validation = await transferImpl.validate(transfer)
         console.log("validation result", validation)
 
         // Step 5. Check validation logs for errors

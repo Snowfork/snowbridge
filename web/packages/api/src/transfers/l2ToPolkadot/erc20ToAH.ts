@@ -19,7 +19,7 @@ import {
     claimerFromBeneficiary,
     claimerLocationToBytes,
     DeliveryFee,
-    getMessageReceipt as getSharedMessageReceipt,
+    messageId as getSharedMessageReceipt,
     ValidationKind,
 } from "../../toPolkadotSnowbridgeV2"
 import {
@@ -52,7 +52,7 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
         return this.route.to
     }
 
-    async getDeliveryFee(
+    async fee(
         l2TokenAddress: string,
         amount: bigint,
         options?: {
@@ -218,7 +218,7 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
         }
     }
 
-    async createTransfer(
+    async rawTx(
         l2TokenAddress: string,
         amount: bigint,
         sourceAccount: string,
@@ -407,7 +407,7 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
         }
     }
 
-    async validateTransfer(transfer: Transfer<T>): Promise<ValidationResult<T>> {
+    async validate(transfer: Transfer<T>): Promise<ValidationResult<T>> {
         const context = this.context
         const { tx } = transfer
         const { amount, sourceAccount, tokenAddress, registry, l2TokenAddress, sourceChainId } =
@@ -607,7 +607,7 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
         }
     }
 
-    async getMessageReceipt(receipt: T["TransactionReceipt"]) {
+    async messageId(receipt: T["TransactionReceipt"]) {
         return getSharedMessageReceipt(this.context.ethereumProvider, receipt)
     }
 }

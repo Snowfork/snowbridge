@@ -63,8 +63,5 @@ export interface RegistrationInterface<T extends EthereumProviderTypes> {
         registration: TokenRegistration<T>,
     ): Promise<RegistrationValidationResult<T>>
 
-    getMessageReceipt(
-        context: Context<T>,
-        receipt: T["TransactionReceipt"],
-    ): Promise<MessageReceipt | null>
+    messageId(context: Context<T>, receipt: T["TransactionReceipt"]): Promise<MessageReceipt | null>
 }

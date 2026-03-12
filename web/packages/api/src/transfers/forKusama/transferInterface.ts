@@ -6,9 +6,9 @@ import { EthereumProviderTypes } from "@snowbridge/base-types"
 export interface TransferInterface<T extends EthereumProviderTypes> {
     readonly context: Context<T>
 
-    getDeliveryFee(tokenAddress: string): Promise<DeliveryFee>
+    fee(tokenAddress: string): Promise<DeliveryFee>
 
-    createTransfer(
+    rawTx(
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
@@ -16,7 +16,7 @@ export interface TransferInterface<T extends EthereumProviderTypes> {
         fee: DeliveryFee,
     ): Promise<Transfer>
 
-    validateTransfer(transfer: Transfer): Promise<ValidationResult>
+    validate(transfer: Transfer): Promise<ValidationResult>
 
     signAndSend(
         transfer: Transfer,

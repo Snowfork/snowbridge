@@ -67,20 +67,20 @@ export const transferToPolkadot = async (
     console.log("Ethereum to Polkadot")
     {
         // Step 0. Create a transfer implementation
-        const transferImpl = api.transfer(
+        const transferImpl = api.sender(
             { kind: "ethereum", id: registry.ethChainId },
             { kind: "polkadot", id: destParaId },
         )
         // Step 1. Get the delivery fee for the transaction
         const feeAssetLocation =
             feeAsset?.toLowerCase() === "dot" ? xcmBuilder.DOT_LOCATION : undefined
-        let fee = await transferImpl.getDeliveryFee(TOKEN_CONTRACT, {
+        let fee = await transferImpl.fee(TOKEN_CONTRACT, {
             feeAsset: feeAssetLocation,
         })
 
         console.log("fee: ", fee)
         // Step 2. Create a transfer tx
-        const transfer = await transferImpl.createTransfer(
+        const transfer = await transferImpl.rawTx(
             ETHEREUM_ACCOUNT_PUBLIC,
             POLKADOT_ACCOUNT_PUBLIC,
             TOKEN_CONTRACT,
@@ -89,7 +89,7 @@ export const transferToPolkadot = async (
         )
 
         // Step 3. Validate the transaction.
-        const validation = await transferImpl.validateTransfer(transfer)
+        const validation = await transferImpl.validate(transfer)
         console.log("validation result", validation)
 
         // Step 4. Check validation logs for errors
@@ -127,7 +127,7 @@ export const transferToPolkadot = async (
             }
 
             // Step 7. Get the message receipt for tracking purposes
-            const message = await transferImpl.getMessageReceipt(receipt)
+            const message = await transferImpl.messageId(receipt)
             if (!message) {
                 throw Error(`Transaction ${receipt.hash} did not emit a message.`)
             }

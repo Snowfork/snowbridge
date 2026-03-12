@@ -182,7 +182,7 @@ export class TransferToPolkadot<T extends EthereumProviderTypes> implements Tran
         return this.#erc20Impl
     }
 
-    async getDeliveryFee(
+    async fee(
         tokenAddress: string,
         options?: {
             paddFeeByPercentage?: bigint
@@ -191,10 +191,10 @@ export class TransferToPolkadot<T extends EthereumProviderTypes> implements Tran
             overrideRelayerFee?: bigint
         },
     ): Promise<DeliveryFee> {
-        return this.#resolveByTokenAddress(tokenAddress).getDeliveryFee(tokenAddress, options)
+        return this.#resolveByTokenAddress(tokenAddress).fee(tokenAddress, options)
     }
 
-    async createTransfer(
+    async rawTx(
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
@@ -202,7 +202,7 @@ export class TransferToPolkadot<T extends EthereumProviderTypes> implements Tran
         fee: DeliveryFee,
         customXcm?: any[],
     ): Promise<Transfer<T>> {
-        return this.#resolveByTokenAddress(tokenAddress).createTransfer(
+        return this.#resolveByTokenAddress(tokenAddress).rawTx(
             sourceAccount,
             beneficiaryAccount,
             tokenAddress,
@@ -212,12 +212,12 @@ export class TransferToPolkadot<T extends EthereumProviderTypes> implements Tran
         )
     }
 
-    async validateTransfer(transfer: Transfer<T>): Promise<ValidationResult<T>> {
-        return this.#resolveByTokenAddress(transfer.input.tokenAddress).validateTransfer(transfer)
+    async validate(transfer: Transfer<T>): Promise<ValidationResult<T>> {
+        return this.#resolveByTokenAddress(transfer.input.tokenAddress).validate(transfer)
     }
 
-    async getMessageReceipt(receipt: T["TransactionReceipt"]): Promise<MessageReceipt | null> {
-        return getMessageReceipt(this.context.ethereumProvider, receipt)
+    async messageId(receipt: T["TransactionReceipt"]): Promise<MessageReceipt | null> {
+        return messageId(this.context.ethereumProvider, receipt)
     }
 }
 
@@ -242,7 +242,7 @@ export function buildMessageId(
     return blake2AsHex(entropy)
 }
 
-export async function getMessageReceipt<T extends EthereumProviderTypes>(
+export async function messageId<T extends EthereumProviderTypes>(
     ethereumProvider: EthereumProvider<T>,
     receipt: T["TransactionReceipt"],
 ): Promise<MessageReceipt | null> {

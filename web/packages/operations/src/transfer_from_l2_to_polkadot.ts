@@ -81,16 +81,16 @@ export const transferToPolkadot = async (
     console.log("Ethereum to Polkadot")
     {
         // Step 0. Create a transfer implementation
-        const transferImpl = api.transfer(
+        const transferImpl = api.sender(
             { kind: "ethereum_l2", id: l2ChainId },
             { kind: "polkadot", id: destParaId },
         )
         // Step 1. Get the delivery fee for the transaction
-        let fee = await transferImpl.getDeliveryFee(TOKEN_CONTRACT, amount)
+        let fee = await transferImpl.fee(TOKEN_CONTRACT, amount)
 
         console.log("fee: ", fee)
         // Step 2. Create a transfer tx
-        const transfer = await transferImpl.createTransfer(
+        const transfer = await transferImpl.rawTx(
             TOKEN_CONTRACT,
             amount,
             ETHEREUM_ACCOUNT_PUBLIC,
@@ -99,7 +99,7 @@ export const transferToPolkadot = async (
         )
 
         // Step 3. Validate the transaction.
-        const validation = await transferImpl.validateTransfer(transfer)
+        const validation = await transferImpl.validate(transfer)
         console.log("validation result", validation)
 
         // Step 4. Check validation logs for errors
@@ -139,7 +139,7 @@ export const transferToPolkadot = async (
                 throw Error(`Transaction ${response.hash} not included.`)
             }
 
-            const message = await transferImpl.getMessageReceipt(receipt)
+            const message = await transferImpl.messageId(receipt)
             if (!message) {
                 throw Error(`Transaction ${receipt.hash} did not emit a message.`)
             }
