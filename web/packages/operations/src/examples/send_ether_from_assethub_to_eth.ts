@@ -1,5 +1,5 @@
 import { Keyring } from "@polkadot/keyring"
-import { assetsV2, createApi, historyV2, toEthereumSnowbridgeV2 } from "@snowbridge/api"
+import { assetsV2, createApi, TransferStatus, toEthereumSnowbridgeV2 } from "@snowbridge/api"
 import { EthersEthereumProvider } from "@snowbridge/provider-ethers"
 import { formatUnits, Wallet } from "ethers"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
@@ -103,13 +103,10 @@ import { bridgeInfoFor } from "@snowbridge/registry"
 
     // Step 7. Poll for message completion
     while (true) {
-        const status = await historyV2.toEthereumTransferById(
-            context.graphqlApiUrl(), // GraphQL endpoint to query
-            response.messageId,
-        )
-        if (status !== undefined && status.status !== historyV2.TransferStatus.Pending) {
+        const status = await api.checkTxStatus(response.messageId)
+        if (status !== undefined && status.status !== TransferStatus.Pending) {
             console.dir(status, { depth: 100 })
-            console.log("tx complete:", historyV2.TransferStatus[status.status])
+            console.log("tx complete:", TransferStatus[status.status])
             break
         }
         console.dir(status, { depth: 100 })
@@ -118,5 +115,5 @@ import { bridgeInfoFor } from "@snowbridge/registry"
     }
 
     // Clean up all open connections
-    await context.destroyContext()
+    await api.destroy()
 })()
