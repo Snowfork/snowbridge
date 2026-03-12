@@ -169,7 +169,7 @@ export class InterParachainTransfer<T extends EthereumProviderTypes>
         return this.route.to
     }
 
-    async getDeliveryFee(
+    async fee(
         tokenAddress: string,
         options?: {
             padPercentage?: bigint
@@ -226,7 +226,7 @@ export class InterParachainTransfer<T extends EthereumProviderTypes>
         }
     }
 
-    async createTransfer(
+    async rawTx(
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
@@ -295,7 +295,7 @@ export class InterParachainTransfer<T extends EthereumProviderTypes>
         }
     }
 
-    async validateTransfer(transfer: Transfer): Promise<ValidationResult> {
+    async validate(transfer: Transfer): Promise<ValidationResult> {
         const sourceParachain = await this.context.parachain(this.from.id)
         const destParachain = await this.context.parachain(this.to.id)
 

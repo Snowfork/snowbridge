@@ -67,20 +67,20 @@ export const transferForKusama = async (
     {
         const transferImpl =
             direction == Direction.ToPolkadot
-                ? api.transfer(
+                ? api.sender(
                       { kind: "kusama", id: registry.kusama!.assetHubParaId },
                       { kind: "polkadot", id: registry.assetHubParaId },
                   )
-                : api.transfer(
+                : api.sender(
                       { kind: "polkadot", id: registry.assetHubParaId },
                       { kind: "kusama", id: registry.kusama!.assetHubParaId },
                   )
 
         // Step 1. Get the delivery fee for the transaction
-        const fee = await transferImpl.getDeliveryFee(tokenAddress)
+        const fee = await transferImpl.fee(tokenAddress)
 
         // Step 2. Create a transfer tx
-        const transfer = await transferImpl.createTransfer(
+        const transfer = await transferImpl.rawTx(
             SOURCE_ACCOUNT_PUBLIC,
             DEST_ACCOUNT_PUBLIC,
             tokenAddress,
@@ -89,7 +89,7 @@ export const transferForKusama = async (
         )
 
         // Step 3. Validate
-        const validation = await transferImpl.validateTransfer(transfer)
+        const validation = await transferImpl.validate(transfer)
 
         // Step 4. Check validation logs for errors
         if (!validation.success) {

@@ -101,15 +101,15 @@ export const transferToPolkadot = async (
 
     console.log("# Ethereum to Asset Hub")
     {
-        const transferImpl = api.transfer(
+        const transferImpl = api.sender(
             { kind: "ethereum", id: registry.ethChainId },
             { kind: "polkadot", id: destinationChainId },
         )
         // Step 1. Get the delivery fee for the transaction
-        const fee = await transferImpl.getDeliveryFee(TOKEN_CONTRACT!)
+        const fee = await transferImpl.fee(TOKEN_CONTRACT!)
 
         // Step 2. Create a transfer tx
-        const transfer = await transferImpl.createTransfer(
+        const transfer = await transferImpl.rawTx(
             ETHEREUM_ACCOUNT_PUBLIC,
             POLKADOT_ACCOUNT_PUBLIC,
             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -119,7 +119,7 @@ export const transferToPolkadot = async (
         )
 
         // Step 3. Validate the transaction.
-        const validation = await transferImpl.validateTransfer(transfer)
+        const validation = await transferImpl.validate(transfer)
         console.log("validation result", validation)
 
         // Step 4. Check validation logs for errors
@@ -154,7 +154,7 @@ export const transferToPolkadot = async (
             }
 
             // Step 7. Get the message receipt for tracking purposes
-            const message = await transferImpl.getMessageReceipt(receipt)
+            const message = await transferImpl.messageId(receipt)
             if (!message) {
                 throw Error(`Transaction ${receipt.hash} did not emit a message.`)
             }

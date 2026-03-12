@@ -54,7 +54,7 @@ export class PNAFromAH<T extends EthereumProviderTypes> implements TransferInter
         return this.route.to
     }
 
-    async getDeliveryFee(
+    async fee(
         tokenAddress: string,
         options?: {
             padPercentage?: bigint
@@ -112,7 +112,7 @@ export class PNAFromAH<T extends EthereumProviderTypes> implements TransferInter
         return fees
     }
 
-    async createTransfer(
+    async rawTx(
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
@@ -225,7 +225,7 @@ export class PNAFromAH<T extends EthereumProviderTypes> implements TransferInter
         }
     }
 
-    async validateTransfer(transfer: Transfer): Promise<ValidationResult> {
+    async validate(transfer: Transfer): Promise<ValidationResult> {
         return validateTransferFromAssetHub(this.context, transfer)
     }
 

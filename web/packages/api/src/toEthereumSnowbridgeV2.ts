@@ -112,7 +112,7 @@ export class TransferToEthereum<T extends EthereumProviderTypes> implements Tran
         return this.#erc20Impl
     }
 
-    async getDeliveryFee(
+    async fee(
         tokenAddress: string,
         options?: {
             padPercentage?: bigint
@@ -123,10 +123,10 @@ export class TransferToEthereum<T extends EthereumProviderTypes> implements Tran
             contractCall?: ContractCall
         },
     ): Promise<DeliveryFee> {
-        return this.#resolveByTokenAddress(tokenAddress).getDeliveryFee(tokenAddress, options)
+        return this.#resolveByTokenAddress(tokenAddress).fee(tokenAddress, options)
     }
 
-    async createTransfer(
+    async rawTx(
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
@@ -137,7 +137,7 @@ export class TransferToEthereum<T extends EthereumProviderTypes> implements Tran
             contractCall?: ContractCall
         },
     ): Promise<Transfer> {
-        return this.#resolveByTokenAddress(tokenAddress).createTransfer(
+        return this.#resolveByTokenAddress(tokenAddress).rawTx(
             sourceAccount,
             beneficiaryAccount,
             tokenAddress,
@@ -147,8 +147,8 @@ export class TransferToEthereum<T extends EthereumProviderTypes> implements Tran
         )
     }
 
-    async validateTransfer(transfer: Transfer): Promise<ValidationResult> {
-        return this.#resolveByTokenAddress(transfer.input.tokenAddress).validateTransfer(transfer)
+    async validate(transfer: Transfer): Promise<ValidationResult> {
+        return this.#resolveByTokenAddress(transfer.input.tokenAddress).validate(transfer)
     }
 
     async signAndSend(

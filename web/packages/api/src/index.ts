@@ -454,11 +454,11 @@ export class SnowbridgeApi<P extends EthereumProvider<any>> {
     registerToken(): RegistrationInterface<ProviderTypesFor<P>> {
         return new RegisterToken<ProviderTypesFor<P>>()
     }
-    transfer<F extends ChainId, T extends ChainId>(
+    sender<F extends ChainId, T extends ChainId>(
         from: F,
         to: T,
     ): TransferFromTo<F, T, ProviderTypesFor<P>>
-    transfer<F extends ChainId, T extends ChainId>(
+    sender<F extends ChainId, T extends ChainId>(
         from: F,
         to: T,
     ): TransferFromTo<F, T, ProviderTypesFor<P>> {
@@ -604,7 +604,7 @@ export class SnowbridgeApi<P extends EthereumProvider<any>> {
         await this.context.destroyContext()
     }
 
-    async checkTxStatus(
+    async txStatus(
         messageId: string,
     ): Promise<ToPolkadotTransferResult | ToEthereumTransferResult | undefined> {
         const graphqlApiUrl = this.context.graphqlApiUrl()

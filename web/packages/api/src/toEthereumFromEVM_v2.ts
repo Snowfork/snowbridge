@@ -54,7 +54,7 @@ export class V1ToEthereumEvmAdapter<T extends EthereumProviderTypes>
         return this.route.to
     }
 
-    async getDeliveryFee(
+    async fee(
         tokenAddress: string,
         options?: {
             padPercentage?: bigint
@@ -97,7 +97,7 @@ export class V1ToEthereumEvmAdapter<T extends EthereumProviderTypes>
         )
     }
 
-    async createTransfer(
+    async rawTx(
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
@@ -238,7 +238,7 @@ export class V1ToEthereumEvmAdapter<T extends EthereumProviderTypes>
         }
     }
 
-    async validateTransfer(transfer: TransferEvm<T>): Promise<ValidationResultEvm<T>> {
+    async validate(transfer: TransferEvm<T>): Promise<ValidationResultEvm<T>> {
         const context = this.context
         const { registry, fee, tokenAddress, amount, beneficiaryAccount } = transfer.input
         const {
@@ -474,7 +474,7 @@ export class V1ToEthereumEvmAdapter<T extends EthereumProviderTypes>
         }
     }
 
-    async getMessageReceipt(receipt: T["TransactionReceipt"]): Promise<MessageReceiptEvm> {
+    async messageId(receipt: T["TransactionReceipt"]): Promise<MessageReceiptEvm> {
         const evmReceipt = receipt as {
             blockNumber: number
             blockHash: string

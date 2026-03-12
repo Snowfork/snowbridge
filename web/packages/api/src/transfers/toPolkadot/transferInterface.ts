@@ -10,7 +10,7 @@ export type MessageReceipt = ToPolkadotV1MessageReceipt | ToPolkadotV2MessageRec
 export interface TransferInterface<T extends EthereumProviderTypes> {
     readonly context: Context<T>
 
-    getDeliveryFee(
+    fee(
         tokenAddress: string,
         options?: {
             paddFeeByPercentage?: bigint
@@ -20,7 +20,7 @@ export interface TransferInterface<T extends EthereumProviderTypes> {
         },
     ): Promise<DeliveryFee>
 
-    createTransfer(
+    rawTx(
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
@@ -29,7 +29,7 @@ export interface TransferInterface<T extends EthereumProviderTypes> {
         customXcm?: any[], // Optional custom XCM instructions to append
     ): Promise<Transfer<T>>
 
-    validateTransfer(transfer: Transfer<T>): Promise<ValidationResult<T>>
+    validate(transfer: Transfer<T>): Promise<ValidationResult<T>>
 
-    getMessageReceipt(receipt: T["TransactionReceipt"]): Promise<MessageReceipt | null>
+    messageId(receipt: T["TransactionReceipt"]): Promise<MessageReceipt | null>
 }
