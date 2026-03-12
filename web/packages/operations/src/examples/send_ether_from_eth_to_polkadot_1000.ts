@@ -5,7 +5,6 @@ import { polkadot_mainnet } from "@snowbridge/registry"
 import { getDefaultProvider, Wallet } from "ethers"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { setTimeout } from "timers/promises"
-
 ;(async () => {
     await cryptoWaitReady()
     // Wallet Setup
@@ -23,21 +22,23 @@ import { setTimeout } from "timers/promises"
 
     console.log("eth", ETHEREUM_ACCOUNT_PUBLIC, "sub", POLKADOT_ACCOUNT_PUBLIC)
 
-
     // 1. Initialize API
-    const api = createApi({ info: polkadot_mainnet, ethereumProvider: new EthersEthereumProvider() })
+    const api = createApi({
+        info: polkadot_mainnet,
+        ethereumProvider: new EthersEthereumProvider(),
+    })
 
     // 2. Get a send builder
     const {
-        chains: { mainnet, assetHub },
+        chains: { ethereum, assetHub },
     } = polkadot_mainnet
-    const sender = api.transfer(mainnet, assetHub)
+    const sender = api.sender(ethereum, assetHub)
 
     // 3. Get Fee
-    const fee = await sender.getDeliveryFee(assetsV2.ETHER_TOKEN_ADDRESS)
+    const fee = await sender.fee(assetsV2.ETHER_TOKEN_ADDRESS)
 
     // 4. Build Tx
-    const createdTransfer = await sender.createTransfer(
+    const createdTransfer = await sender.rawTx(
         ETHEREUM_ACCOUNT_PUBLIC,
         POLKADOT_ACCOUNT_PUBLIC,
         assetsV2.ETHER_TOKEN_ADDRESS, // Ether address
@@ -46,7 +47,7 @@ import { setTimeout } from "timers/promises"
     )
 
     // 5. Dry-run Tx
-    const validation = await sender.validateTransfer(createdTransfer)
+    const validation = await sender.validate(createdTransfer)
     console.log("validation result", validation)
 
     // 6. Check errors
@@ -63,7 +64,7 @@ import { setTimeout } from "timers/promises"
     }
 
     // 9. Get message id
-    const message = await sender.getMessageReceipt(receipt)
+    const message = await sender.messageId(receipt)
     if (!message) {
         throw Error(`Transaction ${receipt.hash} did not emit a message.`)
     }
@@ -77,7 +78,7 @@ import { setTimeout } from "timers/promises"
 
     // 10. Poll Tx Status
     while (true) {
-        const status = await api.checkTxStatus(messageId)
+        const status = await api.txStatus(messageId)
         if (status !== undefined && status.status !== TransferStatus.Pending) {
             console.dir(status, { depth: 100 })
             console.log("tx complete:", TransferStatus[status.status])

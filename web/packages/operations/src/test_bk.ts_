@@ -138,7 +138,7 @@ function test_case1_non_constants(from: ChainId, to: ChainId) {
         bridge: polkadot_mainnet,
     })
 
-    const b = api.transfer(from, to)
+    const b = api.sender(from, to)
     if (b.kind == "ethereum->polkadot") {
         b.f1()
     }
@@ -149,7 +149,7 @@ function test_case2_constants(paraId: number, l2chainId: number) {
         bridge: polkadot_mainnet,
     })
 
-    const a = api.transfer({ kind: "polkadot", id: paraId }, { kind: "ethereum", id: l2chainId })
+    const a = api.sender({ kind: "polkadot", id: paraId }, { kind: "ethereum", id: l2chainId })
     a.f2()
 }
 
@@ -161,7 +161,7 @@ function test_case3_chains(chains: Chain[]) {
     const ethereum = chains[0]
     const polkadot = chains[2]
 
-    const b = api.transfer(ethereum, polkadot)
+    const b = api.sender(ethereum, polkadot)
     const b = api.addtip(etransferthereum, polkadot)
     if (b.kind == "ethereum->polkadot") {
         b.f1()

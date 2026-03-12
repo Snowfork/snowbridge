@@ -41,16 +41,16 @@ import { bridgeInfoFor } from "@snowbridge/registry"
     const SOURCE_PARACHAIN = 1000
 
     console.log("Asset Hub to Ethereum")
-    const transferImpl = api.transfer(
+    const transferImpl = api.sender(
         { kind: "polkadot", id: SOURCE_PARACHAIN },
         { kind: "ethereum", id: registry.ethChainId },
     )
     // Step 1. Get the delivery fee for the transaction
-    const fee = await transferImpl.getDeliveryFee(TOKEN_CONTRACT)
+    const fee = await transferImpl.fee(TOKEN_CONTRACT)
 
     // Step 2. Create a transfer tx
     const amount = 15_000_000_000_000n // 0.000015 ETH
-    const transfer = await transferImpl.createTransfer(
+    const transfer = await transferImpl.rawTx(
         POLKADOT_ACCOUNT_PUBLIC, // The source account
         ETHEREUM_ACCOUNT_PUBLIC, // The destination account
         TOKEN_CONTRACT, // The transfer token
@@ -74,7 +74,7 @@ import { bridgeInfoFor } from "@snowbridge/registry"
     )
 
     // Step 4. Validate the transaction.
-    const validation = await transferImpl.validateTransfer(transfer)
+    const validation = await transferImpl.validate(transfer)
     console.log("validation result", validation)
 
     // Step 5. Check validation for dry run errors
@@ -103,7 +103,7 @@ import { bridgeInfoFor } from "@snowbridge/registry"
 
     // Step 7. Poll for message completion
     while (true) {
-        const status = await api.checkTxStatus(response.messageId)
+        const status = await api.txStatus(response.messageId)
         if (status !== undefined && status.status !== TransferStatus.Pending) {
             console.dir(status, { depth: 100 })
             console.log("tx complete:", TransferStatus[status.status])

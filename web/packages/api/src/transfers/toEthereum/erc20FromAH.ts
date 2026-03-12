@@ -54,7 +54,7 @@ export class ERC20FromAH<T extends EthereumProviderTypes> implements TransferInt
         return this.route.to
     }
 
-    async getDeliveryFee(
+    async fee(
         tokenAddress: string,
         options?: {
             padPercentage?: bigint
@@ -108,7 +108,7 @@ export class ERC20FromAH<T extends EthereumProviderTypes> implements TransferInt
         return fees
     }
 
-    async createTransfer(
+    async rawTx(
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
@@ -223,7 +223,7 @@ export class ERC20FromAH<T extends EthereumProviderTypes> implements TransferInt
         }
     }
 
-    async validateTransfer(transfer: Transfer): Promise<ValidationResult> {
+    async validate(transfer: Transfer): Promise<ValidationResult> {
         return validateTransferFromAssetHub(this.context, transfer)
     }
 

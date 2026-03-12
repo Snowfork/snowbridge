@@ -41,16 +41,16 @@ import { bridgeInfoFor } from "@snowbridge/registry"
     const DESTINATION_PARACHAIN = 1000
 
     console.log("# Ethereum to Asset Hub")
-    const transferImpl = api.transfer(
+    const transferImpl = api.sender(
         { kind: "ethereum", id: registry.ethChainId },
         { kind: "polkadot", id: DESTINATION_PARACHAIN },
     )
     // Step 1. Get the delivery fee for the transaction
-    const fee = await transferImpl.getDeliveryFee(TOKEN_CONTRACT)
+    const fee = await transferImpl.fee(TOKEN_CONTRACT)
 
     // Step 2. Create a transfer tx.
     const amount = 15_000_000_000_000n // 0.000015 ETH
-    const transfer = await transferImpl.createTransfer(
+    const transfer = await transferImpl.rawTx(
         ETHEREUM_ACCOUNT_PUBLIC, // Source account
         POLKADOT_ACCOUNT_PUBLIC, // Destination account
         TOKEN_CONTRACT, // The erc20 token contract address
@@ -59,7 +59,7 @@ import { bridgeInfoFor } from "@snowbridge/registry"
     )
 
     // Step 3. Validate the transaction by dry-running on source and destination.
-    const validation = await transferImpl.validateTransfer(transfer)
+    const validation = await transferImpl.validate(transfer)
     console.log("validation result", validation)
 
     // Step 4. Check validation logs for dry errors
@@ -95,7 +95,7 @@ import { bridgeInfoFor } from "@snowbridge/registry"
     }
 
     // Step 6. Get the message receipt for tracking purposes
-    const message = await transferImpl.getMessageReceipt(receipt)
+    const message = await transferImpl.messageId(receipt)
     if (!message) {
         throw Error(`Transaction ${receipt.hash} did not emit a message.`)
     }
@@ -109,7 +109,7 @@ import { bridgeInfoFor } from "@snowbridge/registry"
 
     // Step 7. Poll for message completion
     while (true) {
-        const status = await api.checkTxStatus(messageId)
+        const status = await api.txStatus(messageId)
         if (status !== undefined && status.status !== TransferStatus.Pending) {
             console.dir(status, { depth: 100 })
             console.log("tx complete:", TransferStatus[status.status])

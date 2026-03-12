@@ -56,7 +56,7 @@ export class ERC20FromParachain<T extends EthereumProviderTypes> implements Tran
         return this.route.to
     }
 
-    async getDeliveryFee(
+    async fee(
         tokenAddress: string,
         options?: {
             padPercentage?: bigint
@@ -136,7 +136,7 @@ export class ERC20FromParachain<T extends EthereumProviderTypes> implements Tran
         return fees
     }
 
-    async createTransfer(
+    async rawTx(
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
@@ -274,7 +274,7 @@ export class ERC20FromParachain<T extends EthereumProviderTypes> implements Tran
         }
     }
 
-    async validateTransfer(transfer: Transfer): Promise<ValidationResult> {
+    async validate(transfer: Transfer): Promise<ValidationResult> {
         return validateTransferFromParachain(this.context, transfer)
     }
 

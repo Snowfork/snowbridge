@@ -113,7 +113,7 @@ export class V1ToEthereumAdapter<T extends EthereumProviderTypes>
         return this.route.to
     }
 
-    async getDeliveryFee(
+    async fee(
         tokenAddress: string,
         options?: {
             padPercentage?: bigint
@@ -153,7 +153,7 @@ export class V1ToEthereumAdapter<T extends EthereumProviderTypes>
         )
     }
 
-    async createTransfer(
+    async rawTx(
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
@@ -290,7 +290,7 @@ export class V1ToEthereumAdapter<T extends EthereumProviderTypes>
         }
     }
 
-    async validateTransfer(transfer: Transfer): Promise<ValidationResult> {
+    async validate(transfer: Transfer): Promise<ValidationResult> {
         const context = this.context
         const { registry, fee, tokenAddress, amount, beneficiaryAccount } = transfer.input
         const {

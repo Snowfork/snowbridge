@@ -7,10 +7,7 @@ import {
     RegistrationValidationResult,
 } from "./registrationInterface"
 import { Context } from "../../index"
-import {
-    getMessageReceipt as getSharedMessageReceipt,
-    ValidationKind,
-} from "../../toPolkadotSnowbridgeV2"
+import { messageId as getSharedMessageReceipt, ValidationKind } from "../../toPolkadotSnowbridgeV2"
 import { FeeInfo, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
 import { getOperatingStatus } from "../../status"
 import { DOT_LOCATION, erc20Location } from "../../xcmBuilder"
@@ -260,7 +257,7 @@ export class RegisterToken<T extends EthereumProviderTypes> implements Registrat
         }
     }
 
-    async getMessageReceipt(context: Context<T>, receipt: T["TransactionReceipt"]) {
+    async messageId(context: Context<T>, receipt: T["TransactionReceipt"]) {
         return getSharedMessageReceipt(context.ethereumProvider, receipt)
     }
 }

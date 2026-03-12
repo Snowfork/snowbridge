@@ -57,7 +57,7 @@ export class PNAFromParachain<T extends EthereumProviderTypes> implements Transf
         return this.route.to
     }
 
-    async getDeliveryFee(
+    async fee(
         tokenAddress: string,
         options?: {
             padPercentage?: bigint
@@ -144,7 +144,7 @@ export class PNAFromParachain<T extends EthereumProviderTypes> implements Transf
         return fees
     }
 
-    async createTransfer(
+    async rawTx(
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
@@ -284,7 +284,7 @@ export class PNAFromParachain<T extends EthereumProviderTypes> implements Transf
         }
     }
 
-    async validateTransfer(transfer: Transfer): Promise<ValidationResult> {
+    async validate(transfer: Transfer): Promise<ValidationResult> {
         return validateTransferFromParachain(this.context, transfer)
     }
 
