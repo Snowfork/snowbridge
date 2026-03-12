@@ -16,13 +16,6 @@ Smoke tests for a running E2E environment
 
 ## Assets
 
-### Token Registration
-
-Send an ethereum transaction to the Gateway to register a new wrapped token on the AssetHub parachain.
-
-```
-cargo test --test register_token -- --nocapture
-```
 ### Send Tokens
 
 Send an ethereum transaction to the Gateway to send tokens to the AssetHub parachain. Must have registered the token previously.

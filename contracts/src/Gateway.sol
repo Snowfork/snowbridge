@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.33;
+pragma solidity 0.8.34;
 
 import {MerkleProof} from "openzeppelin/utils/cryptography/MerkleProof.sol";
 import {Verification} from "./Verification.sol";
@@ -277,7 +277,7 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         override(IGatewayV1, IGatewayV2)
         returns (bool)
     {
-        return CallsV1.isTokenRegistered(token);
+        return CallsV2.isTokenRegistered(token);
     }
 
     function depositEther() external payable {
@@ -286,16 +286,6 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
 
     function queryForeignTokenID(address token) external view returns (bytes32) {
         return AssetsStorage.layout().tokenRegistry[token].foreignID;
-    }
-
-    // Total fee for registering a token
-    function quoteRegisterTokenFee() external view returns (uint256) {
-        return CallsV1.quoteRegisterTokenFee();
-    }
-
-    // Register an Ethereum-native token in the gateway and on AssetHub
-    function registerToken(address token) external payable nonreentrant {
-        CallsV1.registerToken(token);
     }
 
     // Total fee for sending a token

@@ -272,7 +272,7 @@ export async function validateTransferEvm(
         sourceAssetMetadata.decimals === source.info.tokenDecimals &&
         sourceAssetMetadata.symbol == source.info.tokenSymbols
     const [nativeBalance, tokenBalance] = await Promise.all([
-        sourceParachainImpl.getNativeBalance(sourceAccountHex),
+        sourceParachainImpl.getNativeBalance(sourceAccountHex, true),
         sourceParachainImpl.getTokenBalance(sourceAccountHex, registry.ethChainId, tokenAddress),
     ])
 

@@ -2,21 +2,29 @@ source_up_if_exists
 
 # Config for deploy script
 
+## For production deployment, FOUNDRY_PROFILE should be set to "production".
+export FOUNDRY_PROFILE=production
+export VERIFIER=etherscan
+export ETH_NETWORK=mainnet
+
+## Set the deployment stage for Snowbridge. Can be set to "polkadot_mainnet" or "westend_sepolia". This will determine which contracts to deploy and which configurations to use.
+export SNOWBRIDGE_DEPLOY_STAGE=polkadot_mainnet
+
+## The private key of the deployer account. Make sure to keep it secure and do not hardcode it in the script.
+export PRIVATE_KEY=0xprivate_key_here
+export ETHERSCAN_API_KEY=your-etherscan-api-key-here
+
+
 ## BeefyClient
-export RANDAO_COMMIT_DELAY=3
-export RANDAO_COMMIT_EXP=8
+export RANDAO_COMMIT_DELAY=128
+export RANDAO_COMMIT_EXP=24
 export MINIMUM_REQUIRED_SIGNATURES=17
-export PREV_RANDAO=377
 export ValidatorSetSize=600
 
 ## L2 Integration
-PRIVATE_KEY=0xprivate_key_here
-SEPOLIA_CHAIN=sepolia
-BASE_CHAIN=base-sepolia
-SEPOLIA_RPC_URL=https://eth-sepolia.g.alchemy.com/v2/your-api-key-here
-BASE_RPC_URL=https://base-sepolia.g.alchemy.com/v2/your-api-key-here
-ETHERSCAN_API_KEY=your-etherscan-api-key-here
-VERIFIER=etherscan
-
-export L1_SNOWBRIDGE_ADAPTOR_ADDRESS=0xA44626f738e4369f1774b84Fb28Fd10f5a73a76f
-export L2_SNOWBRIDGE_ADAPTOR_ADDRESS=0x7573a771677f30FD602722dB9F92c7a4429456A3
+export L1_NETWORK=mainnet
+export L2_NETWORK=base
+export L1_SNOWBRIDGE_ADAPTOR_ADDRESS=0xd3b11c36404b092645522b682832fcdee07d2668
+export L2_BASE_SNOWBRIDGE_ADAPTOR_ADDRESS=0x07fe4E7340976FC873B74bAfe3C3e5b0e01f3665
+export L2_ARBITRUM_SNOWBRIDGE_ADAPTOR_ADDRESS=0x836895Ad176235Dfe9C59b3df56C7579d90ea338
+export L2_OPTIMISM_SNOWBRIDGE_ADAPTOR_ADDRESS=0x836895Ad176235Dfe9C59b3df56C7579d90ea338

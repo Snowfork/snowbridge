@@ -1,4 +1,4 @@
-pragma solidity 0.8.33;
+pragma solidity 0.8.34;
 
 import "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
@@ -334,6 +334,52 @@ contract BeefyClientAdvancedTest is Test {
         );
 
         // Submit using Fiat-Shamir path with a real non-empty leaf proof
+        beefyClient.submitFiatShamir(
+            commitment, bitfield, finalProofs, leaf, leafProof, leafProofOrder
+        );
+        assertEq(beefyClient.latestMMRRoot(), mmrRoot, "MMR root updated");
+        assertEq(beefyClient.latestBeefyBlock(), uint64(1), "beefy block updated");
+    }
+
+    /// @dev Candidate nextValidatorSet ID may be more than nextValidatorSet.id + 1 (e.g. skip a set).
+    function testFiatShamirCommitWithNextValidatorSetIdMoreThanPlusOne() public {
+        // nextValidatorSet.id == VSET_ID + 1; use leaf.nextAuthoritySetID = VSET_ID + 3 (> id + 1)
+        BeefyClient.MMRLeaf memory leaf;
+        leaf.version = 0;
+        leaf.parentNumber = 0;
+        leaf.parentHash = bytes32(0);
+        leaf.nextAuthoritySetID = VSET_ID + 3;
+        leaf.nextAuthoritySetLen = uint32(VSET_LEN);
+        leaf.nextAuthoritySetRoot = keccak256(abi.encodePacked("next-authority-root"));
+        leaf.parachainHeadsRoot = bytes32(0);
+
+        bytes memory encodedLeaf = bytes.concat(
+            ScaleCodec.encodeU8(leaf.version),
+            ScaleCodec.encodeU32(leaf.parentNumber),
+            leaf.parentHash,
+            ScaleCodec.encodeU64(leaf.nextAuthoritySetID),
+            ScaleCodec.encodeU32(leaf.nextAuthoritySetLen),
+            leaf.nextAuthoritySetRoot,
+            leaf.parachainHeadsRoot
+        );
+        bytes32 leafHash = keccak256(encodedLeaf);
+
+        (bytes32 mmrRoot, bytes32[] memory leafProof, uint256 leafProofOrder) =
+            MerkleLib.buildMerkleWithTargetLeaf(16, 3, leafHash);
+
+        (BeefyClient.Commitment memory commitment, bytes32 commitmentHash) =
+            _buildCommitment(1, VSET_ID + 1, mmrRoot);
+
+        uint256 quorum = beefyClient.computeQuorum_public(VSET_LEN);
+        uint256[] memory bitfield = new uint256[](Bitfield.containerLength(VSET_LEN));
+        for (uint256 i = 0; i < quorum; i++) {
+            Bitfield.set(bitfield, i);
+        }
+
+        (, BeefyClient.ValidatorProof[] memory finalProofs) = _generateFiatShamirProofs(
+            commitment, commitmentHash, bitfield, FIAT_SHAMIR_REQUIRED_SIGNATURES
+        );
+
         beefyClient.submitFiatShamir(
             commitment, bitfield, finalProofs, leaf, leafProof, leafProofOrder
         );

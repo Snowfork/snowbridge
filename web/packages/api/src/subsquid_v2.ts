@@ -1,9 +1,8 @@
 import { queryByGraphQL } from "./subsquid"
 
 export {
-    fetchLatestBlocksSynced,
     fetchInterParachainMessageById,
-    fetchSyncStatusOfParachain,
+    fetchLatestBlockFromIndexer,
     queryByGraphQL,
 } from "./subsquid"
 

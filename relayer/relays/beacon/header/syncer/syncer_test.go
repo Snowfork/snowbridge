@@ -10,7 +10,6 @@ import (
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/api"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/mock"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/protocol"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/store"
 	"github.com/snowfork/snowbridge/relayer/relays/testutil"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -22,10 +21,10 @@ const TestUrl = "https://lodestar-sepolia.chainsafe.io"
 const MaxRedundancy = 20
 
 func newTestRunner() *Syncer {
-	return New(api.NewBeaconClient(TestUrl, TestUrl), &mock.Store{}, protocol.New(config.SpecSettings{
+	return New(api.NewBeaconClient(TestUrl), protocol.New(config.SpecSettings{
 		SlotsInEpoch:                 32,
 		EpochsPerSyncCommitteePeriod: 256,
-	}, MaxRedundancy))
+	}, MaxRedundancy), nil)
 }
 
 // Verifies that the Lodestar provided finalized endpoint matches the manually constructed finalized endpoint
@@ -60,11 +59,6 @@ func TestGetFinalizedUpdateAtSlot(t *testing.T) {
 func TestGetFinalizedUpdateWithSyncCommitteeUpdateAtSlot(t *testing.T) {
 	t.Skip("skip testing utility test")
 
-	beaconData64, err := testutil.LoadFile("64.ssz")
-	require.NoError(t, err)
-	beaconData129, err := testutil.LoadFile("129.ssz")
-	require.NoError(t, err)
-
 	headerAtSlot64, err := testutil.GetHeaderAtSlot(64)
 	require.NoError(t, err)
 	headerAtSlot129, err := testutil.GetHeaderAtSlot(129)
@@ -92,24 +86,16 @@ func TestGetFinalizedUpdateWithSyncCommitteeUpdateAtSlot(t *testing.T) {
 		Header: map[common.Hash]api.BeaconHeader{
 			common.HexToHash("0x3d0145a0f4565ac6fde12d4a4e7f5df35bec009ee9cb30abaac2eaab8de0d6c5"): headerAtSlot64,
 		},
-		BeaconStates: nil,
+		BeaconStates: map[uint64]bool{
+			64:  true,
+			129: true,
+		},
 	}
 
-	syncer := New(&mockAPI, &mock.Store{
-		BeaconStateData: map[uint64][]byte{
-			64:  beaconData64,
-			129: beaconData129,
-		},
-		StoredBeaconStateData: store.StoredBeaconData{
-			AttestedSlot:         129,
-			FinalizedSlot:        64,
-			AttestedBeaconState:  beaconData129,
-			FinalizedBeaconState: beaconData64,
-		},
-	}, protocol.New(config.SpecSettings{
+	syncer := New(&mockAPI, protocol.New(config.SpecSettings{
 		SlotsInEpoch:                 32,
 		EpochsPerSyncCommitteePeriod: 256,
-	}, MaxRedundancy))
+	}, MaxRedundancy), nil)
 
 	// Manually construct a finalized update
 	manualUpdate, err := syncer.GetFinalizedUpdateAtAttestedSlot(129, 0, true)
@@ -160,10 +146,10 @@ func TestFindAttestedAndFinalizedHeadersAtBoundary(t *testing.T) {
 		},
 	}
 
-	syncer := New(&mockAPI, &mock.Store{}, protocol.New(config.SpecSettings{
+	syncer := New(&mockAPI, protocol.New(config.SpecSettings{
 		SlotsInEpoch:                 32,
 		EpochsPerSyncCommitteePeriod: 256,
-	}, MaxRedundancy))
+	}, MaxRedundancy), nil)
 
 	attested, err := syncer.FindValidAttestedHeader(8000, 8160)
 	assert.NoError(t, err)
@@ -189,10 +175,10 @@ func TestFindAttestedAndFinalizedHeadersAtBoundary(t *testing.T) {
 		},
 	}
 
-	syncer = New(&mockAPI, &mock.Store{}, protocol.New(config.SpecSettings{
+	syncer = New(&mockAPI, protocol.New(config.SpecSettings{
 		SlotsInEpoch:                 32,
 		EpochsPerSyncCommitteePeriod: 256,
-	}, MaxRedundancy))
+	}, MaxRedundancy), nil)
 
 	attested, err = syncer.FindValidAttestedHeader(32576, 32704)
 	assert.NoError(t, err)
@@ -218,10 +204,10 @@ func TestFindAttestedAndFinalizedHeadersAtBoundary(t *testing.T) {
 		},
 	}
 
-	syncer = New(&mockAPI, &mock.Store{}, protocol.New(config.SpecSettings{
+	syncer = New(&mockAPI, protocol.New(config.SpecSettings{
 		SlotsInEpoch:                 32,
 		EpochsPerSyncCommitteePeriod: 256,
-	}, MaxRedundancy))
+	}, MaxRedundancy), nil)
 
 	attested, err = syncer.FindValidAttestedHeader(25076, 32736)
 	assert.NoError(t, err)
@@ -241,10 +227,10 @@ func TestFindAttestedAndFinalizedHeadersAtBoundary(t *testing.T) {
 		32448: {Slot: 32448},
 	}
 
-	syncer = New(&mockAPI, &mock.Store{}, protocol.New(config.SpecSettings{
+	syncer = New(&mockAPI, protocol.New(config.SpecSettings{
 		SlotsInEpoch:                 32,
 		EpochsPerSyncCommitteePeriod: 256,
-	}, MaxRedundancy))
+	}, MaxRedundancy), nil)
 
 	attested, err = syncer.FindValidAttestedHeader(32540, 32768)
 	assert.Error(t, err)

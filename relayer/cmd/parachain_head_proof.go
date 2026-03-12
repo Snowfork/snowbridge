@@ -7,7 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
-	"github.com/snowfork/snowbridge/relayer/relays/parachain"
+	"github.com/snowfork/snowbridge/relayer/relays/parachain-v2"
 	"github.com/spf13/cobra"
 )
 

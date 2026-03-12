@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.33;
+pragma solidity 0.8.34;
 
 import {TokenInfo, OperatingMode} from "../types/Common.sol";
 import {MultiAddress} from "./MultiAddress.sol";
@@ -133,7 +133,7 @@ struct SetTokenTransferFeesParams {
     uint128 assetHubCreateAssetFee;
     /// @dev The remote fee (DOT) for send tokens to AssetHub
     uint128 assetHubReserveTransferFee;
-    /// @dev extra fee to register an asset and discourage spamming (Ether)
+    /// @dev The extra fee to register an asset (Ether), though this field is now ignored and won't be applied, as the token registration in V1 is removed
     uint256 registerTokenFee;
 }
 

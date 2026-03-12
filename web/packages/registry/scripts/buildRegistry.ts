@@ -208,13 +208,13 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
             "84532": "https://base-sepolia-rpc.publicnode.com",
             "421614": "https://arbitrum-sepolia-rpc.publicnode.com",
         },
-        relaychainUrl: "wss://westend-rpc.n.dwellir.com",
+        relaychainUrl: "https://westend-rpc.polkadot.io",
         parachains: {
-            "1000": "wss://asset-hub-westend-rpc.n.dwellir.com",
-            "1002": "wss://bridge-hub-westend-rpc.n.dwellir.com",
+            "1000": "https://westend-asset-hub-rpc.polkadot.io",
+            "1002": "https://westend-bridge-hub-rpc.polkadot.io",
         },
         gatewayContract: "0x9ed8b47bc3417e3bd0507adc06e56e2fa360a4e9",
-        beefyContract: "0xa04460b1d8bbef33f54edb2c3115e3e4d41237a6",
+        beefyContract: "0xEBD1CFcF82BaA170b86BDe532f69A6A49c6c790D".toLowerCase(),
         assetHubParaId: 1000,
         bridgeHubParaId: 1002,
         v2_parachains: [1000],
@@ -878,6 +878,7 @@ async function indexParachain(
         info.accountType === "AccountId32"
             ? "0x0000000000000000000000000000000000000000000000000000000000000000"
             : "0x0000000000000000000000000000000000000000",
+        false,
     )
 
     let estimatedExecutionFeeDOT = 0n

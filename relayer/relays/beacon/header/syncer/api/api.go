@@ -43,16 +43,14 @@ type BeaconAPI interface {
 }
 
 type BeaconClient struct {
-	httpClient    http.Client
-	endpoint      string
-	stateEndpoint string
+	httpClient http.Client
+	endpoint   string
 }
 
-func NewBeaconClient(endpoint, stateEndpoint string) *BeaconClient {
+func NewBeaconClient(endpoint string) *BeaconClient {
 	return &BeaconClient{
 		http.Client{},
 		endpoint,
-		stateEndpoint,
 	}
 }
 
@@ -407,7 +405,7 @@ func (b *BeaconClient) GetLatestFinalizedUpdate() (LatestFinalisedUpdateResponse
 
 func (b *BeaconClient) GetBeaconState(stateIdOrSlot string) ([]byte, error) {
 	var data []byte
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/eth/v2/debug/beacon/states/%s", b.stateEndpoint, stateIdOrSlot), nil)
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/eth/v2/debug/beacon/states/%s", b.endpoint, stateIdOrSlot), nil)
 	if err != nil {
 		return data, err
 	}
@@ -440,7 +438,7 @@ func (b *BeaconClient) GetBeaconState(stateIdOrSlot string) ([]byte, error) {
 
 func (b *BeaconClient) GetBeaconBlockBytes(blockID common.Hash) ([]byte, error) {
 	var data []byte
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/eth/v2/beacon/blocks/%s", b.stateEndpoint, blockID), nil)
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/eth/v2/beacon/blocks/%s", b.endpoint, blockID), nil)
 	if err != nil {
 		return data, err
 	}

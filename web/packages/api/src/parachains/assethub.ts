@@ -22,7 +22,7 @@ export class AssetHubParachain extends ParachainBase {
     }
 
     getDotBalance(account: string): Promise<bigint> {
-        return this.getNativeBalance(account)
+        return this.getNativeBalance(account, true)
     }
 
     getAssets(ethChainId: number, pnas: PNAMap): Promise<AssetMap> {

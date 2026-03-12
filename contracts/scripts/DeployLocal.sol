@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.33;
+pragma solidity 0.8.34;
 
 import {WETH9} from "canonical-weth/WETH9.sol";
 import {Script} from "forge-std/Script.sol";
@@ -71,7 +71,6 @@ contract DeployLocal is Script {
         Initializer.Config memory config = Initializer.Config({
             mode: OperatingMode.Normal,
             deliveryCost: uint128(vm.envUint("DELIVERY_COST")),
-            registerTokenFee: uint128(vm.envUint("REGISTER_TOKEN_FEE")),
             assetHubCreateAssetFee: uint128(vm.envUint("CREATE_ASSET_FEE")),
             assetHubReserveTransferFee: uint128(vm.envUint("RESERVE_TRANSFER_FEE")),
             exchangeRate: ud60x18(vm.envUint("EXCHANGE_RATE")),

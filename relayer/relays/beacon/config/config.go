@@ -33,10 +33,10 @@ type DataStore struct {
 }
 
 type BeaconConfig struct {
-	Endpoint      string       `mapstructure:"endpoint"`
-	StateEndpoint string       `mapstructure:"stateEndpoint"`
-	Spec          SpecSettings `mapstructure:"spec"`
-	DataStore     DataStore    `mapstructure:"datastore"`
+	Endpoint             string       `mapstructure:"endpoint"`
+	StateServiceEndpoint string       `mapstructure:"stateServiceEndpoint"`
+	Spec                 SpecSettings `mapstructure:"spec"`
+	DataStore            DataStore    `mapstructure:"datastore"`
 }
 
 type SinkConfig struct {
@@ -69,6 +69,34 @@ func (c Config) Validate() error {
 }
 
 func (b BeaconConfig) Validate() error {
+	if err := b.validateCommon(); err != nil {
+		return err
+	}
+	// state service is required for beacon relay
+	if b.StateServiceEndpoint == "" {
+		return errors.New("source beacon setting [stateServiceEndpoint] is not set")
+	}
+	return nil
+}
+
+// ValidateForStateService validates the beacon config for use by the beacon state service.
+// Unlike Validate(), this requires DataStore settings instead of StateServiceEndpoint
+// (since the beacon state service IS the state service).
+func (b BeaconConfig) ValidateForStateService() error {
+	if err := b.validateCommon(); err != nil {
+		return err
+	}
+	// data store is required for beacon state service
+	if b.DataStore.Location == "" {
+		return errors.New("source beacon datastore [location] is not set")
+	}
+	if b.DataStore.MaxEntries == 0 {
+		return errors.New("source beacon datastore [maxEntries] is not set")
+	}
+	return nil
+}
+
+func (b BeaconConfig) validateCommon() error {
 	// spec settings
 	if b.Spec.EpochsPerSyncCommitteePeriod == 0 {
 		return errors.New("source beacon setting [epochsPerSyncCommitteePeriod] is not set")
@@ -79,19 +107,9 @@ func (b BeaconConfig) Validate() error {
 	if b.Spec.SyncCommitteeSize == 0 {
 		return errors.New("source beacon setting [syncCommitteeSize] is not set")
 	}
-	// data store
-	if b.DataStore.Location == "" {
-		return errors.New("source beacon datastore [location] is not set")
-	}
-	if b.DataStore.MaxEntries == 0 {
-		return errors.New("source beacon datastore [maxEntries] is not set")
-	}
-	// api endpoints
+	// api endpoint
 	if b.Endpoint == "" {
 		return errors.New("source beacon setting [endpoint] is not set")
-	}
-	if b.StateEndpoint == "" {
-		return errors.New("source beacon setting [stateEndpoint] is not set")
 	}
 	return nil
 }

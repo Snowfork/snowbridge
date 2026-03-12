@@ -73,10 +73,6 @@ lazy_static! {
 		.expect("cannot create keypair");
 	pub static ref BOB_PUBLIC: [u8; 32] = (*BOB).public().into();
 
-	pub static ref REGISTER_TOKEN_FEE: u64 = env::var("REGISTER_TOKEN_FEE")
-		.unwrap_or("200000000000000000".to_string())
-		.parse()
-		.unwrap();
 	pub static ref CREATE_ASSET_FEE: u128 = env::var("CREATE_ASSET_FEE")
 		.unwrap_or("10000000000000".to_string())
 		.parse()

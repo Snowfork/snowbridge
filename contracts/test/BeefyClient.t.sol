@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.33;
+pragma solidity 0.8.34;
 
 import {Strings} from "openzeppelin/utils/Strings.sol";
 import {Test} from "forge-std/Test.sol";
@@ -680,6 +680,39 @@ contract BeefyClientTest is Test {
         vm.expectRevert(BeefyClient.InvalidMMRLeaf.selector);
         beefyClient.submitFinal(
             commitment, bitfield, finalValidatorProofs, mmrLeaf, mmrLeafProofs, leafProofOrder
+        );
+    }
+
+    /// @dev Candidate nextValidatorSet ID must be > current nextValidatorSet.id; revert when less.
+    function testSubmitFailWithInvalidMMRLeafWhenNextAuthoritySetIdLessThanCurrent() public {
+        //initialize with previous set (nextValidatorSet.id = setId)
+        BeefyClient.Commitment memory commitment = initialize(setId - 1);
+
+        beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
+
+        vm.roll(block.number + randaoCommitDelay);
+        vm.prevrandao(bytes32(uint256(prevRandao)));
+        beefyClient.commitPrevRandao(commitHash);
+        createFinalProofs();
+
+        // nextValidatorSet.id == setId; set leaf to less than that
+        mmrLeaf.nextAuthoritySetID = uint64(setId > 0 ? setId - 1 : 0);
+        vm.expectRevert(BeefyClient.InvalidMMRLeaf.selector);
+        beefyClient.submitFinal(
+            commitment, bitfield, finalValidatorProofs, mmrLeaf, mmrLeafProofs, leafProofOrder
+        );
+    }
+
+    /// @dev FiatShamir path: candidate nextValidatorSet ID must be > current; revert when less.
+    function testSubmitFiatShamirFailWithInvalidMMRLeafWhenNextAuthoritySetIdLessThanCurrent()
+        public
+    {
+        BeefyClient.Commitment memory commitment = initialize(setId - 1);
+
+        mmrLeaf.nextAuthoritySetID = uint64(setId > 0 ? setId - 1 : 0);
+        vm.expectRevert(BeefyClient.InvalidMMRLeaf.selector);
+        beefyClient.submitFiatShamir(
+            commitment, bitfield, fiatShamirValidatorProofs, mmrLeaf, mmrLeafProofs, leafProofOrder
         );
     }
 

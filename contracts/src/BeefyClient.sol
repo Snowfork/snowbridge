@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.33;
+pragma solidity 0.8.34;
 
 import {ECDSA} from "openzeppelin/utils/cryptography/ECDSA.sol";
 import {SubstrateMerkleProof} from "./utils/SubstrateMerkleProof.sol";
@@ -187,7 +187,7 @@ contract BeefyClient {
     /**
      * @dev Fiat-Shamir domain separator ID
      */
-    bytes public constant FIAT_SHAMIR_DOMAIN_ID = bytes("SNOWBRIDGE-FIAT-SHAMIR-v1");
+    bytes public constant FIAT_SHAMIR_DOMAIN_ID = bytes("SNOWBRIDGE-FIAT-SHAMIR-V1");
 
     /**
      * @dev Beefy payload id for MMR Root payload items:
@@ -412,7 +412,9 @@ contract BeefyClient {
         bytes32 newMMRRoot = ensureProvidesMMRRoot(commitment);
 
         if (is_next_session) {
-            if (leaf.nextAuthoritySetID != nextValidatorSet.id + 1) {
+            // The id for candidate nextValidatorSet should be greater than the current
+            // nextValidatorSet id
+            if (leaf.nextAuthoritySetID <= nextValidatorSet.id) {
                 revert InvalidMMRLeaf();
             }
             bool leafIsValid = MMRProof.verifyLeafProof(
@@ -566,7 +568,9 @@ contract BeefyClient {
         verifyFiatShamirCommitment(commitmentHash, bitfield, vset, proofs);
 
         if (is_next_session) {
-            if (leaf.nextAuthoritySetID != nextValidatorSet.id + 1) {
+            // The id for candidate nextValidatorSet should be greater than the current
+            // nextValidatorSet id
+            if (leaf.nextAuthoritySetID <= nextValidatorSet.id) {
                 revert InvalidMMRLeaf();
             }
             bool leafIsValid = MMRProof.verifyLeafProof(

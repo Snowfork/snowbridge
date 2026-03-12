@@ -391,7 +391,7 @@ export async function validateTransfer(
     let tokenLocation = getTokenLocation(registry, direction, tokenAddress)
 
     const sourceAssetHubImpl = await paraImplementation(sourceAssetHub)
-    let nativeBalance = await sourceAssetHubImpl.getNativeBalance(sourceAccountHex)
+    let nativeBalance = await sourceAssetHubImpl.getNativeBalance(sourceAccountHex, true)
 
     let tokenAsset = getTransferAsset(direction, tokenAddress, transfer.input.registry)
 

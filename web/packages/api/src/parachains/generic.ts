@@ -10,7 +10,7 @@ export class GenericChain extends ParachainBase {
         throw new Error("Method not implemented.")
     }
     getDotBalance(account: string): Promise<bigint> {
-        return this.getNativeBalance(account)
+        return this.getNativeBalance(account, true)
     }
     getAssets(_ethChainId: number, _pnas: PNAMap): Promise<AssetMap> {
         throw new Error("Method not implemented.")

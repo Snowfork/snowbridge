@@ -1,0 +1,329 @@
+package parachain
+
+import (
+	"context"
+	"encoding/binary"
+	"errors"
+	"fmt"
+	"math/big"
+	"strings"
+
+	"golang.org/x/sync/errgroup"
+
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
+
+	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
+	"github.com/snowfork/snowbridge/relayer/contracts"
+	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
+	"github.com/snowfork/snowbridge/relayer/relays/util"
+
+	gsrpcTypes "github.com/snowfork/go-substrate-rpc-client/v4/types"
+
+	log "github.com/sirupsen/logrus"
+)
+
+type EthereumWriter struct {
+	config          *SinkConfig
+	conn            *ethereum.Connection
+	readConn        *ethereum.Connection
+	gateway         *contracts.Gateway
+	gatewayReadOnly *contracts.Gateway
+	tasks           <-chan *Task
+	gatewayABI      abi.ABI
+	relayConfig     *Config
+}
+
+func NewEthereumWriter(
+	config *SinkConfig,
+	conn *ethereum.Connection,
+	readConn *ethereum.Connection,
+	tasks <-chan *Task,
+	relayConfig *Config,
+) (*EthereumWriter, error) {
+	return &EthereumWriter{
+		config:      config,
+		conn:        conn,
+		readConn:    readConn,
+		gateway:     nil,
+		tasks:       tasks,
+		relayConfig: relayConfig,
+	}, nil
+}
+
+func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group) error {
+	address := common.HexToAddress(wr.config.Contracts.Gateway)
+	gateway, err := contracts.NewGateway(address, wr.conn.Client())
+	if err != nil {
+		return err
+	}
+	gatewayReadOnly, err := contracts.NewGateway(address, wr.readConn.Client())
+	if err != nil {
+		return err
+	}
+	wr.gateway = gateway
+	wr.gatewayReadOnly = gatewayReadOnly
+
+	gatewayABI, err := abi.JSON(strings.NewReader(contracts.GatewayABI))
+	if err != nil {
+		return err
+	}
+	wr.gatewayABI = gatewayABI
+
+	eg.Go(func() error {
+		err := wr.writeMessagesLoop(ctx)
+		if err != nil {
+			if errors.Is(err, context.Canceled) {
+				return nil
+			}
+			return fmt.Errorf("write message loop: %w", err)
+		}
+		return nil
+	})
+
+	return nil
+}
+
+func (wr *EthereumWriter) writeMessagesLoop(ctx context.Context) error {
+	options := wr.conn.MakeTxOpts(ctx)
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case task, ok := <-wr.tasks:
+			if !ok {
+				return nil
+			}
+			err := wr.WriteChannels(ctx, options, task)
+			if err != nil {
+				return fmt.Errorf("write message: %w", err)
+			}
+		}
+	}
+}
+
+func (wr *EthereumWriter) WriteChannels(
+	ctx context.Context,
+	options *bind.TransactOpts,
+	task *Task,
+) error {
+	for _, proof := range *task.MessageProofs {
+		profitable, err := wr.isRelayMessageProfitable(ctx, &proof)
+		if err != nil {
+			return fmt.Errorf("determine message profitability: %w", err)
+		}
+		if profitable {
+			err = wr.WriteChannel(ctx, options, &proof, task.ProofOutput)
+			if err != nil {
+				return fmt.Errorf("write eth gateway: %w", err)
+			}
+		} else {
+			log.WithField("nonce", proof.Message.OriginalMessage.Nonce).
+				Info("Skipping unprofitable message relay to Ethereum")
+		}
+	}
+
+	return nil
+}
+
+func (wr *EthereumWriter) commandGas(command *CommandWrapper) uint64 {
+	var gas uint64
+	switch command.Kind {
+	// ERC20 transfer
+	case 2:
+		// BaseUnlockGas should cover most of the ERC20 token. Specific gas costs can be set per token if needed
+		gas = wr.config.Fees.BaseUnlockGas
+	// PNA transfer
+	case 4:
+		gas = wr.config.Fees.BaseMintGas
+	default:
+		gas = uint64(command.MaxDispatchGas)
+	}
+	return gas
+}
+
+func (wr *EthereumWriter) isRelayMessageProfitable(ctx context.Context, proof *MessageProof) (bool, error) {
+	var result bool
+	gasPrice, err := wr.readConn.Client().SuggestGasPrice(ctx)
+	if err != nil {
+		return result, err
+	}
+	var totalDispatchGas uint64
+	commands := proof.Message.OriginalMessage.Commands
+	for _, command := range commands {
+		totalDispatchGas += wr.commandGas(&command)
+	}
+	totalDispatchGas += wr.config.Fees.BaseDeliveryGas
+
+	// gasFee = gasPrice * totalDispatchGas * (numerator / denominator)
+	gasFee := new(big.Int).Mul(gasPrice, new(big.Int).SetUint64(totalDispatchGas))
+
+	numerator := new(big.Int).SetUint64(wr.config.Fees.FeeRatioNumerator)
+	denominator := new(big.Int).SetUint64(wr.config.Fees.FeeRatioDenominator)
+
+	// Apply ratio safely: (gasPrice * gas * num) / denom
+	gasFee.Mul(gasFee, numerator)
+	gasFee.Div(gasFee, denominator)
+	if proof.Message.Fee.Cmp(gasFee) >= 0 {
+		return true, nil
+	}
+	return false, nil
+}
+
+// Submit sends a SCALE-encoded message to an application deployed on the Ethereum network
+func (wr *EthereumWriter) WriteChannel(
+	ctx context.Context,
+	options *bind.TransactOpts,
+	commitmentProof *MessageProof,
+	proof *ProofOutput,
+) error {
+	nonce := commitmentProof.Message.OriginalMessage.Nonce
+
+	// Step 4 (again): Final check before submission in case another relayer submitted while we were waiting
+	isDispatched, err := wr.gatewayReadOnly.V2IsDispatched(&bind.CallOpts{Context: ctx}, uint64(nonce))
+	if err != nil {
+		return fmt.Errorf("check if nonce %d is dispatched: %w", nonce, err)
+	}
+	if isDispatched {
+		log.WithField("nonce", nonce).Info("message already dispatched by another relayer, skipping")
+		return nil
+	}
+
+	message := commitmentProof.Message.OriginalMessage.IntoInboundMessage()
+
+	convertedHeader, err := convertHeader(proof.Header)
+	if err != nil {
+		return fmt.Errorf("convert header: %w", err)
+	}
+
+	var merkleProofItems [][32]byte
+	for _, proofItem := range proof.MMRProof.MerkleProofItems {
+		merkleProofItems = append(merkleProofItems, proofItem)
+	}
+
+	verificationProof := contracts.VerificationProof{
+		Header: *convertedHeader,
+		HeadProof: contracts.VerificationHeadProof{
+			Pos:   big.NewInt(proof.MerkleProofData.ProvenLeafIndex),
+			Width: big.NewInt(int64(proof.MerkleProofData.NumberOfLeaves)),
+			Proof: proof.MerkleProofData.Proof,
+		},
+		LeafPartial: contracts.VerificationMMRLeafPartial{
+			Version:              uint8(proof.MMRProof.Leaf.Version),
+			ParentNumber:         uint32(proof.MMRProof.Leaf.ParentNumberAndHash.ParentNumber),
+			ParentHash:           proof.MMRProof.Leaf.ParentNumberAndHash.Hash,
+			NextAuthoritySetID:   uint64(proof.MMRProof.Leaf.BeefyNextAuthoritySet.ID),
+			NextAuthoritySetLen:  uint32(proof.MMRProof.Leaf.BeefyNextAuthoritySet.Len),
+			NextAuthoritySetRoot: proof.MMRProof.Leaf.BeefyNextAuthoritySet.Root,
+		},
+		LeafProof:      merkleProofItems,
+		LeafProofOrder: new(big.Int).SetUint64(proof.MMRProof.MerkleProofOrder),
+	}
+
+	rewardAddress, err := util.HexStringTo32Bytes(wr.relayConfig.RewardAddress)
+	if err != nil {
+		return fmt.Errorf("convert to reward address: %w", err)
+	}
+
+	tx, err := wr.gateway.V2Submit(
+		options, message, commitmentProof.Proof.InnerHashes, verificationProof, rewardAddress,
+	)
+	if err != nil {
+		// Check if error is due to message already being dispatched (duplicate)
+		if strings.Contains(err.Error(), "AlreadyDispatched") || strings.Contains(err.Error(), "already dispatched") {
+			log.WithField("nonce", nonce).Info("message was already dispatched (duplicate), skipping")
+			return nil
+		}
+		return fmt.Errorf("send transaction Gateway.submit: %w", err)
+	}
+
+	hasher := &keccak.Keccak256{}
+	mmrLeafEncoded, err := gsrpcTypes.EncodeToBytes(proof.MMRProof.Leaf)
+	if err != nil {
+		return fmt.Errorf("encode MMRLeaf: %w", err)
+	}
+	log.WithField("txHash", tx.Hash().Hex()).
+		WithField("params", wr.logFieldsForSubmission(message, commitmentProof.Proof.InnerHashes, verificationProof)).
+		WithFields(log.Fields{
+			"commitmentHash":       commitmentProof.Proof.Root.Hex(),
+			"MMRRoot":              proof.MMRRootHash.Hex(),
+			"MMRLeafHash":          Hex(hasher.Hash(mmrLeafEncoded)),
+			"merkleProofData":      proof.MerkleProofData,
+			"parachainBlockNumber": proof.Header.Number,
+			"beefyBlock":           proof.MMRProof.Blockhash.Hex(),
+			"header":               proof.Header,
+		}).
+		Info("Sent transaction Gateway.submit")
+
+	receipt, err := wr.conn.WatchTransaction(ctx, tx, 1)
+
+	if err != nil {
+		log.WithError(err).Error("Failed to SubmitInbound")
+		return err
+	}
+
+	for _, ev := range receipt.Logs {
+		if ev.Topics[0] == wr.gatewayABI.Events["InboundMessageDispatched"].ID {
+			var holder contracts.GatewayInboundMessageDispatched
+			err = wr.gatewayABI.UnpackIntoInterface(&holder, "InboundMessageDispatched", ev.Data)
+			if err != nil {
+				return fmt.Errorf("unpack event log: %w", err)
+			}
+			log.WithFields(log.Fields{
+				"nonce":   holder.Nonce,
+				"success": holder.Success,
+			}).Info("Message dispatched")
+		}
+	}
+
+	return nil
+}
+
+func convertHeader(header gsrpcTypes.Header) (*contracts.VerificationParachainHeader, error) {
+	var digestItems []contracts.VerificationDigestItem
+
+	for _, di := range header.Digest {
+		switch {
+		case di.IsOther:
+			digestItems = append(digestItems, contracts.VerificationDigestItem{
+				Kind: big.NewInt(0),
+				Data: di.AsOther,
+			})
+		case di.IsPreRuntime:
+			consensusEngineID := make([]byte, 4)
+			binary.LittleEndian.PutUint32(consensusEngineID, uint32(di.AsPreRuntime.ConsensusEngineID))
+			digestItems = append(digestItems, contracts.VerificationDigestItem{
+				Kind:              big.NewInt(6),
+				ConsensusEngineID: *(*[4]byte)(consensusEngineID),
+				Data:              di.AsPreRuntime.Bytes,
+			})
+		case di.IsConsensus:
+			consensusEngineID := make([]byte, 4)
+			binary.LittleEndian.PutUint32(consensusEngineID, uint32(di.AsConsensus.ConsensusEngineID))
+			digestItems = append(digestItems, contracts.VerificationDigestItem{
+				Kind:              big.NewInt(4),
+				ConsensusEngineID: *(*[4]byte)(consensusEngineID),
+				Data:              di.AsConsensus.Bytes,
+			})
+		case di.IsSeal:
+			consensusEngineID := make([]byte, 4)
+			binary.LittleEndian.PutUint32(consensusEngineID, uint32(di.AsSeal.ConsensusEngineID))
+			digestItems = append(digestItems, contracts.VerificationDigestItem{
+				Kind:              big.NewInt(5),
+				ConsensusEngineID: *(*[4]byte)(consensusEngineID),
+				Data:              di.AsSeal.Bytes,
+			})
+		default:
+			return nil, fmt.Errorf("Unsupported digest item: %v", di)
+		}
+	}
+
+	return &contracts.VerificationParachainHeader{
+		ParentHash:     header.ParentHash,
+		Number:         big.NewInt(int64(header.Number)),
+		StateRoot:      header.StateRoot,
+		ExtrinsicsRoot: header.ExtrinsicsRoot,
+		DigestItems:    digestItems,
+	}, nil
+}
