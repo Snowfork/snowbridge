@@ -15,5 +15,6 @@ Build must produce `packages/operations/dist/` (e.g. run `pnpm build` from repo 
 The build depends on `@snowbridge/contract-types`, which runs `forge build` in `contracts/` then typechain. So Foundry must be available in the Vercel build.
 
 - **Root Directory**: Keep as **`web`**. The full repo is cloned, so from `web/packages/contract-types`, `../../../contracts` correctly points at the repo’s `contracts/` folder.
-- **Install / Build**: `vercel.json` sets `installCommand` to install Foundry and `buildCommand` to `pnpm run build:vercel` (adds `~/.foundry/bin` to PATH then runs the normal turbo build). If you override these in the dashboard, use Install: `pnpm install && bash scripts/install-foundry.sh`, Build: `pnpm run build:vercel`.
-- If Foundry cannot be installed (e.g. GLIBC on Vercel), you can instead commit the typechain-generated `web/packages/contract-types/src` and change contract-types build to skip `forge` when `forge` is not in PATH (then build is `tsc` only).
+- **Node**: Use **Node 20.x** in Vercel (Project → Settings → General → Node.js Version). Required so the `@foundryup/foundry` binaries work (avoids GLIBC errors).
+- **Install / Build**: `vercel.json` uses `installCommand: pnpm install && bash scripts/install-foundry.sh` and `buildCommand: pnpm run build:vercel`. The script prefers `forge` from the `@foundryup/foundry` npm package (installed by `pnpm install`); if that’s not available it runs `foundryup`. Build adds `./.foundry/bin`, `~/.foundry/bin`, and `node_modules/.bin` to PATH so `forge` is found.
+- If Foundry still cannot be used (e.g. restricted env), the install script exits successfully and the build continues; contract-types will only run `tsc` if pre-generated `src/` exists.

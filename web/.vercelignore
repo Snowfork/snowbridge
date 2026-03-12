@@ -3,6 +3,7 @@ node_modules/
 .turbo/
 **/dist/
 **/.next/
+.foundry/
 *.log
 .env*.local
 .vercel/
