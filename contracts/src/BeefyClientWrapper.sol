@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.33;
+pragma solidity 0.8.34;
 
 import {BeefyClient} from "./BeefyClient.sol";
 
@@ -24,10 +24,14 @@ contract BeefyClientWrapper {
     event CostCredited(address indexed relayer, bytes32 indexed commitmentHash, uint256 cost);
     event SubmissionRefunded(address indexed relayer, uint256 progress, uint256 refundAmount);
 
+    event Swept(address indexed to, uint256 amount);
+
     error InvalidAddress();
+    error NotSweeper();
     error NotTicketOwner();
     error TicketAlreadyOwned();
     error InsufficientProgress();
+    error SweepFailed();
 
     struct PendingTicket {
         address owner;
@@ -39,6 +43,7 @@ contract BeefyClientWrapper {
     uint256 private constant BASE_TX_GAS = 21000;
 
     address public immutable gateway;
+    address public immutable sweeper;
 
     // Ticket tracking (for multi-step submission)
     mapping(bytes32 => PendingTicket) public pendingTickets;
@@ -55,16 +60,18 @@ contract BeefyClientWrapper {
 
     constructor(
         address _gateway,
+        address _sweeper,
         uint256 _maxGasPrice,
         uint256 _maxRefundAmount,
         uint256 _refundTarget,
         uint256 _ticketTimeout
     ) {
-        if (_gateway == address(0)) {
+        if (_gateway == address(0) || _sweeper == address(0)) {
             revert InvalidAddress();
         }
 
         gateway = _gateway;
+        sweeper = _sweeper;
         maxGasPrice = _maxGasPrice;
         maxRefundAmount = _maxRefundAmount;
         refundTarget = _refundTarget;
@@ -184,6 +191,22 @@ contract BeefyClientWrapper {
         }
 
         _refundWithProgress(startGas, 0, progress);
+    }
+
+    /// @dev Allows the sweeper to withdraw all remaining funds, e.g. when migrating to a new wrapper.
+    function sweep(address payable to) external {
+        if (msg.sender != sweeper) {
+            revert NotSweeper();
+        }
+        if (to == address(0)) {
+            revert InvalidAddress();
+        }
+        uint256 amount = address(this).balance;
+        (bool success,) = to.call{value: amount}("");
+        if (!success) {
+            revert SweepFailed();
+        }
+        emit Swept(to, amount);
     }
 
     /* Internal Functions */

@@ -84,6 +84,7 @@ contract DeployLocal is Script {
         // Deploy BeefyClientWrapper (after GatewayProxy so we can pass its address)
         BeefyClientWrapper beefyClientWrapper = new BeefyClientWrapper(
             address(gateway),
+            deployer,
             vm.envUint("BEEFY_WRAPPER_MAX_GAS_PRICE"),
             vm.envUint("BEEFY_WRAPPER_MAX_REFUND_AMOUNT"),
             vm.envUint("BEEFY_WRAPPER_REFUND_TARGET"),

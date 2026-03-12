@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.33;
+pragma solidity 0.8.34;
 
 import {Test} from "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
@@ -160,6 +160,7 @@ contract BeefyClientWrapperTest is Test {
     address relayer1 = address(0x2);
     address relayer2 = address(0x3);
     address anyone = address(0x5);
+    address sweeper = address(0x6);
 
     uint256 constant MAX_GAS_PRICE = 100 gwei;
     uint256 constant MAX_REFUND_AMOUNT = 0.05 ether;
@@ -175,6 +176,7 @@ contract BeefyClientWrapperTest is Test {
         // Deploy wrapper with gateway address
         wrapper = new BeefyClientWrapper(
             address(mockGateway),
+            sweeper,
             MAX_GAS_PRICE,
             MAX_REFUND_AMOUNT,
             REFUND_TARGET,
@@ -234,6 +236,7 @@ contract BeefyClientWrapperTest is Test {
 
     function test_initialization() public {
         assertEq(wrapper.gateway(), address(mockGateway));
+        assertEq(wrapper.sweeper(), sweeper);
         assertEq(wrapper.maxGasPrice(), MAX_GAS_PRICE);
         assertEq(wrapper.maxRefundAmount(), MAX_REFUND_AMOUNT);
         assertEq(wrapper.refundTarget(), REFUND_TARGET);
@@ -243,6 +246,19 @@ contract BeefyClientWrapperTest is Test {
     function test_invalidGatewayAddress() public {
         vm.expectRevert(BeefyClientWrapper.InvalidAddress.selector);
         new BeefyClientWrapper(
+            address(0),
+            sweeper,
+            MAX_GAS_PRICE,
+            MAX_REFUND_AMOUNT,
+            REFUND_TARGET,
+            TICKET_TIMEOUT
+        );
+    }
+
+    function test_invalidSweeperAddress() public {
+        vm.expectRevert(BeefyClientWrapper.InvalidAddress.selector);
+        new BeefyClientWrapper(
+            address(mockGateway),
             address(0),
             MAX_GAS_PRICE,
             MAX_REFUND_AMOUNT,
@@ -518,6 +534,7 @@ contract BeefyClientWrapperTest is Test {
         // Deploy a wrapper with a very low maxRefundAmount to test capping
         BeefyClientWrapper lowMaxWrapper = new BeefyClientWrapper(
             address(mockGateway),
+            sweeper,
             MAX_GAS_PRICE,
             0.0001 ether,
             REFUND_TARGET,
@@ -553,6 +570,7 @@ contract BeefyClientWrapperTest is Test {
         // Deploy a wrapper with no ETH balance
         BeefyClientWrapper emptyWrapper = new BeefyClientWrapper(
             address(mockGateway),
+            sweeper,
             MAX_GAS_PRICE,
             MAX_REFUND_AMOUNT,
             REFUND_TARGET,
@@ -682,6 +700,53 @@ contract BeefyClientWrapperTest is Test {
 
     /* Highest Pending Block Tests */
 
+    /* Sweep Tests */
+
+    function test_sweepMovesAllFunds() public {
+        uint256 wrapperBalance = address(wrapper).balance;
+        address payable recipient = payable(address(0x99));
+
+        vm.prank(sweeper);
+        wrapper.sweep(recipient);
+
+        assertEq(address(wrapper).balance, 0);
+        assertEq(recipient.balance, wrapperBalance);
+    }
+
+    function test_sweepRevertsForNonSweeper() public {
+        vm.prank(relayer1);
+        vm.expectRevert(BeefyClientWrapper.NotSweeper.selector);
+        wrapper.sweep(payable(relayer1));
+    }
+
+    function test_sweepRevertsForZeroAddress() public {
+        vm.prank(sweeper);
+        vm.expectRevert(BeefyClientWrapper.InvalidAddress.selector);
+        wrapper.sweep(payable(address(0)));
+    }
+
+    function test_sweepToNewWrapper() public {
+        // Simulate migration: deploy new wrapper and sweep funds from old to new
+        BeefyClientWrapper newWrapper = new BeefyClientWrapper(
+            address(mockGateway),
+            sweeper,
+            MAX_GAS_PRICE,
+            MAX_REFUND_AMOUNT,
+            REFUND_TARGET,
+            TICKET_TIMEOUT
+        );
+
+        uint256 oldBalance = address(wrapper).balance;
+
+        vm.prank(sweeper);
+        wrapper.sweep(payable(address(newWrapper)));
+
+        assertEq(address(wrapper).balance, 0);
+        assertEq(address(newWrapper).balance, oldBalance);
+    }
+
+    /* Highest Pending Block Tests */
+
     function test_submitInitial_doesNotUpdateHighestPendingBlock_whenLower() public {
         // First submission sets highestPendingBlock
         uint32 higherBlockNumber = uint32(INITIAL_BEEFY_BLOCK + REFUND_TARGET + 200);
@@ -760,6 +825,7 @@ contract BeefyClientWrapperTransferFailedTest is Test {
         mockGateway = new MockGateway(address(mockBeefyClient));
         wrapper = new BeefyClientWrapper(
             address(mockGateway),
+            address(0x6),
             100 gwei,
             0.05 ether,
             REFUND_TARGET,
