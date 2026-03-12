@@ -108,7 +108,7 @@ const registry = {
         },
     ],
     registry: {
-        timestamp: "2026-02-16T10:23:33.158Z",
+        timestamp: "2026-03-12T12:22:16.496Z",
         environment: "paseo_sepolia",
         ethChainId: 11155111,
         gatewayAddress: "0x1607c1368bc943130258318c91bbd8cff3d063e6",
@@ -344,6 +344,28 @@ const registry = {
                 estimatedExecutionFeeDOT: 1000000000n,
                 estimatedDeliveryFeeDOT: 306650000n,
             },
+        },
+    },
+    chains: {
+        sepolia: {
+            key: "ethereum_11155111",
+            kind: "ethereum",
+            id: 11155111,
+        },
+        assetHub: {
+            key: "polkadot_1000",
+            kind: "polkadot",
+            id: 1000,
+        },
+        neuroTestnet: {
+            key: "polkadot_2043",
+            kind: "polkadot",
+            id: 2043,
+        },
+        museTestnet: {
+            key: "polkadot_3369",
+            kind: "polkadot",
+            id: 3369,
         },
     },
 } as const

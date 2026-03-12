@@ -17,6 +17,7 @@ import {
     XC20TokenMap,
     XcmVersion,
     BridgeInfo,
+    ChainMap,
     TransferRoute,
     ChainId,
     ChainKey,
@@ -29,6 +30,7 @@ import { AbstractProvider, Contract, ethers } from "ethers"
 import { IGatewayV1__factory as IGateway__factory } from "@snowbridge/contract-types"
 import { parachains as ParaImpl, xcmBuilder, assetsV2 } from "@snowbridge/api"
 import { EthersEthereumProvider, EthersProviderTypes } from "@snowbridge/provider-ethers"
+import { buildFriendlyChains } from "./friendlyChains"
 
 export type Path = {
     source: ChainId
@@ -632,7 +634,10 @@ async function buildRegistry(environment: Environment): Promise<AssetRegistry> {
                         ? new HttpProvider(parachainUrl)
                         : new WsProvider(parachainUrl),
                 })
-                const accessor = await ParaImpl.paraImplementation(provider, new EthersEthereumProvider())
+                const accessor = await ParaImpl.paraImplementation(
+                    provider,
+                    new EthersEthereumProvider(),
+                )
                 return { parachainId: accessor.parachainId, accessor }
             }),
         )) {
@@ -1189,7 +1194,12 @@ async function getRegisteredPnas(
     const environment = SNOWBRIDGE_ENV[env]
     const registry = await buildRegistry(environment)
     const routes = buildTransferLocations(registry, environment)
-    const bridge: BridgeInfo = { environment, routes, registry }
+    const chains = buildFriendlyChains([
+        ...Object.values(registry.ethereumChains),
+        ...Object.values(registry.parachains),
+        ...Object.values(registry.kusama?.parachains ?? {}),
+    ])
+    const bridge: BridgeInfo = { environment, routes, registry, chains }
     const json = generateTsObject(bridge, 4)
     const fileContents = `const registry = ${json} as const\nexport default registry\n`
     const filepath = `src/${env}_bridge_info.g.ts`

@@ -2,6 +2,7 @@ export type BridgeInfo = {
   environment: Environment;
   routes: readonly TransferRoute[];
   registry: AssetRegistry;
+  chains: ChainMap;
 };
 
 export type AccountType = "AccountId20" | "AccountId32";
@@ -104,6 +105,10 @@ export type Parachain = ChainId & {
 
 export type EthereumChainMap = Record<ChainKey<EthereumKind>, EthereumChain>;
 export type ParachainMap = Record<ChainKey<ParachainKind>, Parachain>;
+export type ChainRef = ChainId & {
+  key: ChainKey<ChainKind>;
+};
+export type ChainMap = Record<string, ChainRef>;
 
 export type KusamaConfig = {
   assetHubParaId: number;
