@@ -18,7 +18,7 @@ export type TokenRegistration<T extends EthereumProviderTypes> = {
     tx: T["ContractTransaction"]
 }
 
-export type RegistrationValidationResult<T extends EthereumProviderTypes> = {
+export type ValidatedRegisterToken<T extends EthereumProviderTypes> = TokenRegistration<T> & {
     logs: ValidationLog[]
     success: boolean
     data: {
@@ -28,7 +28,6 @@ export type RegistrationValidationResult<T extends EthereumProviderTypes> = {
         isTokenAlreadyRegistered: boolean
         assetHubDryRunError?: string
     }
-    registration: TokenRegistration<T>
 }
 
 export type RegistrationFee = {
@@ -41,7 +40,7 @@ export type RegistrationFee = {
 }
 
 export interface RegistrationInterface<T extends EthereumProviderTypes> {
-    getRegistrationFee(
+    fee(
         context: Context<T>,
         registry: AssetRegistry,
         relayerFee: bigint,
@@ -50,7 +49,7 @@ export interface RegistrationInterface<T extends EthereumProviderTypes> {
         },
     ): Promise<RegistrationFee>
 
-    createRegistration(
+    tx(
         context: Context<T>,
         registry: AssetRegistry,
         sourceAccount: string,
@@ -58,10 +57,21 @@ export interface RegistrationInterface<T extends EthereumProviderTypes> {
         fee: RegistrationFee,
     ): Promise<TokenRegistration<T>>
 
-    validateRegistration(
+    validate(
         context: Context<T>,
         registration: TokenRegistration<T>,
-    ): Promise<RegistrationValidationResult<T>>
+    ): Promise<ValidatedRegisterToken<T>>
+
+    build(
+        context: Context<T>,
+        registry: AssetRegistry,
+        sourceAccount: string,
+        tokenAddress: string,
+        relayerFee: bigint,
+        options?: {
+            paddFeeByPercentage?: bigint
+        },
+    ): Promise<ValidatedRegisterToken<T>>
 
     messageId(context: Context<T>, receipt: T["TransactionReceipt"]): Promise<MessageReceipt | null>
 }

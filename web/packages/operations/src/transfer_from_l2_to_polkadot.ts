@@ -90,7 +90,7 @@ export const transferToPolkadot = async (
 
         console.log("fee: ", fee)
         // Step 2. Create a transfer tx
-        const transfer = await transferImpl.rawTx(
+        const transfer = await transferImpl.tx(
             TOKEN_CONTRACT,
             amount,
             ETHEREUM_ACCOUNT_PUBLIC,

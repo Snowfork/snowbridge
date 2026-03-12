@@ -32,8 +32,9 @@ import {
     MessageReceiptEvm,
     TransferEvm,
     TransferInterface as ToEthereumEvmTransferInterface,
-    ValidationResultEvm,
+    ValidatedTransferEvm,
 } from "./transfers/toEthereumEvm/transferInterface"
+import { ensureValidationSuccess } from "./utils"
 
 export class V1ToEthereumEvmAdapter<T extends EthereumProviderTypes>
     implements ToEthereumEvmTransferInterface<T>
@@ -97,7 +98,7 @@ export class V1ToEthereumEvmAdapter<T extends EthereumProviderTypes>
         )
     }
 
-    async rawTx(
+    async tx(
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
@@ -215,6 +216,7 @@ export class V1ToEthereumEvmAdapter<T extends EthereumProviderTypes>
                 customXcm.toHex(),
             )
         return {
+            kind: "ethereum->ethereum",
             input: {
                 registry,
                 sourceAccount,
@@ -238,7 +240,39 @@ export class V1ToEthereumEvmAdapter<T extends EthereumProviderTypes>
         }
     }
 
-    async validate(transfer: TransferEvm<T>): Promise<ValidationResultEvm<T>> {
+    async build(
+        sourceAccount: string,
+        beneficiaryAccount: string,
+        tokenAddress: string,
+        amount: bigint,
+        options?: {
+            fee?: {
+                padPercentage?: bigint
+                slippagePadPercentage?: bigint
+                defaultFee?: bigint
+                feeTokenLocation?: any
+                claimerLocation?: any
+                contractCall?: ContractCall
+            }
+            tx?: {
+                claimerLocation?: any
+                contractCall?: ContractCall
+            }
+        },
+    ): Promise<ValidatedTransferEvm<T>> {
+        const fee = await this.fee(tokenAddress, options?.fee)
+        const transfer = await this.tx(
+            sourceAccount,
+            beneficiaryAccount,
+            tokenAddress,
+            amount,
+            fee,
+            options?.tx,
+        )
+        return ensureValidationSuccess(await this.validate(transfer))
+    }
+
+    async validate(transfer: TransferEvm<T>): Promise<ValidatedTransferEvm<T>> {
         const context = this.context
         const { registry, fee, tokenAddress, amount, beneficiaryAccount } = transfer.input
         const {
@@ -470,7 +504,7 @@ export class V1ToEthereumEvmAdapter<T extends EthereumProviderTypes>
                 sourceDryRunError,
                 assetHubDryRunError,
             },
-            transfer,
+            ...transfer,
         }
     }
 

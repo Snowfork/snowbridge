@@ -11,7 +11,7 @@ export type AgentCreation<ContractTransaction> = {
     tx: ContractTransaction
 }
 
-export type AgentCreationValidationResult<ContractTransaction> = {
+export type ValidatedCreateAgent<ContractTransaction> = AgentCreation<ContractTransaction> & {
     logs: ValidationLog[]
     success: boolean
     data: {
@@ -20,18 +20,17 @@ export type AgentCreationValidationResult<ContractTransaction> = {
         agentAlreadyExists: boolean
         agentAddress?: string
     }
-    creation: AgentCreation<ContractTransaction>
 }
 
 export interface AgentCreationInterface<ContractTransaction> {
-    rawTx(sourceAccount: string, agentId: string): Promise<AgentCreation<ContractTransaction>>
+    tx(sourceAccount: string, agentId: string): Promise<AgentCreation<ContractTransaction>>
 
-    validateTx(
+    validate(
         creation: AgentCreation<ContractTransaction>,
-    ): Promise<AgentCreationValidationResult<ContractTransaction>>
+    ): Promise<ValidatedCreateAgent<ContractTransaction>>
 
-    tx(
+    build(
         sourceAccount: string,
         agentId: string,
-    ): Promise<AgentCreationValidationResult<ContractTransaction>>
+    ): Promise<ValidatedCreateAgent<ContractTransaction>>
 }

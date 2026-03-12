@@ -4,7 +4,7 @@ import {
     RegistrationInterface,
     RegistrationFee,
     TokenRegistration,
-    RegistrationValidationResult,
+    ValidatedRegisterToken,
 } from "./registrationInterface"
 import { Context } from "../../index"
 import { messageId as getSharedMessageReceipt, ValidationKind } from "../../toPolkadotSnowbridgeV2"
@@ -12,7 +12,7 @@ import { FeeInfo, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
 import { getOperatingStatus } from "../../status"
 import { DOT_LOCATION, erc20Location } from "../../xcmBuilder"
 import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
-import { padFeeByPercentage } from "../../utils"
+import { ensureValidationSuccess, padFeeByPercentage } from "../../utils"
 import {
     buildAssetHubRegisterTokenXcm,
     getBridgeOwnerAccount,
@@ -23,7 +23,7 @@ const getAssetDeposit = (assetHub: ApiPromise): bigint => {
 }
 
 export class RegisterToken<T extends EthereumProviderTypes> implements RegistrationInterface<T> {
-    async getRegistrationFee(
+    async fee(
         context: Context<T>,
         registry: AssetRegistry,
         relayerFee: bigint,
@@ -93,7 +93,7 @@ export class RegisterToken<T extends EthereumProviderTypes> implements Registrat
         }
     }
 
-    async createRegistration(
+    async tx(
         context: Context<T>,
         registry: AssetRegistry,
         sourceAccount: string,
@@ -130,10 +130,10 @@ export class RegisterToken<T extends EthereumProviderTypes> implements Registrat
         }
     }
 
-    async validateRegistration(
+    async validate(
         context: Context<T>,
         registration: TokenRegistration<T>,
-    ): Promise<RegistrationValidationResult<T>> {
+    ): Promise<ValidatedRegisterToken<T>> {
         const { tx } = registration
         const { sourceAccount, tokenAddress, registry } = registration.input
         const ethereum = context.ethereum()
@@ -253,8 +253,23 @@ export class RegisterToken<T extends EthereumProviderTypes> implements Registrat
                 isTokenAlreadyRegistered,
                 assetHubDryRunError,
             },
-            registration,
+            ...registration,
         }
+    }
+
+    async build(
+        context: Context<T>,
+        registry: AssetRegistry,
+        sourceAccount: string,
+        tokenAddress: string,
+        relayerFee: bigint,
+        options?: {
+            paddFeeByPercentage?: bigint
+        },
+    ): Promise<ValidatedRegisterToken<T>> {
+        const fee = await this.fee(context, registry, relayerFee, options)
+        const registration = await this.tx(context, registry, sourceAccount, tokenAddress, fee)
+        return ensureValidationSuccess(await this.validate(context, registration))
     }
 
     async messageId(context: Context<T>, receipt: T["TransactionReceipt"]) {

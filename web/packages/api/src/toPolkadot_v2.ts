@@ -1,4 +1,4 @@
-import { padFeeByPercentage } from "./utils"
+import { ensureValidationSuccess, padFeeByPercentage } from "./utils"
 import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
 import {
     Asset,
@@ -10,6 +10,7 @@ import {
     FeeData,
     MultiAddressStruct,
     Parachain,
+    TransferKind,
     TransferRoute,
 } from "@snowbridge/base-types"
 import { getOperatingStatus, OperationStatus } from "./status"
@@ -30,10 +31,11 @@ import { TransferInterface as ToPolkadotTransferInterface } from "./transfers/to
 import type {
     DeliveryFee as ToPolkadotV2DeliveryFee,
     Transfer as ToPolkadotV2Transfer,
-    ValidationResult as ToPolkadotV2ValidationResult,
+    ValidatedTransfer as ToPolkadotV2ValidatedTransfer,
 } from "./toPolkadotSnowbridgeV2"
 
 export type Transfer<T extends EthereumProviderTypes> = {
+    kind: Extract<TransferKind, "ethereum->polkadot">
     input: {
         registry: AssetRegistry
         sourceAccount: string
@@ -96,7 +98,7 @@ export type DeliveryFee = {
     totalFeeInWei: bigint
 }
 
-export type ValidationResult<T extends EthereumProviderTypes> = {
+export type ValidatedTransfer<T extends EthereumProviderTypes> = Transfer<T> & {
     logs: ValidationLog[]
     success: boolean
     data: {
@@ -110,7 +112,6 @@ export type ValidationResult<T extends EthereumProviderTypes> = {
         assetHubDryRunError?: string
         destinationParachainDryRunError?: string
     }
-    transfer: Transfer<T>
 }
 
 export type MessageReceipt = {
@@ -295,7 +296,7 @@ export class V1ToPolkadotAdapter<T extends EthereumProviderTypes>
         })
     }
 
-    async rawTx(
+    async tx(
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
@@ -356,6 +357,7 @@ export class V1ToPolkadotAdapter<T extends EthereumProviderTypes>
             value,
         )
         return toV2Transfer({
+            kind: "ethereum->polkadot",
             input: {
                 registry,
                 sourceAccount,
@@ -381,7 +383,34 @@ export class V1ToPolkadotAdapter<T extends EthereumProviderTypes>
         })
     }
 
-    async validate(transfer: ToPolkadotV2Transfer<T>): Promise<ToPolkadotV2ValidationResult<T>> {
+    async build(
+        sourceAccount: string,
+        beneficiaryAccount: string,
+        tokenAddress: string,
+        amount: bigint,
+        options?: {
+            fee?: {
+                paddFeeByPercentage?: bigint
+                feeAsset?: any
+                customXcm?: any[]
+                overrideRelayerFee?: bigint
+            }
+            customXcm?: any[]
+        },
+    ): Promise<ToPolkadotV2ValidatedTransfer<T>> {
+        const fee = await this.fee(tokenAddress, options?.fee)
+        const transfer = await this.tx(
+            sourceAccount,
+            beneficiaryAccount,
+            tokenAddress,
+            amount,
+            fee,
+            options?.customXcm,
+        )
+        return ensureValidationSuccess(await this.validate(transfer))
+    }
+
+    async validate(transfer: ToPolkadotV2Transfer<T>): Promise<ToPolkadotV2ValidatedTransfer<T>> {
         const context = this.context
         const v1Transfer = toV1Transfer<T>(transfer)
         const { tx } = v1Transfer
@@ -544,7 +573,7 @@ export class V1ToPolkadotAdapter<T extends EthereumProviderTypes>
             }
         }
 
-        const v1Result: ValidationResult<T> = {
+        const v1Result: ValidatedTransfer<T> = {
             logs,
             success: logs.find((l) => l.kind === ValidationKind.Error) === undefined,
             data: {
@@ -555,12 +584,12 @@ export class V1ToPolkadotAdapter<T extends EthereumProviderTypes>
                 assetHubDryRunError,
                 destinationParachainDryRunError,
             },
-            transfer: v1Transfer,
+            ...v1Transfer,
         }
         return {
             ...v1Result,
-            transfer: toV2Transfer(v1Result.transfer),
-        } as ToPolkadotV2ValidationResult<T>
+            ...toV2Transfer(v1Result),
+        } as ToPolkadotV2ValidatedTransfer<T>
     }
 
     async messageId(receipt: T["TransactionReceipt"]): Promise<MessageReceipt | null> {

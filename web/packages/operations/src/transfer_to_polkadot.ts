@@ -109,7 +109,7 @@ export const transferToPolkadot = async (
         const fee = await transferImpl.fee(TOKEN_CONTRACT!)
 
         // Step 2. Create a transfer tx
-        const transfer = await transferImpl.rawTx(
+        const transfer = await transferImpl.tx(
             ETHEREUM_ACCOUNT_PUBLIC,
             POLKADOT_ACCOUNT_PUBLIC,
             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion

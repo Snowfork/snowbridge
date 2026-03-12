@@ -50,7 +50,7 @@ import { bridgeInfoFor } from "@snowbridge/registry"
 
     // Step 2. Create a transfer tx
     const amount = 15_000_000_000_000n // 0.000015 ETH
-    const transfer = await transferImpl.rawTx(
+    const transfer = await transferImpl.tx(
         POLKADOT_ACCOUNT_PUBLIC, // The source account
         ETHEREUM_ACCOUNT_PUBLIC, // The destination account
         TOKEN_CONTRACT, // The transfer token

@@ -1,7 +1,7 @@
 import { Context } from "../.."
 import { AddressOrPair, SignerOptions } from "@polkadot/api/types"
 import { ContractCall, EthereumProviderTypes } from "@snowbridge/base-types"
-import { DeliveryFee, MessageReceipt, Transfer, ValidationResult } from "../../toEthereum_v2"
+import { DeliveryFee, MessageReceipt, Transfer, ValidatedTransfer } from "../../toEthereum_v2"
 
 export interface TransferInterface<T extends EthereumProviderTypes> {
     readonly context: Context<T>
@@ -21,7 +21,7 @@ export interface TransferInterface<T extends EthereumProviderTypes> {
         },
     ): Promise<DeliveryFee>
 
-    rawTx(
+    tx(
         tokenAddress: string,
         amount: bigint,
         sourceAccount: string,
@@ -34,7 +34,31 @@ export interface TransferInterface<T extends EthereumProviderTypes> {
         },
     ): Promise<Transfer>
 
-    validate(transfer: Transfer): Promise<ValidationResult>
+    validate(transfer: Transfer): Promise<ValidatedTransfer>
+
+    build(
+        tokenAddress: string,
+        amount: bigint,
+        sourceAccount: string,
+        beneficiaryAccount: string,
+        options?: {
+            fee?: {
+                padPercentage?: bigint
+                slippagePadPercentage?: bigint
+                defaultFee?: bigint
+                feeTokenLocation?: any
+                claimerLocation?: any
+                contractCall?: ContractCall
+                l2PadFeeByPercentage?: bigint
+                fillDeadlineBuffer?: bigint
+            }
+            tx?: {
+                claimerLocation?: any
+                contractCall?: ContractCall
+                fillDeadlineBuffer?: bigint
+            }
+        },
+    ): Promise<ValidatedTransfer>
 
     signAndSend(
         transfer: Transfer,

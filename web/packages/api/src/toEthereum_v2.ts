@@ -30,6 +30,7 @@ import {
     EthereumProviderTypes,
     FeeData,
     Parachain,
+    TransferKind,
     TransferRoute,
 } from "@snowbridge/base-types"
 import {
@@ -39,12 +40,13 @@ import {
     XcmDryRunEffects,
 } from "@polkadot/types/interfaces"
 import { Result } from "@polkadot/types"
-import { padFeeByPercentage, u32ToLeBytes } from "./utils"
+import { ensureValidationSuccess, padFeeByPercentage, u32ToLeBytes } from "./utils"
 import { Context } from "./index"
 import { ParachainBase } from "./parachains/parachainBase"
 import { TransferInterface as ToEthereumTransferInterface } from "./transfers/toEthereum/transferInterface"
 
 export type Transfer = {
+    kind: Extract<TransferKind, "polkadot->ethereum" | "polkadot->ethereum_l2">
     input: {
         registry: AssetRegistry
         sourceAccount: string
@@ -153,7 +155,7 @@ export class V1ToEthereumAdapter<T extends EthereumProviderTypes>
         )
     }
 
-    async rawTx(
+    async tx(
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
@@ -269,6 +271,7 @@ export class V1ToEthereumAdapter<T extends EthereumProviderTypes>
         }
 
         return {
+            kind: "polkadot->ethereum",
             input: {
                 registry,
                 sourceAccount,
@@ -290,7 +293,39 @@ export class V1ToEthereumAdapter<T extends EthereumProviderTypes>
         }
     }
 
-    async validate(transfer: Transfer): Promise<ValidationResult> {
+    async build(
+        sourceAccount: string,
+        beneficiaryAccount: string,
+        tokenAddress: string,
+        amount: bigint,
+        options?: {
+            fee?: {
+                padPercentage?: bigint
+                slippagePadPercentage?: bigint
+                defaultFee?: bigint
+                feeTokenLocation?: any
+                claimerLocation?: any
+                contractCall?: ContractCall
+            }
+            tx?: {
+                claimerLocation?: any
+                contractCall?: ContractCall
+            }
+        },
+    ): Promise<ValidatedTransfer> {
+        const fee = await this.fee(tokenAddress, options?.fee)
+        const transfer = await this.tx(
+            sourceAccount,
+            beneficiaryAccount,
+            tokenAddress,
+            amount,
+            fee,
+            options?.tx,
+        )
+        return ensureValidationSuccess(await this.validate(transfer))
+    }
+
+    async validate(transfer: Transfer): Promise<ValidatedTransfer> {
         const context = this.context
         const { registry, fee, tokenAddress, amount, beneficiaryAccount } = transfer.input
         const {
@@ -610,7 +645,7 @@ export class V1ToEthereumAdapter<T extends EthereumProviderTypes>
                 sourceDryRunError,
                 assetHubDryRunError,
             },
-            transfer,
+            ...transfer,
         }
     }
 
@@ -648,7 +683,7 @@ export type ValidationLog = {
     message: string
 }
 
-export type ValidationResult = {
+export type ValidatedTransfer = Transfer & {
     logs: ValidationLog[]
     success: boolean
     data: {
@@ -661,7 +696,6 @@ export type ValidationResult = {
         assetHubDryRunError: any
         bridgeHubDryRunError?: any
     }
-    transfer: Transfer
 }
 
 export type MessageReceipt = {

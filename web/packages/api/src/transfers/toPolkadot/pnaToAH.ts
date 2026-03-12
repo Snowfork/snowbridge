@@ -17,11 +17,11 @@ import {
     messageId as getSharedMessageReceipt,
     Transfer,
     ValidationKind,
-    ValidationResult,
+    ValidatedTransfer,
 } from "../../toPolkadotSnowbridgeV2"
 import { accountId32Location, DOT_LOCATION, erc20Location } from "../../xcmBuilder"
 import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
-import { padFeeByPercentage } from "../../utils"
+import { ensureValidationSuccess, padFeeByPercentage } from "../../utils"
 import { FeeInfo, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
 import { buildAssetHubPNAReceivedXcm, sendMessageXCM } from "../../xcmbuilders/toPolkadot/pnaToAH"
 import { getOperatingStatus } from "../../status"
@@ -130,7 +130,7 @@ export class PNAToAH<T extends EthereumProviderTypes> implements TransferInterfa
         }
     }
 
-    async rawTx(
+    async tx(
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
@@ -212,6 +212,7 @@ export class PNAToAH<T extends EthereumProviderTypes> implements TransferInterfa
         )
 
         return {
+            kind: "ethereum->polkadot",
             input: {
                 registry,
                 sourceAccount,
@@ -240,7 +241,34 @@ export class PNAToAH<T extends EthereumProviderTypes> implements TransferInterfa
         }
     }
 
-    async validate(transfer: Transfer<T>): Promise<ValidationResult<T>> {
+    async build(
+        sourceAccount: string,
+        beneficiaryAccount: string,
+        tokenAddress: string,
+        amount: bigint,
+        options?: {
+            fee?: {
+                paddFeeByPercentage?: bigint
+                feeAsset?: any
+                customXcm?: any[]
+                overrideRelayerFee?: bigint
+            }
+            customXcm?: any[]
+        },
+    ): Promise<ValidatedTransfer<T>> {
+        const fee = await this.fee(tokenAddress, options?.fee)
+        const transfer = await this.tx(
+            sourceAccount,
+            beneficiaryAccount,
+            tokenAddress,
+            amount,
+            fee,
+            options?.customXcm,
+        )
+        return ensureValidationSuccess(await this.validate(transfer))
+    }
+
+    async validate(transfer: Transfer<T>): Promise<ValidatedTransfer<T>> {
         const context = this.context
         const { tx } = transfer
         const { amount, sourceAccount, tokenAddress, registry } = transfer.input
@@ -411,7 +439,7 @@ export class PNAToAH<T extends EthereumProviderTypes> implements TransferInterfa
                 bridgeStatus,
                 assetHubDryRunError,
             },
-            transfer,
+            ...transfer,
         }
     }
 

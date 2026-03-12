@@ -13,6 +13,7 @@ import {
     EthereumProviderTypes,
     MultiAddressStruct,
     Parachain,
+    TransferKind,
     TransferRoute,
 } from "@snowbridge/base-types"
 import { PNAToAH } from "./transfers/toPolkadot/pnaToAH"
@@ -26,7 +27,7 @@ import { ApiPromise } from "@polkadot/api"
 import { accountToLocation, DOT_LOCATION, erc20Location } from "./xcmBuilder"
 import { Codec } from "@polkadot/types/types"
 import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
-import { padFeeByPercentage } from "./utils"
+import { ensureValidationSuccess, padFeeByPercentage } from "./utils"
 import { Context } from "./index"
 export { ValidationKind } from "./toPolkadot_v2"
 import { ParachainBase } from "./parachains/parachainBase"
@@ -47,6 +48,7 @@ export type DeliveryFee = {
 }
 
 export type Transfer<T extends EthereumProviderTypes> = {
+    kind: Extract<TransferKind, "ethereum->polkadot" | "ethereum_l2->polkadot">
     input: {
         registry: AssetRegistry
         sourceAccount: string
@@ -77,7 +79,7 @@ export type Transfer<T extends EthereumProviderTypes> = {
     tx: T["ContractTransaction"]
 }
 
-export type ValidationResult<T extends EthereumProviderTypes> = {
+export type ValidatedTransfer<T extends EthereumProviderTypes> = Transfer<T> & {
     logs: ValidationLog[]
     success: boolean
     data: {
@@ -93,7 +95,6 @@ export type ValidationResult<T extends EthereumProviderTypes> = {
         destinationParachainDryRunError?: string
         l2BridgeDryRunError?: string
     }
-    transfer: Transfer<T>
 }
 
 export type MessageReceipt = {
@@ -108,7 +109,7 @@ export type MessageReceipt = {
 // Re-export registration types for convenience
 export type {
     TokenRegistration,
-    RegistrationValidationResult,
+    ValidatedRegisterToken,
     RegistrationFee,
     RegistrationInterface,
 } from "./registration/toPolkadot/registrationInterface"
@@ -194,7 +195,7 @@ export class TransferToPolkadot<T extends EthereumProviderTypes> implements Tran
         return this.#resolveByTokenAddress(tokenAddress).fee(tokenAddress, options)
     }
 
-    async rawTx(
+    async tx(
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
@@ -202,7 +203,7 @@ export class TransferToPolkadot<T extends EthereumProviderTypes> implements Tran
         fee: DeliveryFee,
         customXcm?: any[],
     ): Promise<Transfer<T>> {
-        return this.#resolveByTokenAddress(tokenAddress).rawTx(
+        return this.#resolveByTokenAddress(tokenAddress).tx(
             sourceAccount,
             beneficiaryAccount,
             tokenAddress,
@@ -212,7 +213,34 @@ export class TransferToPolkadot<T extends EthereumProviderTypes> implements Tran
         )
     }
 
-    async validate(transfer: Transfer<T>): Promise<ValidationResult<T>> {
+    async build(
+        sourceAccount: string,
+        beneficiaryAccount: string,
+        tokenAddress: string,
+        amount: bigint,
+        options?: {
+            fee?: {
+                paddFeeByPercentage?: bigint
+                feeAsset?: any
+                customXcm?: any[]
+                overrideRelayerFee?: bigint
+            }
+            customXcm?: any[]
+        },
+    ): Promise<ValidatedTransfer<T>> {
+        const fee = await this.fee(tokenAddress, options?.fee)
+        const transfer = await this.tx(
+            sourceAccount,
+            beneficiaryAccount,
+            tokenAddress,
+            amount,
+            fee,
+            options?.customXcm,
+        )
+        return ensureValidationSuccess(await this.validate(transfer))
+    }
+
+    async validate(transfer: Transfer<T>): Promise<ValidatedTransfer<T>> {
         return this.#resolveByTokenAddress(transfer.input.tokenAddress).validate(transfer)
     }
 

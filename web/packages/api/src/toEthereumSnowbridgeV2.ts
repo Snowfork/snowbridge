@@ -20,7 +20,7 @@ import {
     ValidationKind,
     ValidationLog,
     ValidationReason,
-    ValidationResult,
+    ValidatedTransfer,
 } from "./toEthereum_v2"
 import { PNAFromAH } from "./transfers/toEthereum/pnaFromAH"
 import { TransferInterface } from "./transfers/toEthereum/transferInterface"
@@ -36,7 +36,7 @@ import {
 } from "./xcmBuilder"
 import { xxhashAsHex } from "@polkadot/util-crypto"
 import { BN } from "@polkadot/util"
-import { padFeeByPercentage } from "./utils"
+import { ensureValidationSuccess, padFeeByPercentage } from "./utils"
 import { Context } from "./index"
 import { ETHER_TOKEN_ADDRESS, findL2TokenAddress } from "./assets_v2"
 import { getOperatingStatus } from "./status"
@@ -126,7 +126,7 @@ export class TransferToEthereum<T extends EthereumProviderTypes> implements Tran
         return this.#resolveByTokenAddress(tokenAddress).fee(tokenAddress, options)
     }
 
-    async rawTx(
+    async tx(
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
@@ -137,7 +137,7 @@ export class TransferToEthereum<T extends EthereumProviderTypes> implements Tran
             contractCall?: ContractCall
         },
     ): Promise<Transfer> {
-        return this.#resolveByTokenAddress(tokenAddress).rawTx(
+        return this.#resolveByTokenAddress(tokenAddress).tx(
             sourceAccount,
             beneficiaryAccount,
             tokenAddress,
@@ -147,7 +147,39 @@ export class TransferToEthereum<T extends EthereumProviderTypes> implements Tran
         )
     }
 
-    async validate(transfer: Transfer): Promise<ValidationResult> {
+    async build(
+        sourceAccount: string,
+        beneficiaryAccount: string,
+        tokenAddress: string,
+        amount: bigint,
+        options?: {
+            fee?: {
+                padPercentage?: bigint
+                slippagePadPercentage?: bigint
+                defaultFee?: bigint
+                feeTokenLocation?: any
+                claimerLocation?: any
+                contractCall?: ContractCall
+            }
+            tx?: {
+                claimerLocation?: any
+                contractCall?: ContractCall
+            }
+        },
+    ): Promise<ValidatedTransfer> {
+        const fee = await this.fee(tokenAddress, options?.fee)
+        const transfer = await this.tx(
+            sourceAccount,
+            beneficiaryAccount,
+            tokenAddress,
+            amount,
+            fee,
+            options?.tx,
+        )
+        return ensureValidationSuccess(await this.validate(transfer))
+    }
+
+    async validate(transfer: Transfer): Promise<ValidatedTransfer> {
         return this.#resolveByTokenAddress(transfer.input.tokenAddress).validate(transfer)
     }
 
@@ -628,7 +660,7 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
 export const validateTransferFromAssetHub = async <T extends EthereumProviderTypes>(
     context: Context<T>,
     transfer: Transfer,
-): Promise<ValidationResult> => {
+): Promise<ValidatedTransfer> => {
     const { registry, fee, tokenAddress, amount } = transfer.input
     const { sourceAccountHex, sourceParaId, sourceAssetMetadata } = transfer.computed
     const { tx } = transfer
@@ -805,14 +837,14 @@ export const validateTransferFromAssetHub = async <T extends EthereumProviderTyp
             assetHubDryRunError,
             bridgeHubDryRunError,
         },
-        transfer,
+        ...transfer,
     }
 }
 
 export const validateTransferFromParachain = async <T extends EthereumProviderTypes>(
     context: Context<T>,
     transfer: Transfer,
-): Promise<ValidationResult> => {
+): Promise<ValidatedTransfer> => {
     const { registry, fee, tokenAddress, amount } = transfer.input
     const {
         sourceAccountHex,
@@ -995,7 +1027,7 @@ export const validateTransferFromParachain = async <T extends EthereumProviderTy
             assetHubDryRunError,
             bridgeHubDryRunError,
         },
-        transfer,
+        ...transfer,
     }
 }
 
@@ -1028,7 +1060,7 @@ export const mockDeliveryFee: DeliveryFee = {
 // Agent creation exports
 export type {
     AgentCreation,
-    AgentCreationValidationResult,
+    ValidatedCreateAgent,
     AgentCreationInterface,
 } from "./registration/agent/agentInterface"
 
