@@ -80,7 +80,7 @@ export const transferForKusama = async (
         const fee = await transferImpl.fee(tokenAddress)
 
         // Step 2. Create a transfer tx
-        const transfer = await transferImpl.rawTx(
+        const transfer = await transferImpl.tx(
             SOURCE_ACCOUNT_PUBLIC,
             DEST_ACCOUNT_PUBLIC,
             tokenAddress,

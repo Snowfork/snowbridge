@@ -50,7 +50,7 @@ import { bridgeInfoFor } from "@snowbridge/registry"
 
     // Step 2. Create a transfer tx.
     const amount = 15_000_000_000_000n // 0.000015 ETH
-    const transfer = await transferImpl.rawTx(
+    const transfer = await transferImpl.tx(
         ETHEREUM_ACCOUNT_PUBLIC, // Source account
         POLKADOT_ACCOUNT_PUBLIC, // Destination account
         TOKEN_CONTRACT, // The erc20 token contract address

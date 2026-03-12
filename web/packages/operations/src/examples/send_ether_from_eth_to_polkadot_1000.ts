@@ -34,41 +34,27 @@ import { setTimeout } from "timers/promises"
     } = polkadot_mainnet
     const sender = api.sender(ethereum, assetHub)
 
-    // 3. Get Fee
-    const fee = await sender.fee(assetsV2.ETHER_TOKEN_ADDRESS)
-
-    // 4. Build Tx
-    const createdTransfer = await sender.rawTx(
+    // 3. Build and validate Tx
+    const transfer = await sender.build(
         ETHEREUM_ACCOUNT_PUBLIC,
         POLKADOT_ACCOUNT_PUBLIC,
         assetsV2.ETHER_TOKEN_ADDRESS, // Ether address
         15_000_000_000_000n, // 0.000015 ETH,
-        fee,
     )
 
-    // 5. Dry-run Tx
-    const validation = await sender.validate(createdTransfer)
-    console.log("validation result", validation)
-
-    // 6. Check errors
-    if (!validation.success) {
-        console.error(validation.logs)
-        throw Error(`validation has one of more errors.`)
-    }
-
-    // 8. Send Tx wil wallet
-    const response = await ETHEREUM_ACCOUNT.sendTransaction(createdTransfer.tx)
+    // 4. Send Tx with wallet
+    const response = await ETHEREUM_ACCOUNT.sendTransaction(transfer.tx)
     const receipt = await response.wait(1)
     if (!receipt) {
         throw Error(`Transaction ${response.hash} not included.`)
     }
 
-    // 9. Get message id
+    // 5. Get message id
     const message = await sender.messageId(receipt)
     if (!message) {
         throw Error(`Transaction ${receipt.hash} did not emit a message.`)
     }
-    const messageId = createdTransfer.computed.topic
+    const messageId = transfer.computed.topic
     console.log(
         `Success message with message id: ${messageId}
                 nonce: ${message.nonce}
@@ -76,7 +62,7 @@ import { setTimeout } from "timers/promises"
                 tx hash: ${message.txHash}`,
     )
 
-    // 10. Poll Tx Status
+    // 6. Poll Tx Status
     while (true) {
         const status = await api.txStatus(messageId)
         if (status !== undefined && status.status !== TransferStatus.Pending) {
@@ -89,6 +75,6 @@ import { setTimeout } from "timers/promises"
         await setTimeout(60_000)
     }
 
-    // 11. Cleanup api
+    // 7. Cleanup api
     await api.destroy()
 })()

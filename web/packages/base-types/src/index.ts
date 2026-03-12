@@ -169,6 +169,16 @@ export type TransferRoute = {
   assets: readonly string[];
 };
 
+export type TransferKind =
+  | "polkadot->polkadot"
+  | "kusama->polkadot"
+  | "polkadot->kusama"
+  | "polkadot->ethereum"
+  | "ethereum->polkadot"
+  | "ethereum->ethereum"
+  | "polkadot->ethereum_l2"
+  | "ethereum_l2->polkadot";
+
 export type ChainKey<T extends string> = `${T}_${number}`;
 
 export type Source = ChainId & {

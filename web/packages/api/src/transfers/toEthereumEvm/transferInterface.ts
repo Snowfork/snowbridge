@@ -7,12 +7,14 @@ import {
     EthereumChain,
     EthereumProviderTypes,
     Parachain,
+    TransferKind,
 } from "@snowbridge/base-types"
 import { EventRecord } from "@polkadot/types/interfaces"
 import { OperationStatus } from "../../status"
 import { DeliveryFee, FeeInfo, ValidationLog } from "../../toEthereum_v2"
 
 export type TransferEvm<T extends EthereumProviderTypes> = {
+    kind: Extract<TransferKind, "ethereum->ethereum">
     input: {
         registry: AssetRegistry
         sourceAccount: string
@@ -36,7 +38,7 @@ export type TransferEvm<T extends EthereumProviderTypes> = {
     tx: T["ContractTransaction"]
 }
 
-export type ValidationResultEvm<T extends EthereumProviderTypes> = {
+export type ValidatedTransferEvm<T extends EthereumProviderTypes> = TransferEvm<T> & {
     logs: ValidationLog[]
     success: boolean
     data: {
@@ -48,7 +50,6 @@ export type ValidationResultEvm<T extends EthereumProviderTypes> = {
         sourceDryRunError: any
         assetHubDryRunError: any
     }
-    transfer: TransferEvm<T>
 }
 
 export type MessageReceiptEvm = {
@@ -78,7 +79,7 @@ export interface TransferInterface<T extends EthereumProviderTypes> {
         },
     ): Promise<DeliveryFee>
 
-    rawTx(
+    tx(
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
@@ -90,7 +91,28 @@ export interface TransferInterface<T extends EthereumProviderTypes> {
         },
     ): Promise<TransferEvm<T>>
 
-    validate(transfer: TransferEvm<T>): Promise<ValidationResultEvm<T>>
+    validate(transfer: TransferEvm<T>): Promise<ValidatedTransferEvm<T>>
+
+    build(
+        sourceAccount: string,
+        beneficiaryAccount: string,
+        tokenAddress: string,
+        amount: bigint,
+        options?: {
+            fee?: {
+                padPercentage?: bigint
+                slippagePadPercentage?: bigint
+                defaultFee?: bigint
+                feeTokenLocation?: any
+                claimerLocation?: any
+                contractCall?: ContractCall
+            }
+            tx?: {
+                claimerLocation?: any
+                contractCall?: ContractCall
+            }
+        },
+    ): Promise<ValidatedTransferEvm<T>>
 
     messageId(receipt: T["TransactionReceipt"]): Promise<MessageReceiptEvm>
 }
