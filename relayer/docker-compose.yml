@@ -6,7 +6,7 @@ x-logging: &awslogs
     awslogs-create-group: "true"
 
 x-image: &image
-  image: ghcr.io/snowfork/snowbridge-relay:${IMAGE_TAG:-latest}
+  image: ghcr.io/snowfork/snowbridge-relay:${IMAGE_TAG:-snowbridge-relayers-v1}
   platform: linux/amd64
 
 services:
