@@ -8,9 +8,60 @@ importers:
 
   .:
     devDependencies:
+      '@aws-sdk/client-cloudwatch':
+        specifier: ^3.901.0
+        version: 3.901.0
+      '@polkadot/api':
+        specifier: 16.5.4
+        version: 16.5.4
+      '@polkadot/keyring':
+        specifier: 14.0.1
+        version: 14.0.1(@polkadot/util-crypto@14.0.1(@polkadot/util@14.0.1))(@polkadot/util@14.0.1)
+      '@polkadot/types':
+        specifier: 16.5.4
+        version: 16.5.4
+      '@polkadot/types-codec':
+        specifier: 16.5.4
+        version: 16.5.4
+      '@polkadot/util':
+        specifier: 14.0.1
+        version: 14.0.1
+      '@polkadot/util-crypto':
+        specifier: 14.0.1
+        version: 14.0.1(@polkadot/util@14.0.1)
+      '@snowbridge/api':
+        specifier: workspace:*
+        version: link:packages/api
+      '@snowbridge/base-types':
+        specifier: workspace:*
+        version: link:packages/base-types
+      '@snowbridge/contract-types':
+        specifier: workspace:*
+        version: link:packages/contract-types
+      '@snowbridge/registry':
+        specifier: workspace:*
+        version: link:packages/registry
+      '@types/pino':
+        specifier: ^7.0.5
+        version: 7.0.5
       '@vercel/node':
         specifier: ^3.2.0
         version: 3.2.29
+      dotenv:
+        specifier: ^17.2.3
+        version: 17.2.3
+      ethers:
+        specifier: ^6.16.0
+        version: 6.16.0
+      lodash:
+        specifier: ^4.17.21
+        version: 4.17.21
+      pino:
+        specifier: ^10.0.0
+        version: 10.0.0
+      pino-pretty:
+        specifier: ^13.1.1
+        version: 13.1.1
       ts-node:
         specifier: 10.9.2
         version: 10.9.2(@types/node@16.18.11)(typescript@5.9.3)

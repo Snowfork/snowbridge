@@ -1,6 +1,7 @@
 {
   "installCommand": "pnpm install && bash scripts/install-foundry.sh",
   "buildCommand": "pnpm run build:vercel",
+  "outputDirectory": ".",
   "crons": [
     {
       "path": "/api/monitor",
