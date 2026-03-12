@@ -7,12 +7,11 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Use project-local dir on CI/Vercel so we don't rely on $HOME being writable
-# if [ -n "${CI:-}" ] || [ -n "${VERCEL:-}" ]; then
-#   FOUNDRY_DIR="${FOUNDRY_DIR:-$SCRIPT_DIR/.foundry}"
-# else
-#   FOUNDRY_DIR="${FOUNDRY_DIR:-$HOME/.foundry}"
-# fi
-FOUNDRY_DIR="${FOUNDRY_DIR:-$SCRIPT_DIR/.foundry}"
+if [ -n "${CI:-}" ] || [ -n "${VERCEL:-}" ]; then
+  FOUNDRY_DIR="${FOUNDRY_DIR:-$SCRIPT_DIR/.foundry}"
+else
+  FOUNDRY_DIR="${FOUNDRY_DIR:-$HOME/.foundry}"
+fi
 
 # If forge is already in PATH (e.g. from a previous step), skip install
 if command -v forge >/dev/null 2>&1; then
@@ -48,23 +47,33 @@ else
   tar -xzf /tmp/foundry.tar.gz -C "$FOUNDRY_DIR"
   rm -f /tmp/foundry.tar.gz
 
-  # Tarball has one top-level dir (e.g. foundry_nightly_linux_amd64) with binaries
-  SUBDIR=$(find "$FOUNDRY_DIR" -maxdepth 1 -type d ! -path "$FOUNDRY_DIR" 2>/dev/null | head -1)
-  if [ -n "$SUBDIR" ] && [ -f "$SUBDIR/forge" ]; then
-    mkdir -p "$FOUNDRY_DIR/bin"
-    cp -f "$SUBDIR"/forge "$SUBDIR"/cast "$SUBDIR"/anvil "$FOUNDRY_DIR/bin/" 2>/dev/null || true
-    [ -f "$SUBDIR/chisel" ] && cp -f "$SUBDIR/chisel" "$FOUNDRY_DIR/bin/" 2>/dev/null || true
-    chmod +x "$FOUNDRY_DIR/bin"/*
-    rm -rf "$SUBDIR"
-  else
-    # Binaries at top level of FOUNDRY_DIR
-    mkdir -p "$FOUNDRY_DIR/bin"
-    for b in forge cast anvil chisel; do
-      [ -f "$FOUNDRY_DIR/$b" ] && mv "$FOUNDRY_DIR/$b" "$FOUNDRY_DIR/bin/" && chmod +x "$FOUNDRY_DIR/bin/$b"
-    done
-  fi
+  # Tarball layout: either one top-level dir (e.g. foundry_nightly_linux_amd64/) with binaries,
+  # or binaries directly in FOUNDRY_DIR (darwin). Put forge in FOUNDRY_DIR/bin for a consistent PATH.
+  FOUNDRY_BIN="$FOUNDRY_DIR/bin"
+  mkdir -p "$FOUNDRY_BIN"
+  # Find a subdir that contains forge (skip FOUNDRY_BIN so we don't treat bin as the source dir)
+  SUBDIR=$(find "$FOUNDRY_DIR" -maxdepth 1 -type d ! -path "$FOUNDRY_DIR" ! -path "$FOUNDRY_BIN" 2>/dev/null | head -1)
 
-  export PATH="$FOUNDRY_DIR/bin:$PATH"
+  if [ -n "$SUBDIR" ] && [ -f "$SUBDIR/forge" ]; then
+    cp -f "$SUBDIR"/forge "$SUBDIR"/cast "$SUBDIR"/anvil "$FOUNDRY_BIN/" 2>/dev/null || true
+    [ -f "$SUBDIR/chisel" ] && cp -f "$SUBDIR/chisel" "$FOUNDRY_BIN/" 2>/dev/null || true
+    rm -rf "$SUBDIR"
+  fi
+  # If binaries were at FOUNDRY_DIR root (e.g. darwin tarball)
+  for b in forge cast anvil chisel; do
+    if [ -f "$FOUNDRY_DIR/$b" ]; then
+      mv -f "$FOUNDRY_DIR/$b" "$FOUNDRY_BIN/$b"
+      chmod +x "$FOUNDRY_BIN/$b"
+    fi
+  done
+
+  if [ ! -f "$FOUNDRY_BIN/forge" ]; then
+    echo "Error: forge binary not found after extract. Contents of $FOUNDRY_DIR:"
+    ls -la "$FOUNDRY_DIR" 2>/dev/null || true
+    exit 1
+  fi
+  chmod +x "$FOUNDRY_BIN"/*
+  export PATH="$FOUNDRY_BIN:$PATH"
 fi
 
 # Ensure forge is available
