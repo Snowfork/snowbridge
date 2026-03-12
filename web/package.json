@@ -7,7 +7,7 @@
   },
   "scripts": {
     "preinstall": "npx only-allow pnpm",
-    "build": "turbo run build --concurrency=1 --no-cache",
+    "build": "turbo run build --concurrency=1",
     "build:vercel": "export PATH=\"$(pwd)/scripts/.foundry/bin:$(pwd)/.foundry/bin:${HOME}/.foundry/bin:${PATH}\" && cd ../contracts && forge build && cd ../web && pnpm run build",
     "build:vercel:full": "bash scripts/install-foundry.sh && pnpm run build:vercel",
     "test": "turbo run test",
