@@ -162,6 +162,34 @@ func (h *Header) SyncCommitteePeriodUpdate(ctx context.Context, period uint64) e
 		"period":                period,
 	}).Info("syncing sync committee for period")
 
+	// Check if the sync committee period has already been updated on-chain by another relayer
+	// to avoid paying fees for a no-op submission.
+	currentOnchainState, err := h.writer.GetLastFinalizedHeaderStateAtBestBlock()
+	if err != nil {
+		return fmt.Errorf("fetch current on-chain finalized header state: %w", err)
+	}
+	currentOnchainPeriod := h.protocol.ComputeSyncPeriodAtSlot(currentOnchainState.BeaconSlot)
+	if currentOnchainPeriod >= period {
+		log.WithFields(log.Fields{
+			"period":          period,
+			"on_chain_period": currentOnchainPeriod,
+			"on_chain_slot":   currentOnchainState.BeaconSlot,
+		}).Info("skipping sync committee update: period already synced on-chain")
+
+		h.cache.SetLastSyncedFinalizedState(currentOnchainState.BeaconBlockRoot, currentOnchainState.BeaconSlot)
+		return nil
+	}
+
+	hasPending, err := h.writer.HasPendingExtrinsic("EthereumBeaconClient.submit")
+	if err != nil {
+		log.WithError(err).Warn("failed to check pending extrinsics, proceeding with submission")
+	} else if hasPending {
+		log.WithFields(log.Fields{
+			"period": period,
+		}).Info("skipping sync committee update: another relayer has a pending submission in the tx pool")
+		return nil
+	}
+
 	err = h.writer.WriteToParachainAndWatch(ctx, "EthereumBeaconClient.submit", update.Payload)
 	if err != nil {
 		return err
@@ -258,6 +286,35 @@ func (h *Header) updateFinalizedHeaderOnchain(ctx context.Context, update scale.
 		// Update cache since the header is already on-chain
 		h.cache.SetLastSyncedFinalizedState(update.FinalizedHeaderBlockRoot, uint64(update.Payload.FinalizedHeader.Slot))
 		h.cache.AddCheckPoint(update.FinalizedHeaderBlockRoot, update.BlockRootsTree, uint64(update.Payload.FinalizedHeader.Slot))
+		return nil
+	}
+
+	// Also skip if the on-chain slot is already at or ahead of the slot we want to submit.
+	// This catches the race condition where another relayer submitted a different header for the
+	// same or newer slot between our check and submission, which would result in a no-op
+	// on-chain with fees charged.
+	if currentOnchainState.BeaconSlot >= uint64(update.Payload.FinalizedHeader.Slot) {
+		log.WithFields(log.Fields{
+			"slot":            update.Payload.FinalizedHeader.Slot,
+			"on_chain_slot":   currentOnchainState.BeaconSlot,
+			"block_root":      update.FinalizedHeaderBlockRoot.Hex(),
+			"on_chain_root":   currentOnchainState.BeaconBlockRoot.Hex(),
+		}).Info("skipping finalized header submission: on-chain slot is already at or ahead of update slot")
+
+		h.cache.SetLastSyncedFinalizedState(currentOnchainState.BeaconBlockRoot, currentOnchainState.BeaconSlot)
+		return nil
+	}
+
+	// Check if another relayer already has a pending submission in the transaction pool.
+	// This catches the race where both relayers pass the on-chain checks simultaneously
+	// but one submits slightly earlier, leaving a tx in the mempool.
+	hasPending, err := h.writer.HasPendingExtrinsic("EthereumBeaconClient.submit")
+	if err != nil {
+		log.WithError(err).Warn("failed to check pending extrinsics, proceeding with submission")
+	} else if hasPending {
+		log.WithFields(log.Fields{
+			"slot": update.Payload.FinalizedHeader.Slot,
+		}).Info("skipping finalized header submission: another relayer has a pending submission in the tx pool")
 		return nil
 	}
 

@@ -28,6 +28,7 @@ type ChainWriter interface {
 	GetFinalizedHeaderStateByBlockRoot(blockRoot types.H256) (state.FinalizedHeader, error)
 	GetLastFinalizedStateIndex() (types.U32, error)
 	GetFinalizedBeaconRootByIndex(index uint32) (types.H256, error)
+	HasPendingExtrinsic(extrinsicName string) (bool, error)
 }
 
 type ParachainWriter struct {
@@ -463,4 +464,35 @@ func (wr *ParachainWriter) GetFinalizedBeaconRootByIndex(index uint32) (types.H2
 	}
 
 	return beaconRoot, nil
+}
+
+// HasPendingExtrinsic checks if there is already a pending extrinsic in the transaction pool
+// for the given extrinsic name (e.g. "EthereumBeaconClient.submit"). This is used to avoid
+// submitting duplicate extrinsics when another relayer has already submitted one that hasn't
+// been included in a block yet.
+func (wr *ParachainWriter) HasPendingExtrinsic(extrinsicName string) (bool, error) {
+	meta, err := wr.conn.API().RPC.State.GetMetadataLatest()
+	if err != nil {
+		return false, fmt.Errorf("get metadata: %w", err)
+	}
+
+	// Get the call index for the target extrinsic so we can match against pending txs
+	targetCall, err := types.NewCall(meta, extrinsicName)
+	if err != nil {
+		return false, fmt.Errorf("create call for %s: %w", extrinsicName, err)
+	}
+	targetIndex := targetCall.CallIndex
+
+	pendingExts, err := wr.conn.API().RPC.Author.PendingExtrinsics()
+	if err != nil {
+		return false, fmt.Errorf("get pending extrinsics: %w", err)
+	}
+
+	for _, ext := range pendingExts {
+		if ext.Method.CallIndex == targetIndex {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }

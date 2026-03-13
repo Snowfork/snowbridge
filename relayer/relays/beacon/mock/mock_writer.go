@@ -76,6 +76,10 @@ func (m *Writer) GetFinalizedHeaderStateByBlockRoot(blockRoot types.H256) (state
 	return m.FinalizedHeaderStateByBlockRoot[blockRoot], nil
 }
 
+func (m *Writer) HasPendingExtrinsic(extrinsicName string) (bool, error) {
+	return false, nil
+}
+
 func (m *Writer) FindCheckPointBackward(slot uint64) (state.FinalizedHeader, error) {
 	return state.FinalizedHeader{}, nil
 }
