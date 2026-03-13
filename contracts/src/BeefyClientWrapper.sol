@@ -176,8 +176,11 @@ contract BeefyClientWrapper {
     ) external {
         uint256 startGas = gasleft();
 
-        // Capture previous state for progress calculation
+        // Revert early if commitment won't make enough progress for a refund
         uint64 previousBeefyBlock = _beefyClient().latestBeefyBlock();
+        if (commitment.blockNumber <= previousBeefyBlock || commitment.blockNumber - previousBeefyBlock < refundTarget) {
+            revert InsufficientProgress();
+        }
 
         _beefyClient().submitFiatShamir(commitment, bitfield, proofs, leaf, leafProof, leafProofOrder);
 

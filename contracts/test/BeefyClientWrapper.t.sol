@@ -658,6 +658,20 @@ contract BeefyClientWrapperTest is Test {
 
     /* Fiat Shamir Tests */
 
+    function test_submitFiatShamirRevertsForLowProgress() public {
+        uint32 progress = uint32(REFUND_TARGET / 2);
+        uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + progress);
+        BeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
+        uint256[] memory bitfield = new uint256[](1);
+        BeefyClient.ValidatorProof[] memory proofs = createValidatorProofs(1);
+        BeefyClient.MMRLeaf memory leaf = createMMRLeaf();
+        bytes32[] memory leafProof = new bytes32[](0);
+
+        vm.prank(relayer1);
+        vm.expectRevert(BeefyClientWrapper.InsufficientProgress.selector);
+        wrapper.submitFiatShamir(commitment, bitfield, proofs, leaf, leafProof, 0);
+    }
+
     function test_submitFiatShamir() public {
         uint32 newBlockNumber = uint32(INITIAL_BEEFY_BLOCK + 500);
         BeefyClient.Commitment memory commitment = createCommitment(newBlockNumber);
