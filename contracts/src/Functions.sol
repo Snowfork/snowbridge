@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.33;
+pragma solidity 0.8.34;
 
 import {IERC20} from "./interfaces/IERC20.sol";
 import {SafeNativeTransfer, SafeTokenTransferFrom} from "./utils/SafeTransfer.sol";
@@ -102,7 +102,7 @@ library Functions {
         if (!token.isContract()) {
             revert InvalidToken();
         }
-        
+
         // NOTE: Explicitly allow a native token to be re-registered. This offers resiliency
         // in case a previous registration attempt of the same token failed on the remote side.
         // It means that registration can be retried.

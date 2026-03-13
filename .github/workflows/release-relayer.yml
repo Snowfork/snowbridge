@@ -20,6 +20,7 @@ jobs:
       - uses: actions/checkout@v1
         with:
           fetch-depth: 2
+          submodules: recursive
 
       - name: Setup go
         uses: actions/setup-go@v5
@@ -34,15 +35,6 @@ jobs:
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
-
-      - name: Install contract dependencies
-        working-directory: contracts
-        run: |
-          forge install https://github.com/foundry-rs/forge-std --no-git
-          forge install https://github.com/dapphub/ds-test --no-git
-          forge install https://github.com/PaulRBerg/prb-math --no-git
-          forge install https://github.com/OpenZeppelin/openzeppelin-contracts --no-git
-          forge install https://github.com/snowfork/canonical-weth --no-git
 
       - name: Build contracts
         working-directory: contracts
@@ -163,7 +155,6 @@ jobs:
           asset_path: ./relayer/.env.mainnet.example
           asset_name: .env.mainnet.example
           asset_content_type: text/plain
-
 
       - name: Determine image tag
         id: image_tag

@@ -4,160 +4,291 @@ description: Steps to set up your own Snowbridge message relayers.
 
 # Run Relayers
 
-1. [Setup](run-relayers.md#id-1.-setup)
-2. [Upgrade](run-relayers.md#id-2.-upgrade)
+This guide explains how to run Snowbridge relayers using Docker Compose.
 
-## 1. Setup
+## Overview
 
-### 1.1 AWS account
+Snowbridge relayers are off-chain agents that facilitate message passing between Ethereum and Polkadot. Running a relayer helps decentralize the bridge and you can earn rewards for successfully relaying messages.
 
-The first thing you will need is an AWS account. [Register](https://signin.aws.amazon.com/signup?request_type=register) if you do not have an account yet.
+### Which Relayers Should I Run?
 
-### 1.2 Clone infra repo
+For new operators, we recommend starting with:
 
-Clone the [infrastructure repository](https://github.com/Snowfork/snowbrige-relayers-infra):
+| Relayer | Direction |
+|---------|-----------|
+| `parachain-v2` | Polkadot → Ethereum |
+| `ethereum-v2` | Ethereum → Polkadot |
+| `primary-governance` | Polkadot → Ethereum |
+| `secondary-governance` | Polkadot → Ethereum |
 
-```sh
-git clone https://github.com/Snowfork/snowbridge-relayers-infra.git
-```
+**Note:** The `beefy` relayer is expensive to operate (high gas costs) and is typically run by the Snowbridge team. Only run it if you understand the costs involved.
 
-### 1.3 Install Ansible & dependencies
+### Hardware Requirements
 
-Install Ansible and its dependencies:
+Minimum recommended specifications:
+- **CPU:** 2 cores (dedicated, avoid burstable instances)
+- **RAM:** 4 GB
+- **Storage:** 20 GB SSD
+- **Network:** Stable internet connection with low latency
 
-```sh
-brew install pipx
-pipx install --include-deps ansible boto3 botocore
-pipx ensurepath
-ansible-galaxy collection install amazon.aws
-```
+## Prerequisites
 
-### 1.4 Create AWS key pair
+- Docker and Docker Compose installed
+- Private keys for signing transactions (Ethereum and/or Substrate)
+- RPC endpoints for:
+  - Ethereum execution layer (WebSocket)
+  - Ethereum beacon chain (HTTP)
+  - Polkadot relay chain (WebSocket)
+  - BridgeHub parachain (WebSocket)
+  - AssetHub parachain (WebSocket, for ethereum relay gas estimation)
 
-On the AWS console, under the EC2 section, create an ED25519 key pair called `snowbridge-relayers-key`.
+## Quick Start
 
-### 1.5 Set AWS env variables
+1. **Download the Docker Compose file and environment template for your network:**
+   ```bash
+   mkdir snowbridge && cd snowbridge
 
-In the `snowbridge-relayers-infra` directory, create a .envrc file with the following values:
+   # Docker Compose file
+   curl -O https://raw.githubusercontent.com/Snowfork/snowbridge/main/relayer/docker-compose.yml
 
-```
-export AWS_ACCESS_KEY_ID=
-export AWS_SECRET_ACCESS_KEY=
-export AWS_ACCOUNT_ID=
-export AWS_DEFAULT_REGION=eu-central-1
-```
+   # For mainnet (Polkadot + Ethereum)
+   curl -o .env https://raw.githubusercontent.com/Snowfork/snowbridge/main/relayer/.env.mainnet.example
+   ```
 
-Add your AWS access key ID, secret access key and account ID.
+2. **Configure your .env file with:**
+   - RPC endpoints
+   - Private key references (see [Private Keys](#private-keys) section)
+   - (Mainnet only) Chainalysis API key for OFAC compliance
 
-### 1.6 Create EC2 instance
+3. **Start the relayers:**
+   ```bash
+   docker compose up -d
+   ```
 
+## Architecture
 
+The Docker Compose setup runs the following relayer services:
 
-Run command from inside the `snowbridge-relayers-infra` directory:
+| Service | Description | Keys Required | Profile |
+|---------|-------------|---------------|---------|
+| `beacon-state-service` | Caches beacon state proofs | None | default |
+| `beacon` | Relays Ethereum beacon headers to Polkadot | Substrate | default |
+| `ethereum-v2` | Relays Ethereum messages to Polkadot (v2) | Substrate | default |
+| `ethereum` | Relays Ethereum messages to Polkadot (v1) | Substrate | default |
+| `parachain-v2` | Relays Polkadot messages to Ethereum (v2) | Ethereum | default |
+| `parachain` | Relays Polkadot messages to Ethereum (v1) | Ethereum | default |
+| `primary-governance` | Relays primary governance messages to Ethereum | Ethereum | default |
+| `secondary-governance` | Relays secondary governance messages to Ethereum | Ethereum | default |
+| `reward` | Processes relayer rewards | Substrate | default |
+| `beefy` | Relays BEEFY commitments to Ethereum | Ethereum | expensive |
+| `beefy-on-demand` | On-demand BEEFY relay | Ethereum | expensive |
 
-`ansible-playbook -i inventory/message-relayers/aws_ec2.yml infra.yml`
+**Note:** Services in the `expensive` profile require `--profile expensive` to start.
 
-It will create an EC2 instance to run the relayers on.
-
-### 1.7 Add secrets
-
-Add the following plaintext secrets to AWS secrets manager:
-
-```
-snowbridge/dwellir-eth-node-api-key
-snowbridge/dwellir-polkadot-node-api-key
-snowbridge/chainalysis-api-key
-snowbridge/asset-hub-ethereum-relay
-snowbridge/asset-hub-parachain-relay
-```
-
-<figure><img src="../.gitbook/assets/Screenshot 2024-10-22 at 19.44.27.png" alt="" width="563"><figcaption><p>Example of how to add an AWS secret.</p></figcaption></figure>
-
-#### 1.7.1 Lodestar, Polkadot Nodes & Chainalysis key
-
-Ask for API keys for `dwellir-eth-node-api-key`, `dwellir-polkadot-node-api-key` and `chainalysis-api-key` in Snowbridge Relayer Telegram group: [https://t.me/+I8Iel-Eaxcw3NjU0](https://t.me/+I8Iel-Eaxcw3NjU0) (keys will be DM'ed to you).
-
-#### 1.7.2 Ethereum relay key
-
-The `asset-hub-ethereum-relay` is a private key for an prefunded account on Polkadot BridgeHub. To retrieve the private key from an account on Polkadot with seedphrase "cat cow milk...", use [subkey](https://docs.substrate.io/reference/command-line-tools/subkey/):
-
-```
-./target/release/subkey inspect "cat cow milk..."
-```
-
-Use the secret seed hash as the `snowbridge/asset-hub-ethereum-relay` secret.
-
-#### 1.7.3 Parachain relayer key
-
-The `asset-hub-parachain-relay` is a private key for a funded account on Ethereum.
-
-### 1.8 Fund relayer accounts
-
-The Ethereum and Polkadot BridgeHub account should be funded with $10 each, at least.
-
-### 1.9 Set relayer number
-
-Once you have set up all of the above, ask for a relayer ID and relayer count in Snowbridge Relayer Telegram group: [https://t.me/+I8Iel-Eaxcw3NjU0](https://t.me/+I8Iel-Eaxcw3NjU0). Add the key and ID in your `.envrc` file. [Example .envrc file](https://github.com/Snowfork/snowbrige-relayers-infra/blob/main/.envrc-example#L5-L6).
-
-### 1.10 Install Relayers
-
-Once you have added all the secrets, you can deploy your relayers:
+### Service Dependencies
 
 ```
-ssh-agent bash
-ssh-add /path/to/snowbridge-relayers-key.pem
-ansible-playbook -i inventory/message-relayers/aws_ec2.yml relayers.yml
+beacon-state-service (starts first, health checked)
+    ├── beacon
+    ├── ethereum-v2
+    ├── ethereum
+    └── reward
+
+parachain-v2 (independent)
+parachain (independent)
+primary-governance (independent)
+secondary-governance (independent)
+beefy (independent, expensive profile)
+beefy-on-demand (independent, expensive profile)
 ```
 
-Once it has completed, ssh into your instance.
+## Configuration
 
-```
-ssh -i message-relayers-key.pem ubuntu@xxx.eu-central-1.compute.amazonaws.com
-```
+### Environment Files
 
-Check that you see no relayer errors for each relayer:
+Each network has a pre-configured environment file:
 
-```
-sudo journalctl -fu snowbridge-asset-hub-ethereum-relay --since today
-sudo journalctl -fu snowbridge-asset-hub-parachain-relay --since today
-```
+| Network | File | Ethereum | Polkadot |
+|---------|------|----------|----------|
+| Mainnet | `.env.mainnet.example` | Ethereum Mainnet | Polkadot |
+| Paseo | `.env.paseo.example` | Sepolia | Paseo |
+| Westend | `.env.westend.example` | Sepolia | Westend |
 
-### 1.11 Increment Relayer count
+### Private Keys
 
-Once the relayer has started up successfully, all relaying parties should increment their [relayer count config and redeploy](https://github.com/Snowfork/snowbrige-relayers-infra/blob/main/.envrc-example#L5-L6) their relayer config. This action will be prompted in the TG group.
+For production deployments, use AWS Secrets Manager:
 
-### 1.12 Monitoring
-
-To set up monitoring, register an account with [PagerDuty](https://www.pagerduty.com/).
-
-Once registered, create a new service: **Services** -> **Services Directory**. Click on **New**. Call the service "Snowbridge Message Relayers"
-
-Under service "Snowbridge Message Relayers", click on **Integrations**. Add a new **Amazon Cloudwatch** integration. Copy the integration URL.
-
-In your `snowbridge-relayers-infra` project, copy the URL to your .envrc file:
-
-```
-export PAGER_URL=https://events.eu.pagerduty.com/integration/xxx/enqueue
-```
-
-Now run the Ansible script to create all the necessary metrics, alarms, topic and subscription on AWS:
-
-```
-git pull
-ssh-agent bash
-ssh-add /path/to/snowbridge-relayers-key.pem
-ansible-playbook -i inventory/message-relayers/aws_ec2.yml alarm.yml
+```bash
+# Pattern: {environment}/{relay-name}
+BEACON_RELAY_SUBSTRATE_KEY_ID=snowbridge/beacon-relay
+EXECUTION_RELAY_SUBSTRATE_KEY_ID=snowbridge/asset-hub-ethereum-relay-v2
+BEEFY_RELAY_ETHEREUM_KEY_ID=snowbridge/beefy-relay
+BEEFY_ON_DEMAND_RELAY_ETHEREUM_KEY_ID=snowbridge/beefy-on-demand-relay
+PARACHAIN_V1_RELAY_ETHEREUM_KEY_ID=snowbridge/asset-hub-parachain-relay
+PARACHAIN_RELAY_ETHEREUM_KEY_ID=snowbridge/asset-hub-parachain-relay-v2
+REWARD_RELAY_SUBSTRATE_KEY_ID=snowbridge/asset-hub-parachain-relay-v2-delivery-proof
+EXECUTION_V1_RELAY_SUBSTRATE_KEY_ID=snowbridge/asset-hub-ethereum-relay
+PRIMARY_GOVERNANCE_RELAY_ETHEREUM_KEY_ID=prod/governance-relay
+SECONDARY_GOVERNANCE_RELAY_ETHEREUM_KEY_ID=prod/governance-relay
 ```
 
-Test the alarms by triggering a failure condition (i.e. change the URL of one of the service endpoints to an invalid value).
+Create secrets in AWS Secrets Manager containing the raw private key strings. Requires AWS credentials configured in your `.env` file.
 
-## 2. Upgrade
+### Endpoint Configuration
 
-To upgrade the relayer, run the following commands:
+All endpoints are configured via environment variables:
 
+| Variable | Description |
+|----------|-------------|
+| `ETHEREUM_ENDPOINT` | Ethereum execution layer RPC (WebSocket) |
+| `BEACON_ENDPOINT` | Ethereum beacon chain HTTP endpoint |
+| `POLKADOT_ENDPOINT` | Polkadot relay chain RPC (WebSocket) |
+| `BRIDGEHUB_ENDPOINT` | BridgeHub parachain RPC (WebSocket) |
+| `ASSETHUB_ENDPOINT` | AssetHub parachain RPC (WebSocket) |
+| `FLASHBOTS_ENDPOINT` | Flashbots RPC for private transactions |
+
+### OFAC Compliance
+
+The execution and parachain relays support OFAC compliance checking via Chainalysis.
+
+- **Mainnet**: Enabled by default, requires `CHAINALYSIS_API_KEY`
+- **Testnets**: Disabled by default
+
+### Fund Relayer Accounts
+
+The Ethereum and Polkadot BridgeHub accounts should be funded with at least $10 each.
+
+## Operations
+
+### View logs
+
+```bash
+# All services
+docker compose logs -f
+
+# Specific service
+docker compose logs -f parachain-v2
 ```
-git pull
-ssh-agent bash
-ssh-add /path/to/snowbridge-relayers-key.pem
-ansible-playbook -i inventory/message-relayers/aws_ec2.yml relayers.yml --start-at "Upload binary"
+
+### Stop relayers
+
+```bash
+docker compose down
 ```
+
+### Restart a specific relayer
+
+```bash
+docker compose restart ethereum-v2
+```
+
+### Check health
+
+```bash
+# Beacon state service health
+curl http://localhost:8080/health
+
+# Check container status
+docker compose ps
+```
+
+### Upgrade
+
+To upgrade to a newer relayer version:
+
+```bash
+# Pull the latest image
+docker compose pull
+
+# Restart with the new image
+docker compose up -d
+```
+
+Or specify a specific version via the `IMAGE_TAG` environment variable in your `.env` file.
+
+## Volumes
+
+The setup creates persistent volumes for:
+- `beacon-state-data` — Beacon state service cache and persistence
+- `beacon-data` — Beacon relay local datastore
+
+To reset state:
+```bash
+docker compose down -v
+```
+
+## Rewards
+
+Relayers earn rewards for successfully delivering messages:
+
+- **Polkadot → Ethereum** (`parachain-v2`): Rewards are paid in ETH on Ethereum
+- **Ethereum → Polkadot** (`ethereum-v2`): Rewards are paid in DOT on AssetHub
+
+To claim rewards, configure the `REWARD_ADDRESS` environment variable with your reward destination address.
+
+The `reward` relayer service automatically claims accumulated rewards periodically.
+
+## Monitoring
+
+### CloudWatch Logging (AWS)
+
+If running on AWS EC2, logs are automatically sent to CloudWatch when configured:
+
+1. Set `AWS_REGION`, `AWS_ACCESS_KEY_ID`, and `AWS_SECRET_ACCESS_KEY` in your `.env` file
+2. Logs will appear in CloudWatch under `snowbridge/{environment}/`
+
+### Local Logging
+
+```bash
+# Follow all logs
+docker compose logs -f
+
+# Follow specific service
+docker compose logs -f parachain-v2
+
+# View last 100 lines
+docker compose logs --tail 100 ethereum-v2
+```
+
+### Health Checks
+
+```bash
+# Beacon state service health
+curl http://localhost:8080/health
+
+# Check container status
+docker compose ps
+```
+
+## Troubleshooting
+
+### Beacon state service not healthy
+
+Check the logs:
+```bash
+docker compose logs beacon-state-service
+```
+
+Common issues:
+- Beacon endpoint not reachable
+- Incorrect fork versions (check your .env matches the network)
+
+### Relayer failing to submit transactions
+
+- Check private key is correctly configured
+- If using AWS Secrets Manager, verify AWS credentials in `.env`
+- Check endpoint connectivity
+
+### Gas estimation failures (ethereum relay)
+
+- Verify AssetHub and BridgeHub endpoints are correct
+
+### Relayer not picking up messages
+
+- Ensure your endpoints are synced and not lagging
+- Check logs for connectivity issues
+
+## Getting Help
+
+- Telegram: [Snowbridge Relayer Group](https://t.me/+I8Iel-Eaxcw3NjU0)
+- GitHub Issues: https://github.com/Snowfork/snowbridge/issues

@@ -1,0 +1,23 @@
+{
+  "lib/canonical-weth": {
+    "rev": "ea174e6f07efe8be85690cf38192155033c425e2"
+  },
+  "lib/forge-std": {
+    "tag": {
+      "name": "v1.12.0",
+      "rev": "7117c90c8cf6c68e5acce4f09a6b24715cea4de6"
+    }
+  },
+  "lib/openzeppelin-contracts": {
+    "tag": {
+      "name": "v5.5.0",
+      "rev": "fcbae5394ae8ad52d8e580a3477db99814b9d565"
+    }
+  },
+  "lib/prb-math": {
+    "tag": {
+      "name": "v4.0.1",
+      "rev": "77fa88eda4a4a91b3f3e9431df291292c26b6c71"
+    }
+  }
+}
