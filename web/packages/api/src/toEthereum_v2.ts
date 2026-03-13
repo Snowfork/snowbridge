@@ -522,8 +522,8 @@ export async function validateTransfer(
     }
     let nativeBalanceCheckFailed = false
     if (isNativeBalance && fee.totalFeeInNative) {
-        nativeBalanceCheckFailed = true
         if (amount + fee.totalFeeInNative > tokenBalance) {
+            nativeBalanceCheckFailed = true
             logs.push({
                 kind: ValidationKind.Error,
                 reason: ValidationReason.InsufficientTokenBalance,
