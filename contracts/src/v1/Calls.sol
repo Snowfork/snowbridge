@@ -13,15 +13,7 @@ import {MultiAddress} from "./MultiAddress.sol";
 import {Address} from "../utils/Address.sol";
 import {Token} from "../Token.sol";
 import {Functions} from "../Functions.sol";
-import {
-    TokenInfo,
-    OperatingMode,
-    ParaID,
-    Channel,
-    ChannelID,
-    Ticket,
-    Costs
-} from "./Types.sol";
+import {OperatingMode, ParaID, Channel, ChannelID, Ticket, Costs} from "./Types.sol";
 import {IGatewayBase} from "../interfaces/IGatewayBase.sol";
 import {IGatewayV1} from "./IGateway.sol";
 import {UD60x18, convert} from "prb/math/src/UD60x18.sol";
@@ -108,11 +100,11 @@ library CallsV1 {
         }
     }
 
-    function quoteSendTokenFee(
-        address token,
-        ParaID destinationChain,
-        uint128 destinationChainFee
-    ) external view returns (uint256) {
+    function quoteSendTokenFee(address token, ParaID destinationChain, uint128 destinationChainFee)
+        external
+        view
+        returns (uint256)
+    {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
         TokenInfo storage info = $.tokenRegistry[token];
         if (!info.isRegistered) {
