@@ -83,7 +83,7 @@ if ! command -v forge >/dev/null 2>&1; then
 fi
 echo "Foundry installed: $(forge --version)"
 
-# Install forge dependencies (same as scripts/init.sh). Contracts dir: ../contracts when run from web/, contracts when run from repo root.
+# Install forge dependencies. Contracts dir: ../contracts when run from web/, contracts when run from repo root.
 CONTRACTS_DIR=""
 [ -d "$SCRIPT_DIR/../contracts" ] && CONTRACTS_DIR="$SCRIPT_DIR/../contracts"
 [ -d "$SCRIPT_DIR/../../contracts" ] && CONTRACTS_DIR="$SCRIPT_DIR/../../contracts"
