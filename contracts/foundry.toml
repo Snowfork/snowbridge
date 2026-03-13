@@ -2,7 +2,7 @@
 solc_version = "0.8.34"
 optimizer = true
 optimizer_runs = 200
-via_ir = false
+via_ir = true
 test = 'test'
 script = 'scripts'
 fs_permissions = [
@@ -20,6 +20,9 @@ ignored_error_codes = [
 ]
 
 no_match_test = "testRegenerate*"
+
+# Coverage: use --ir-minimum to avoid "stack too deep" when running forge coverage
+# Example: forge coverage --ir-minimum --exclude-tests --report=lcov
 
 # Production profile: via_ir enabled for deployment contracts
 [profile.production]

@@ -6,11 +6,13 @@ import {SafeERC20} from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
 import {WETH9} from "canonical-weth/WETH9.sol";
 import {ISpokePool, IMessageHandler} from "./interfaces/ISpokePool.sol";
 import {DepositParams, Instructions, Call} from "./Types.sol";
+import {Agent} from "../Agent.sol";
 
 contract SnowbridgeL1Adaptor {
     using SafeERC20 for IERC20;
     ISpokePool public immutable SPOKE_POOL;
     WETH9 public immutable L1_WETH9;
+    address public immutable GATEWAY;
 
     /**************************************
      *              EVENTS                *
@@ -19,15 +21,27 @@ contract SnowbridgeL1Adaptor {
     event DepositCallInvoked(bytes32 topic, uint256 depositId);
     event DepositCallFailed(bytes32 topic);
 
-    constructor(address _spokePool, address _l1weth9) {
+    constructor(address _spokePool, address _l1weth9, address _gateway) {
         SPOKE_POOL = ISpokePool(_spokePool);
         L1_WETH9 = WETH9(payable(_l1weth9));
+        GATEWAY = _gateway;
+    }
+
+    modifier onlyRegisteredGatewayAgent() {
+        require(
+            Agent(payable(msg.sender)).GATEWAY() == GATEWAY,
+            "Caller is not a registered Gateway Agent"
+        );
+        _;
     }
 
     // Send ERC20 token on L1 to L2, the fee (params.inputAmount - params.outputAmount) should be calculated off-chain
     // following https://docs.across.to/reference/api-reference#get-swap-approval
     // The call requires pre-funding of the contract with the input tokens.
-    function depositToken(DepositParams calldata params, address recipient, bytes32 topic) public {
+    function depositToken(DepositParams calldata params, address recipient, bytes32 topic)
+        public
+        onlyRegisteredGatewayAgent
+    {
         require(params.inputToken != address(0), "Input token cannot be zero address");
         checkInputs(params, recipient);
         IERC20(params.inputToken).forceApprove(address(SPOKE_POOL), params.inputAmount);
@@ -54,6 +68,7 @@ contract SnowbridgeL1Adaptor {
     // The call requires pre-funding of the contract with native Ether.
     function depositNativeEther(DepositParams calldata params, address recipient, bytes32 topic)
         public
+        onlyRegisteredGatewayAgent
     {
         require(
             params.inputToken == address(0),
