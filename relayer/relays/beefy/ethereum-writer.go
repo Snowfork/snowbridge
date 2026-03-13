@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math/big"
 	"math/rand"
-	"strings"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -151,7 +150,7 @@ func (wr *EthereumWriter) submit(ctx context.Context, task *Request) error {
 	// Initial submission
 	tx, initialBitfield, err := wr.doSubmitInitial(ctx, task)
 	if err != nil {
-		if isDuplicateBeefyError(err) {
+		if isExpectedCompetitionError(err) {
 			log.WithFields(logrus.Fields{
 				"beefyBlock": task.SignedCommitment.Commitment.BlockNumber,
 			}).Info("Commitment already submitted by another relayer during submitInitial, skipping")
@@ -219,7 +218,7 @@ func (wr *EthereumWriter) submit(ctx context.Context, task *Request) error {
 	// https://github.com/Snowfork/snowbridge/blob/75a475cbf8fc8e13577ad6b773ac452b2bf82fbb/contracts/contracts/BeefyClient.sol#L446-L447
 	tx, err = wr.doCommitPrevRandao(ctx, commitmentHash)
 	if err != nil {
-		if isDuplicateBeefyError(err) {
+		if isExpectedCompetitionError(err) {
 			log.WithFields(logrus.Fields{
 				"beefyBlock": task.SignedCommitment.Commitment.BlockNumber,
 			}).Info("Commitment already submitted by another relayer during CommitPrevRandao, skipping")
@@ -259,16 +258,10 @@ func (wr *EthereumWriter) submit(ctx context.Context, task *Request) error {
 	// Final submission
 	tx, err = wr.doSubmitFinal(ctx, commitmentHash, initialBitfield, task)
 	if err != nil {
-		if isDuplicateBeefyError(err) {
-			log.WithFields(logrus.Fields{
-				"beefyBlock": task.SignedCommitment.Commitment.BlockNumber,
-			}).Info("Commitment already submitted by another relayer during submitFinal, skipping")
-			return nil
-		}
 		if isExpectedCompetitionError(err) {
 			log.WithFields(logrus.Fields{
 				"beefyBlock": task.SignedCommitment.Commitment.BlockNumber,
-			}).Info("Skipping commitment: expected error during submitFinal")
+			}).Info("Commitment already submitted by another relayer during submitFinal, skipping")
 			return nil
 		}
 		return fmt.Errorf("Failed to call submitFinal: %w", err)
@@ -522,7 +515,7 @@ func (wr *EthereumWriter) submitFiatShamir(ctx context.Context, task *Request) e
 	tx, err := wr.doSubmitFiatShamir(ctx, params)
 	if err != nil {
 		// Check if error is due to commitment already being submitted (duplicate)
-		if isDuplicateBeefyError(err) {
+		if isExpectedCompetitionError(err) {
 			log.WithFields(logrus.Fields{
 				"beefyBlock": task.SignedCommitment.Commitment.BlockNumber,
 			}).Info("Commitment was already submitted by another relayer, skipping")
@@ -537,6 +530,12 @@ func (wr *EthereumWriter) submitFiatShamir(ctx context.Context, task *Request) e
 
 	_, err = wr.conn.WatchTransaction(ctx, tx, 0)
 	if err != nil {
+		if isExpectedCompetitionError(err) {
+			log.WithFields(logrus.Fields{
+				"beefyBlock": task.SignedCommitment.Commitment.BlockNumber,
+			}).Info("Skipping commitment: expected error during SubmitFiatShamir receipt")
+			return nil
+		}
 		return fmt.Errorf("Wait receipt for SubmitFiatShamir: %w", err)
 	}
 
@@ -551,7 +550,7 @@ func (wr *EthereumWriter) submitFiatShamir(ctx context.Context, task *Request) e
 // isWrapperFunded checks if the wrapper has sufficient balance to cover a refund.
 // Returns false if the wrapper is not configured, has insufficient funds, or on error.
 func (wr *EthereumWriter) isWrapperFunded(ctx context.Context) bool {
-	if !wr.useWrapper {
+	if wr.wrapperContract == nil {
 		return false
 	}
 
@@ -684,19 +683,6 @@ func (wr *EthereumWriter) shouldSkipDueToPendingSession(ctx context.Context, tas
 		return false, nil
 	}
 
-// isDuplicateBeefyError checks if the error indicates the commitment was already submitted
-func isDuplicateBeefyError(err error) bool {
-	if err == nil {
-		return false
-	}
-	errStr := err.Error()
-	// Check for common duplicate/already processed error patterns from the BeefyClient contract
-	return strings.Contains(errStr, "StaleCommitment") ||
-		strings.Contains(errStr, "InvalidCommitment") ||
-		strings.Contains(errStr, "already") ||
-		strings.Contains(errStr, "Duplicate")
-}
-
 	log.WithFields(logrus.Fields{
 		"highestPendingBlock": highestPendingBlock.Uint64(),
 		"latestBeefyBlock":    latestBeefyBlock,
@@ -707,6 +693,7 @@ func isDuplicateBeefyError(err error) bool {
 
 	return true, nil
 }
+
 
 // Contract abstraction helpers
 // View functions always use beefyClient directly
