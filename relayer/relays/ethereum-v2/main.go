@@ -560,6 +560,16 @@ func (r *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayOutboundMessa
 	// Extract beneficiaries from gas estimation
 	var beneficiaries []string
 	if r.gasEstimator.config.Enabled {
+		// Check again before expensive gas estimation in case another relayer processed the
+		// message during proof fetching above.
+		isProcessed, err := r.isMessageProcessed(ev.Nonce)
+		if err != nil {
+			return fmt.Errorf("is message processed before gas estimation: %w", err)
+		}
+		if isProcessed {
+			return nil
+		}
+
 		relayerPublicKey := r.keypair.PublicKey()
 		gasEstimate, err := r.gasEstimator.EstimateGas(ctx, ev, inboundMsg, source, relayerPublicKey)
 		if err != nil {
@@ -597,6 +607,15 @@ func (r *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayOutboundMessa
 	}
 	// If the message is already processed we shouldn't submit it again
 	if isProcessed {
+		return nil
+	}
+
+	// Check if another relayer already has a pending inbound queue submission in the tx pool
+	hasPending, err := r.writer.HasPendingExtrinsic("EthereumInboundQueueV2.submit")
+	if err != nil {
+		log.WithError(err).Warn("failed to check pending extrinsics, proceeding with submission")
+	} else if hasPending {
+		logger.Info("skipping inbound message submission: another relayer has a pending submission in the tx pool")
 		return nil
 	}
 
