@@ -57,6 +57,7 @@ library ForkTestFixtures {
     // Create a fixture from real-world mainnet transactions
     function makeSubmitMessageFixture(string memory fixturePath)
         internal
+        view
         returns (SubmitMessageFixture memory)
     {
         // Read the test data
@@ -126,6 +127,7 @@ library ForkTestFixtures {
 
     function parseParachainHeader(string memory data)
         internal
+        pure
         returns (Verification.ParachainHeader memory)
     {
         bytes32 parentHash = data.readBytes32(".input.headerProof.header.parentHash");

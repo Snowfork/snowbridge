@@ -960,7 +960,7 @@ contract GatewayV1Test is Test {
         Gateway(address(gateway)).v1_handleMintForeignToken(ParaID.wrap(3042).into(), "");
     }
 
-    function testGetters() public {
+    function testGetters() public view {
         IGatewayV1 gw = IGatewayV1(address(gateway));
 
         OperatingMode mode = gw.operatingMode();
@@ -986,7 +986,7 @@ contract GatewayV1Test is Test {
     bytes32 public expectChannelIDBytes =
         bytes32(0xc173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539);
 
-    function testDeriveChannelID() public {
+    function testDeriveChannelID() public view {
         ParaID para_id = ParaID.wrap(1000);
         ChannelID channel_id = para_id.into();
         assertEq(ChannelID.unwrap(channel_id), expectChannelIDBytes);
@@ -1304,13 +1304,14 @@ contract GatewayV1Test is Test {
         assertEq(highGasToken.balanceOf(assetHubAgent), 1000);
     }
 
-    function testCalldataPaddingVulnerability() public {
+    function testCalldataPaddingVulnerability() public view {
         // Test 1: Minimal calldata (4 bytes)
         bytes memory shortCalldata =
             abi.encodeWithSelector(MockGateway.transactionBaseGas.selector);
         (bool success1, bytes memory result1) = address(gateway).staticcall(shortCalldata);
         require(success1, "Short call failed");
         uint256 shortGas = abi.decode(result1, (uint256));
+        assertGt(shortGas, 0, "shortGas should be positive");
 
         // Test 2: Same call + 1,000 zero bytes padding
         uint256 paddingSize = 1000;
@@ -1449,7 +1450,7 @@ contract GatewayV1Test is Test {
         gw.submitV1(msgv, leafProof, headerProof);
     }
 
-    function test_exposed_v1_transactionBaseGas_respects_msgdata_length() public {
+    function test_exposed_v1_transactionBaseGas_respects_msgdata_length() public view {
         MockGateway gw = MockGateway(address(gateway));
         // call the exposed function; this will compute base gas based on calldata length
         uint256 v = gw.exposed_v1_transactionBaseGas();

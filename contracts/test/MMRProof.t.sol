@@ -38,7 +38,7 @@ contract MMRProofTest is Test {
         return abi.decode(fixtureData, (Fixture));
     }
 
-    function testVerifyLeafProof() public {
+    function testVerifyLeafProof() public view {
         Fixture memory fix = fixture();
 
         for (uint256 i = 0; i < fix.leaves.length; i++) {

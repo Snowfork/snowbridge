@@ -38,7 +38,6 @@ contract DeploySnowbridgeL2Adaptor is Script {
         address GATEWAY_V2_ADDRESS;
         address WETH9_ADDRESS;
         address L2_WETH9_ADDRESS;
-        address UNISWAP_ROUTER_ADDRESS;
 
         if (
             keccak256(bytes(vm.envString("L1_NETWORK"))) == keccak256(bytes("mainnet"))

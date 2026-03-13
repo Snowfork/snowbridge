@@ -545,7 +545,7 @@ contract BeefyClientTest is Test {
         );
     }
 
-    function testScaleEncodeCommit() public {
+    function testScaleEncodeCommit() public view {
         BeefyClient.PayloadItem[] memory _payload = new BeefyClient.PayloadItem[](2);
         // forge-lint: disable-next-line(unsafe-typecast)
         _payload[0] = BeefyClient.PayloadItem(bytes2("ab"), hex"000102");
@@ -763,7 +763,7 @@ contract BeefyClientTest is Test {
         regenerateBitField(bitFieldFile, numRequiredSignatures);
     }
 
-    function testFuzzComputeValidatorSetQuorum(uint128 validatorSetLen) public {
+    function testFuzzComputeValidatorSetQuorum(uint128 validatorSetLen) public view {
         // There must be atleast 1 validator.
         vm.assume(validatorSetLen > 0);
         // Calculator 1/3 with flooring due to integer division.
@@ -776,6 +776,7 @@ contract BeefyClientTest is Test {
 
     function testFuzzSignatureSamplingRanges(uint128 validatorSetLen, uint16 minSignatures)
         public
+        view
     {
         // There must be atleast 1 validator.
         vm.assume(validatorSetLen > 0);
@@ -794,7 +795,7 @@ contract BeefyClientTest is Test {
         assertGt(result, 0, "result is greater than zero.");
     }
 
-    function testSignatureSamplingCases() public {
+    function testSignatureSamplingCases() public view {
         uint256 result = beefyClient.computeQuorum_public(1);
         assertEq(1, result, "B");
         result = beefyClient.computeNumRequiredSignatures_public(1, 0, 0);

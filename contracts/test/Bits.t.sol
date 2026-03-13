@@ -13,7 +13,7 @@ contract BitsTest is Test {
         bc = new BitsCaller();
     }
 
-    function test_set_clear_toggle_bit() public {
+    function test_set_clear_toggle_bit() public pure {
         uint256 v = 0;
         v = v.setBit(5);
         assertEq(v.bit(5), 1);
@@ -28,7 +28,7 @@ contract BitsTest is Test {
         assertEq(v.bit(3), 0);
     }
 
-    function test_bit_ops_and_equality() public {
+    function test_bit_ops_and_equality() public pure {
         uint256 a = 0;
         a = a.setBit(1).setBit(3);
         uint256 b = 0;

@@ -29,7 +29,7 @@ contract VerificationTest is Test {
         v = new VerificationWrapper();
     }
 
-    function testCreateParachainHeaderMerkleLeaf() public {
+    function testCreateParachainHeaderMerkleLeaf() public view {
         Verification.DigestItem[] memory digestItems = new Verification.DigestItem[](3);
         digestItems[0] = Verification.DigestItem({
             kind: 6, consensusEngineID: 0x61757261, data: hex"c1f05e0800000000"
@@ -132,7 +132,7 @@ contract VerificationTest is Test {
         );
     }
 
-    function testIsCommitmentInHeaderDigestVersionedItems() public {
+    function testIsCommitmentInHeaderDigestVersionedItems() public view {
         // Test the V1 vs V2 digest item validation logic
 
         // Create a test commitment

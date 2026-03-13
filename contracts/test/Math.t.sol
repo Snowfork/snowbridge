@@ -13,7 +13,7 @@ contract MathTest is Test {
 
     function setUp() public {}
 
-    function testLog2WithWellKnownValues() public {
+    function testLog2WithWellKnownValues() public pure {
         // Test log will well known values generated from python.
         Log2Test[47] memory tests = [
             Log2Test({result: 0, input: 0}),
@@ -70,17 +70,17 @@ contract MathTest is Test {
         }
     }
 
-    function testFuzzMin(uint256 a, uint256 b) public {
+    function testFuzzMin(uint256 a, uint256 b) public pure {
         vm.assume(a < b);
         assertEq(a, Math.min(a, b));
     }
 
-    function testFuzzMax(uint256 a, uint256 b) public {
+    function testFuzzMax(uint256 a, uint256 b) public pure {
         vm.assume(a > b);
         assertEq(a, Math.max(a, b));
     }
 
-    function testFuzzSaturatingAdd(uint16 a, uint16 b) public {
+    function testFuzzSaturatingAdd(uint16 a, uint16 b) public pure {
         uint256 result = uint256(a) + uint256(b);
         if (result > 0xFFFF) {
             result = 0xFFFF;
@@ -88,7 +88,7 @@ contract MathTest is Test {
         assertEq(result, Math.saturatingAdd(a, b));
     }
 
-    function testFuzzSaturatingSub(uint256 a, uint256 b) public {
+    function testFuzzSaturatingSub(uint256 a, uint256 b) public pure {
         uint256 result = 0;
         if (a > b) {
             result = a - b;

@@ -56,6 +56,7 @@ contract SwapScript is Script {
         console.log("Swapped USDC for WETH:", amountIn, amountOut);
 
         WETH9(payable(WETH)).withdraw(amountOut);
-        payable(msg.sender).transfer(amountOut);
+        (bool ok,) = payable(msg.sender).call{value: amountOut}("");
+        require(ok, "WETH transfer failed");
     }
 }

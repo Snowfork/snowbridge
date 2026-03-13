@@ -171,6 +171,7 @@ contract FiatShamirPaddingBitsGrindTest is Test {
     // Validator proofs
     function _buildProofs(bytes32 commitmentHash, uint256 startIndex, uint256 count)
         internal
+        view
         returns (BeefyClient.ValidatorProof[] memory proofs)
     {
         proofs = new BeefyClient.ValidatorProof[](count);
