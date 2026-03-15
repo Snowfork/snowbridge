@@ -1,23 +1,21 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.33;
+pragma solidity 0.8.34;
 
-import {Script, console} from "forge-std/Script.sol";
+import {Script} from "forge-std/Script.sol";
 
 import {
-    SPOKE_POOL as SEPOLIA_SPOKE_POOL,
     MULTI_CALL_HANDLER as SEPOLIA_MULTI_CALL_HANDLER,
-    WETH9 as SEPOLIA_WETH9,
     GATEWAY as SEPOLIA_GATEWAY,
+    WETH9 as SEPOLIA_WETH9,
     BASE_SPOKE_POOL as SEPOLIA_BASE_SPOKE_POOL,
     BASE_WETH9 as SEPOLIA_BASE_WETH9,
     ARBITRUM_SPOKE_POOL as SEPOLIA_ARBITRUM_SPOKE_POOL,
     ARBITRUM_WETH9 as SEPOLIA_ARBITRUM_WETH9
 } from "../constants/Sepolia.sol";
 import {
-    SPOKE_POOL as MAINNET_SPOKE_POOL,
     MULTI_CALL_HANDLER as MAINNET_MULTI_CALL_HANDLER,
-    WETH9 as MAINNET_WETH9,
     GATEWAY as MAINNET_GATEWAY,
+    WETH9 as MAINNET_WETH9,
     BASE_SPOKE_POOL as MAINNET_BASE_SPOKE_POOL,
     BASE_WETH9 as MAINNET_BASE_WETH9,
     ARBITRUM_SPOKE_POOL as MAINNET_ARBITRUM_SPOKE_POOL,
@@ -40,7 +38,6 @@ contract DeploySnowbridgeL2Adaptor is Script {
         address GATEWAY_V2_ADDRESS;
         address WETH9_ADDRESS;
         address L2_WETH9_ADDRESS;
-        address UNISWAP_ROUTER_ADDRESS;
 
         if (
             keccak256(bytes(vm.envString("L1_NETWORK"))) == keccak256(bytes("mainnet"))
@@ -99,7 +96,6 @@ contract DeploySnowbridgeL2Adaptor is Script {
             WETH9_ADDRESS,
             L2_WETH9_ADDRESS
         );
-        console.log("Snowbridge L2 Adaptor deployed at:", address(snowbridgeL2Adaptor));
         return;
     }
 }

@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.33;
+pragma solidity 0.8.34;
 
-import "../Gateway.sol";
+import {Gateway} from "../Gateway.sol";
+import {ERC1967} from "../utils/ERC1967.sol";
 
 // New Gateway logic contract with an fee initializer
-contract GatewaySepolia202601 is Gateway {
+contract GatewaySepolia202603 is Gateway {
     constructor(address beefyClient, address agentExecutor) Gateway(beefyClient, agentExecutor) {}
 
     // Override parent initializer to prevent re-initialization of storage.
-    function initialize(bytes calldata) external override {
+    function initialize(bytes calldata) external view override {
         // Ensure that arbitrary users cannot initialize storage in this logic contract.
         if (ERC1967.load() == address(0)) {
             revert Unauthorized();

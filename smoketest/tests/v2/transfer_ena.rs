@@ -107,15 +107,6 @@ async fn transfer_ena() {
 
 	let signer = sr25519::Keypair::from_uri(&suri).expect("valid keypair");
 
-	// Mint ether to sender to pay fees
-	mint_token_to(
-		&test_clients.asset_hub_client,
-		eth_location(),
-		signer.public_key().0,
-		INITIAL_FUND,
-	)
-	.await;
-
 	let token_transfer_call =
 		TransactionApi.execute(xcm, Weight { ref_time: 8_000_000_000, proof_size: 80_000 });
 

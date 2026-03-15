@@ -1,12 +1,12 @@
-pragma solidity 0.8.33;
+pragma solidity 0.8.34;
 
-import "forge-std/Test.sol";
+import {Test} from "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
+import {stdJson} from "forge-std/StdJson.sol";
 import {BeefyClient} from "../src/BeefyClient.sol";
 import {BeefyClientMock} from "./mocks/BeefyClientMock.sol";
 import {Bitfield} from "../src/utils/Bitfield.sol";
 import {ScaleCodec} from "../src/utils/ScaleCodec.sol";
-import {SubstrateMerkleProof} from "../src/utils/SubstrateMerkleProof.sol";
 import {Math} from "../src/utils/Math.sol";
 import {MerkleLib, MerkleLibSubstrate} from "./utils/MerkleLib.sol";
 
@@ -30,7 +30,9 @@ contract BeefyClientAdvancedTest is Test {
     uint256 validator0PK;
     bytes32[] proofIndex0;
 
+    // forge-lint: disable-next-line(unsafe-typecast)
     bytes2 constant MMR_ROOT_ID = bytes2("mh");
+    // forge-lint: disable-next-line(unsafe-typecast)
     bytes32 constant MMRRoot =
         bytes32(uint256(0xDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEF));
 
@@ -55,8 +57,10 @@ contract BeefyClientAdvancedTest is Test {
         proofIndex0 = vProofs[0];
 
         BeefyClient.ValidatorSet memory cur =
+            // forge-lint: disable-next-line(unsafe-typecast)
             BeefyClient.ValidatorSet({id: VSET_ID, length: uint128(VSET_LEN), root: vsetRoot});
         BeefyClient.ValidatorSet memory nxt =
+            // forge-lint: disable-next-line(unsafe-typecast)
             BeefyClient.ValidatorSet({id: VSET_ID + 1, length: uint128(VSET_LEN), root: vsetRoot});
 
         beefyClient = new BeefyClientMock({
@@ -106,11 +110,14 @@ contract BeefyClientAdvancedTest is Test {
         vm.startPrank(honestRelayer2);
         beefyClient.submitInitial(commitment, bitfield, vproof);
         bytes32 ticketID2 = beefyClient.createTicketID_public(honestRelayer2, commitmentHash);
-        (,, /*blockNumber2*/ /*vsetLen2*/ uint32 nRequiredAfter,/*prevRandao2*/ /*bfhash2*/,) =
+        (,, /*blockNumber2*/ /*vsetLen2*/
+            // forge-lint: disable-next-line(unsafe-typecast)
+            uint32 nRequiredAfter,/*prevRandao2*/ /*bfhash2*/,) =
             beefyClient.tickets(ticketID2);
         vm.stopPrank();
         // assert protocol-wide grief: ΔN >= 24 and never exceeds quorum
         assertGt(nRequiredAfter, nRequiredBefore, "N did not increase");
+        // forge-lint: disable-next-line(unsafe-typecast)
         assertLe(nRequiredAfter, uint32(quorum), "N must be capped at quorum");
         assertTrue(
             nRequiredAfter >= nRequiredBefore + 24, unicode"Need ΔN >= 24 for high-impact demo"
@@ -297,6 +304,7 @@ contract BeefyClientAdvancedTest is Test {
         leaf.parentHash = bytes32(0);
         // nextValidatorSet.id == VSET_ID + 1, so set leaf.nextAuthoritySetID = VSET_ID + 2
         leaf.nextAuthoritySetID = VSET_ID + 2;
+        // forge-lint: disable-next-line(unsafe-typecast)
         leaf.nextAuthoritySetLen = uint32(VSET_LEN);
         leaf.nextAuthoritySetRoot = keccak256(abi.encodePacked("next-authority-root"));
         leaf.parachainHeadsRoot = bytes32(0);
@@ -334,6 +342,53 @@ contract BeefyClientAdvancedTest is Test {
         );
 
         // Submit using Fiat-Shamir path with a real non-empty leaf proof
+        beefyClient.submitFiatShamir(
+            commitment, bitfield, finalProofs, leaf, leafProof, leafProofOrder
+        );
+        assertEq(beefyClient.latestMMRRoot(), mmrRoot, "MMR root updated");
+        assertEq(beefyClient.latestBeefyBlock(), uint64(1), "beefy block updated");
+    }
+
+    /// @dev Candidate nextValidatorSet ID may be more than nextValidatorSet.id + 1 (e.g. skip a set).
+    function testFiatShamirCommitWithNextValidatorSetIdMoreThanPlusOne() public {
+        // nextValidatorSet.id == VSET_ID + 1; use leaf.nextAuthoritySetID = VSET_ID + 3 (> id + 1)
+        BeefyClient.MMRLeaf memory leaf;
+        leaf.version = 0;
+        leaf.parentNumber = 0;
+        leaf.parentHash = bytes32(0);
+        leaf.nextAuthoritySetID = VSET_ID + 3;
+        // forge-lint: disable-next-line(unsafe-typecast)
+        leaf.nextAuthoritySetLen = uint32(VSET_LEN);
+        leaf.nextAuthoritySetRoot = keccak256(abi.encodePacked("next-authority-root"));
+        leaf.parachainHeadsRoot = bytes32(0);
+
+        bytes memory encodedLeaf = bytes.concat(
+            ScaleCodec.encodeU8(leaf.version),
+            ScaleCodec.encodeU32(leaf.parentNumber),
+            leaf.parentHash,
+            ScaleCodec.encodeU64(leaf.nextAuthoritySetID),
+            ScaleCodec.encodeU32(leaf.nextAuthoritySetLen),
+            leaf.nextAuthoritySetRoot,
+            leaf.parachainHeadsRoot
+        );
+        bytes32 leafHash = keccak256(encodedLeaf);
+
+        (bytes32 mmrRoot, bytes32[] memory leafProof, uint256 leafProofOrder) =
+            MerkleLib.buildMerkleWithTargetLeaf(16, 3, leafHash);
+
+        (BeefyClient.Commitment memory commitment, bytes32 commitmentHash) =
+            _buildCommitment(1, VSET_ID + 1, mmrRoot);
+
+        uint256 quorum = beefyClient.computeQuorum_public(VSET_LEN);
+        uint256[] memory bitfield = new uint256[](Bitfield.containerLength(VSET_LEN));
+        for (uint256 i = 0; i < quorum; i++) {
+            Bitfield.set(bitfield, i);
+        }
+
+        (, BeefyClient.ValidatorProof[] memory finalProofs) = _generateFiatShamirProofs(
+            commitment, commitmentHash, bitfield, FIAT_SHAMIR_REQUIRED_SIGNATURES
+        );
+
         beefyClient.submitFiatShamir(
             commitment, bitfield, finalProofs, leaf, leafProof, leafProofOrder
         );

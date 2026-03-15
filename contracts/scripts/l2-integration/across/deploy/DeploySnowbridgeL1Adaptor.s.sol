@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.33;
+pragma solidity 0.8.34;
 
 import {Script, console} from "forge-std/Script.sol";
 import {SPOKE_POOL as SEPOLIA_SPOKE_POOL, WETH9 as SEPOLIA_WETH9} from "../constants/Sepolia.sol";
@@ -14,7 +14,6 @@ contract DeploySnowbridgeL1Adaptor is Script {
     function run() public {
         vm.startBroadcast();
         address SPOKE_POOL_ADDRESS;
-        address BASE_MULTI_CALL_HANDLER_ADDRESS;
         address WETH9_ADDRESS;
 
         if (keccak256(bytes(vm.envString("L1_NETWORK"))) == keccak256(bytes("mainnet"))) {

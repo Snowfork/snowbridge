@@ -1,33 +1,19 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.33;
+pragma solidity 0.8.34;
 
 import {Test} from "forge-std/Test.sol";
-import {Strings} from "openzeppelin/utils/Strings.sol";
-import {console} from "forge-std/console.sol";
-
-import {BeefyClient} from "../src/BeefyClient.sol";
 
 import {IGatewayBase} from "../src/interfaces/IGatewayBase.sol";
 import {IGatewayV2} from "../src/v2/IGateway.sol";
-import {IInitializable} from "../src/interfaces/IInitializable.sol";
-import {IUpgradable} from "../src/interfaces/IUpgradable.sol";
-import {Gateway} from "../src/Gateway.sol";
 import {MockGateway} from "./mocks/MockGateway.sol";
-import {MockGatewayV2} from "./mocks/MockGatewayV2.sol";
 import {GatewayProxy} from "../src/GatewayProxy.sol";
 import {Token} from "../src/Token.sol";
 
 import {AgentExecutor} from "../src/AgentExecutor.sol";
-import {Agent} from "../src/Agent.sol";
 import {Verification} from "../src/Verification.sol";
-import {SubstrateTypes} from "./../src/SubstrateTypes.sol";
-import {OperatingMode, ParaID, CommandV2, CommandKind, InboundMessageV2} from "../src/Types.sol";
+import {OperatingMode, CommandV2, CommandKind, InboundMessageV2} from "../src/Types.sol";
 
-import {NativeTransferFailed} from "../src/utils/SafeTransfer.sol";
-import {PricingStorage} from "../src/storage/PricingStorage.sol";
 import {IERC20} from "../src/interfaces/IERC20.sol";
-import {TokenLib} from "../src/TokenLib.sol";
-import {Token} from "../src/Token.sol";
 
 import {Initializer} from "../src/Initializer.sol";
 import {Constants} from "../src/Constants.sol";
@@ -43,20 +29,11 @@ import {
     Asset,
     makeNativeAsset,
     makeForeignAsset,
-    Xcm,
     makeRawXCM
 } from "../src/v2/Types.sol";
 
-import {
-    AgentExecuteCommand,
-    InboundMessage,
-    OperatingMode,
-    ParaID,
-    Command
-} from "../src/v1/Types.sol";
-
 import {WETH9} from "canonical-weth/WETH9.sol";
-import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
+import {ud60x18} from "prb/math/src/UD60x18.sol";
 
 import {HelloWorld} from "./mocks/HelloWorld.sol";
 import {Upgrade} from "../src/Upgrade.sol";
@@ -115,7 +92,7 @@ contract MockERC20 {
 contract PayableRecipient {
     receive() external payable {}
 }
-import "./mocks/FeeOnTransferToken.sol";
+import {FeeOnTransferToken} from "./mocks/FeeOnTransferToken.sol";
 
 contract GatewayV2Test is Test {
     // Emitted when token minted/burnt/transferred
@@ -253,8 +230,9 @@ contract GatewayV2Test is Test {
         string memory symbol,
         uint8 decimals
     ) public pure returns (CommandV2[] memory) {
-        RegisterForeignTokenParams memory params =
-            RegisterForeignTokenParams(id, name, symbol, decimals);
+        RegisterForeignTokenParams memory params = RegisterForeignTokenParams({
+            foreignTokenID: id, name: name, symbol: symbol, decimals: decimals
+        });
         bytes memory payload = abi.encode(params);
 
         CommandV2[] memory commands = new CommandV2[](1);
@@ -268,7 +246,8 @@ contract GatewayV2Test is Test {
         pure
         returns (CommandV2[] memory)
     {
-        MintForeignTokenParams memory params = MintForeignTokenParams(id, recipient, amount);
+        MintForeignTokenParams memory params =
+            MintForeignTokenParams({foreignTokenID: id, recipient: recipient, amount: amount});
         bytes memory payload = abi.encode(params);
 
         CommandV2[] memory commands = new CommandV2[](1);
@@ -974,7 +953,10 @@ contract GatewayV2Test is Test {
         PayableRecipient recipient = new PayableRecipient();
         bytes memory params = abi.encode(
             UnlockNativeTokenParams({
-                token: address(0), recipient: address(recipient), amount: uint128(amt)
+                token: address(0),
+                recipient: address(recipient),
+                // forge-lint: disable-next-line(unsafe-typecast)
+                amount: uint128(amt)
             })
         );
 
@@ -998,7 +980,10 @@ contract GatewayV2Test is Test {
         // build params for token transfer
         bytes memory params = abi.encode(
             UnlockNativeTokenParams({
-                token: address(token), recipient: address(this), amount: uint128(tAmt)
+                token: address(token),
+                recipient: address(this),
+                // forge-lint: disable-next-line(unsafe-typecast)
+                amount: uint128(tAmt)
             })
         );
 
@@ -1062,6 +1047,7 @@ contract GatewayV2Test is Test {
 
         InboundMessageV2 memory m;
         m.nonce = 5;
+        // forge-lint: disable-next-line(unsafe-typecast)
         m.origin = bytes32("x");
         m.topic = bytes32(0);
         m.commands = new CommandV2[](0);
@@ -1143,6 +1129,7 @@ contract GatewayV2Test is Test {
         cmds[1] =
             CommandV2({kind: CommandKind.CallContract, gas: 200_000, payload: abi.encode(cc)});
         InboundMessageV2 memory msgv;
+        // forge-lint: disable-next-line(unsafe-typecast)
         msgv.origin = bytes32("orig");
         msgv.nonce = 1;
         msgv.topic = bytes32(0);

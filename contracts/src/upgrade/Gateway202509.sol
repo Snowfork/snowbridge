@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.33;
+pragma solidity 0.8.34;
 
-import "../Gateway.sol";
+import {Gateway} from "../Gateway.sol";
+import {ERC1967} from "../utils/ERC1967.sol";
+import {AssetsStorage} from "../storage/AssetsStorage.sol";
 
 // New Gateway logic contract with an fee initializer
 contract Gateway202509 is Gateway {

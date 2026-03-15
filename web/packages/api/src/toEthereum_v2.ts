@@ -819,7 +819,7 @@ export async function signAndSend(
         try {
             transfer.tx.signAndSend(account, options, (c) => {
                 if (c.isError) {
-                    console.error(c)
+                    console.error(c.toHuman())
                     reject(c.internalError || c.dispatchError || c)
                 }
                 // We have to check for finalization here because re-orgs will produce a different messageId on Asset Hub.
