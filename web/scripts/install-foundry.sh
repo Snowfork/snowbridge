@@ -32,12 +32,12 @@ else
     *)       echo "Unsupported arch: $ARCH"; exit 1 ;;
   esac
 
-  TAG="${FOUNDRY_TAG:-nightly}"
-  # e.g. foundry_nightly_linux_amd64.tar.gz or foundry_v1.0.0_linux_amd64.tar.gz
+  TAG="${FOUNDRY_TAG:-v1.5.1}"
+  # e.g. foundry_nightly_linux_amd64.tar.gz or foundry_v1.5.1_linux_amd64.tar.gz
   if [ "$TAG" = "nightly" ]; then
     ASSET="foundry_nightly_${OS}_${ARCH}.tar.gz"
   else
-    ASSET="foundry_${TAG#v}_${OS}_${ARCH}.tar.gz"
+    ASSET="foundry_${TAG}_${OS}_${ARCH}.tar.gz"
   fi
   URL="https://github.com/foundry-rs/foundry/releases/download/${TAG}/${ASSET}"
 
