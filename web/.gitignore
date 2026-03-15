@@ -1,3 +1,5 @@
 .deps
 .pnpm-store
 .turbo
+.vercel
+scripts/.foundry

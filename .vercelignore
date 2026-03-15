@@ -1,0 +1,32 @@
+# Reduce deployment size (Vercel 10MB request limit)
+# Dependencies and build outputs
+**/node_modules/
+**/.pnpm-store/
+**/dist/
+**/.turbo/
+**/out/
+**/cache/
+**/artifacts/
+
+# Foundry / contracts (lib is recreated by install-foundry.sh on Vercel)
+contracts/lib/
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+contracts/report/
+contracts/coverage/
+contracts/docs/
+
+# Other large dirs
+lodestar/
+polkadot-sdk/
+relaychain/
+go/
+control/target/
+gas-estimator/target/
+**/.git/
+**/.cargo/
+**/.rustup/
+**/states/
+**/deploy/
+**/.vercel/

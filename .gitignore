@@ -42,3 +42,4 @@ db.sqlite*
 .pnpm-store
 /deploy
 .envs/
+.vercel

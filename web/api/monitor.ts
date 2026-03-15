@@ -1,0 +1,33 @@
+import "dotenv/config";
+import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { monitor } from "../packages/operations/dist/src/monitor";
+
+export const config = {
+  maxDuration: 60,
+};
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== "GET") {
+    res.setHeader("Allow", "GET");
+    return res.status(405).json({ error: "Method not allowed" });
+  }
+
+  const authHeader = req.headers.authorization;
+  if (
+    process.env.CRON_SECRET &&
+    authHeader !== `Bearer ${process.env.CRON_SECRET}`
+  ) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  try {
+    const metrics = await monitor();
+    return res.status(200).json({ ok: true, name: metrics.name });
+  } catch (error) {
+    console.error("Monitor error:", error);
+    return res.status(500).json({
+      error: "Monitor failed",
+      message: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
