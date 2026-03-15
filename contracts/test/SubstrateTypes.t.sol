@@ -102,14 +102,14 @@ contract SubstrateTypesTest is Test {
     // Use authoritative encoders from `ScaleCodec` to build expected bytes
 
     // --- Tests ---
-    function testH160() public {
+    function testH160() public view {
         address a = address(0x1234567890AbcdEF1234567890aBcdef12345678);
         bytes memory got = wrapper.H160(a);
         bytes memory expect = abi.encodePacked(a);
         assertEq(keccak256(got), keccak256(expect));
     }
 
-    function testVecU8() public {
+    function testVecU8() public view {
         bytes memory data = hex"1122334455";
         bytes memory got = wrapper.VecU8(data);
         bytes memory prefix = ScaleCodec.checkedEncodeCompactU32(data.length);
@@ -117,13 +117,13 @@ contract SubstrateTypesTest is Test {
         assertEq(keccak256(got), keccak256(expect));
     }
 
-    function testNone() public {
+    function testNone() public view {
         bytes memory got = wrapper.None();
         assertEq(got.length, 1);
         assertEq(uint8(got[0]), 0);
     }
 
-    function testSendTokenToAssetHubAddress32() public {
+    function testSendTokenToAssetHubAddress32() public view {
         address token = address(0x1111111111222222222233333333333344444444);
         bytes32 recipient = keccak256("recipient32");
         uint128 xcmFee = 10;
@@ -145,7 +145,7 @@ contract SubstrateTypesTest is Test {
         assertEq(keccak256(got), keccak256(expect));
     }
 
-    function testSendTokenToAddress32() public {
+    function testSendTokenToAddress32() public view {
         address token = address(0x2222000000000000000000000000000000000000);
         uint32 para = 42;
         bytes32 recipient = keccak256("r32");
@@ -172,7 +172,7 @@ contract SubstrateTypesTest is Test {
         assertEq(keccak256(got), keccak256(expect));
     }
 
-    function testSendTokenToAddress20() public {
+    function testSendTokenToAddress20() public view {
         address token = address(0x3333000000000000000000000000000000000000);
         uint32 para = 7;
         bytes20 recipient = bytes20(address(0xABcdEFABcdEFabcdEfAbCdefabcdeFABcDEFabCD));
@@ -199,7 +199,7 @@ contract SubstrateTypesTest is Test {
         assertEq(keccak256(got), keccak256(expect));
     }
 
-    function testSendForeignTokenToAssetHubAddress32() public {
+    function testSendForeignTokenToAssetHubAddress32() public view {
         bytes32 tokenID = keccak256("tokenid");
         bytes32 recipient = keccak256("r");
         uint128 xcmFee = 4;
@@ -222,7 +222,7 @@ contract SubstrateTypesTest is Test {
         assertEq(keccak256(got), keccak256(expect));
     }
 
-    function testSendForeignTokenToAddress32() public {
+    function testSendForeignTokenToAddress32() public view {
         bytes32 tokenID = keccak256("t2");
         uint32 para = 3;
         bytes32 recipient = keccak256("r2");
@@ -249,7 +249,7 @@ contract SubstrateTypesTest is Test {
         assertEq(keccak256(got), keccak256(expect));
     }
 
-    function testSendForeignTokenToAddress20() public {
+    function testSendForeignTokenToAddress20() public view {
         bytes32 tokenID = keccak256("t3");
         uint32 para = 99;
         bytes20 recipient = bytes20(address(0x3333333333333333333333333333333333333333));

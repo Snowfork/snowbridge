@@ -14,7 +14,6 @@ contract DeploySnowbridgeL1Adaptor is Script {
     function run() public {
         vm.startBroadcast();
         address SPOKE_POOL_ADDRESS;
-        address BASE_MULTI_CALL_HANDLER_ADDRESS;
         address WETH9_ADDRESS;
 
         if (keccak256(bytes(vm.envString("L1_NETWORK"))) == keccak256(bytes("mainnet"))) {

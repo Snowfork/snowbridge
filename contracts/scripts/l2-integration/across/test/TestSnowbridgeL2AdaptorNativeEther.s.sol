@@ -1,28 +1,17 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.34;
 
-import {Script, console} from "forge-std/Script.sol";
-import {IERC20} from "openzeppelin/token/ERC20/IERC20.sol";
-import {WETH9} from "canonical-weth/WETH9.sol";
+import {Script} from "forge-std/Script.sol";
 
 import {SnowbridgeL2Adaptor} from "../../../../src/l2-integration/SnowbridgeL2Adaptor.sol";
-import {ISpokePool} from "../../../../src/l2-integration/interfaces/ISpokePool.sol";
-import {DepositParams, SendParams, SwapParams} from "../../../../src/l2-integration/Types.sol";
+import {DepositParams, SendParams} from "../../../../src/l2-integration/Types.sol";
 import {
     CHAIN_ID as SEPOLIA_CHAIN_ID,
-    BASE_CHAIN_ID as SEPOLIA_BASE_CHAIN_ID,
-    WETH9 as SEPOLIA_WETH9,
-    BASE_WETH9 as SEPOLIA_BASE_WETH9,
     TIME_BUFFER as SEPOLIA_TIME_BUFFER
 } from "../constants/Sepolia.sol";
 import {
     CHAIN_ID as MAINNET_CHAIN_ID,
-    BASE_CHAIN_ID as MAINNET_BASE_CHAIN_ID,
-    WETH9 as MAINNET_WETH9,
-    BASE_WETH9 as MAINNET_BASE_WETH9,
-    TIME_BUFFER as MAINNET_TIME_BUFFER,
-    ARBITRUM_CHAIN_ID as MAINNET_ARBITRUM_CHAIN_ID,
-    ARBITRUM_WETH9 as MAINNET_ARBITRUM_WETH9
+    TIME_BUFFER as MAINNET_TIME_BUFFER
 } from "../constants/Mainnet.sol";
 
 contract TestSnowbridgeL2AdaptorNativeEther is Script {

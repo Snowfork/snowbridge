@@ -2,22 +2,18 @@
 pragma solidity 0.8.34;
 
 import {Gateway} from "../../src/Gateway.sol";
-import {Functions} from "../../src/Gateway.sol";
 import {Token} from "../../src/Token.sol";
-import {ChannelID, ParaID, OperatingMode} from "../../src/Types.sol";
+import {ChannelID} from "../../src/Types.sol";
 
 import {CoreStorage} from "../../src/storage/CoreStorage.sol";
 import {Verification} from "../../src/Verification.sol";
-import {IInitializable} from "../../src/interfaces/IInitializable.sol";
-
-import {UD60x18} from "prb/math/src/UD60x18.sol";
 
 import {Command as CommandV2} from "../../src/v2/Types.sol";
 import {IGatewayV2} from "../../src/v2/IGateway.sol";
 import {Agent} from "../../src/Agent.sol";
-import {AgentExecutor} from "../../src/AgentExecutor.sol";
 import {Constants} from "../../src/Constants.sol";
 import {HandlersV2} from "../../src/v2/Handlers.sol";
+import {Functions} from "../../src/Functions.sol";
 
 contract MockGateway is Gateway {
     bool public commitmentsAreVerified;

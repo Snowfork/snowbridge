@@ -1,27 +1,23 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.34;
 
-import {Script, console} from "forge-std/Script.sol";
+import {Script} from "forge-std/Script.sol";
 import {IERC20} from "openzeppelin/token/ERC20/IERC20.sol";
 
 import {SnowbridgeL1Adaptor} from "../../../../src/l2-integration/SnowbridgeL1Adaptor.sol";
-import {ISpokePool} from "../../../../src/l2-integration/interfaces/ISpokePool.sol";
-import {DepositParams, SendParams} from "../../../../src/l2-integration/Types.sol";
+import {DepositParams} from "../../../../src/l2-integration/Types.sol";
 
 import {
     USDC as SEPOLIA_USDC,
     BASE_USDC as SEPOLIA_BASE_USDC,
-    CHAIN_ID as SEPOLIA_CHAIN_ID,
     BASE_CHAIN_ID as SEPOLIA_BASE_CHAIN_ID,
     TIME_BUFFER as SEPOLIA_TIME_BUFFER,
     ARBITRUM_USDC as SEPOLIA_ARBITRUM_USDC,
-    ARBITRUM_CHAIN_ID as SEPOLIA_ARBITRUM_CHAIN_ID,
-    ARBITRUM_WETH9 as SEPOLIA_ARBITRUM_WETH9
+    ARBITRUM_CHAIN_ID as SEPOLIA_ARBITRUM_CHAIN_ID
 } from "../constants/Sepolia.sol";
 import {
     USDC as MAINNET_USDC,
     BASE_USDC as MAINNET_BASE_USDC,
-    CHAIN_ID as MAINNET_CHAIN_ID,
     BASE_CHAIN_ID as MAINNET_BASE_CHAIN_ID,
     TIME_BUFFER as MAINNET_TIME_BUFFER
 } from "../constants/Mainnet.sol";
@@ -97,7 +93,7 @@ contract TestSnowbridgeL1Adaptor is Script {
             revert("Unsupported L1 network");
         }
 
-        IERC20(params.inputToken).transfer(l1SnowbridgeAdaptor, params.inputAmount);
+        require(IERC20(params.inputToken).transfer(l1SnowbridgeAdaptor, params.inputAmount), "transfer failed");
 
         SnowbridgeL1Adaptor(l1SnowbridgeAdaptor)
             .depositToken(params, recipient, keccak256("TestERC20Deposit"));

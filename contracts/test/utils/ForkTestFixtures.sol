@@ -2,23 +2,13 @@
 pragma solidity 0.8.34;
 
 import {Vm} from "forge-std/Vm.sol";
-import {Test} from "forge-std/Test.sol";
 import {stdJson} from "forge-std/StdJson.sol";
-import {console} from "forge-std/console.sol";
 
-import {IUpgradable} from "../../src/interfaces/IUpgradable.sol";
 import {Verification} from "../../src/Verification.sol";
 import {
-    UpgradeParams,
-    SetOperatingModeParams,
-    OperatingMode,
-    RegisterForeignTokenParams,
     ChannelID,
-    ParaID,
-    OperatingMode,
     InboundMessage,
-    Command,
-    TokenInfo
+    Command
 } from "../../src/v1/Types.sol";
 
 struct SubmitMessageFixture {
@@ -67,6 +57,7 @@ library ForkTestFixtures {
     // Create a fixture from real-world mainnet transactions
     function makeSubmitMessageFixture(string memory fixturePath)
         internal
+        view
         returns (SubmitMessageFixture memory)
     {
         // Read the test data
@@ -136,6 +127,7 @@ library ForkTestFixtures {
 
     function parseParachainHeader(string memory data)
         internal
+        pure
         returns (Verification.ParachainHeader memory)
     {
         bytes32 parentHash = data.readBytes32(".input.headerProof.header.parentHash");

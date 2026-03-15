@@ -2,9 +2,8 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.34;
 
-import {AgentExecutor} from "./AgentExecutor.sol";
 import {Agent} from "./Agent.sol";
-import {OperatingMode, ParaID, TokenInfo, Channel, ChannelID} from "./Types.sol";
+import {OperatingMode, TokenInfo, Channel} from "./Types.sol";
 import {ERC1967} from "./utils/ERC1967.sol";
 
 import {CoreStorage} from "./storage/CoreStorage.sol";
@@ -13,7 +12,7 @@ import {AssetsStorage} from "./storage/AssetsStorage.sol";
 
 import {Constants} from "./Constants.sol";
 
-import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
+import {UD60x18} from "prb/math/src/UD60x18.sol";
 
 library Initializer {
     error Unauthorized();

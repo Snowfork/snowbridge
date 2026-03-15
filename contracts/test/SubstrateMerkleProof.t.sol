@@ -52,7 +52,7 @@ contract SubstrateMerkleProofTest is Test {
         return MerkleLibSubstrate.rootFromLeaves(leaves);
     }
 
-    function testVerifyAllLeavesEvenWidth() public {
+    function testVerifyAllLeavesEvenWidth() public view {
         uint256 width = 16; // arbitrary width (power-of-two or not)
         bytes32[] memory leaves = generateLeaves(width);
         bytes32 root = computeRootFromLeaves(leaves);
@@ -75,7 +75,7 @@ contract SubstrateMerkleProofTest is Test {
         }
     }
 
-    function testVerifyAllLeavesOddWidth() public {
+    function testVerifyAllLeavesOddWidth() public view {
         uint256 width = 15; // non-power-of-two width
         bytes32[] memory leaves = generateLeaves(width);
         bytes32 root = computeRootFromLeaves(leaves);
@@ -86,7 +86,7 @@ contract SubstrateMerkleProofTest is Test {
         }
     }
 
-    function testInvalidPosition() public {
+    function testInvalidPosition() public view {
         uint256 width = 8;
         bytes32[] memory leaves = generateLeaves(width);
         bytes32 root = computeRootFromLeaves(leaves);

@@ -1,12 +1,12 @@
 pragma solidity 0.8.34;
 
-import "forge-std/Test.sol";
+import {Test} from "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
+import {stdJson} from "forge-std/StdJson.sol";
 import {BeefyClient} from "../src/BeefyClient.sol";
 import {BeefyClientMock} from "./mocks/BeefyClientMock.sol";
 import {Bitfield} from "../src/utils/Bitfield.sol";
 import {ScaleCodec} from "../src/utils/ScaleCodec.sol";
-import {SubstrateMerkleProof} from "../src/utils/SubstrateMerkleProof.sol";
 import {Math} from "../src/utils/Math.sol";
 import {MerkleLib, MerkleLibSubstrate} from "./utils/MerkleLib.sol";
 
@@ -30,7 +30,9 @@ contract BeefyClientAdvancedTest is Test {
     uint256 validator0PK;
     bytes32[] proofIndex0;
 
+    // forge-lint: disable-next-line(unsafe-typecast)
     bytes2 constant MMR_ROOT_ID = bytes2("mh");
+    // forge-lint: disable-next-line(unsafe-typecast)
     bytes32 constant MMRRoot =
         bytes32(uint256(0xDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEF));
 
@@ -55,8 +57,10 @@ contract BeefyClientAdvancedTest is Test {
         proofIndex0 = vProofs[0];
 
         BeefyClient.ValidatorSet memory cur =
+            // forge-lint: disable-next-line(unsafe-typecast)
             BeefyClient.ValidatorSet({id: VSET_ID, length: uint128(VSET_LEN), root: vsetRoot});
         BeefyClient.ValidatorSet memory nxt =
+            // forge-lint: disable-next-line(unsafe-typecast)
             BeefyClient.ValidatorSet({id: VSET_ID + 1, length: uint128(VSET_LEN), root: vsetRoot});
 
         beefyClient = new BeefyClientMock({
@@ -106,11 +110,14 @@ contract BeefyClientAdvancedTest is Test {
         vm.startPrank(honestRelayer2);
         beefyClient.submitInitial(commitment, bitfield, vproof);
         bytes32 ticketID2 = beefyClient.createTicketID_public(honestRelayer2, commitmentHash);
-        (,, /*blockNumber2*/ /*vsetLen2*/ uint32 nRequiredAfter,/*prevRandao2*/ /*bfhash2*/,) =
+        (,, /*blockNumber2*/ /*vsetLen2*/
+            // forge-lint: disable-next-line(unsafe-typecast)
+            uint32 nRequiredAfter,/*prevRandao2*/ /*bfhash2*/,) =
             beefyClient.tickets(ticketID2);
         vm.stopPrank();
         // assert protocol-wide grief: ΔN >= 24 and never exceeds quorum
         assertGt(nRequiredAfter, nRequiredBefore, "N did not increase");
+        // forge-lint: disable-next-line(unsafe-typecast)
         assertLe(nRequiredAfter, uint32(quorum), "N must be capped at quorum");
         assertTrue(
             nRequiredAfter >= nRequiredBefore + 24, unicode"Need ΔN >= 24 for high-impact demo"
@@ -297,6 +304,7 @@ contract BeefyClientAdvancedTest is Test {
         leaf.parentHash = bytes32(0);
         // nextValidatorSet.id == VSET_ID + 1, so set leaf.nextAuthoritySetID = VSET_ID + 2
         leaf.nextAuthoritySetID = VSET_ID + 2;
+        // forge-lint: disable-next-line(unsafe-typecast)
         leaf.nextAuthoritySetLen = uint32(VSET_LEN);
         leaf.nextAuthoritySetRoot = keccak256(abi.encodePacked("next-authority-root"));
         leaf.parachainHeadsRoot = bytes32(0);
@@ -349,6 +357,7 @@ contract BeefyClientAdvancedTest is Test {
         leaf.parentNumber = 0;
         leaf.parentHash = bytes32(0);
         leaf.nextAuthoritySetID = VSET_ID + 3;
+        // forge-lint: disable-next-line(unsafe-typecast)
         leaf.nextAuthoritySetLen = uint32(VSET_LEN);
         leaf.nextAuthoritySetRoot = keccak256(abi.encodePacked("next-authority-root"));
         leaf.parachainHeadsRoot = bytes32(0);

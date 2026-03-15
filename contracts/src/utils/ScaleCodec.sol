@@ -111,6 +111,7 @@ library ScaleCodec {
     function encodeCompactU32(uint32 value) internal pure returns (bytes memory) {
         if (value <= 2 ** 6 - 1) {
             // add single byte flag
+            // forge-lint: disable-next-line(unsafe-typecast)
             return abi.encodePacked(uint8(value << 2));
         } else if (value <= 2 ** 14 - 1) {
             // add two byte flag and create little endian encoding
@@ -128,6 +129,7 @@ library ScaleCodec {
         if (value <= 63) {
             // single byte = (value << 2)
             // (lowest two bits = 00)
+            // forge-lint: disable-next-line(unsafe-typecast)
             return abi.encodePacked(uint8(value << 2));
         }
 
@@ -135,6 +137,7 @@ library ScaleCodec {
         if (value <= 0x3FFF) {
             // two bytes = (value << 2) + 0x01
             // (lowest two bits = 01)
+            // forge-lint: disable-next-line(unsafe-typecast)
             uint16 encoded = uint16(value << 2) | 0x01;
             // We must store it in little-endian
             return abi.encodePacked(reverse16(encoded));
@@ -144,6 +147,7 @@ library ScaleCodec {
         if (value <= 0x3FFF_FFFF) {
             // four bytes = (value << 2) + 0x02
             // (lowest two bits = 10)
+            // forge-lint: disable-next-line(unsafe-typecast)
             uint32 encoded = (uint32(value) << 2) | 0x02;
             return abi.encodePacked(reverse32(encoded));
         }
@@ -153,6 +157,7 @@ library ScaleCodec {
         // prefix = 0x03 + ((numValueBytes - 4) << 2)
         //   where numValueBytes is how many bytes needed to represent `value`.
         bytes memory littleEndian = _toLittleEndianNoLeadingZeros(value);
+        // forge-lint: disable-next-line(unsafe-typecast)
         uint8 len = uint8(littleEndian.length); // number of bytes needed
 
         // Substrate: prefix's lower 2 bits = 0b11,
@@ -177,6 +182,7 @@ library ScaleCodec {
         uint128 current = value;
         uint8 i = 0;
         while (current != 0) {
+            // forge-lint: disable-next-line(unsafe-typecast)
             buf[i] = bytes1(uint8(current & 0xFF));
             current >>= 8;
             unchecked {
@@ -196,6 +202,7 @@ library ScaleCodec {
         if (value > type(uint32).max) {
             revert UnsupportedCompactEncoding();
         }
+        // forge-lint: disable-next-line(unsafe-typecast)
         return encodeCompactU32(uint32(value));
     }
 }

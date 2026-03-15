@@ -2,8 +2,7 @@
 pragma solidity 0.8.34;
 
 import {BeefyClient} from "../../src/BeefyClient.sol";
-import {Uint16Array, createUint16Array} from "../../src/utils/Uint16Array.sol";
-import "forge-std/console.sol";
+import {createUint16Array} from "../../src/utils/Uint16Array.sol";
 
 contract BeefyClientMock is BeefyClient {
     constructor(

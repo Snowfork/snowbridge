@@ -2,7 +2,8 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.34;
 
-import "../Gateway.sol";
+import {Gateway} from "../Gateway.sol";
+import {ERC1967} from "../utils/ERC1967.sol";
 
 // New Gateway logic contract with an fee initializer
 contract Gateway202602 is Gateway {

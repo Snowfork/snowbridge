@@ -2,9 +2,11 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.34;
 
+// forge-lint: disable-start(unused-import)
 import {TokenInfo, OperatingMode} from "../types/Common.sol";
 import {MultiAddress} from "./MultiAddress.sol";
 import {UD60x18} from "prb/math/src/UD60x18.sol";
+// forge-lint: disable-end(unused-import)
 
 type ParaID is uint32;
 
