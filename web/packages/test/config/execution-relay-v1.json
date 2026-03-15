@@ -15,9 +15,8 @@
         "slotsInEpoch": 32,
         "epochsPerSyncCommitteePeriod": 256,
         "forkVersions": {
-          "deneb": 0,
           "electra": 0,
-          "fulu": 50000000
+          "fulu": 0
         }
       },
       "datastore": {
@@ -38,5 +37,6 @@
   "ofac": {
     "enabled": false,
     "apiKey": ""
-  }
+  },
+  "fetch-interval": 5
 }

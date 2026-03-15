@@ -13,6 +13,7 @@ type Config struct {
 	InstantVerification bool               `mapstructure:"instantVerification"`
 	OFAC                config.OFACConfig  `mapstructure:"ofac"`
 	GasEstimation       GasEstimatorConfig `mapstructure:"gasEstimation"`
+	FetchInterval       uint32             `mapstructure:"fetch-interval"`
 }
 
 type SourceConfig struct {

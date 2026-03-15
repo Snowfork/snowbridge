@@ -5,7 +5,7 @@ source scripts/set-env.sh
 
 config_relayer() {
     local electra_forked_epoch=0
-    local fulu_forked_epoch=50000000
+    local fulu_forked_epoch=0
     local state_service_endpoint="http://127.0.0.1:8080"
     # Configure beefy relay
     jq \
@@ -107,20 +107,6 @@ config_relayer() {
     ' \
         config/fisherman-relay.json >$output_dir/fisherman-relay.json
 
-    # Configure beacon state service
-    jq \
-        --arg beacon_endpoint_http $beacon_endpoint_http \
-        --argjson electra_forked_epoch $electra_forked_epoch \
-        --argjson fulu_forked_epoch $fulu_forked_epoch \
-        --arg datastore_location "$output_dir/beacon-state-service-data" \
-        '
-      .beacon.endpoint = $beacon_endpoint_http
-    | .beacon.spec.forkVersions.electra = $electra_forked_epoch
-    | .beacon.spec.forkVersions.fulu = $fulu_forked_epoch
-    | .beacon.datastore.location = $datastore_location
-    ' \
-        config/beacon-state-service.json >$output_dir/beacon-state-service.json
-
     # Configure beacon relay
     jq \
         --arg beacon_endpoint_http $beacon_endpoint_http \
@@ -208,7 +194,7 @@ start_relayer() {
         : >"$output_dir"/parachain-relay-v1.log
         while :; do
             echo "Starting parachain relay v1 at $(date)"
-            "${relayer}" run parachain-v1 \
+            "${relayer}" run parachain \
                 --config "$output_dir/parachain-relay-v1.json" \
                 --ethereum.private-key $parachain_relay_primary_gov_eth_key \
                 >>"$output_dir"/parachain-relay-v1.log 2>&1 || true
@@ -221,10 +207,9 @@ start_relayer() {
         : >"$output_dir"/parachain-relay-v2.log
         while :; do
             echo "Starting parachain relay v2 at $(date)"
-            "${relayer}" run parachain \
+            "${relayer}" run parachain-v2 \
                 --config "$output_dir/parachain-relay.json" \
-                --ethereum.private-key $parachain_relay_primary_gov_eth_key \
-                --substrate.private-key "//ExecutionRelayAssetHub" \
+                --ethereum.private-key $parachain_relay_assethub_eth_key \
                 >>"$output_dir"/parachain-relay-v2.log 2>&1 || true
             sleep 20
         done
@@ -240,18 +225,6 @@ start_relayer() {
                 --ethereum.private-key $parachain_relay_primary_gov_eth_key \
                 --substrate.private-key "//ExecutionRelayAssetHub" \
                 >>"$output_dir"/equivocation-fisherman.log 2>&1 || true
-            sleep 20
-        done
-    ) &
-
-    # Launch beacon state service (before other relayers since may use it)
-    (
-        : >"$output_dir"/beacon-state-service.log
-        while :; do
-            echo "Starting beacon state service at $(date)"
-            "${relayer}" run beacon-state-service \
-                --config "$output_dir/beacon-state-service.json" \
-                >>"$output_dir"/beacon-state-service.log 2>&1 || true
             sleep 20
         done
     ) &
@@ -272,28 +245,28 @@ start_relayer() {
         done
     ) &
 
-    # Launch execution relay v1
+    # Launch ethereum relay v1
     (
-        : >$output_dir/execution-relay-v1.log
+        : >$output_dir/ethereum-relay-v1.log
         while :; do
-            echo "Starting execution relay v1 at $(date)"
-            "${relayer}" run execution-v1 \
+            echo "Starting ethereum relay v1 at $(date)"
+            "${relayer}" run ethereum \
                 --config $output_dir/execution-relay-v1.json \
                 --substrate.private-key "//ExecutionRelayAssetHub" \
-                >>"$output_dir"/execution-relay-v1.log 2>&1 || true
+                >>"$output_dir"/ethereum-relay-v1.log 2>&1 || true
             sleep 20
         done
     ) &
 
-    # Launch execution relay v2
+    # Launch ethereum relay v2
     (
-        : >$output_dir/execution-relay-v2.log
+        : >$output_dir/ethereum-relay-v2.log
         while :; do
-            echo "Starting execution relay v2 at $(date)"
-            "${relayer}" run execution \
+            echo "Starting ethereum relay v2 at $(date)"
+            "${relayer}" run ethereum-v2 \
                 --config $output_dir/execution-relay.json \
                 --substrate.private-key "//ExecutionRelayAssetHub" \
-                >>"$output_dir"/execution-relay-v2.log 2>&1 || true
+                >>"$output_dir"/ethereum-relay-v2.log 2>&1 || true
             sleep 20
         done
     ) &
@@ -316,7 +289,7 @@ start_relayer() {
         : >"$output_dir"/parachain-relay-bridge-hub-01.log
         while :; do
             echo "Starting parachain-relay (primary governance) at $(date)"
-            "${relayer}" run parachain-v1 \
+            "${relayer}" run parachain \
                 --config "$output_dir/parachain-relay-bridge-hub-01.json" \
                 --ethereum.private-key $parachain_relay_primary_gov_eth_key \
                 >>"$output_dir"/parachain-relay-bridge-hub-01.log 2>&1 || true
@@ -329,7 +302,7 @@ start_relayer() {
         : >"$output_dir"/parachain-relay-bridge-hub-02.log
         while :; do
             echo "Starting parachain-relay (secondary governance) at $(date)"
-            "${relayer}" run parachain-v1 \
+            "${relayer}" run parachain \
                 --config "$output_dir/parachain-relay-bridge-hub-02.json" \
                 --ethereum.private-key $parachain_relay_secondary_gov_eth_key \
                 >>"$output_dir"/parachain-relay-bridge-hub-02.log 2>&1 || true
@@ -341,7 +314,8 @@ start_relayer() {
 build_relayer() {
     echo "Building relayer"
     mage -d "$relay_dir" build
-    cp $relay_bin "$output_bin_dir/snowbridge-relay"
+    rm -rf $relayer
+    cp $relay_bin $relayer
 }
 
 deploy_relayer() {

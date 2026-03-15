@@ -126,11 +126,18 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		"chainId": r.chainID,
 	}).Info("relayer config")
 
+	var fetchInterval time.Duration
+	if r.config.FetchInterval == 0 {
+		fetchInterval = 60 * time.Second
+	} else {
+		fetchInterval = time.Duration(r.config.FetchInterval) * time.Second
+	}
+
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
-		case <-time.After(60 * time.Second):
+		case <-time.After(fetchInterval):
 			log.Info("Polling Nonces")
 
 			ethNonce, err := r.fetchEthereumNonce(ctx)
@@ -210,9 +217,14 @@ func (r *Relay) writeToParachain(ctx context.Context, proof scale.ProofPayload, 
 		"Proof":    inboundMsg.Proof,
 	}).Debug("Generated message from Ethereum log")
 
+	submitPayload, err := r.paraconn.GenerateSubmitMessagePayload(inboundMsg)
+	if err != nil {
+		return fmt.Errorf("generate submit message payload: %w", err)
+	}
+
 	// There is already a valid finalized header on-chain that can prove the message
 	if proof.FinalizedPayload == nil {
-		err := r.writer.WriteToParachainAndWatch(ctx, "EthereumInboundQueueV2.submit", inboundMsg)
+		err := r.writer.WriteToParachainAndWatch(ctx, "EthereumInboundQueueV2.submit", submitPayload)
 		if err != nil {
 			if isDuplicateError(err) {
 				log.Info("message already processed (duplicate), skipping")
@@ -231,9 +243,9 @@ func (r *Relay) writeToParachain(ctx context.Context, proof scale.ProofPayload, 
 	}).Debug("Batching finalized header update with message")
 
 	extrinsics := []string{"EthereumBeaconClient.submit", "EthereumInboundQueueV2.submit"}
-	payloads := []interface{}{proof.FinalizedPayload.Payload, inboundMsg}
+	payloads := []interface{}{proof.FinalizedPayload.Payload, submitPayload}
 	// Batch the finalized header update with the inbound message
-	err := r.writer.BatchCall(ctx, extrinsics, payloads)
+	err = r.writer.BatchCall(ctx, extrinsics, payloads)
 	if err != nil {
 		if isDuplicateError(err) {
 			log.Info("message already processed (duplicate), skipping")

@@ -6,7 +6,6 @@
       "slotsInEpoch": 32,
       "epochsPerSyncCommitteePeriod": 256,
       "forkVersions": {
-        "deneb": 0,
         "electra": 0,
         "fulu": 0
       }
@@ -22,16 +21,16 @@
     "writeTimeout": "60s"
   },
   "cache": {
-    "maxProofs": 1000,
+    "maxProofs": 1000000,
     "proofTTLSeconds": 3600
   },
   "persist": {
     "enabled": true,
-    "saveIntervalHours": 12,
+    "saveIntervalHours": 1,
     "maxEntries": 10
   },
   "watch": {
     "enabled": true,
-    "pollIntervalSeconds": 12
+    "pollIntervalSeconds": 1
   }
 }
