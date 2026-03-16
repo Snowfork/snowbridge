@@ -39,13 +39,21 @@ import { ensureValidationSuccess } from "./utils"
 export class V1ToEthereumEvmAdapter<T extends EthereumProviderTypes>
     implements ToEthereumEvmTransferInterface<T>
 {
+    evmParachainId: number
     constructor(
         public readonly context: Context<T>,
         public readonly registry: AssetRegistry,
         public readonly route: TransferRoute,
         public readonly source: EthereumChain,
         public readonly destination: EthereumChain,
-    ) {}
+    ) {
+        const evmParachainId =
+            this.registry.ethereumChains[`ethereum_${this.from.id}`].evmParachainId
+        if (!evmParachainId) {
+            throw Error(`Could not get parachainId for evm parachain ${this.from.id}.`)
+        }
+        this.evmParachainId = evmParachainId
+    }
 
     get from(): ChainId {
         return this.route.from
@@ -76,17 +84,17 @@ export class V1ToEthereumEvmAdapter<T extends EthereumProviderTypes>
             throw new Error("v1 toEthereumEVM adapter does not support options.contractCall.")
         }
         const assetHub = await this.context.assetHub()
-        const parachain = await this.context.parachain(this.from.id)
-        const sourceParachain = this.registry.parachains[`polkadot_${this.from.id}`]
+        const parachain = await this.context.parachain(this.evmParachainId)
+        const sourceParachain = this.registry.parachains[`polkadot_${this.evmParachainId}`]
         if (!sourceParachain) {
-            throw Error(`Could not find ${this.from.id} in the asset registry.`)
+            throw Error(`Could not find ${this.evmParachainId} in the asset registry.`)
         }
         const assetHubImpl = await this.context.paraImplementation(assetHub)
         const sourceParachainImpl = await this.context.paraImplementation(parachain)
         return getDeliveryFeeV1(
             assetHubImpl,
             sourceParachainImpl,
-            this.from.id,
+            this.evmParachainId,
             sourceParachain,
             this.registry,
             tokenAddress,
@@ -127,7 +135,7 @@ export class V1ToEthereumEvmAdapter<T extends EthereumProviderTypes>
             throw Error(`Source address ${sourceAccountHex} is not a 20 byte address.`)
         }
 
-        const parachain = await this.context.parachain(this.from.id)
+        const parachain = await this.context.parachain(this.evmParachainId)
         const sourceParachainImpl = await this.context.paraImplementation(parachain)
         const sourceParachain = registry.parachains[`polkadot_${sourceParachainImpl.parachainId}`]
         if (!sourceParachain) {
@@ -516,7 +524,7 @@ export class V1ToEthereumEvmAdapter<T extends EthereumProviderTypes>
             index: number
             status: number
         }
-        const sourceParachain = await this.context.parachain(this.from.id)
+        const sourceParachain = await this.context.parachain(this.evmParachainId)
         const blockHash = await sourceParachain.rpc.chain.getBlockHash(evmReceipt.blockNumber)
         const events = await (
             await sourceParachain.at(blockHash)
