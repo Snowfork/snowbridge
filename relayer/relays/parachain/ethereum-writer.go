@@ -8,12 +8,15 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
+	"time"
 
+	goEthereum "github.com/ethereum/go-ethereum"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/metachris/flashbotsrpc"
 
@@ -184,31 +187,10 @@ func (wr *EthereumWriter) WriteChannel(
 		Info("Sent transaction Gateway.submit")
 
 	if useFlashbots {
-		txBytes, err := tx.MarshalBinary()
+		err = wr.sendFlashbotsBundleUntilMined(ctx, tx)
 		if err != nil {
-			return fmt.Errorf("marshal tx for Flashbots bundle: %w", err)
+			return err
 		}
-		rawTxHex := "0x" + hex.EncodeToString(txBytes)
-
-		blockNumber, err := wr.conn.Client().BlockNumber(ctx)
-		if err != nil {
-			return fmt.Errorf("get block number for Flashbots bundle: %w", err)
-		}
-		targetBlock := blockNumber + 1
-
-		fbRPC := flashbotsrpc.New(wr.config.Ethereum.FlashbotsRelayURL)
-		sendReq := flashbotsrpc.FlashbotsSendBundleRequest{
-			Txs:         []string{rawTxHex},
-			BlockNumber: fmt.Sprintf("0x%x", targetBlock),
-		}
-		result, err := fbRPC.FlashbotsSendBundle(wr.conn.Keypair().PrivateKey(), sendReq)
-		if err != nil {
-			return fmt.Errorf("Flashbots SendBundle: %w", err)
-		}
-		log.WithFields(log.Fields{
-			"bundleHash":   result.BundleHash,
-			"targetBlock": targetBlock,
-		}).Info("Flashbots bundle submitted")
 	}
 
 	receipt, err := wr.conn.WatchTransaction(ctx, tx, 1)
@@ -234,6 +216,61 @@ func (wr *EthereumWriter) WriteChannel(
 	}
 
 	return nil
+}
+
+func (wr *EthereumWriter) sendFlashbotsBundleUntilMined(ctx context.Context, tx *types.Transaction) error {
+	txBytes, err := tx.MarshalBinary()
+	if err != nil {
+		return fmt.Errorf("marshal tx for Flashbots bundle: %w", err)
+	}
+	rawTxHex := "0x" + hex.EncodeToString(txBytes)
+
+	fbRPC := flashbotsrpc.New(wr.config.Ethereum.FlashbotsRelayURL)
+	var lastTargetBlock uint64
+	var timeout <-chan time.Time
+	if wr.config.Ethereum.PendingTxTimeoutSecs > 0 {
+		timeout = time.After(time.Duration(wr.config.Ethereum.PendingTxTimeoutSecs) * time.Second)
+	}
+
+	for {
+		receipt, err := wr.conn.Client().TransactionReceipt(ctx, tx.Hash())
+		if err == nil && receipt != nil {
+			return nil
+		}
+		if err != nil && !errors.Is(err, goEthereum.NotFound) {
+			return fmt.Errorf("check receipt for Flashbots tx: %w", err)
+		}
+
+		blockNumber, err := wr.conn.Client().BlockNumber(ctx)
+		if err != nil {
+			return fmt.Errorf("get block number for Flashbots bundle: %w", err)
+		}
+		targetBlock := blockNumber + 1
+		if targetBlock != lastTargetBlock {
+			sendReq := flashbotsrpc.FlashbotsSendBundleRequest{
+				Txs:         []string{rawTxHex},
+				BlockNumber: fmt.Sprintf("0x%x", targetBlock),
+			}
+			result, err := fbRPC.FlashbotsSendBundle(wr.conn.Keypair().PrivateKey(), sendReq)
+			if err != nil {
+				return fmt.Errorf("Flashbots SendBundle: %w", err)
+			}
+			log.WithFields(log.Fields{
+				"bundleHash":  result.BundleHash,
+				"targetBlock": targetBlock,
+				"txHash":      tx.Hash().Hex(),
+			}).Info("Flashbots bundle submitted")
+			lastTargetBlock = targetBlock
+		}
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-timeout:
+			return fmt.Errorf("wait receipt timeout")
+		case <-time.After(time.Duration(ethereum.PollInterval) * time.Second):
+		}
+	}
 }
 
 func convertHeader(header gsrpcTypes.Header) (*contracts.VerificationParachainHeader, error) {
