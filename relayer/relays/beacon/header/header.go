@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand"
 	"time"
 
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
@@ -180,6 +181,10 @@ func (h *Header) SyncCommitteePeriodUpdate(ctx context.Context, period uint64) e
 		return nil
 	}
 
+	jitter := time.Duration(rand.Intn(5000)) * time.Millisecond
+	log.WithField("jitter_ms", jitter.Milliseconds()).Debug("waiting before sync committee submission")
+	time.Sleep(jitter)
+
 	hasPending, err := h.writer.HasPendingExtrinsic("EthereumBeaconClient.submit")
 	if err != nil {
 		log.WithError(err).Warn("failed to check pending extrinsics, proceeding with submission")
@@ -304,6 +309,12 @@ func (h *Header) updateFinalizedHeaderOnchain(ctx context.Context, update scale.
 		h.cache.SetLastSyncedFinalizedState(currentOnchainState.BeaconBlockRoot, currentOnchainState.BeaconSlot)
 		return nil
 	}
+
+	// Add random jitter to reduce the chance of two relayers submitting simultaneously.
+	// This makes the tx pool check below more effective by staggering submissions.
+	jitter := time.Duration(rand.Intn(5000)) * time.Millisecond
+	log.WithField("jitter_ms", jitter.Milliseconds()).Debug("waiting before finalized header submission")
+	time.Sleep(jitter)
 
 	// Check if another relayer already has a pending submission in the transaction pool.
 	// This catches the race where both relayers pass the on-chain checks simultaneously

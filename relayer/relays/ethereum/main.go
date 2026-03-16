@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"math/rand"
 	"sort"
 	"strings"
 	"time"
@@ -475,6 +476,11 @@ func (r *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayOutboundMessa
 	if isProcessed {
 		return nil
 	}
+
+	// Add random jitter to stagger submissions between competing relayers
+	jitter := time.Duration(rand.Intn(5000)) * time.Millisecond
+	log.WithField("jitter_ms", jitter.Milliseconds()).Debug("waiting before inbound message submission")
+	time.Sleep(jitter)
 
 	// Check if another relayer already has a pending inbound queue submission in the tx pool
 	hasPending, err := r.writer.HasPendingExtrinsic("EthereumInboundQueue.submit")
