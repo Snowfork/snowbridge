@@ -19,7 +19,7 @@ import {
     TransferKind,
     TransferRoute,
 } from "@snowbridge/base-types"
-import { ensureValidationSuccess, padFeeByPercentage } from "./utils"
+import { ensureValidationSuccess, padFeeByPercentage, resolveBeneficiary } from "./utils"
 import { Context } from "."
 import { buildMessageId } from "./toEthereum_v2"
 import { Result } from "@polkadot/types"
@@ -238,9 +238,9 @@ export class InterParachainTransfer<T extends EthereumProviderTypes>
         const source = await this.context.paraImplementation(sourceParachain)
 
         let { hexAddress: beneficiaryAddressHex } =
-            this.context.ethereumProvider.beneficiaryMultiAddress(beneficiaryAccount)
+            resolveBeneficiary(beneficiaryAccount)
         let { hexAddress: sourceAccountHex } =
-            this.context.ethereumProvider.beneficiaryMultiAddress(sourceAccount)
+            resolveBeneficiary(sourceAccount)
 
         const {
             sourceAssetMetadata,

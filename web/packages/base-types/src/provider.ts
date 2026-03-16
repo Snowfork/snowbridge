@@ -28,10 +28,7 @@ export type FeeData = {
   maxPriorityFeePerGas: bigint | null;
 };
 
-export type EncodedMultiAddress = {
-  address: MultiAddressStruct;
-  hexAddress: string;
-};
+export type EncodedMultiAddress = MultiAddressStruct;
 
 export type L1AdapterDepositParams = {
   inputToken: string;
@@ -114,7 +111,7 @@ export interface EthereumProvider<T extends EthereumProviderTypes> {
   l1LegacySwapRouterExactOutputSingle(
     params: L1LegacySwapRouterExactOutputSingleParams,
   ): string;
-  beneficiaryMultiAddress(beneficiary: string): EncodedMultiAddress;
+  beneficiaryMultiAddress(beneficiary: string): MultiAddressStruct;
   estimateGas(
     provider: T["Connection"],
     tx: T["ContractTransaction"],

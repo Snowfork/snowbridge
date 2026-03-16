@@ -22,7 +22,7 @@ import {
 } from "../../xcmbuilders/toPolkadot/erc20ToAH"
 import { accountId32Location, DOT_LOCATION, erc20Location } from "../../xcmBuilder"
 import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
-import { ensureValidationSuccess, padFeeByPercentage } from "../../utils"
+import { ensureValidationSuccess, padFeeByPercentage, resolveBeneficiary } from "../../utils"
 import { FeeInfo, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
 import { buildMessageId, Transfer, ValidatedTransfer } from "../../toPolkadotSnowbridgeV2"
 import { getOperatingStatus } from "../../status"
@@ -164,8 +164,8 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
                 ? ahAssetMetadata.minimumBalance
                 : destAssetMetadata.minimumBalance
 
-        let { address: beneficiary, hexAddress: beneficiaryAddressHex } =
-            context.ethereumProvider.beneficiaryMultiAddress(beneficiaryAccount)
+        const { hexAddress: beneficiaryAddressHex } = resolveBeneficiary(beneficiaryAccount)
+        const beneficiary = context.ethereumProvider.beneficiaryMultiAddress(beneficiaryAddressHex)
         let value = fee.totalFeeInWei
         let inputAmount = amount
         const assets: string[] = []

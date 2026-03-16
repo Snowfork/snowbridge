@@ -21,7 +21,12 @@ import {
 } from "../../toPolkadotSnowbridgeV2"
 import { accountId32Location, DOT_LOCATION, erc20Location, isDOT } from "../../xcmBuilder"
 import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
-import { ensureValidationSuccess, padFeeByPercentage, paraIdToSovereignAccount } from "../../utils"
+import {
+    ensureValidationSuccess,
+    padFeeByPercentage,
+    paraIdToSovereignAccount,
+    resolveBeneficiary,
+} from "../../utils"
 import { FeeInfo, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
 import {
     buildAssetHubPNAReceivedXcm,
@@ -252,8 +257,8 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
                 ? ahAssetMetadata.minimumBalance
                 : destAssetMetadata.minimumBalance
 
-        let { address: beneficiary, hexAddress: beneficiaryAddressHex } =
-            context.ethereumProvider.beneficiaryMultiAddress(beneficiaryAccount)
+        const { hexAddress: beneficiaryAddressHex } = resolveBeneficiary(beneficiaryAccount)
+        const beneficiary = context.ethereumProvider.beneficiaryMultiAddress(beneficiaryAddressHex)
         let value = fee.totalFeeInWei
 
         if (!ahAssetMetadata.foreignId) {

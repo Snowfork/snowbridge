@@ -235,7 +235,6 @@ export type AssetRegistry = {
 };
 
 export type {
-  EncodedMultiAddress,
   EthereumProvider,
   EthereumProviderTypes,
   FeeData,
