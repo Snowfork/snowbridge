@@ -3,6 +3,7 @@ package parachainv1
 import (
 	"context"
 	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -13,6 +14,8 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+
+	"github.com/metachris/flashbotsrpc"
 
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	contracts "github.com/snowfork/snowbridge/relayer/contracts/v1"
@@ -150,6 +153,11 @@ func (wr *EthereumWriter) WriteChannel(
 	}
 	options.Nonce = big.NewInt(0).SetUint64(nonce)
 
+	useFlashbots := wr.config.Ethereum.FlashbotsRelayURL != ""
+	if useFlashbots {
+		options.NoSend = true
+	}
+
 	tx, err := wr.gateway.SubmitV1(
 		options, message, commitmentProof.Proof.InnerHashes, verificationProof,
 	)
@@ -174,6 +182,34 @@ func (wr *EthereumWriter) WriteChannel(
 			"header":               proof.Header,
 		}).
 		Info("Sent transaction Gateway.submit")
+
+	if useFlashbots {
+		txBytes, err := tx.MarshalBinary()
+		if err != nil {
+			return fmt.Errorf("marshal tx for Flashbots bundle: %w", err)
+		}
+		rawTxHex := "0x" + hex.EncodeToString(txBytes)
+
+		blockNumber, err := wr.conn.Client().BlockNumber(ctx)
+		if err != nil {
+			return fmt.Errorf("get block number for Flashbots bundle: %w", err)
+		}
+		targetBlock := blockNumber + 1
+
+		fbRPC := flashbotsrpc.New(wr.config.Ethereum.FlashbotsRelayURL)
+		sendReq := flashbotsrpc.FlashbotsSendBundleRequest{
+			Txs:         []string{rawTxHex},
+			BlockNumber: fmt.Sprintf("0x%x", targetBlock),
+		}
+		result, err := fbRPC.FlashbotsSendBundle(wr.conn.Keypair().PrivateKey(), sendReq)
+		if err != nil {
+			return fmt.Errorf("Flashbots SendBundle: %w", err)
+		}
+		log.WithFields(log.Fields{
+			"bundleHash":   result.BundleHash,
+			"targetBlock": targetBlock,
+		}).Info("Flashbots bundle submitted")
+	}
 
 	receipt, err := wr.conn.WatchTransaction(ctx, tx, 1)
 

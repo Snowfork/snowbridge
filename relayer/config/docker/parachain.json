@@ -21,7 +21,8 @@
   "sink": {
     "ethereum": {
       "endpoint": "${FLASHBOTS_ENDPOINT}",
-      "pending-tx-timeout-secs": 240
+      "pending-tx-timeout-secs": 240,
+      "flashbots-relay-url": "${FLASHBOTS_RELAY_URL}"
     },
     "contracts": {
       "Gateway": "${GATEWAY_CONTRACT}"

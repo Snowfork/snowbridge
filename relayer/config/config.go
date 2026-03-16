@@ -19,6 +19,8 @@ type EthereumConfig struct {
 	GasLimit             uint64 `mapstructure:"gas-limit"`
 	HeartbeatSecs        uint64 `mapstructure:"heartbeat-secs"`
 	PendingTxTimeoutSecs uint64 `mapstructure:"pending-tx-timeout-secs"`
+	// FlashbotsRelayURL when set sends txs via Flashbots bundle API (eth_sendBundle) instead of public mempool.
+	FlashbotsRelayURL string `mapstructure:"flashbots-relay-url"`
 }
 
 type OFACConfig struct {

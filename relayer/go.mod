@@ -39,6 +39,8 @@ require (
 	github.com/ethereum/c-kzg-4844/v2 v2.1.0 // indirect
 	github.com/ethereum/go-verkle v0.2.2 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
+	github.com/metachris/flashbotsrpc v0.7.1 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 )
 
 require (
