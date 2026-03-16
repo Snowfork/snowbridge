@@ -21,7 +21,6 @@ import type {
 } from "viem";
 import type {
   BeefyClient,
-  EncodedMultiAddress,
   EthereumProvider,
   EthereumProviderTypes,
   FeeData,
@@ -34,6 +33,7 @@ import type {
   L1AdapterDepositParams,
   L1LegacySwapRouterExactOutputSingleParams,
   L1SwapRouterExactOutputSingleParams,
+  MultiAddressStruct,
 } from "@snowbridge/base-types";
 import {
   IERC20_ABI,
@@ -45,22 +45,6 @@ import {
   SWAP_LEGACY_ROUTER_ABI,
   SWAP_ROUTER_ABI,
 } from "@snowbridge/base-types";
-
-function resolveBeneficiary(address: string) {
-  if (/^0x[a-fA-F0-9]{40}$/.test(address)) {
-    return {
-      hexAddress: address,
-      kind: 2,
-    };
-  }
-  if (/^0x[a-fA-F0-9]{64}$/.test(address)) {
-    return {
-      hexAddress: address,
-      kind: 1,
-    };
-  }
-  throw new Error("Unknown Beneficiary address format.");
-}
 
 type ReadonlyFunction = ((...args: unknown[]) => Promise<unknown>) & {
   staticCall: (...args: unknown[]) => Promise<unknown>;
@@ -196,7 +180,7 @@ export class ViemEthereumProvider
     sourceAccount: string,
     tokenAddress: string,
     destinationParaId: number,
-    beneficiary: EncodedMultiAddress["address"],
+    beneficiary: MultiAddressStruct,
     totalFeeDot: bigint,
     amount: bigint,
     value: bigint,
@@ -426,30 +410,31 @@ export class ViemEthereumProvider
     );
   }
 
-  beneficiaryMultiAddress(beneficiary: string): EncodedMultiAddress {
-    const { hexAddress, kind } = resolveBeneficiary(beneficiary);
+  beneficiaryMultiAddress(beneficiary: string): MultiAddressStruct {
+    let kind: number;
+    if (/^0x[a-fA-F0-9]{40}$/.test(beneficiary)) {
+      kind = 2;
+    } else if (/^0x[a-fA-F0-9]{64}$/.test(beneficiary)) {
+      kind = 1;
+    } else {
+      throw new Error("Unknown Beneficiary address format.");
+    }
     let data: Hex;
     switch (kind) {
       case 1:
         data = encodeAbiParameters(parseAbiParameters("bytes32"), [
-          hexAddress as Hex,
+          beneficiary as Hex,
         ]);
         break;
       case 2:
         data = encodeAbiParameters(parseAbiParameters("bytes20"), [
-          hexAddress as Hex,
+          beneficiary as Hex,
         ]);
         break;
       default:
         throw new Error(`Unknown Beneficiary kind ${kind}.`);
     }
-    return {
-      hexAddress,
-      address: {
-        kind,
-        data,
-      },
-    };
+    return { kind, data };
   }
 
   async estimateGas(

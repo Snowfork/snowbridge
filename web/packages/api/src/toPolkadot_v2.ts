@@ -1,4 +1,4 @@
-import { ensureValidationSuccess, padFeeByPercentage } from "./utils"
+import { ensureValidationSuccess, padFeeByPercentage, resolveBeneficiary } from "./utils"
 import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
 import {
     Asset,
@@ -338,8 +338,8 @@ export class V1ToPolkadotAdapter<T extends EthereumProviderTypes>
                 ? ahAssetMetadata.minimumBalance
                 : destAssetMetadata.minimumBalance
 
-        let { address: beneficiary, hexAddress: beneficiaryAddressHex } =
-            context.ethereumProvider.beneficiaryMultiAddress(beneficiaryAccount)
+        const { hexAddress: beneficiaryAddressHex } = resolveBeneficiary(beneficiaryAccount)
+        const beneficiary = context.ethereumProvider.beneficiaryMultiAddress(beneficiaryAddressHex)
         let value = v1Fee.totalFeeInWei
         if (tokenAddress === ETHER_TOKEN_ADDRESS) {
             value += amount

@@ -40,7 +40,7 @@ import {
     XcmDryRunEffects,
 } from "@polkadot/types/interfaces"
 import { Result } from "@polkadot/types"
-import { ensureValidationSuccess, padFeeByPercentage, u32ToLeBytes } from "./utils"
+import { ensureValidationSuccess, padFeeByPercentage, resolveBeneficiary, u32ToLeBytes } from "./utils"
 import { TransferInterface as KusamaTransferInterface } from "./transfers/forKusama/transferInterface"
 import { Context } from "."
 
@@ -362,7 +362,7 @@ export class KusamaTransfer<T extends EthereumProviderTypes> implements KusamaTr
         }
 
         let { hexAddress: beneficiaryAddressHex } =
-            this.context.ethereumProvider.beneficiaryMultiAddress(beneficiaryAccount)
+            resolveBeneficiary(beneficiaryAccount)
 
         const { sourceAssetMetadata, destAssetMetadata, sourceParachain } = resolveInputs(
             this.info.registry,

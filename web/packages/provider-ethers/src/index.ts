@@ -13,7 +13,6 @@ import {
 } from "ethers";
 import type {
   BeefyClient,
-  EncodedMultiAddress,
   EthereumProvider,
   EthereumProviderTypes,
   FeeData,
@@ -26,6 +25,7 @@ import type {
   L1AdapterDepositParams,
   L1LegacySwapRouterExactOutputSingleParams,
   L1SwapRouterExactOutputSingleParams,
+  MultiAddressStruct,
 } from "@snowbridge/base-types";
 import {
   IERC20_ABI,
@@ -37,22 +37,6 @@ import {
   SWAP_LEGACY_ROUTER_ABI,
   SWAP_ROUTER_ABI,
 } from "@snowbridge/base-types";
-
-function resolveBeneficiary(address: string) {
-  if (/^0x[a-fA-F0-9]{40}$/.test(address)) {
-    return {
-      hexAddress: address,
-      kind: 2,
-    };
-  }
-  if (/^0x[a-fA-F0-9]{64}$/.test(address)) {
-    return {
-      hexAddress: address,
-      kind: 1,
-    };
-  }
-  throw new Error("Unknown Beneficiary address format.");
-}
 
 export interface EthersProviderTypes extends EthereumProviderTypes {
   Connection: AbstractProvider;
@@ -117,7 +101,7 @@ export class EthersEthereumProvider
     sourceAccount: string,
     tokenAddress: string,
     destinationParaId: number,
-    beneficiary: EncodedMultiAddress["address"],
+    beneficiary: MultiAddressStruct,
     totalFeeDot: bigint,
     amount: bigint,
     value: bigint,
@@ -368,27 +352,28 @@ export class EthersEthereumProvider
     );
   }
 
-  beneficiaryMultiAddress(beneficiary: string): EncodedMultiAddress {
+  beneficiaryMultiAddress(beneficiary: string): MultiAddressStruct {
     const abi = AbiCoder.defaultAbiCoder();
-    const { hexAddress, kind } = resolveBeneficiary(beneficiary);
+    let kind: number;
+    if (/^0x[a-fA-F0-9]{40}$/.test(beneficiary)) {
+      kind = 2;
+    } else if (/^0x[a-fA-F0-9]{64}$/.test(beneficiary)) {
+      kind = 1;
+    } else {
+      throw new Error("Unknown Beneficiary address format.");
+    }
     let data: string;
     switch (kind) {
       case 1:
-        data = abi.encode(["bytes32"], [hexAddress]);
+        data = abi.encode(["bytes32"], [beneficiary]);
         break;
       case 2:
-        data = abi.encode(["bytes20"], [hexAddress]);
+        data = abi.encode(["bytes20"], [beneficiary]);
         break;
       default:
         throw new Error(`Unknown Beneficiary kind {kind}.`);
     }
-    return {
-      hexAddress,
-      address: {
-        kind,
-        data,
-      },
-    };
+    return { kind, data };
   }
 
   async estimateGas(
