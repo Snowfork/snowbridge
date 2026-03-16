@@ -150,6 +150,7 @@ export const monitorParams: {
             { id: "1000", name: "AssetHub", type: "substrate" },
             { id: "kusama_1000", name: "AssetHub on Westend", type: "substrate" },
             { id: "1002", name: "BridgeHub", type: "substrate" },
+            { id: "2004", name: "Moonbeam", type: "substrate" },
             { id: "2034", name: "Hydration", type: "substrate" },
             { id: "2043", name: "Neuroweb", type: "substrate" },
             { id: "3369", name: "Mythos", type: "substrate" },
