@@ -228,6 +228,8 @@ func (wr *EthereumWriter) sendFlashbotsBundleUntilMined(ctx context.Context, tx 
 	fbRPC := flashbotsrpc.New(wr.config.Ethereum.FlashbotsRelayURL)
 	var lastTargetBlock uint64
 	var timeout <-chan time.Time
+	txFeeCap := tx.GasFeeCap()
+	txTipCap := tx.GasTipCap()
 	if wr.config.Ethereum.PendingTxTimeoutSecs > 0 {
 		timeout = time.After(time.Duration(wr.config.Ethereum.PendingTxTimeoutSecs) * time.Second)
 	}
@@ -241,12 +243,13 @@ func (wr *EthereumWriter) sendFlashbotsBundleUntilMined(ctx context.Context, tx 
 			return fmt.Errorf("check receipt for Flashbots tx: %w", err)
 		}
 
-		blockNumber, err := wr.conn.Client().BlockNumber(ctx)
+		latestHeader, err := wr.conn.Client().HeaderByNumber(ctx, nil)
 		if err != nil {
-			return fmt.Errorf("get block number for Flashbots bundle: %w", err)
+			return fmt.Errorf("get latest block header for Flashbots bundle: %w", err)
 		}
-		targetBlock := blockNumber + 1
+		targetBlock := latestHeader.Number.Uint64() + 1
 		if targetBlock != lastTargetBlock {
+			wr.logFlashbotsFeeDiagnostics(tx, latestHeader.BaseFee, targetBlock)
 			sendReq := flashbotsrpc.FlashbotsSendBundleRequest{
 				Txs:         []string{rawTxHex},
 				BlockNumber: fmt.Sprintf("0x%x", targetBlock),
@@ -259,6 +262,8 @@ func (wr *EthereumWriter) sendFlashbotsBundleUntilMined(ctx context.Context, tx 
 				"bundleHash":  result.BundleHash,
 				"targetBlock": targetBlock,
 				"txHash":      tx.Hash().Hex(),
+				"gasFeeCap":   txFeeCap,
+				"gasTipCap":   txTipCap,
 			}).Info("Flashbots bundle submitted")
 			lastTargetBlock = targetBlock
 		}
@@ -267,10 +272,59 @@ func (wr *EthereumWriter) sendFlashbotsBundleUntilMined(ctx context.Context, tx 
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-timeout:
-			return fmt.Errorf("wait receipt timeout")
+			if err := wr.sendToPublicMempool(ctx, tx); err != nil {
+				return fmt.Errorf("wait receipt timeout and fallback mempool send failed: %w", err)
+			}
+			return nil
 		case <-time.After(time.Duration(ethereum.PollInterval) * time.Second):
 		}
 	}
+}
+
+func (wr *EthereumWriter) sendToPublicMempool(ctx context.Context, tx *types.Transaction) error {
+	err := wr.conn.Client().SendTransaction(ctx, tx)
+	if err != nil && !strings.Contains(err.Error(), "already known") {
+		return err
+	}
+
+	log.WithFields(log.Fields{
+		"txHash": tx.Hash().Hex(),
+	}).Warn("Flashbots timeout reached, sent transaction to public mempool")
+	return nil
+}
+
+func (wr *EthereumWriter) logFlashbotsFeeDiagnostics(tx *types.Transaction, baseFee *big.Int, targetBlock uint64) {
+	if tx.GasFeeCap() == nil || tx.GasTipCap() == nil {
+		return
+	}
+
+	feeCap := new(big.Int).Set(tx.GasFeeCap())
+	tipCap := new(big.Int).Set(tx.GasTipCap())
+	fields := log.Fields{
+		"txHash":       tx.Hash().Hex(),
+		"targetBlock":  targetBlock,
+		"gasFeeCapWei": feeCap.String(),
+		"gasTipCapWei": tipCap.String(),
+	}
+
+	if baseFee != nil {
+		base := new(big.Int).Set(baseFee)
+		requiredMinFeeCap := new(big.Int).Add(new(big.Int).Set(base), tipCap)
+		effectiveTip := new(big.Int).Sub(new(big.Int).Set(feeCap), base)
+		if effectiveTip.Sign() < 0 {
+			effectiveTip = big.NewInt(0)
+		}
+		if effectiveTip.Cmp(tipCap) > 0 {
+			effectiveTip = tipCap
+		}
+
+		fields["baseFeeWei"] = base.String()
+		fields["requiredMinFeeCapWei"] = requiredMinFeeCap.String()
+		fields["effectiveTipWei"] = effectiveTip.String()
+		fields["feeCapTooLow"] = feeCap.Cmp(requiredMinFeeCap) < 0
+	}
+
+	log.WithFields(fields).Info("Flashbots bundle fee diagnostics")
 }
 
 func convertHeader(header gsrpcTypes.Header) (*contracts.VerificationParachainHeader, error) {
