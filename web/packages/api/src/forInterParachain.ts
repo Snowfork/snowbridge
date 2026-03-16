@@ -237,10 +237,8 @@ export class InterParachainTransfer<T extends EthereumProviderTypes>
         const sourceParachain = await this.context.parachain(this.from.id)
         const source = await this.context.paraImplementation(sourceParachain)
 
-        let { hexAddress: beneficiaryAddressHex } =
-            resolveBeneficiary(beneficiaryAccount)
-        let { hexAddress: sourceAccountHex } =
-            resolveBeneficiary(sourceAccount)
+        let { hexAddress: beneficiaryAddressHex } = resolveBeneficiary(beneficiaryAccount)
+        let { hexAddress: sourceAccountHex } = resolveBeneficiary(sourceAccount)
 
         const {
             sourceAssetMetadata,
