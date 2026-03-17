@@ -258,7 +258,6 @@ export class PNAFromParachain<T extends EthereumProviderTypes> implements Transf
                 `Fee token as ${fee.feeLocation} is not supported. Only DOT or native asset is allowed.`,
             )
         }
-        console.log("xcm on source chain:", xcm.toHuman())
         let tx: SubmittableExtrinsic<"promise", ISubmittableResult> =
             parachain.tx.polkadotXcm.execute(xcm, MaxWeight)
 
