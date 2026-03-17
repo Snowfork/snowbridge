@@ -31,7 +31,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.error("Monitor error:", error);
     return res.status(500).json({
       error: "Monitor failed",
-      message: error instanceof Error ? error.message : String(error),
+      message: "Monitor failed",
     });
   }
 }
