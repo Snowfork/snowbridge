@@ -200,6 +200,7 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
             destinationExecutionFeeEther +
             relayerFee
         return {
+            kind: "ethereum->polkadot",
             assetHubDeliveryFeeEther: deliveryFeeInEther,
             assetHubExecutionFeeEther: assetHubExecutionFeeEther,
             destinationDeliveryFeeEther: destinationDeliveryFeeEther,

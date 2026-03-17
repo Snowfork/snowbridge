@@ -57,6 +57,7 @@ export type Transfer = {
 }
 
 export type DeliveryFee = {
+    kind: Extract<TransferKind, "polkadot->polkadot">
     deliveryFee: bigint
     executionFee: bigint
     totalFeeInDot: bigint
@@ -221,6 +222,7 @@ export class InterParachainTransfer<T extends EthereumProviderTypes>
         )
 
         return {
+            kind: "polkadot->polkadot",
             deliveryFee,
             executionFee,
             totalFeeInDot: deliveryFee + executionFee,

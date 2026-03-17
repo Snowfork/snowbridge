@@ -484,6 +484,7 @@ export const estimateFeesFromAssetHub = async <T extends EthereumProviderTypes>(
     }
 
     return {
+        kind: l2ChainId ? "polkadot->ethereum_l2" : "polkadot->ethereum",
         localExecutionFeeDOT,
         snowbridgeDeliveryFeeDOT,
         assetHubExecutionFeeDOT,
@@ -638,6 +639,7 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
     }
 
     return {
+        kind: "polkadot->ethereum",
         localExecutionFeeDOT,
         localDeliveryFeeDOT,
         snowbridgeDeliveryFeeDOT,
@@ -1046,6 +1048,7 @@ export async function buildContractCallHex<T extends EthereumProviderTypes>(
 }
 
 export const mockDeliveryFee: DeliveryFee = {
+    kind: "polkadot->ethereum",
     localExecutionFeeDOT: 1n,
     localDeliveryFeeDOT: 1n,
     snowbridgeDeliveryFeeDOT: 1n,

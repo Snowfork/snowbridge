@@ -102,6 +102,7 @@ export class V1ToEthereumEvmAdapter<T extends EthereumProviderTypes>
                 padPercentage: options?.padPercentage,
                 slippagePadPercentage: options?.slippagePadPercentage,
                 defaultFee: options?.defaultFee,
+                kind: "ethereum->ethereum",
             },
         )
     }

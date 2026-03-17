@@ -72,6 +72,7 @@ export type Transfer = {
 }
 
 export type DeliveryFee = {
+    kind: Extract<TransferKind, "kusama->polkadot" | "polkadot->kusama">
     xcmBridgeFee: bigint
     bridgeHubDeliveryFee: bigint
     destinationFee: bigint
@@ -337,6 +338,7 @@ export class KusamaTransfer<T extends EthereumProviderTypes> implements KusamaTr
         let totalFee = totalXcmBridgeFee + bridgeHubDeliveryFee + destinationFee
 
         return {
+            kind: this.from.kind === "kusama" ? "kusama->polkadot" : "polkadot->kusama",
             xcmBridgeFee: totalXcmBridgeFee,
             destinationFee,
             bridgeHubDeliveryFee,

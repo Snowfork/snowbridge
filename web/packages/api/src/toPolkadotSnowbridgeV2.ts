@@ -33,6 +33,7 @@ export { ValidationKind } from "./toPolkadot_v2"
 import { ParachainBase } from "./parachains/parachainBase"
 
 export type DeliveryFee = {
+    kind: Extract<TransferKind, "ethereum->polkadot" | "ethereum_l2->polkadot">
     feeAsset: any
     assetHubDeliveryFeeEther: bigint
     assetHubExecutionFeeEther: bigint
