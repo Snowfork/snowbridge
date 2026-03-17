@@ -453,6 +453,38 @@ function buildTransferLocations(
         }
     }
 
+    // Kusama paths (Ethereum ↔ Kusama AH)
+    if (registry.kusama) {
+        const kusamaParachains = Object.values(registry.kusama.parachains)
+        for (const kusamaPara of kusamaParachains) {
+            const kusamaAssets = Object.keys(kusamaPara.assets)
+            // Find assets common to both Ethereum and Kusama AH
+            const commonAssets = new Set(
+                ethAssets.filter((ea) => kusamaAssets.find((ka) => ka === ea)),
+            )
+            for (const asset of commonAssets) {
+                // Ethereum → Kusama
+                const p1: Path = {
+                    source: { kind: ethChain.kind, id: ethChain.id },
+                    destination: { kind: kusamaPara.kind, id: kusamaPara.id },
+                    asset,
+                }
+                if (pathFilter(p1)) {
+                    locations.push(p1)
+                }
+                // Kusama → Ethereum
+                const p2: Path = {
+                    source: { kind: kusamaPara.kind, id: kusamaPara.id },
+                    destination: { kind: ethChain.kind, id: ethChain.id },
+                    asset,
+                }
+                if (pathFilter(p2)) {
+                    locations.push(p2)
+                }
+            }
+        }
+    }
+
     // L2 paths
     if (environment.l2Bridge) {
         // Do asset hub only, in future we can loop through all v2 enabled parachains.

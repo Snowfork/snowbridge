@@ -31,6 +31,8 @@ import { TransferToEthereum } from "./toEthereumSnowbridgeV2"
 import { V1ToEthereumAdapter } from "./toEthereum_v2"
 import { TransferToPolkadot } from "./toPolkadotSnowbridgeV2"
 import { V1ToPolkadotAdapter } from "./toPolkadot_v2"
+import { TransferToKusama } from "./toKusamaSnowbridgeV2"
+import { TransferFromKusama } from "./fromKusamaSnowbridgeV2"
 import type { TransferInterface as ForInterParachainTransferInterface } from "./transfers/forInterParachain/transferInterface"
 import type { TransferInterface as ForKusamaTransferInterface } from "./transfers/forKusama/transferInterface"
 import type { TransferInterface as ToPolkadotTransferInterface } from "./transfers/toPolkadot/transferInterface"
@@ -38,6 +40,8 @@ import type { TransferInterface as ToPolkadotL2TransferInterface } from "./trans
 import type { TransferInterface as ToEthereumTransferInterface } from "./transfers/toEthereum/transferInterface"
 import type { TransferInterface as ToEthereumL2TransferInterface } from "./transfers/polkadotToL2/transferInterface"
 import type { TransferInterface as ToEthereumEvmTransferInterface } from "./transfers/toEthereumEvm/transferInterface"
+import type { TransferInterface as ToKusamaTransferInterface } from "./transfers/toKusama/transferInterface"
+import type { TransferInterface as FromKusamaTransferInterface } from "./transfers/fromKusama/transferInterface"
 import { ERC20ToAH as ERC20FromL2ToAH } from "./transfers/l2ToPolkadot/erc20ToAH"
 import { ERC20FromAH as ERC20FromAHToL2 } from "./transfers/polkadotToL2/erc20ToL2"
 import { V1ToEthereumEvmAdapter } from "./toEthereumFromEVM_v2"
@@ -62,6 +66,8 @@ export * as xcmBuilder from "./xcmBuilder"
 export * as toEthereumSnowbridgeV2 from "./toEthereumSnowbridgeV2"
 export * as neuroWeb from "./parachains/neuroweb"
 export * as toPolkadotSnowbridgeV2 from "./toPolkadotSnowbridgeV2"
+export * as toKusamaSnowbridgeV2 from "./toKusamaSnowbridgeV2"
+export * as fromKusamaSnowbridgeV2 from "./fromKusamaSnowbridgeV2"
 export * as addTip from "./addTip"
 
 export class Context<T extends EthereumProviderTypes> {
@@ -373,6 +379,8 @@ export type TransferImplementation<T extends EthereumProviderTypes = EthereumPro
     | ({ kind: "ethereum->ethereum" } & ToEthereumEvmTransferInterface<T>)
     | ({ kind: "polkadot->ethereum_l2" } & ToEthereumL2TransferInterface<T>)
     | ({ kind: "ethereum_l2->polkadot" } & ToPolkadotL2TransferInterface<T>)
+    | ({ kind: "ethereum->kusama" } & ToKusamaTransferInterface<T>)
+    | ({ kind: "kusama->ethereum" } & FromKusamaTransferInterface<T>)
 
 type TransferKindFor<T extends EthereumProviderTypes> = Extract<
     TransferImplementation<T>["kind"],
@@ -581,6 +589,34 @@ export class SnowbridgeApi<P extends EthereumProvider<any>> {
                         destinationParachain,
                     )
                 return withKind(tIface, kind) as TransferFromTo<F, T, ProviderTypesFor<P>>
+            }
+            case "ethereum->kusama": {
+                const sourceEthChain = sourceChain as EthereumChain
+                const destinationParachain = destinationChain as Parachain
+                return withKind(
+                    new TransferToKusama(
+                        this.context,
+                        route,
+                        this.info.registry,
+                        sourceEthChain,
+                        destinationParachain,
+                    ),
+                    kind,
+                ) as unknown as TransferFromTo<F, T, ProviderTypesFor<P>>
+            }
+            case "kusama->ethereum": {
+                const sourceParachain = sourceChain as Parachain
+                const destinationEthChain = destinationChain as EthereumChain
+                return withKind(
+                    new TransferFromKusama(
+                        this.context,
+                        route,
+                        this.info.registry,
+                        sourceParachain,
+                        destinationEthChain,
+                    ),
+                    kind,
+                ) as unknown as TransferFromTo<F, T, ProviderTypesFor<P>>
             }
             default:
                 throw new Error(`No implementation for route ${route.from.kind}:${route.to.kind}.`)

@@ -177,7 +177,9 @@ export type TransferKind =
   | "ethereum->polkadot"
   | "ethereum->ethereum"
   | "polkadot->ethereum_l2"
-  | "ethereum_l2->polkadot";
+  | "ethereum_l2->polkadot"
+  | "ethereum->kusama"
+  | "kusama->ethereum";
 
 export type ChainKey<T extends string> = `${T}_${number}`;
 
