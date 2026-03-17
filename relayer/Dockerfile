@@ -19,7 +19,7 @@ WORKDIR /opt/gas-estimator
 RUN apt-get update && apt-get install -y build-essential && rm -rf /var/lib/apt/lists/*
 COPY gas-estimator/ .
 # Runtime metadata (.bin) is gitignored; generate with subxt before building
-RUN cargo install subxt-cli --version 0.50.0
+RUN cargo install subxt-cli --version 0.42.1
 RUN subxt metadata -f bytes --url "${GAS_ESTIMATOR_ASSET_HUB_URL}" > runtimes/asset-hub-${GAS_ESTIMATOR_NETWORK}/asset-hub-metadata.bin && \
     subxt metadata -f bytes --url "${GAS_ESTIMATOR_BRIDGE_HUB_URL}" > runtimes/bridge-hub-${GAS_ESTIMATOR_NETWORK}/bridge-hub-metadata.bin
 RUN cargo build --release --features ${GAS_ESTIMATOR_NETWORK}
