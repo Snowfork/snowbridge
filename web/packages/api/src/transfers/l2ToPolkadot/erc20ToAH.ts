@@ -319,6 +319,9 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
         }
         if (l2TokenAddress === ETHER_TOKEN_ADDRESS || l2TokenAddress === l2FeeTokenAddress) {
             value = fee.totalFeeInWei + amount
+            inputAmount =
+                amount +
+                (l2TokenAddress === l2FeeTokenAddress ? (fee.bridgeFeeInL2Token ?? 0n) : 0n)
             depositParams = {
                 inputToken: l2TokenAddress,
                 outputToken: tokenAddress,
