@@ -747,7 +747,6 @@ export const validateTransferFromAssetHub = async <T extends EthereumProviderTyp
         }
         try {
             let agentAddress = await sourceAgentAddress(context, sourceParaId, sourceAccountHex)
-            console.log("Agent address for contract call validation:", agentAddress)
         } catch (error) {
             logs.push({
                 kind: ValidationKind.Error,

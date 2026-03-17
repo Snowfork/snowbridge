@@ -248,7 +248,6 @@ export class ERC20FromParachain<T extends EthereumProviderTypes> implements Tran
         } else {
             throw new Error(`Fee token as ${fee.feeLocation} is not supported yet.`)
         }
-        console.log("xcm on source chain:", xcm.toHuman())
         let tx: SubmittableExtrinsic<"promise", ISubmittableResult> =
             parachain.tx.polkadotXcm.execute(xcm, MaxWeight)
 
