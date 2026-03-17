@@ -121,6 +121,7 @@
     "@snowbridge/base-types": "workspace:*",
     "@snowbridge/contract-types": "workspace:*",
     "@snowbridge/provider-ethers": "workspace:*",
+    "@snowbridge/provider-viem": "workspace:*",
     "@snowbridge/registry": "workspace:*",
     "@types/pino": "^7.0.5",
     "dotenv": "^17.2.3",

@@ -74,7 +74,6 @@ export class Context<T extends EthereumProviderTypes> {
     #gatewayV2?: T["Contract"] & IGatewayV2
     #beefyClient?: T["Contract"] & BeefyClient
     #l1SwapQuoter?: T["Contract"] & ISwapQuoter
-    #l2Adapters: { [l2ChainId: number]: T["Contract"] } = {}
 
     // Substrate
     #polkadotParachains: Record<string, Promise<ApiPromise>>
@@ -357,22 +356,6 @@ export class Context<T extends EthereumProviderTypes> {
             this.ethereum(),
         ) as T["Contract"] & ISwapQuoter
         return this.#l1SwapQuoter!
-    }
-
-    l2Adapter(l2ChainId: number): T["Contract"] {
-        if (!this.environment.l2Bridge) {
-            throw new Error("L2 bridge configuration is missing.")
-        }
-        if (this.#l2Adapters[l2ChainId]) {
-            return this.#l2Adapters[l2ChainId]
-        }
-        const adapter = this.ethereumProvider.connectContract(
-            this.environment.l2Bridge.l2Chains[l2ChainId].adapterAddress,
-            SNOWBRIDGE_L2_ADAPTOR_ABI as T["Abi"],
-            this.ethChain(l2ChainId),
-        ) as T["Contract"]
-        this.#l2Adapters[l2ChainId] = adapter
-        return adapter
     }
 }
 
