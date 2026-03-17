@@ -36,7 +36,6 @@
     "pino-pretty": "^13.1.1"
   },
   "devDependencies": {
-    "@types/pino": "^7.0.5",
     "ts-node": "10.9.2",
     "tsconfig-paths": "4.2.0",
     "turbo": "2.5.8",

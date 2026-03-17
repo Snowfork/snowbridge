@@ -41,9 +41,6 @@ importers:
       '@snowbridge/registry':
         specifier: workspace:*
         version: link:packages/registry
-      '@vercel/node':
-        specifier: ^3.2.0
-        version: 3.2.29
       dotenv:
         specifier: ^17.2.3
         version: 17.2.3
@@ -60,9 +57,9 @@ importers:
         specifier: ^13.1.1
         version: 13.1.1
     devDependencies:
-      '@types/pino':
-        specifier: ^7.0.5
-        version: 7.0.5
+      '@vercel/node':
+        specifier: ^3.2.0
+        version: 3.2.29
       ts-node:
         specifier: 10.9.2
         version: 10.9.2(@types/node@16.18.11)(typescript@5.9.3)
