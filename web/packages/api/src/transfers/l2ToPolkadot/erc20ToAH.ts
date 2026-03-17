@@ -547,7 +547,11 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
                 totalTxCost,
             }
         }
-        const bridgeStatus = await getOperatingStatus({ gateway, bridgeHub })
+        const bridgeStatus = await getOperatingStatus({
+            ethereumProvider: context.ethereumProvider,
+            gateway,
+            bridgeHub,
+        })
         if (
             bridgeStatus.toPolkadot.outbound !== "Normal" ||
             bridgeStatus.toPolkadot.beacon !== "Normal"

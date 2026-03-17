@@ -491,7 +491,11 @@ export class V1ToEthereumEvmAdapter<T extends EthereumProviderTypes>
                 message: "Insufficient token balance to submit transaction.",
             })
         }
-        const bridgeStatus = await getOperatingStatus({ gateway, bridgeHub })
+        const bridgeStatus = await getOperatingStatus({
+            ethereumProvider: context.ethereumProvider,
+            gateway,
+            bridgeHub,
+        })
         if (bridgeStatus.toEthereum.outbound !== "Normal") {
             logs.push({
                 kind: ValidationKind.Error,

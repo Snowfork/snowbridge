@@ -1,7 +1,7 @@
 import { Context, subsquidV2 } from "./index"
 import { fetchBeaconSlot, fetchFinalityUpdate } from "./utils"
 import { ApiPromise } from "@polkadot/api"
-import { EthereumProviderTypes, IGatewayV1, IGatewayV2 } from "@snowbridge/base-types"
+import { EthereumProvider, EthereumProviderTypes, IGatewayV1, IGatewayV2 } from "@snowbridge/base-types"
 
 export type OperatingMode = "Normal" | "Halted"
 export type BridgeStatusInfo = {
@@ -92,13 +92,15 @@ export type OperationStatus = {
     }
 }
 export async function getOperatingStatus({
+    ethereumProvider,
     gateway,
     bridgeHub,
 }: {
+    ethereumProvider: EthereumProvider<EthereumProviderTypes>
     gateway: IGatewayV1 | IGatewayV2
     bridgeHub: ApiPromise
 }): Promise<OperationStatus> {
-    const ethereumOperatingMode = await gateway.operatingMode()
+    const ethereumOperatingMode = await ethereumProvider.gatewayOperatingMode(gateway)
     const beaconOperatingMode = (
         await bridgeHub.query.ethereumBeaconClient.operatingMode()
     ).toPrimitive()
@@ -116,7 +118,7 @@ export async function getOperatingStatus({
         toPolkadot: {
             beacon: beaconOperatingMode as OperatingMode,
             inbound: inboundOperatingMode as OperatingMode,
-            outbound: ethereumOperatingMode === 0n ? "Normal" : ("Halted" as OperatingMode),
+            outbound: BigInt(ethereumOperatingMode) === 0n ? "Normal" : ("Halted" as OperatingMode),
         },
     }
 }
@@ -164,7 +166,11 @@ export const bridgeStatusInfo = async (
     const beaconLatencySeconds = beaconBlockLatency * options.ethereumBlockTimeInSeconds
 
     // Operating mode
-    const op = await getOperatingStatus({ gateway, bridgeHub })
+    const op = await getOperatingStatus({
+        ethereumProvider: context.ethereumProvider,
+        gateway,
+        bridgeHub,
+    })
 
     return {
         toEthereum: {
@@ -201,7 +207,10 @@ export const channelStatusInfo = async (
 
     // V1 nonces
     const [inbound_nonce_eth, outbound_nonce_eth] = await gateway.channelNoncesOf(channelId)
-    const operatingMode = await gateway.channelOperatingModeOf(channelId)
+    const operatingMode = await context.ethereumProvider.gatewayChannelOperatingModeOf(
+        gateway,
+        channelId,
+    )
     const inbound_nonce_sub = (
         await bridgeHub.query.ethereumInboundQueue.nonce(channelId)
     ).toPrimitive() as number

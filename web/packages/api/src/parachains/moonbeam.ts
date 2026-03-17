@@ -9,6 +9,7 @@ const MOONBEAM_ERC20_ABI = [
     "function decimals() view returns (uint8)",
     "function balanceOf(address) view returns (uint256)",
 ]
+
 function toMoonbeamXC20(assetId: bigint) {
     const xc20 = assetId.toString(16).toLowerCase()
     return "0xffffffff" + xc20
@@ -42,12 +43,12 @@ async function getMoonbeamEvmForeignAssetBalanceWithProvider(
             `Could not fetch balance for ${token}: ${JSON.stringify(resultJson?.ok?.exitReason)}`,
         )
     }
-    const retVal = ethereumProvider.decodeFunctionResult<[bigint]>(
+    const retVal = ethereumProvider.decodeFunctionResult<bigint | readonly [bigint]>(
         MOONBEAM_ERC20_ABI,
         method,
         resultJson?.ok?.value,
     )
-    return BigInt(retVal[0])
+    return BigInt(Array.isArray(retVal) ? retVal[0] : retVal)
 }
 
 async function getMoonbeamEvmAssetMetadataWithProvider(
@@ -77,12 +78,14 @@ async function getMoonbeamEvmAssetMetadataWithProvider(
             `Could not fetch metadata for ${token}: ${JSON.stringify(resultJson?.ok?.exitReason)}`,
         )
     }
-    const retVal = ethereumProvider.decodeFunctionResult<[string | bigint]>(
+    const retVal = ethereumProvider.decodeFunctionResult<
+        string | bigint | readonly [string | bigint]
+    >(
         MOONBEAM_ERC20_ABI,
         method,
         resultJson?.ok?.value,
     )
-    return retVal[0]
+    return Array.isArray(retVal) ? retVal[0] : retVal
 }
 
 export class MoonbeamParachain extends ParachainBase {

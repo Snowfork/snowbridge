@@ -6,8 +6,10 @@ import {
   encodeFunctionData,
   getAddress,
   http,
+  parseAbi,
   parseAbiParameters,
   parseUnits,
+  toHex,
   webSocket,
 } from "viem";
 import type {
@@ -27,9 +29,9 @@ import type {
   FeeData,
   GatewayV1OutboundMessageAccepted,
   GatewayV2OutboundMessageAccepted,
-  IERC20,
   IGatewayV1,
   IGatewayV2,
+  IERC20,
   ISwapQuoter,
   L1AdapterDepositParams,
   L1LegacySwapRouterExactOutputSingleParams,
@@ -75,15 +77,76 @@ function toAddress(value: string): Address {
   return getAddress(value);
 }
 
-function asAbi(abi: unknown): Abi {
-  return abi as unknown as Abi;
+function asAbi<TAbi extends Abi>(abi: TAbi): TAbi;
+function asAbi(abi: readonly [string, ...string[]]): Abi;
+function asAbi(abi: Abi | readonly [string, ...string[]]): Abi;
+function asAbi(abi: Abi | readonly [string, ...string[]]): Abi {
+  if (
+    Array.isArray(abi) &&
+    abi.every((item) => typeof item === "string")
+  ) {
+    return parseAbi(abi);
+  }
+  return abi as Abi;
+}
+
+function toBytesHex(value: string | Uint8Array): Hex {
+  return typeof value === "string" ? (value as Hex) : toHex(value);
+}
+
+function normalizeMultiAddress(address: MultiAddressStruct): MultiAddressStruct {
+  return {
+    kind: address.kind,
+    data: address.data as Hex,
+  };
+}
+
+function normalizeDepositParams<
+  T extends { inputToken: string; outputToken: string },
+>(params: T): T {
+  return {
+    ...params,
+    inputToken: toAddress(params.inputToken),
+    outputToken: toAddress(params.outputToken),
+  };
+}
+
+function normalizeSendParams(sendParams: SendParamsStruct): {
+  xcm: Hex;
+  assets: Hex[];
+  claimer: Hex;
+  executionFee: bigint;
+  relayerFee: bigint;
+} {
+  return {
+    xcm: toBytesHex(sendParams.xcm),
+    assets: sendParams.assets.map((asset) => asset as Hex),
+    claimer: toBytesHex(sendParams.claimer),
+    executionFee: sendParams.executionFee,
+    relayerFee: sendParams.relayerFee,
+  };
+}
+
+function normalizeSwapParams(swapParams: SwapParamsStruct): SwapParamsStruct & {
+  callData: Hex;
+} {
+  return {
+    ...swapParams,
+    router: toAddress(swapParams.router),
+    callData: swapParams.callData as Hex,
+  };
+}
+
+function normalizeDestination(destination: [number, string[]]): [number, Hex[]] {
+  return [destination[0], destination[1].map((item) => item as Hex)];
 }
 
 function createReadOnlyContract(
   address: Address,
-  abi: Abi,
+  abi: Abi | readonly [string, ...string[]],
   provider: PublicClient,
 ): ViemContract {
+  const normalizedAbi = asAbi(abi);
   return new Proxy(
     {
       async getAddress() {
@@ -103,7 +166,7 @@ function createReadOnlyContract(
         const fn = (async (...args: unknown[]) => {
           return await provider.readContract({
             address,
-            abi,
+            abi: normalizedAbi,
             functionName: prop,
             args,
           } as never);
@@ -112,7 +175,7 @@ function createReadOnlyContract(
         fn.staticCall = async (...args: unknown[]) => {
           const result = await provider.simulateContract({
             address,
-            abi,
+            abi: normalizedAbi,
             functionName: prop,
             args,
           } as never);
@@ -148,7 +211,7 @@ export class ViemEthereumProvider
     abi: Abi,
     provider: PublicClient,
   ): ViemContract {
-    return createReadOnlyContract(toAddress(address), abi, provider);
+    return createReadOnlyContract(toAddress(address), asAbi(abi), provider);
   }
 
   async erc20Balance(
@@ -195,7 +258,7 @@ export class ViemEthereumProvider
       data: this.encodeFunctionData(asAbi(IGATEWAY_V1_ABI), "sendToken", [
         toAddress(token),
         BigInt(destinationChain),
-        destinationAddress,
+        normalizeMultiAddress(destinationAddress),
         destinationFee,
         amount,
       ]),
@@ -253,9 +316,9 @@ export class ViemEthereumProvider
       account: toAddress(sender),
       value,
       data: this.encodeFunctionData(asAbi(IGATEWAY_V2_ABI), "v2_sendMessage", [
-        xcm,
-        assets.map(toAddress),
-        claimer,
+        toBytesHex(xcm),
+        assets.map((asset) => asset as Hex),
+        toBytesHex(claimer),
         executionFee,
         relayerFee,
       ]),
@@ -279,7 +342,12 @@ export class ViemEthereumProvider
       data: this.encodeFunctionData(
         asAbi(SNOWBRIDGE_L2_ADAPTOR_ABI),
         "sendEtherAndCall",
-        [params, sendParams, toAddress(recipient), topic as Hex],
+        [
+          normalizeDepositParams(params),
+          normalizeSendParams(sendParams),
+          toAddress(recipient),
+          topic as Hex,
+        ],
       ),
     };
   }
@@ -300,7 +368,13 @@ export class ViemEthereumProvider
       data: this.encodeFunctionData(
         asAbi(SNOWBRIDGE_L2_ADAPTOR_ABI),
         "sendTokenAndCall",
-        [params, swapParams, sendParams, toAddress(recipient), topic as Hex],
+        [
+          normalizeDepositParams(params),
+          normalizeSwapParams(swapParams),
+          normalizeSendParams(sendParams),
+          toAddress(recipient),
+          topic as Hex,
+        ],
       ),
     };
   }
@@ -323,7 +397,7 @@ export class ViemEthereumProvider
         asAbi(MOONBEAM_PALLET_XCM_PRECOMPILE_ABI),
         "transferAssetsUsingTypeAndThenAddress",
         [
-          destination,
+          normalizeDestination(destination),
           assets.map(([asset, amount]) => [toAddress(asset), amount]),
           assetsTransferType,
           remoteFeesIdIndex,
@@ -334,17 +408,25 @@ export class ViemEthereumProvider
     };
   }
 
-  encodeFunctionData(abi: Abi, method: string, args: readonly unknown[]): Hex {
+  encodeFunctionData(
+    abi: Abi | readonly [string, ...string[]],
+    method: string,
+    args: readonly unknown[],
+  ): Hex {
     return encodeFunctionData({
-      abi,
+      abi: asAbi(abi),
       functionName: method,
       args: [...args],
     } as never);
   }
 
-  decodeFunctionResult<T = unknown>(abi: Abi, method: string, data: string): T {
+  decodeFunctionResult<T = unknown>(
+    abi: Abi | readonly [string, ...string[]],
+    method: string,
+    data: string,
+  ): T {
     return decodeFunctionResult({
-      abi,
+      abi: asAbi(abi),
       functionName: method,
       data: data as Hex,
     } as never) as T;
@@ -366,7 +448,7 @@ export class ViemEthereumProvider
     return this.encodeFunctionData(
       asAbi(SNOWBRIDGE_L1_ADAPTOR_ABI),
       "depositNativeEther",
-      [params, toAddress(recipient), topic as Hex],
+      [normalizeDepositParams(params), toAddress(recipient), topic as Hex],
     );
   }
 
@@ -378,7 +460,7 @@ export class ViemEthereumProvider
     return this.encodeFunctionData(
       asAbi(SNOWBRIDGE_L1_ADAPTOR_ABI),
       "depositToken",
-      [params, toAddress(recipient), topic as Hex],
+      [normalizeDepositParams(params), toAddress(recipient), topic as Hex],
     );
   }
 
@@ -388,7 +470,14 @@ export class ViemEthereumProvider
     return this.encodeFunctionData(
       asAbi(SWAP_ROUTER_ABI),
       "exactOutputSingle",
-      [params],
+      [
+        {
+          ...params,
+          tokenIn: toAddress(params.tokenIn),
+          tokenOut: toAddress(params.tokenOut),
+          recipient: toAddress(params.recipient),
+        },
+      ],
     );
   }
 
@@ -398,7 +487,14 @@ export class ViemEthereumProvider
     return this.encodeFunctionData(
       asAbi(SWAP_LEGACY_ROUTER_ABI),
       "exactOutputSingle",
-      [params],
+      [
+        {
+          ...params,
+          tokenIn: toAddress(params.tokenIn),
+          tokenOut: toAddress(params.tokenOut),
+          recipient: toAddress(params.recipient),
+        },
+      ],
     );
   }
 
@@ -475,6 +571,19 @@ export class ViemEthereumProvider
     return parseUnits(value, decimals);
   }
 
+  async gatewayOperatingMode(
+    gateway: ViemContract & (IGatewayV1 | IGatewayV2),
+  ): Promise<bigint> {
+    return BigInt(await gateway.operatingMode());
+  }
+
+  async gatewayChannelOperatingModeOf(
+    gateway: ViemContract & IGatewayV1,
+    channelId: string,
+  ): Promise<bigint> {
+    return BigInt(await gateway.channelOperatingModeOf(channelId));
+  }
+
   async isContractAddress(
     provider: PublicClient,
     address: string,
@@ -501,7 +610,7 @@ export class ViemEthereumProvider
           data: log.data,
         });
         if (event.eventName === "OutboundMessageAccepted") {
-          const args = event.args as readonly unknown[] | undefined;
+          const args = event.args as unknown as readonly unknown[] | undefined;
           if (!args) {
             continue;
           }
@@ -531,7 +640,7 @@ export class ViemEthereumProvider
           data: log.data,
         });
         if (event.eventName === "OutboundMessageAccepted") {
-          const args = event.args as
+          const args = event.args as unknown as
             | {
                 nonce: bigint;
                 payload: {

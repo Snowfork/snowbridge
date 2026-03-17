@@ -15,7 +15,6 @@ export const registerTokenV2 = async (tokenAddress: string) => {
     console.log(`Using environment '${env}'`)
 
     const info = bridgeInfoFor(env)
-    const { registry } = info
     const api = createApi({ info, ethereumProvider: new EthersEthereumProvider() })
     const context = api.context
 
@@ -39,19 +38,13 @@ export const registerTokenV2 = async (tokenAddress: string) => {
         const registrationImpl = api.registerToken()
 
         // Step 1. Get the registration fee for the transaction
-        let fee = await registrationImpl.fee(context, registry, relayerFee)
+        let fee = await registrationImpl.fee(relayerFee)
 
         // Step 2. Create a registration tx
-        const registration = await registrationImpl.tx(
-            context,
-            registry,
-            ETHEREUM_ACCOUNT_PUBLIC,
-            TOKEN_CONTRACT,
-            fee,
-        )
+        const registration = await registrationImpl.tx(ETHEREUM_ACCOUNT_PUBLIC, TOKEN_CONTRACT, fee)
 
         // Step 3. Validate the transaction.
-        const validation = await registrationImpl.validate(context, registration)
+        const validation = await registrationImpl.validate(registration)
 
         // Check validation logs for errors
         if (validation.logs.find((l) => l.kind == toPolkadotSnowbridgeV2.ValidationKind.Error)) {
@@ -77,7 +70,7 @@ export const registerTokenV2 = async (tokenAddress: string) => {
             }
 
             // Step 6. Get the message receipt for tracking purposes
-            const message = await registrationImpl.messageId(context, receipt)
+            const message = await registrationImpl.messageId(receipt)
             if (!message) {
                 throw Error(`Transaction ${receipt.hash} did not emit a message.`)
             }

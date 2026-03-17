@@ -1,5 +1,4 @@
 import { AssetRegistry, EthereumProviderTypes } from "@snowbridge/base-types"
-import { Context } from "../../index"
 import { OperationStatus } from "../../status"
 import { FeeInfo, ValidationLog } from "../../toPolkadot_v2"
 import type { MessageReceipt } from "../../toPolkadotSnowbridgeV2"
@@ -41,8 +40,6 @@ export type RegistrationFee = {
 
 export interface RegistrationInterface<T extends EthereumProviderTypes> {
     fee(
-        context: Context<T>,
-        registry: AssetRegistry,
         relayerFee: bigint,
         options?: {
             paddFeeByPercentage?: bigint
@@ -50,21 +47,14 @@ export interface RegistrationInterface<T extends EthereumProviderTypes> {
     ): Promise<RegistrationFee>
 
     tx(
-        context: Context<T>,
-        registry: AssetRegistry,
         sourceAccount: string,
         tokenAddress: string,
         fee: RegistrationFee,
     ): Promise<TokenRegistration<T>>
 
-    validate(
-        context: Context<T>,
-        registration: TokenRegistration<T>,
-    ): Promise<ValidatedRegisterToken<T>>
+    validate(registration: TokenRegistration<T>): Promise<ValidatedRegisterToken<T>>
 
     build(
-        context: Context<T>,
-        registry: AssetRegistry,
         sourceAccount: string,
         tokenAddress: string,
         relayerFee: bigint,
@@ -73,5 +63,5 @@ export interface RegistrationInterface<T extends EthereumProviderTypes> {
         },
     ): Promise<ValidatedRegisterToken<T>>
 
-    messageId(context: Context<T>, receipt: T["TransactionReceipt"]): Promise<MessageReceipt | null>
+    messageId(receipt: T["TransactionReceipt"]): Promise<MessageReceipt | null>
 }

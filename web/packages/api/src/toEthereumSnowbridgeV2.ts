@@ -814,7 +814,11 @@ export const validateTransferFromAssetHub = async <T extends EthereumProviderTyp
             message: "Insufficient DOT balance to submit transaction on the source parachain.",
         })
     }
-    const bridgeStatus = await getOperatingStatus({ gateway, bridgeHub })
+    const bridgeStatus = await getOperatingStatus({
+        ethereumProvider: context.ethereumProvider,
+        gateway,
+        bridgeHub,
+    })
     if (bridgeStatus.toEthereum.outbound !== "Normal") {
         logs.push({
             kind: ValidationKind.Error,
@@ -1004,7 +1008,11 @@ export const validateTransferFromParachain = async <T extends EthereumProviderTy
     const paymentInfo = await tx.paymentInfo(sourceAccountHex)
     const sourceExecutionFee = paymentInfo["partialFee"].toBigInt()
 
-    const bridgeStatus = await getOperatingStatus({ gateway, bridgeHub })
+    const bridgeStatus = await getOperatingStatus({
+        ethereumProvider: context.ethereumProvider,
+        gateway,
+        bridgeHub,
+    })
     if (bridgeStatus.toEthereum.outbound !== "Normal") {
         logs.push({
             kind: ValidationKind.Error,

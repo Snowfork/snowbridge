@@ -197,7 +197,6 @@ export class ERC20FromAH<T extends EthereumProviderTypes> implements TransferInt
         } else {
             throw new Error(`Fee token as ${fee.feeLocation} is not supported yet.`)
         }
-        console.log("xcm on AH:", xcm.toHuman())
         let tx: SubmittableExtrinsic<"promise", ISubmittableResult> =
             parachain.tx.polkadotXcm.execute(xcm, MaxWeight)
 

@@ -19,6 +19,8 @@ import type {
   FeeData,
   GatewayV1OutboundMessageAccepted,
   GatewayV2OutboundMessageAccepted,
+  IGatewayV1,
+  IGatewayV2,
   IERC20,
   L1AdapterDepositParams,
   L1LegacySwapRouterExactOutputSingleParams,
@@ -379,6 +381,19 @@ export class EthersEthereumProvider
 
   parseUnits(value: string, decimals: number): bigint {
     return parseUnits(value, decimals);
+  }
+
+  async gatewayOperatingMode(
+    gateway: Contract & (IGatewayV1 | IGatewayV2),
+  ): Promise<bigint> {
+    return BigInt(await gateway.operatingMode());
+  }
+
+  async gatewayChannelOperatingModeOf(
+    gateway: Contract & IGatewayV1,
+    channelId: string,
+  ): Promise<bigint> {
+    return BigInt(await gateway.channelOperatingModeOf(channelId));
   }
 
   async isContractAddress(
