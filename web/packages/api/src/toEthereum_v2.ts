@@ -70,7 +70,10 @@ export type Transfer = {
 }
 
 export type DeliveryFee = {
-    kind: Extract<TransferKind, "polkadot->ethereum" | "polkadot->ethereum_l2" | "ethereum->ethereum">
+    kind: Extract<
+        TransferKind,
+        "polkadot->ethereum" | "polkadot->ethereum_l2" | "ethereum->ethereum"
+    >
     snowbridgeDeliveryFeeDOT: bigint
     bridgeHubDeliveryFeeDOT: bigint
     assetHubExecutionFeeDOT: bigint
