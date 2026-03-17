@@ -627,7 +627,11 @@ export class V1ToEthereumAdapter<T extends EthereumProviderTypes>
                 })
             }
         }
-        const bridgeStatus = await getOperatingStatus({ gateway, bridgeHub })
+        const bridgeStatus = await getOperatingStatus({
+            ethereumProvider: context.ethereumProvider,
+            gateway,
+            bridgeHub,
+        })
         if (bridgeStatus.toEthereum.outbound !== "Normal") {
             logs.push({
                 kind: ValidationKind.Error,

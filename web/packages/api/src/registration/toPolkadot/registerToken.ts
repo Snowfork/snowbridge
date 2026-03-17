@@ -23,14 +23,18 @@ const getAssetDeposit = (assetHub: ApiPromise): bigint => {
 }
 
 export class RegisterToken<T extends EthereumProviderTypes> implements RegistrationInterface<T> {
+    constructor(
+        private readonly context: Context<T>,
+        private readonly registry: AssetRegistry,
+    ) {}
+
     async fee(
-        context: Context<T>,
-        registry: AssetRegistry,
         relayerFee: bigint,
         options?: {
             paddFeeByPercentage?: bigint
         },
     ): Promise<RegistrationFee> {
+        const { context, registry } = this
         const assetHub = await context.assetHub()
         const bridgeHub = await context.bridgeHub()
 
@@ -94,12 +98,11 @@ export class RegisterToken<T extends EthereumProviderTypes> implements Registrat
     }
 
     async tx(
-        context: Context<T>,
-        registry: AssetRegistry,
         sourceAccount: string,
         tokenAddress: string,
         fee: RegistrationFee,
     ): Promise<TokenRegistration<T>> {
+        const { context, registry } = this
         const totalValue = fee.totalFeeInWei
 
         const network = 0
@@ -130,10 +133,8 @@ export class RegisterToken<T extends EthereumProviderTypes> implements Registrat
         }
     }
 
-    async validate(
-        context: Context<T>,
-        registration: TokenRegistration<T>,
-    ): Promise<ValidatedRegisterToken<T>> {
+    async validate(registration: TokenRegistration<T>): Promise<ValidatedRegisterToken<T>> {
+        const { context } = this
         const { tx } = registration
         const { sourceAccount, tokenAddress, registry } = registration.input
         const ethereum = context.ethereum()
@@ -186,7 +187,11 @@ export class RegisterToken<T extends EthereumProviderTypes> implements Registrat
         }
 
         // Check bridge status
-        const bridgeStatus = await getOperatingStatus({ gateway, bridgeHub })
+        const bridgeStatus = await getOperatingStatus({
+            ethereumProvider: context.ethereumProvider,
+            gateway,
+            bridgeHub,
+        })
         if (
             bridgeStatus.toPolkadot.outbound !== "Normal" ||
             bridgeStatus.toPolkadot.beacon !== "Normal"
@@ -258,8 +263,6 @@ export class RegisterToken<T extends EthereumProviderTypes> implements Registrat
     }
 
     async build(
-        context: Context<T>,
-        registry: AssetRegistry,
         sourceAccount: string,
         tokenAddress: string,
         relayerFee: bigint,
@@ -267,12 +270,13 @@ export class RegisterToken<T extends EthereumProviderTypes> implements Registrat
             paddFeeByPercentage?: bigint
         },
     ): Promise<ValidatedRegisterToken<T>> {
-        const fee = await this.fee(context, registry, relayerFee, options)
-        const registration = await this.tx(context, registry, sourceAccount, tokenAddress, fee)
-        return ensureValidationSuccess(await this.validate(context, registration))
+        const fee = await this.fee(relayerFee, options)
+        const registration = await this.tx(sourceAccount, tokenAddress, fee)
+        return ensureValidationSuccess(await this.validate(registration))
     }
 
-    async messageId(context: Context<T>, receipt: T["TransactionReceipt"]) {
+    async messageId(receipt: T["TransactionReceipt"]) {
+        const { context } = this
         return getSharedMessageReceipt(context.ethereumProvider, receipt)
     }
 }

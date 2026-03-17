@@ -1,5 +1,7 @@
 import type {
   DepositParamsStruct,
+  IGatewayV1,
+  IGatewayV2,
   SendParamsStruct,
   SwapParamsStruct,
 } from "./contracts";
@@ -206,6 +208,11 @@ export interface EthereumProvider<T extends EthereumProviderTypes> {
   getBalance(provider: T["Connection"], address: string): Promise<bigint>;
   getFeeData(provider: T["Connection"]): Promise<FeeData>;
   parseUnits(value: string, decimals: number): bigint;
+  gatewayOperatingMode(gateway: T["Contract"] & (IGatewayV1 | IGatewayV2)): Promise<bigint>;
+  gatewayChannelOperatingModeOf(
+    gateway: T["Contract"] & IGatewayV1,
+    channelId: string,
+  ): Promise<bigint>;
   isContractAddress(
     provider: T["Connection"],
     address: string,

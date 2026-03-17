@@ -439,7 +439,7 @@ export class SnowbridgeApi<P extends EthereumProvider<any>> {
         return new CreateAgent(this.context, this.info.registry)
     }
     registerToken(): RegistrationInterface<ProviderTypesFor<P>> {
-        return new RegisterToken<ProviderTypesFor<P>>()
+        return new RegisterToken<ProviderTypesFor<P>>(this.context, this.info.registry)
     }
     sender<F extends ChainId, T extends ChainId>(
         from: F,

@@ -512,6 +512,7 @@ export class V1ToPolkadotAdapter<T extends EthereumProviderTypes>
         }
 
         const bridgeStatus = await getOperatingStatus({
+            ethereumProvider: context.ethereumProvider,
             gateway: context.gateway(),
             bridgeHub,
         })

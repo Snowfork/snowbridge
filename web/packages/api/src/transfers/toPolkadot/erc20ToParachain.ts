@@ -478,7 +478,11 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
                 totalTxCost,
             }
         }
-        const bridgeStatus = await getOperatingStatus({ gateway, bridgeHub })
+        const bridgeStatus = await getOperatingStatus({
+            ethereumProvider: context.ethereumProvider,
+            gateway,
+            bridgeHub,
+        })
         if (
             bridgeStatus.toPolkadot.outbound !== "Normal" ||
             bridgeStatus.toPolkadot.beacon !== "Normal"
