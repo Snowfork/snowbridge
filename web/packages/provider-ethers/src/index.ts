@@ -13,19 +13,19 @@ import {
 } from "ethers";
 import type {
   BeefyClient,
+  DepositParamsStruct,
   EthereumProvider,
   EthereumProviderTypes,
   FeeData,
   GatewayV1OutboundMessageAccepted,
   GatewayV2OutboundMessageAccepted,
   IERC20,
-  IGatewayV1,
-  IGatewayV2,
-  ISwapQuoter,
   L1AdapterDepositParams,
   L1LegacySwapRouterExactOutputSingleParams,
   L1SwapRouterExactOutputSingleParams,
   MultiAddressStruct,
+  SendParamsStruct,
+  SwapParamsStruct,
 } from "@snowbridge/base-types";
 import {
   IERC20_ABI,
@@ -98,11 +98,11 @@ export class EthersEthereumProvider
   async gatewayV1SendToken(
     provider: AbstractProvider,
     gatewayAddress: string,
-    sourceAccount: string,
-    tokenAddress: string,
-    destinationParaId: number,
-    beneficiary: MultiAddressStruct,
-    totalFeeDot: bigint,
+    sender: string,
+    token: string,
+    destinationChain: number,
+    destinationAddress: MultiAddressStruct,
+    destinationFee: bigint,
     amount: bigint,
     value: bigint,
   ): Promise<ContractTransaction> {
@@ -114,24 +114,24 @@ export class EthersEthereumProvider
     return await gateway
       .getFunction("sendToken")
       .populateTransaction(
-        tokenAddress,
-        destinationParaId,
-        beneficiary,
-        totalFeeDot,
+        token,
+        destinationChain,
+        destinationAddress,
+        destinationFee,
         amount,
-        { value, from: sourceAccount },
+        { value, from: sender },
       );
   }
 
   async gatewayV2RegisterToken(
     provider: AbstractProvider,
     gatewayAddress: string,
-    sourceAccount: string,
-    tokenAddress: string,
+    sender: string,
+    token: string,
     network: number,
-    assetHubExecutionFeeEther: bigint,
+    executionFee: bigint,
     relayerFee: bigint,
-    totalValue: bigint,
+    value: bigint,
   ): Promise<ContractTransaction> {
     const gateway = this.connectContract(
       gatewayAddress,
@@ -140,41 +140,33 @@ export class EthersEthereumProvider
     );
     return await gateway
       .getFunction("v2_registerToken")
-      .populateTransaction(
-        tokenAddress,
-        network,
-        assetHubExecutionFeeEther,
-        relayerFee,
-        {
-          value: totalValue,
-          from: sourceAccount,
-        },
-      );
+      .populateTransaction(token, network, executionFee, relayerFee, {
+        value,
+        from: sender,
+      });
   }
 
   async gatewayV2CreateAgent(
     provider: AbstractProvider,
     gatewayAddress: string,
-    agentId: string,
+    id: string,
   ): Promise<ContractTransaction> {
     const gateway = this.connectContract(
       gatewayAddress,
       IGATEWAY_V2_ABI,
       provider,
     );
-    return await gateway
-      .getFunction("v2_createAgent")
-      .populateTransaction(agentId);
+    return await gateway.getFunction("v2_createAgent").populateTransaction(id);
   }
 
   async gatewayV2SendMessage(
     provider: AbstractProvider,
     gatewayAddress: string,
-    sourceAccount: string,
+    sender: string,
     xcm: Uint8Array,
     assets: string[],
     claimer: Uint8Array,
-    assetHubExecutionFeeEther: bigint,
+    executionFee: bigint,
     relayerFee: bigint,
     value: bigint,
   ): Promise<ContractTransaction> {
@@ -185,26 +177,19 @@ export class EthersEthereumProvider
     );
     return await gateway
       .getFunction("v2_sendMessage")
-      .populateTransaction(
-        xcm,
-        assets,
-        claimer,
-        assetHubExecutionFeeEther,
-        relayerFee,
-        {
-          value,
-          from: sourceAccount,
-        },
-      );
+      .populateTransaction(xcm, assets, claimer, executionFee, relayerFee, {
+        value,
+        from: sender,
+      });
   }
 
   async l2AdapterSendEtherAndCall(
     provider: AbstractProvider,
     adapterAddress: string,
-    sourceAccount: string,
-    depositParams: any,
-    sendParams: any,
-    refundAddress: string,
+    sender: string,
+    params: DepositParamsStruct,
+    sendParams: SendParamsStruct,
+    recipient: string,
     topic: string,
     value?: bigint,
   ): Promise<ContractTransaction> {
@@ -214,28 +199,20 @@ export class EthersEthereumProvider
       provider,
     );
     const txOptions =
-      value === undefined
-        ? { from: sourceAccount }
-        : { from: sourceAccount, value };
+      value === undefined ? { from: sender } : { from: sender, value };
     return await adapter
       .getFunction("sendEtherAndCall")
-      .populateTransaction(
-        depositParams,
-        sendParams,
-        refundAddress,
-        topic,
-        txOptions,
-      );
+      .populateTransaction(params, sendParams, recipient, topic, txOptions);
   }
 
   async l2AdapterSendTokenAndCall(
     provider: AbstractProvider,
     adapterAddress: string,
-    sourceAccount: string,
-    depositParams: any,
-    swapParams: any,
-    sendParams: any,
-    refundAddress: string,
+    sender: string,
+    params: DepositParamsStruct,
+    swapParams: SwapParamsStruct,
+    sendParams: SendParamsStruct,
+    recipient: string,
     topic: string,
   ): Promise<ContractTransaction> {
     const adapter = this.connectContract(
@@ -245,16 +222,9 @@ export class EthersEthereumProvider
     );
     return await adapter
       .getFunction("sendTokenAndCall")
-      .populateTransaction(
-        depositParams,
-        swapParams,
-        sendParams,
-        refundAddress,
-        topic,
-        {
-          from: sourceAccount,
-        },
-      );
+      .populateTransaction(params, swapParams, sendParams, recipient, topic, {
+        from: sender,
+      });
   }
 
   async evmParachainTransferAssetsUsingTypeAndThenAddress(
@@ -461,9 +431,21 @@ export class EthersEthereumProvider
           data: log.data,
         });
         if (event && event.name === "OutboundMessageAccepted") {
+          const payload = event.args[1];
           return {
             nonce: BigInt(event.args[0]),
-            payload: event.args[1],
+            payload: {
+              origin: String(payload.origin),
+              assets: payload.assets.map((asset: MultiAddressStruct) => [
+                Number(asset.kind),
+                String(asset.data),
+              ]),
+              xcm: [Number(payload.xcm.kind), String(payload.xcm.data)],
+              claimer: String(payload.claimer),
+              value: BigInt(payload.value),
+              executionFee: BigInt(payload.executionFee),
+              relayerFee: BigInt(payload.relayerFee),
+            },
             blockHash: receipt.blockHash,
             blockNumber: receipt.blockNumber,
             txHash: receipt.hash,

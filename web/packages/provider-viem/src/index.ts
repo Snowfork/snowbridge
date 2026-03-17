@@ -21,6 +21,7 @@ import type {
 } from "viem";
 import type {
   BeefyClient,
+  DepositParamsStruct,
   EthereumProvider,
   EthereumProviderTypes,
   FeeData,
@@ -34,6 +35,8 @@ import type {
   L1LegacySwapRouterExactOutputSingleParams,
   L1SwapRouterExactOutputSingleParams,
   MultiAddressStruct,
+  SendParamsStruct,
+  SwapParamsStruct,
 } from "@snowbridge/base-types";
 import {
   IERC20_ABI,
@@ -177,23 +180,23 @@ export class ViemEthereumProvider
   async gatewayV1SendToken(
     _provider: PublicClient,
     gatewayAddress: string,
-    sourceAccount: string,
-    tokenAddress: string,
-    destinationParaId: number,
-    beneficiary: MultiAddressStruct,
-    totalFeeDot: bigint,
+    sender: string,
+    token: string,
+    destinationChain: number,
+    destinationAddress: MultiAddressStruct,
+    destinationFee: bigint,
     amount: bigint,
     value: bigint,
   ): Promise<ViemContractTransaction> {
     return {
       to: toAddress(gatewayAddress),
-      account: toAddress(sourceAccount),
+      account: toAddress(sender),
       value,
       data: this.encodeFunctionData(asAbi(IGATEWAY_V1_ABI), "sendToken", [
-        toAddress(tokenAddress),
-        BigInt(destinationParaId),
-        beneficiary,
-        totalFeeDot,
+        toAddress(token),
+        BigInt(destinationChain),
+        destinationAddress,
+        destinationFee,
         amount,
       ]),
     };
@@ -202,26 +205,21 @@ export class ViemEthereumProvider
   async gatewayV2RegisterToken(
     _provider: PublicClient,
     gatewayAddress: string,
-    sourceAccount: string,
-    tokenAddress: string,
+    sender: string,
+    token: string,
     network: number,
-    assetHubExecutionFeeEther: bigint,
+    executionFee: bigint,
     relayerFee: bigint,
-    totalValue: bigint,
+    value: bigint,
   ): Promise<ViemContractTransaction> {
     return {
       to: toAddress(gatewayAddress),
-      account: toAddress(sourceAccount),
-      value: totalValue,
+      account: toAddress(sender),
+      value,
       data: this.encodeFunctionData(
         asAbi(IGATEWAY_V2_ABI),
         "v2_registerToken",
-        [
-          toAddress(tokenAddress),
-          BigInt(network),
-          assetHubExecutionFeeEther,
-          relayerFee,
-        ],
+        [toAddress(token), BigInt(network), executionFee, relayerFee],
       ),
     };
   }
@@ -229,12 +227,12 @@ export class ViemEthereumProvider
   async gatewayV2CreateAgent(
     _provider: PublicClient,
     gatewayAddress: string,
-    agentId: string,
+    id: string,
   ): Promise<ViemContractTransaction> {
     return {
       to: toAddress(gatewayAddress),
       data: this.encodeFunctionData(asAbi(IGATEWAY_V2_ABI), "v2_createAgent", [
-        agentId as Hex,
+        id as Hex,
       ]),
     };
   }
@@ -242,23 +240,23 @@ export class ViemEthereumProvider
   async gatewayV2SendMessage(
     _provider: PublicClient,
     gatewayAddress: string,
-    sourceAccount: string,
+    sender: string,
     xcm: Uint8Array,
     assets: string[],
     claimer: Uint8Array,
-    assetHubExecutionFeeEther: bigint,
+    executionFee: bigint,
     relayerFee: bigint,
     value: bigint,
   ): Promise<ViemContractTransaction> {
     return {
       to: toAddress(gatewayAddress),
-      account: toAddress(sourceAccount),
+      account: toAddress(sender),
       value,
       data: this.encodeFunctionData(asAbi(IGATEWAY_V2_ABI), "v2_sendMessage", [
         xcm,
         assets.map(toAddress),
         claimer,
-        assetHubExecutionFeeEther,
+        executionFee,
         relayerFee,
       ]),
     };
@@ -267,21 +265,21 @@ export class ViemEthereumProvider
   async l2AdapterSendEtherAndCall(
     _provider: PublicClient,
     adapterAddress: string,
-    sourceAccount: string,
-    depositParams: any,
-    sendParams: any,
-    refundAddress: string,
+    sender: string,
+    params: DepositParamsStruct,
+    sendParams: SendParamsStruct,
+    recipient: string,
     topic: string,
     value?: bigint,
   ): Promise<ViemContractTransaction> {
     return {
       to: toAddress(adapterAddress),
-      account: toAddress(sourceAccount),
+      account: toAddress(sender),
       value,
       data: this.encodeFunctionData(
         asAbi(SNOWBRIDGE_L2_ADAPTOR_ABI),
         "sendEtherAndCall",
-        [depositParams, sendParams, toAddress(refundAddress), topic as Hex],
+        [params, sendParams, toAddress(recipient), topic as Hex],
       ),
     };
   }
@@ -289,26 +287,20 @@ export class ViemEthereumProvider
   async l2AdapterSendTokenAndCall(
     _provider: PublicClient,
     adapterAddress: string,
-    sourceAccount: string,
-    depositParams: any,
-    swapParams: any,
-    sendParams: any,
-    refundAddress: string,
+    sender: string,
+    params: DepositParamsStruct,
+    swapParams: SwapParamsStruct,
+    sendParams: SendParamsStruct,
+    recipient: string,
     topic: string,
   ): Promise<ViemContractTransaction> {
     return {
       to: toAddress(adapterAddress),
-      account: toAddress(sourceAccount),
+      account: toAddress(sender),
       data: this.encodeFunctionData(
         asAbi(SNOWBRIDGE_L2_ADAPTOR_ABI),
         "sendTokenAndCall",
-        [
-          depositParams,
-          swapParams,
-          sendParams,
-          toAddress(refundAddress),
-          topic as Hex,
-        ],
+        [params, swapParams, sendParams, toAddress(recipient), topic as Hex],
       ),
     };
   }
@@ -539,13 +531,37 @@ export class ViemEthereumProvider
           data: log.data,
         });
         if (event.eventName === "OutboundMessageAccepted") {
-          const args = event.args as readonly unknown[] | undefined;
+          const args = event.args as
+            | {
+                nonce: bigint;
+                payload: {
+                  origin: Address;
+                  assets: { kind: number; data: Hex }[];
+                  xcm: { kind: number; data: Hex };
+                  claimer: Hex;
+                  value: bigint;
+                  executionFee: bigint;
+                  relayerFee: bigint;
+                };
+              }
+            | undefined;
           if (!args) {
             continue;
           }
           return {
-            nonce: BigInt(args[0] as bigint),
-            payload: args[1] as Hex,
+            nonce: BigInt(args.nonce),
+            payload: {
+              origin: args.payload.origin,
+              assets: args.payload.assets.map((asset) => [
+                Number(asset.kind),
+                asset.data,
+              ]),
+              xcm: [Number(args.payload.xcm.kind), args.payload.xcm.data],
+              claimer: args.payload.claimer,
+              value: BigInt(args.payload.value),
+              executionFee: BigInt(args.payload.executionFee),
+              relayerFee: BigInt(args.payload.relayerFee),
+            },
             blockHash: receipt.blockHash,
             blockNumber: Number(receipt.blockNumber),
             txHash: receipt.transactionHash,

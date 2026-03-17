@@ -36,21 +36,21 @@ export type SwapParamsStruct = {
 
 export type IGatewayV1 = {
   quoteSendTokenFee(
-    tokenAddress: string,
-    destinationParaId: number,
-    totalFeeInDot: bigint,
+    token: string,
+    destinationChain: number,
+    destinationFee: bigint,
   ): Promise<bigint>;
   operatingMode(): Promise<bigint>;
   channelNoncesOf(channelId: string): Promise<[bigint, bigint]>;
   channelOperatingModeOf(channelId: string): Promise<bigint>;
-  agentOf(agentId: string): Promise<string>;
+  agentOf(agentID: string): Promise<string>;
 };
 
 export type IGatewayV2 = {
   operatingMode(): Promise<bigint>;
   v2_outboundNonce(): Promise<bigint>;
-  isTokenRegistered(tokenAddress: string): Promise<boolean>;
-  agentOf(agentId: string): Promise<string>;
+  isTokenRegistered(token: string): Promise<boolean>;
+  agentOf(agentID: string): Promise<string>;
 };
 
 export type BeefyClient = {
@@ -66,61 +66,535 @@ export type ISwapQuoter = {
 };
 
 export type IERC20 = {
-  balanceOf(owner: string): Promise<bigint>;
+  balanceOf(account: string): Promise<bigint>;
   allowance(owner: string, spender: string): Promise<bigint>;
 };
 
 export const IGATEWAY_V1_ABI = [
-  "function quoteSendTokenFee(address tokenAddress, uint32 destinationParaId, uint128 totalFeeInDot) view returns (uint256)",
-  "function operatingMode() view returns (uint8)",
-  "function channelNoncesOf(bytes32 channelId) view returns (uint64 inbound, uint64 outbound)",
-  "function channelOperatingModeOf(bytes32 channelId) view returns (uint8)",
-  "function agentOf(bytes32 agentId) view returns (address)",
-  "function sendToken(address tokenAddress, uint32 destinationParaId, (uint8 kind, bytes data) beneficiary, uint128 destinationFeeInDOT, uint128 amount) payable",
-  "event OutboundMessageAccepted(bytes32 indexed channelId, uint64 nonce, bytes32 messageId)",
+  {
+    type: "function",
+    name: "agentOf",
+    inputs: [{ name: "agentID", type: "bytes32", internalType: "bytes32" }],
+    outputs: [{ name: "", type: "address", internalType: "address" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "channelNoncesOf",
+    inputs: [{ name: "channelID", type: "bytes32", internalType: "ChannelID" }],
+    outputs: [
+      { name: "", type: "uint64", internalType: "uint64" },
+      { name: "", type: "uint64", internalType: "uint64" },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "channelOperatingModeOf",
+    inputs: [{ name: "channelID", type: "bytes32", internalType: "ChannelID" }],
+    outputs: [{ name: "", type: "uint8", internalType: "enum OperatingMode" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "operatingMode",
+    inputs: [],
+    outputs: [{ name: "", type: "uint8", internalType: "enum OperatingMode" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "quoteSendTokenFee",
+    inputs: [
+      { name: "token", type: "address", internalType: "address" },
+      {
+        name: "destinationChain",
+        type: "uint32",
+        internalType: "ParaID",
+      },
+      { name: "destinationFee", type: "uint128", internalType: "uint128" },
+    ],
+    outputs: [{ name: "", type: "uint256", internalType: "uint256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "sendToken",
+    inputs: [
+      { name: "token", type: "address", internalType: "address" },
+      {
+        name: "destinationChain",
+        type: "uint32",
+        internalType: "ParaID",
+      },
+      {
+        name: "destinationAddress",
+        type: "tuple",
+        internalType: "struct MultiAddress",
+        components: [
+          { name: "kind", type: "uint8", internalType: "enum Kind" },
+          { name: "data", type: "bytes", internalType: "bytes" },
+        ],
+      },
+      { name: "destinationFee", type: "uint128", internalType: "uint128" },
+      { name: "amount", type: "uint128", internalType: "uint128" },
+    ],
+    outputs: [],
+    stateMutability: "payable",
+  },
+  {
+    type: "event",
+    name: "OutboundMessageAccepted",
+    inputs: [
+      {
+        name: "channelID",
+        type: "bytes32",
+        indexed: true,
+        internalType: "ChannelID",
+      },
+      {
+        name: "nonce",
+        type: "uint64",
+        indexed: false,
+        internalType: "uint64",
+      },
+      {
+        name: "messageID",
+        type: "bytes32",
+        indexed: true,
+        internalType: "bytes32",
+      },
+      {
+        name: "payload",
+        type: "bytes",
+        indexed: false,
+        internalType: "bytes",
+      },
+    ],
+    anonymous: false,
+  },
 ] as const;
 
 export const IGATEWAY_V2_ABI = [
-  "function operatingMode() view returns (uint8)",
-  "function v2_outboundNonce() view returns (uint64)",
-  "function isTokenRegistered(address tokenAddress) view returns (bool)",
-  "function agentOf(bytes32 agentId) view returns (address)",
-  "function v2_createAgent(bytes32 agentId) payable",
-  "function v2_registerToken(address tokenAddress, uint8 network, uint128 executionFee, uint128 relayerFee) payable",
-  "function v2_sendMessage(bytes xcm, bytes[] assets, bytes claimer, uint128 executionFee, uint128 relayerFee) payable",
-  "event OutboundMessageAccepted(uint64 nonce, bytes payload)",
+  {
+    type: "function",
+    name: "agentOf",
+    inputs: [{ name: "agentID", type: "bytes32", internalType: "bytes32" }],
+    outputs: [{ name: "", type: "address", internalType: "address" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "isTokenRegistered",
+    inputs: [{ name: "token", type: "address", internalType: "address" }],
+    outputs: [{ name: "", type: "bool", internalType: "bool" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "operatingMode",
+    inputs: [],
+    outputs: [{ name: "", type: "uint8", internalType: "enum OperatingMode" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "v2_createAgent",
+    inputs: [{ name: "id", type: "bytes32", internalType: "bytes32" }],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "v2_outboundNonce",
+    inputs: [],
+    outputs: [{ name: "", type: "uint64", internalType: "uint64" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "v2_registerToken",
+    inputs: [
+      { name: "token", type: "address", internalType: "address" },
+      { name: "network", type: "uint8", internalType: "uint8" },
+      { name: "executionFee", type: "uint128", internalType: "uint128" },
+      { name: "relayerFee", type: "uint128", internalType: "uint128" },
+    ],
+    outputs: [],
+    stateMutability: "payable",
+  },
+  {
+    type: "function",
+    name: "v2_sendMessage",
+    inputs: [
+      { name: "xcm", type: "bytes", internalType: "bytes" },
+      { name: "assets", type: "bytes[]", internalType: "bytes[]" },
+      { name: "claimer", type: "bytes", internalType: "bytes" },
+      { name: "executionFee", type: "uint128", internalType: "uint128" },
+      { name: "relayerFee", type: "uint128", internalType: "uint128" },
+    ],
+    outputs: [],
+    stateMutability: "payable",
+  },
+  {
+    type: "event",
+    name: "OutboundMessageAccepted",
+    inputs: [
+      {
+        name: "nonce",
+        type: "uint64",
+        indexed: false,
+        internalType: "uint64",
+      },
+      {
+        name: "payload",
+        type: "tuple",
+        indexed: false,
+        internalType: "struct Payload",
+        components: [
+          { name: "origin", type: "address", internalType: "address" },
+          {
+            name: "assets",
+            type: "tuple[]",
+            internalType: "struct Asset[]",
+            components: [
+              { name: "kind", type: "uint8", internalType: "uint8" },
+              { name: "data", type: "bytes", internalType: "bytes" },
+            ],
+          },
+          {
+            name: "xcm",
+            type: "tuple",
+            internalType: "struct Xcm",
+            components: [
+              { name: "kind", type: "uint8", internalType: "uint8" },
+              { name: "data", type: "bytes", internalType: "bytes" },
+            ],
+          },
+          { name: "claimer", type: "bytes", internalType: "bytes" },
+          { name: "value", type: "uint128", internalType: "uint128" },
+          {
+            name: "executionFee",
+            type: "uint128",
+            internalType: "uint128",
+          },
+          { name: "relayerFee", type: "uint128", internalType: "uint128" },
+        ],
+      },
+    ],
+    anonymous: false,
+  },
 ] as const;
 
 export const IERC20_ABI = [
-  "function balanceOf(address owner) view returns (uint256)",
-  "function allowance(address owner, address spender) view returns (uint256)",
-  "function approve(address spender, uint256 amount) returns (bool)",
+  {
+    type: "function",
+    name: "allowance",
+    inputs: [
+      { name: "owner", type: "address", internalType: "address" },
+      { name: "spender", type: "address", internalType: "address" },
+    ],
+    outputs: [{ name: "", type: "uint256", internalType: "uint256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "approve",
+    inputs: [
+      { name: "spender", type: "address", internalType: "address" },
+      { name: "amount", type: "uint256", internalType: "uint256" },
+    ],
+    outputs: [{ name: "", type: "bool", internalType: "bool" }],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "balanceOf",
+    inputs: [{ name: "account", type: "address", internalType: "address" }],
+    outputs: [{ name: "", type: "uint256", internalType: "uint256" }],
+    stateMutability: "view",
+  },
 ] as const;
 
 export const BEEFY_CLIENT_ABI = [
-  "function latestBeefyBlock() view returns (uint32)",
+  {
+    type: "function",
+    name: "latestBeefyBlock",
+    inputs: [],
+    outputs: [{ name: "", type: "uint64", internalType: "uint64" }],
+    stateMutability: "view",
+  },
 ] as const;
 
 export const SWAP_QUOTER_ABI = [
-  "function quoteExactOutputSingle((address tokenIn,address tokenOut,uint256 amount,uint24 fee,uint160 sqrtPriceLimitX96) params) view returns (uint256 amountIn, uint160 sqrtPriceX96After, uint32 initializedTicksCrossed, uint256 gasEstimate)",
+  {
+    type: "function",
+    name: "quoteExactOutputSingle",
+    inputs: [
+      {
+        name: "params",
+        type: "tuple",
+        internalType: "struct ISwapQuoter.QuoteExactOutputSingleParams",
+        components: [
+          { name: "tokenIn", type: "address", internalType: "address" },
+          { name: "tokenOut", type: "address", internalType: "address" },
+          { name: "amount", type: "uint256", internalType: "uint256" },
+          { name: "fee", type: "uint24", internalType: "uint24" },
+          {
+            name: "sqrtPriceLimitX96",
+            type: "uint160",
+            internalType: "uint160",
+          },
+        ],
+      },
+    ],
+    outputs: [
+      { name: "amountIn", type: "uint256", internalType: "uint256" },
+      {
+        name: "sqrtPriceX96After",
+        type: "uint160",
+        internalType: "uint160",
+      },
+      {
+        name: "initializedTicksCrossed",
+        type: "uint32",
+        internalType: "uint32",
+      },
+      { name: "gasEstimate", type: "uint256", internalType: "uint256" },
+    ],
+    stateMutability: "nonpayable",
+  },
 ] as const;
 
 export const SWAP_ROUTER_ABI = [
-  "function exactOutputSingle((address tokenIn,address tokenOut,uint24 fee,address recipient,uint256 deadline,uint256 amountOut,uint256 amountInMaximum,uint160 sqrtPriceLimitX96) params) payable returns (uint256 amountIn)",
+  {
+    type: "function",
+    name: "exactOutputSingle",
+    inputs: [
+      {
+        name: "params",
+        type: "tuple",
+        internalType: "struct ISwapRouter.ExactOutputSingleParams",
+        components: [
+          { name: "tokenIn", type: "address", internalType: "address" },
+          { name: "tokenOut", type: "address", internalType: "address" },
+          { name: "fee", type: "uint24", internalType: "uint24" },
+          { name: "recipient", type: "address", internalType: "address" },
+          { name: "deadline", type: "uint256", internalType: "uint256" },
+          { name: "amountOut", type: "uint256", internalType: "uint256" },
+          {
+            name: "amountInMaximum",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "sqrtPriceLimitX96",
+            type: "uint160",
+            internalType: "uint160",
+          },
+        ],
+      },
+    ],
+    outputs: [{ name: "amountIn", type: "uint256", internalType: "uint256" }],
+    stateMutability: "nonpayable",
+  },
 ] as const;
 
 export const SWAP_LEGACY_ROUTER_ABI = [
-  "function exactOutputSingle((address tokenIn,address tokenOut,uint24 fee,address recipient,uint256 amountOut,uint256 amountInMaximum,uint160 sqrtPriceLimitX96) params) payable returns (uint256 amountIn)",
+  {
+    type: "function",
+    name: "exactOutputSingle",
+    inputs: [
+      {
+        name: "params",
+        type: "tuple",
+        internalType: "struct ISwapLegacyRouter.ExactOutputSingleParams",
+        components: [
+          { name: "tokenIn", type: "address", internalType: "address" },
+          { name: "tokenOut", type: "address", internalType: "address" },
+          { name: "fee", type: "uint24", internalType: "uint24" },
+          { name: "recipient", type: "address", internalType: "address" },
+          { name: "amountOut", type: "uint256", internalType: "uint256" },
+          {
+            name: "amountInMaximum",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "sqrtPriceLimitX96",
+            type: "uint160",
+            internalType: "uint160",
+          },
+        ],
+      },
+    ],
+    outputs: [{ name: "amountIn", type: "uint256", internalType: "uint256" }],
+    stateMutability: "nonpayable",
+  },
 ] as const;
 
 export const SNOWBRIDGE_L1_ADAPTOR_ABI = [
-  "function depositNativeEther((address inputToken,address outputToken,uint256 inputAmount,uint256 outputAmount,uint256 destinationChainId,uint256 fillDeadlineBuffer) params, address recipient, bytes32 topic) payable",
-  "function depositToken((address inputToken,address outputToken,uint256 inputAmount,uint256 outputAmount,uint256 destinationChainId,uint256 fillDeadlineBuffer) params, address recipient, bytes32 topic)",
+  {
+    type: "function",
+    name: "depositNativeEther",
+    inputs: [
+      {
+        name: "params",
+        type: "tuple",
+        internalType: "struct DepositParams",
+        components: [
+          { name: "inputToken", type: "address", internalType: "address" },
+          { name: "outputToken", type: "address", internalType: "address" },
+          { name: "inputAmount", type: "uint256", internalType: "uint256" },
+          { name: "outputAmount", type: "uint256", internalType: "uint256" },
+          {
+            name: "destinationChainId",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "fillDeadlineBuffer",
+            type: "uint32",
+            internalType: "uint32",
+          },
+        ],
+      },
+      { name: "recipient", type: "address", internalType: "address" },
+      { name: "topic", type: "bytes32", internalType: "bytes32" },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "depositToken",
+    inputs: [
+      {
+        name: "params",
+        type: "tuple",
+        internalType: "struct DepositParams",
+        components: [
+          { name: "inputToken", type: "address", internalType: "address" },
+          { name: "outputToken", type: "address", internalType: "address" },
+          { name: "inputAmount", type: "uint256", internalType: "uint256" },
+          { name: "outputAmount", type: "uint256", internalType: "uint256" },
+          {
+            name: "destinationChainId",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "fillDeadlineBuffer",
+            type: "uint32",
+            internalType: "uint32",
+          },
+        ],
+      },
+      { name: "recipient", type: "address", internalType: "address" },
+      { name: "topic", type: "bytes32", internalType: "bytes32" },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
 ] as const;
 
 export const SNOWBRIDGE_L2_ADAPTOR_ABI = [
-  "function sendEtherAndCall((address inputToken,address outputToken,uint256 inputAmount,uint256 outputAmount,uint256 destinationChainId,uint256 fillDeadlineBuffer) depositParams, (bytes xcm, bytes[] assets, bytes claimer, uint128 executionFee, uint128 relayerFee) sendParams, address sourceAccount, bytes32 topic) payable",
-  "function sendTokenAndCall((address inputToken,address outputToken,uint256 inputAmount,uint256 outputAmount,uint256 destinationChainId,uint256 fillDeadlineBuffer) depositParams, (uint256 inputAmount, address router, bytes callData) swapParams, (bytes xcm, bytes[] assets, bytes claimer, uint128 executionFee, uint128 relayerFee) sendParams, address sourceAccount, bytes32 topic)",
+  {
+    type: "function",
+    name: "sendEtherAndCall",
+    inputs: [
+      {
+        name: "params",
+        type: "tuple",
+        internalType: "struct DepositParams",
+        components: [
+          { name: "inputToken", type: "address", internalType: "address" },
+          { name: "outputToken", type: "address", internalType: "address" },
+          { name: "inputAmount", type: "uint256", internalType: "uint256" },
+          { name: "outputAmount", type: "uint256", internalType: "uint256" },
+          {
+            name: "destinationChainId",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "fillDeadlineBuffer",
+            type: "uint32",
+            internalType: "uint32",
+          },
+        ],
+      },
+      {
+        name: "sendParams",
+        type: "tuple",
+        internalType: "struct SendParams",
+        components: [
+          { name: "xcm", type: "bytes", internalType: "bytes" },
+          { name: "assets", type: "bytes[]", internalType: "bytes[]" },
+          { name: "claimer", type: "bytes", internalType: "bytes" },
+          { name: "executionFee", type: "uint128", internalType: "uint128" },
+          { name: "relayerFee", type: "uint128", internalType: "uint128" },
+        ],
+      },
+      { name: "recipient", type: "address", internalType: "address" },
+      { name: "topic", type: "bytes32", internalType: "bytes32" },
+    ],
+    outputs: [],
+    stateMutability: "payable",
+  },
+  {
+    type: "function",
+    name: "sendTokenAndCall",
+    inputs: [
+      {
+        name: "params",
+        type: "tuple",
+        internalType: "struct DepositParams",
+        components: [
+          { name: "inputToken", type: "address", internalType: "address" },
+          { name: "outputToken", type: "address", internalType: "address" },
+          { name: "inputAmount", type: "uint256", internalType: "uint256" },
+          { name: "outputAmount", type: "uint256", internalType: "uint256" },
+          {
+            name: "destinationChainId",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "fillDeadlineBuffer",
+            type: "uint32",
+            internalType: "uint32",
+          },
+        ],
+      },
+      {
+        name: "swapParams",
+        type: "tuple",
+        internalType: "struct SwapParams",
+        components: [
+          { name: "inputAmount", type: "uint256", internalType: "uint256" },
+          { name: "router", type: "address", internalType: "address" },
+          { name: "callData", type: "bytes", internalType: "bytes" },
+        ],
+      },
+      {
+        name: "sendParams",
+        type: "tuple",
+        internalType: "struct SendParams",
+        components: [
+          { name: "xcm", type: "bytes", internalType: "bytes" },
+          { name: "assets", type: "bytes[]", internalType: "bytes[]" },
+          { name: "claimer", type: "bytes", internalType: "bytes" },
+          { name: "executionFee", type: "uint128", internalType: "uint128" },
+          { name: "relayerFee", type: "uint128", internalType: "uint128" },
+        ],
+      },
+      { name: "recipient", type: "address", internalType: "address" },
+      { name: "topic", type: "bytes32", internalType: "bytes32" },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
 ] as const;
 
 export const MOONBEAM_PALLET_XCM_PRECOMPILE_ABI = [

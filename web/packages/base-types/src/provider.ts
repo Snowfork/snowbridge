@@ -1,3 +1,9 @@
+import type {
+  DepositParamsStruct,
+  SendParamsStruct,
+  SwapParamsStruct,
+} from "./contracts";
+
 export type MultiAddressStruct = {
   kind: number;
   data: string;
@@ -15,7 +21,15 @@ export type GatewayV1OutboundMessageAccepted = {
 
 export type GatewayV2OutboundMessageAccepted = {
   nonce: bigint;
-  payload: string;
+  payload: {
+    origin: string;
+    assets: [number, string][];
+    xcm: [number, string];
+    claimer: string;
+    value: bigint;
+    executionFee: bigint;
+    relayerFee: bigint;
+  };
   blockNumber: number;
   blockHash: string;
   txHash: string;
@@ -124,58 +138,58 @@ export interface EthereumProvider<T extends EthereumProviderTypes> {
   gatewayV1SendToken(
     provider: T["Connection"],
     gatewayAddress: string,
-    sourceAccount: string,
-    tokenAddress: string,
-    destinationParaId: number,
-    beneficiary: MultiAddressStruct,
-    totalFeeDot: bigint,
+    sender: string,
+    token: string,
+    destinationChain: number,
+    destinationAddress: MultiAddressStruct,
+    destinationFee: bigint,
     amount: bigint,
     value: bigint,
   ): Promise<T["ContractTransaction"]>;
   gatewayV2RegisterToken(
     provider: T["Connection"],
     gatewayAddress: string,
-    sourceAccount: string,
-    tokenAddress: string,
+    sender: string,
+    token: string,
     network: number,
-    assetHubExecutionFeeEther: bigint,
+    executionFee: bigint,
     relayerFee: bigint,
-    totalValue: bigint,
+    value: bigint,
   ): Promise<T["ContractTransaction"]>;
   gatewayV2CreateAgent(
     provider: T["Connection"],
     gatewayAddress: string,
-    agentId: string,
+    id: string,
   ): Promise<T["ContractTransaction"]>;
   gatewayV2SendMessage(
     provider: T["Connection"],
     gatewayAddress: string,
-    sourceAccount: string,
+    sender: string,
     xcm: Uint8Array,
     assets: string[],
     claimer: Uint8Array,
-    assetHubExecutionFeeEther: bigint,
+    executionFee: bigint,
     relayerFee: bigint,
     value: bigint,
   ): Promise<T["ContractTransaction"]>;
   l2AdapterSendEtherAndCall(
     provider: T["Connection"],
     adapterAddress: string,
-    sourceAccount: string,
-    depositParams: any,
-    sendParams: any,
-    refundAddress: string,
+    sender: string,
+    params: DepositParamsStruct,
+    sendParams: SendParamsStruct,
+    recipient: string,
     topic: string,
     value?: bigint,
   ): Promise<T["ContractTransaction"]>;
   l2AdapterSendTokenAndCall(
     provider: T["Connection"],
     adapterAddress: string,
-    sourceAccount: string,
-    depositParams: any,
-    swapParams: any,
-    sendParams: any,
-    refundAddress: string,
+    sender: string,
+    params: DepositParamsStruct,
+    swapParams: SwapParamsStruct,
+    sendParams: SendParamsStruct,
+    recipient: string,
     topic: string,
   ): Promise<T["ContractTransaction"]>;
   evmParachainTransferAssetsUsingTypeAndThenAddress(

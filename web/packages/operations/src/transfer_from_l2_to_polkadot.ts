@@ -55,7 +55,10 @@ export const transferToPolkadot = async (
     if (TOKEN_CONTRACT != ETHER_TOKEN_ADDRESS) {
         console.log("# Approve")
         const erc20 = IERC20__factory.connect(TOKEN_CONTRACT, ETHEREUM_ACCOUNT)
-        const l2AdapterAddress = await context.l2Adapter(l2ChainId).getAddress()
+        const l2AdapterAddress = context.environment.l2Bridge?.l2Chains[l2ChainId].adapterAddress
+        if (!l2AdapterAddress) {
+            throw new Error("L2 bridge configuration is missing.")
+        }
         const [balance, allowance] = await Promise.all([
             erc20.balanceOf(ETHEREUM_ACCOUNT_PUBLIC),
             erc20.allowance(ETHEREUM_ACCOUNT_PUBLIC, l2AdapterAddress),
