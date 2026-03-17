@@ -7,18 +7,18 @@ import {stdJson} from "forge-std/StdJson.sol";
 import {console} from "forge-std/console.sol";
 import {UD60x18, ud60x18, unwrap} from "prb/math/src/UD60x18.sol";
 
-import {IUpgradable} from "../../src/interfaces/IUpgradable.sol";
-import {IGatewayV1} from "../../src/v1/IGateway.sol";
-import {Verification} from "../../src/Verification.sol";
-import {Gateway} from "../../src/Gateway.sol";
-import {Gateway202509} from "../../src/upgrade/Gateway202509.sol";
-import {AgentExecutor} from "../../src/AgentExecutor.sol";
+import {IUpgradable} from "../src/interfaces/IUpgradable.sol";
+import {IGatewayV1} from "../src/v1/IGateway.sol";
+import {Verification} from "../src/Verification.sol";
+import {Gateway} from "../src/Gateway.sol";
+import {Gateway202509} from "../src/upgrade/Gateway202509.sol";
+import {AgentExecutor} from "../src/AgentExecutor.sol";
 import {
     UpgradeParams,
     SetOperatingModeParams,
     OperatingMode,
     RegisterForeignTokenParams
-} from "../../src/v1/Types.sol";
+} from "../src/v1/Types.sol";
 import {
     ChannelID,
     ParaID,
@@ -27,8 +27,8 @@ import {
     Command,
     TokenInfo,
     MintForeignTokenParams
-} from "../../src/v1/Types.sol";
-import {MultiAddress, multiAddressFromBytes32} from "../../src/v1/MultiAddress.sol";
+} from "../src/v1/Types.sol";
+import {MultiAddress, multiAddressFromBytes32} from "../src/v1/MultiAddress.sol";
 import {ForkTestFixtures, SubmitMessageFixture} from "../test/utils/ForkTestFixtures.sol";
 import {WETH9} from "canonical-weth/WETH9.sol";
 
