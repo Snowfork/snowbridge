@@ -79,7 +79,7 @@ fi
 # Ensure forge is available
 if ! command -v forge >/dev/null 2>&1; then
   echo "Warning: Foundry install failed or forge not in PATH. Skipping forge dependency install."
-  exit 0
+  exit 1
 fi
 echo "Foundry installed: $(forge --version)"
 
