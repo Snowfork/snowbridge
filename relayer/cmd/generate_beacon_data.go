@@ -15,6 +15,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	ethereumv2 "github.com/snowfork/snowbridge/relayer/cmd/run/ethereum-v2"
 	"github.com/snowfork/snowbridge/relayer/contracts"
+	beaconstate "github.com/snowfork/snowbridge/relayer/relays/beacon-state"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/cache"
 	beaconConf "github.com/snowfork/snowbridge/relayer/relays/beacon/config"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer"
@@ -143,7 +144,9 @@ func generateBeaconCheckpoint(cmd *cobra.Command, _ []string) error {
 		defer store.Close()
 
 		client := api.NewBeaconClient(conf.Source.Beacon.Endpoint)
-		s := syncer.New(client, p, nil)
+		var stateServiceClient syncer.StateServiceClient
+		stateServiceClient = beaconstate.NewClient(conf.Source.Beacon.StateServiceEndpoint)
+		s := syncer.New(client, p, stateServiceClient)
 
 		var checkPointScale scale.BeaconCheckpoint
 		if finalizedSlot == 0 {

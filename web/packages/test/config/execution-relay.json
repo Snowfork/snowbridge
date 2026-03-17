@@ -14,9 +14,8 @@
         "slotsInEpoch": 32,
         "epochsPerSyncCommitteePeriod": 256,
         "forkVersions": {
-          "deneb": 0,
           "electra": 0,
-          "fulu": 50000000
+          "fulu": 0
         }
       },
       "datastore": {
@@ -33,15 +32,16 @@
     },
     "ss58Prefix": 1
   },
-  "instantVerification": true,
+  "instantVerification": false,
   "ofac": {
     "enabled": false,
     "apiKey": ""
   },
   "gasEstimation": {
-    "enabled": true,
+    "enabled": false,
     "binary-path": "../../../gas-estimator/target/release/snowbridge-gas-estimator",
     "asset-hub-url": "ws://127.0.0.1:12144",
     "bridge-hub-url": "ws://127.0.0.1:11144"
-  }
+  },
+  "fetch-interval": 5
 }
