@@ -12,11 +12,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret) {
+    return res.status(503).json({
+      error: "Service unavailable",
+      message: "CRON_SECRET is not configured",
+    });
+  }
   const authHeader = req.headers.authorization;
-  if (
-    process.env.CRON_SECRET &&
-    authHeader !== `Bearer ${process.env.CRON_SECRET}`
-  ) {
+  if (authHeader !== `Bearer ${cronSecret}`) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
