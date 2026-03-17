@@ -111,6 +111,7 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
 
         const totalFeeInWei = assetHubExecutionFeeEther + relayerFee
         return {
+            kind: "ethereum->polkadot",
             assetHubDeliveryFeeEther: deliveryFeeInEther,
             assetHubExecutionFeeEther: assetHubExecutionFeeEther,
             destinationDeliveryFeeEther: 0n,

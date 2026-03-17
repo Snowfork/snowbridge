@@ -204,6 +204,7 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
             destinationExecutionFeeEther +
             relayerFee
         return {
+            kind: "ethereum->polkadot",
             assetHubDeliveryFeeEther: deliveryFeeInEther,
             assetHubExecutionFeeEther: assetHubExecutionFeeEther,
             destinationDeliveryFeeEther: destinationDeliveryFeeEther,

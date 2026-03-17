@@ -118,6 +118,7 @@ export class PNAToAH<T extends EthereumProviderTypes> implements TransferInterfa
 
         const totalFeeInWei = assetHubExecutionFeeEther + relayerFee
         return {
+            kind: "ethereum->polkadot",
             assetHubDeliveryFeeEther: deliveryFeeInEther,
             assetHubExecutionFeeEther: assetHubExecutionFeeEther,
             destinationDeliveryFeeEther: 0n,

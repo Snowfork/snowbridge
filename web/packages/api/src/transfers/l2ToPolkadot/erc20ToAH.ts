@@ -204,6 +204,7 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
         }
 
         return {
+            kind: "ethereum_l2->polkadot",
             assetHubDeliveryFeeEther: deliveryFeeInEther,
             assetHubExecutionFeeEther: assetHubExecutionFeeEther,
             destinationDeliveryFeeEther: 0n,

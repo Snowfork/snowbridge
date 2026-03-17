@@ -70,6 +70,7 @@ export type Transfer = {
 }
 
 export type DeliveryFee = {
+    kind: Extract<TransferKind, "polkadot->ethereum" | "polkadot->ethereum_l2" | "ethereum->ethereum">
     snowbridgeDeliveryFeeDOT: bigint
     bridgeHubDeliveryFeeDOT: bigint
     assetHubExecutionFeeDOT: bigint
@@ -151,6 +152,7 @@ export class V1ToEthereumAdapter<T extends EthereumProviderTypes>
                 padPercentage: options?.padPercentage,
                 slippagePadPercentage: options?.slippagePadPercentage,
                 defaultFee: options?.defaultFee,
+                kind: "polkadot->ethereum",
             },
         )
     }
@@ -720,6 +722,7 @@ export async function getDeliveryFeeV1(
         padPercentage?: bigint
         slippagePadPercentage?: bigint
         defaultFee?: bigint
+        kind?: Extract<TransferKind, "polkadot->ethereum" | "ethereum->ethereum">
     },
 ): Promise<DeliveryFee> {
     // Fees stored in 0x5fbc5c7ba58845ad1f1a9a7c5bc12fad
@@ -907,6 +910,7 @@ export async function getDeliveryFeeV1(
     }
 
     return {
+        kind: options?.kind ?? "polkadot->ethereum",
         snowbridgeDeliveryFeeDOT,
         assetHubExecutionFeeDOT,
         bridgeHubDeliveryFeeDOT,

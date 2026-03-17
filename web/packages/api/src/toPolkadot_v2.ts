@@ -93,6 +93,7 @@ export type FeeInfo = {
 }
 
 export type DeliveryFee = {
+    kind: Extract<TransferKind, "ethereum->polkadot">
     destinationDeliveryFeeDOT: bigint
     destinationExecutionFeeDOT: bigint
     totalFeeInWei: bigint
@@ -155,6 +156,7 @@ function toV1DeliveryFee(fee: ToPolkadotV2DeliveryFee): DeliveryFee {
         )
     }
     return {
+        kind: "ethereum->polkadot",
         destinationDeliveryFeeDOT: v1Fee.destinationDeliveryFeeDOT,
         destinationExecutionFeeDOT: v1Fee.destinationExecutionFeeDOT,
         totalFeeInWei: v1Fee.totalFeeInWei,
@@ -290,6 +292,7 @@ export class V1ToPolkadotAdapter<T extends EthereumProviderTypes>
         }
         const totalFeeInDOT = destinationExecutionFeeDOT + destinationDeliveryFeeDOT
         return toV2DeliveryFee({
+            kind: "ethereum->polkadot",
             destinationExecutionFeeDOT,
             destinationDeliveryFeeDOT,
             totalFeeInWei: await gateway.quoteSendTokenFee(tokenAddress, this.to.id, totalFeeInDOT),
