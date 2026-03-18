@@ -189,4 +189,36 @@ contract ForkUpgrade202603Test is Test {
         IGatewayV1(address(GATEWAY_PROXY))
             .submitV1(fixture.message, fixture.leafProof, fixture.headerProof);
     }
+
+    // Send Ether can work with the upgraded Gateway
+    function testUpgradedGatewayStillCanSendEtherWithV1SendToken() public {
+        selectFork24681921();
+        upgradeTo202602();
+        // Create a mock user
+        address user = makeAddr("user");
+        uint128 amount = 1;
+        ParaID paraID = ParaID.wrap(1000);
+
+        MultiAddress memory recipientAddress32 = multiAddressFromBytes32(keccak256("recipient"));
+
+        uint128 fee =
+            uint128(IGatewayV1(address(GATEWAY_PROXY)).quoteSendTokenFee(address(0), paraID, 1));
+        assertTrue(fee > 0);
+        // This addresses the missing AssetsStorage.Layout migration bug, which was causing the fee to be unreasonably high.
+        assertTrue(fee < 0.01 ether);
+
+        uint256 balanceBefore = assetHubAgent.balance;
+
+        vm.expectEmit();
+        emit IGatewayV1.TokenSent(address(0), user, paraID, recipientAddress32, amount);
+        vm.expectEmit(true, false, false, false);
+        emit IGatewayV1.OutboundMessageAccepted(paraID.into(), 1, bytes32("0x"), hex"");
+        hoax(user, amount + fee);
+        IGatewayV1(address(GATEWAY_PROXY))
+        .sendToken{value: amount + fee}(address(0), paraID, recipientAddress32, 1, amount);
+        // After the sendToken call, the asset hub agent should have received the amount, and the user's balance should be 0.
+        uint256 balanceAfter = assetHubAgent.balance;
+        assertEq(balanceAfter, balanceBefore + amount);
+        assertEq(user.balance, 0);
+    }
 }
