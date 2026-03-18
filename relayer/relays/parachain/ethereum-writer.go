@@ -17,6 +17,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	contracts "github.com/snowfork/snowbridge/relayer/contracts/v1"
 	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
+	"github.com/snowfork/snowbridge/relayer/relays/util"
 
 	gsrpcTypes "github.com/snowfork/go-substrate-rpc-client/v4/types"
 
@@ -82,7 +83,12 @@ func (wr *EthereumWriter) writeMessagesLoop(ctx context.Context) error {
 			if !ok {
 				return nil
 			}
-			err := wr.WriteChannels(ctx, options, task)
+			err := util.RetryOnErrorSubstring(
+				ctx,
+				log.WithField("component", "parachain/ethereum-writer"),
+				util.DefaultRetryableSubstring,
+				func() error { return wr.WriteChannels(ctx, options, task) },
+			)
 			if err != nil {
 				return fmt.Errorf("write message: %w", err)
 			}
