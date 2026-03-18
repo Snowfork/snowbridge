@@ -77,6 +77,13 @@ contract ForkUpgrade202603Test is Test {
         );
     }
 
+    function selectFork24683314() public {
+        vm.createSelectFork(
+            "https://virtual.mainnet.eu.rpc.tenderly.co/61589e0a-d204-449b-b095-64366ea949cb",
+            24_683_314
+        );
+    }
+
     // This function is used to upgrade the gateway to the new implementation. It can be called
     // at the beginning of other tests in this contract to ensure that the gateway is upgraded
     // before running the test logic.
@@ -147,7 +154,7 @@ contract ForkUpgrade202603Test is Test {
         assertEq(balanceAfter, balance);
     }
 
-    function testUpgradedGatewayStillAcceptsV2UnlockNativeEther() public {
+    function testUpgradedGateway202602StillAcceptsV2UnlockNativeEther() public {
         selectFork24677447();
         upgradeTo202602();
         SubmitV2MessageFixture memory fixture = ForkTestFixtures.makeSubmitV2MessageFixture(
@@ -170,7 +177,7 @@ contract ForkUpgrade202603Test is Test {
             );
     }
 
-    function testUpgradedGatewayStillAcceptsV1UnlockNativeEther() public {
+    function testUpgradedGateway202602StillAcceptsV1UnlockNativeEther() public {
         selectFork24681921();
         upgradeTo202602();
         SubmitMessageFixture memory fixture = ForkTestFixtures.makeSubmitMessageFixture(
@@ -191,7 +198,7 @@ contract ForkUpgrade202603Test is Test {
             .submitV1(fixture.message, fixture.leafProof, fixture.headerProof);
     }
 
-    function testUpgradedGatewayStillCanSendEtherWithV1SendToken() public {
+    function testUpgradedGateway202602StillCanSendEtherWithV1SendToken() public {
         selectFork24681921();
         upgradeTo202602();
         // Create a mock user
@@ -222,7 +229,7 @@ contract ForkUpgrade202603Test is Test {
         assertEq(user.balance, 0);
     }
 
-    function testUpgradedGatewayStillCanSendEtherWithV2SendMessage() public {
+    function testUpgradedGateway202602StillCanSendEtherWithV2SendMessage() public {
         selectFork24681921();
         upgradeTo202602();
         // Create a mock user
@@ -257,5 +264,65 @@ contract ForkUpgrade202603Test is Test {
         // Verify asset balances
         assertEq(assetHubAgent.balance, balanceBefore + amount + fee);
         assertEq(IGatewayV2(address(GATEWAY_PROXY)).v2_outboundNonce(), nonceBefore + 1);
+    }
+
+    function testUpgradedGateway202602StillAcceptsV1MintDOT() public {
+        selectFork24683314();
+        upgradeTo202602();
+        SubmitMessageFixture memory fixture = ForkTestFixtures.makeSubmitMessageFixture(
+            "/test/data/mainnet-gateway-submitv1-mint-dot-202603.json"
+        );
+
+        // Expect the gateway to emit InboundMessageDispatched event
+        vm.expectEmit(true, true, true, true);
+        emit IGatewayV1.InboundMessageDispatched(
+            fixture.message.channelID, fixture.message.nonce, fixture.message.id, true
+        );
+
+        address relayer = makeAddr("relayer");
+        vm.deal(relayer, 10 ether);
+
+        vm.prank(relayer);
+        IGatewayV1(address(GATEWAY_PROXY))
+            .submitV1(fixture.message, fixture.leafProof, fixture.headerProof);
+    }
+
+    // Send DOT can work with the upgraded Gateway
+    function testUpgradedGatewayStillCanSendDOT() public {
+        selectFork24683314();
+        upgradeTo202602();
+        address user = 0x302F0B71B8aD3CF6dD90aDb668E49b2168d652fd;
+        vm.deal(user, 1 ether);
+
+        vm.prank(address(GATEWAY_PROXY));
+        uint128 amount = 100;
+        MintForeignTokenParams memory params =
+            MintForeignTokenParams({foreignTokenID: DOT_ID, recipient: user, amount: amount});
+
+        vm.expectEmit(true, true, false, false);
+        emit Transfer(address(0), user, amount);
+
+        ParaID paraID = ParaID.wrap(1000);
+        Gateway(address(GATEWAY_PROXY))
+            .v1_handleMintForeignToken(paraID.into(), abi.encode(params));
+
+        MultiAddress memory recipientAddress32 = multiAddressFromBytes32(keccak256("recipient"));
+
+        uint128 fee = uint128(IGatewayV1(address(GATEWAY_PROXY)).quoteSendTokenFee(DOT, paraID, 1));
+        assertTrue(fee > 0);
+        assertTrue(fee < 0.01 ether);
+
+        vm.prank(user);
+        vm.expectEmit();
+        emit IGatewayV1.TokenSent(DOT, user, paraID, recipientAddress32, amount);
+        vm.expectEmit(true, true, true, false);
+        emit IGatewayV1.OutboundMessageAccepted(
+            paraID.into(),
+            11_110,
+            bytes32(0x688eefdb5afe6d8dfbccd6746853dd9ec90695bccaa7a37ea624f1b4d951fbdd),
+            hex""
+        );
+        IGatewayV1(address(GATEWAY_PROXY))
+        .sendToken{value: fee}(DOT, paraID, recipientAddress32, 1, amount);
     }
 }
