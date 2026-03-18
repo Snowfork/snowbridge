@@ -5,7 +5,7 @@ This document tracks performance benchmarks for running Snowbridge relayers on d
 ## Test Configuration
 
 - **Network**: Mainnet (Polkadot + Ethereum)
-- **Services**: All relayers including beefy (expensive profile)
+- **Services**: All relayers including beefy (consensus profile)
 - **Metric**: Beacon state proof generation time
 
 ## Results
