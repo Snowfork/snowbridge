@@ -98,8 +98,8 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
         },
         relaychainUrl: "https://polkadot-rpc.n.dwellir.com",
         parachains: {
-            "1000": "https://polkadot-asset-hub-rpc.polkadot.io",
-            "1002": "https://polkadot-bridge-hub-rpc.polkadot.io",
+            "1000": "wss://polkadot-asset-hub-rpc.polkadot.io",
+            "1002": "wss://polkadot-bridge-hub-rpc.polkadot.io",
             "3369": "wss://polkadot-mythos-rpc.polkadot.io",
             "2034": "wss://hydration-rpc.n.dwellir.com",
             "2030": "wss://bifrost-polkadot.ibp.network",
