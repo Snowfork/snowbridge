@@ -39,6 +39,8 @@ services:
 
   beacon:
     <<: *image
+    profiles:
+      - consensus
     command: >
       run beacon
       --config /config/beacon.json
@@ -137,7 +139,7 @@ services:
   beefy:
     <<: *image
     profiles:
-      - expensive
+      - consensus
     command: >
       run beefy
       --config /config/beefy.json
@@ -306,7 +308,7 @@ services:
   beefy-on-demand:
     <<: *image
     profiles:
-      - expensive
+      - consensus
     command: >
       run beefy
       --config /config/beefy.json

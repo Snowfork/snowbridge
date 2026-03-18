@@ -15,7 +15,7 @@ For new operators, we recommend starting with:
 | `parachain-v2` | Polkadot → Ethereum | High | Medium |
 | `ethereum-v2` | Ethereum → Polkadot | Medium | Low |
 
-**Note:** The `beefy` relayer is expensive to operate (high gas costs) and is typically run by the Snowbridge team. Only run it if you understand the costs involved.
+**Note:** The `beefy` and `beacon` relayers are consensus relayers that are expensive to operate (high gas costs) and are run exclusively by the Snowfork team. Individual operators do not need to run these.
 
 ### Hardware Requirements
 
@@ -68,6 +68,11 @@ Minimum recommended specifications:
    docker compose up -d
    ```
 
+   To start all services including consensus relayers (Snowfork only):
+   ```bash
+   docker compose --profile consensus up -d
+   ```
+
 ### Option B: Run a Single Relayer (Recommended for Beginners)
 
 Example: Running only the `parachain-v2` relayer on mainnet:
@@ -93,28 +98,28 @@ The Docker Compose setup runs the following relayer services:
 | Service | Description | Keys Required | Profile |
 |---------|-------------|---------------|---------|
 | `beacon-state-service` | Caches beacon state proofs | None | default |
-| `beacon` | Relays Ethereum beacon headers to Polkadot | Substrate | default |
+| `beacon` | Relays Ethereum beacon headers to Polkadot | Substrate | consensus |
 | `ethereum-v2` | Relays Ethereum messages to Polkadot (v2) | Substrate | default |
 | `ethereum` | Relays Ethereum messages to Polkadot (v1) | Substrate | default |
-| `beefy` | Relays BEEFY commitments to Ethereum | Ethereum | expensive |
-| `beefy-on-demand` | On-demand BEEFY relay | Ethereum | expensive |
+| `beefy` | Relays BEEFY commitments to Ethereum | Ethereum | consensus |
+| `beefy-on-demand` | On-demand BEEFY relay | Ethereum | consensus |
 | `parachain-v2` | Relays Polkadot messages to Ethereum (v2) | Ethereum | default |
 | `parachain` | Relays Polkadot messages to Ethereum (v1) | Ethereum | default |
 | `reward` | Processes relayer rewards | Substrate | default |
 
-**Note:** Services in the `expensive` profile require `--profile expensive` to start.
+**Note:** Services in the `consensus` profile are run by the Snowfork team and require `--profile consensus` to start. Individual relayer operators do not need to run these services.
 
 ### Service Dependencies
 
 ```
 beacon-state-service (starts first, health checked)
-    ├── beacon
+    ├── beacon (consensus profile)
     ├── ethereum-v2
     ├── ethereum
     └── reward
 
-beefy (independent, expensive profile)
-beefy-on-demand (independent, expensive profile)
+beefy (independent, consensus profile)
+beefy-on-demand (independent, consensus profile)
 parachain-v2 (independent)
 parachain (independent)
 ```
