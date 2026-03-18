@@ -1,11 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.34;
 
-import {Vm} from "forge-std/Vm.sol";
 import {Test} from "forge-std/Test.sol";
-import {stdJson} from "forge-std/StdJson.sol";
-import {console} from "forge-std/console.sol";
-import {UD60x18, ud60x18, unwrap} from "prb/math/src/UD60x18.sol";
 import {WETH9} from "canonical-weth/WETH9.sol";
 
 import {IUpgradable} from "../src/interfaces/IUpgradable.sol";
@@ -15,17 +11,10 @@ import {Verification} from "../src/Verification.sol";
 import {Gateway} from "../src/Gateway.sol";
 import {
     UpgradeParams,
-    SetOperatingModeParams,
-    OperatingMode,
-    RegisterForeignTokenParams
-} from "../src/v1/Types.sol";
-import {
     ChannelID,
     ParaID,
-    OperatingMode,
     InboundMessage,
     Command,
-    TokenInfo,
     MintForeignTokenParams
 } from "../src/v1/Types.sol";
 import {MultiAddress, multiAddressFromBytes32} from "../src/v1/MultiAddress.sol";
