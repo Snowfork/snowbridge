@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"math/rand"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/snowfork/snowbridge/relayer/ofac"
@@ -180,6 +182,19 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	}
 }
 
+var ErrDuplicateMessage = errors.New("duplicate message")
+
+func isDuplicateError(err error) bool {
+	if err == nil {
+		return false
+	}
+	errStr := err.Error()
+	return strings.Contains(errStr, "InvalidNonce") ||
+		strings.Contains(errStr, "AlreadyProcessed") ||
+		strings.Contains(errStr, "Duplicate") ||
+		strings.Contains(errStr, "already processed")
+}
+
 func (r *Relay) writeToParachain(ctx context.Context, proof scale.ProofPayload, inboundMsg *parachain.Message) error {
 	inboundMsg.Proof.ExecutionProof = proof.HeaderPayload
 
@@ -197,6 +212,9 @@ func (r *Relay) writeToParachain(ctx context.Context, proof scale.ProofPayload, 
 	if proof.FinalizedPayload == nil {
 		err := r.writer.WriteToParachainAndWatch(ctx, "EthereumInboundQueue.submit", submitPayload)
 		if err != nil {
+			if isDuplicateError(err) {
+				return ErrDuplicateMessage
+			}
 			return fmt.Errorf("submit message to inbound queue: %w", err)
 		}
 
@@ -214,6 +232,9 @@ func (r *Relay) writeToParachain(ctx context.Context, proof scale.ProofPayload, 
 	// Batch the finalized header update with the inbound message
 	err = r.writer.BatchCall(ctx, extrinsics, payloads)
 	if err != nil {
+		if isDuplicateError(err) {
+			return ErrDuplicateMessage
+		}
 		return fmt.Errorf("batch call containing finalized header update and inbound queue message: %w", err)
 	}
 
@@ -468,8 +489,26 @@ func (r *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayOutboundMessa
 		return nil
 	}
 
+	// Add random jitter to stagger submissions between competing relayers
+	jitter := time.Duration(rand.Intn(5000)) * time.Millisecond
+	log.WithField("jitter_ms", jitter.Milliseconds()).Debug("waiting before inbound message submission")
+	time.Sleep(jitter)
+
+	// Check if another relayer already has a pending inbound queue submission in the tx pool
+	hasPending, err := r.writer.HasPendingExtrinsic("EthereumInboundQueue.submit")
+	if err != nil {
+		log.WithError(err).Warn("failed to check pending extrinsics, proceeding with submission")
+	} else if hasPending {
+		logger.Info("skipping inbound message submission: another relayer has a pending submission in the tx pool")
+		return nil
+	}
+
 	err = r.writeToParachain(ctx, proof, inboundMsg)
 	if err != nil {
+		if errors.Is(err, ErrDuplicateMessage) {
+			logger.Info("message was already processed by another relayer")
+			return nil
+		}
 		return fmt.Errorf("write to parachain: %w", err)
 	}
 
