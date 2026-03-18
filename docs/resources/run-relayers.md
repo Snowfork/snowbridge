@@ -14,82 +14,89 @@ Snowbridge relayers are off-chain agents that facilitate message passing between
 
 For new operators, we recommend starting with:
 
-| Relayer | Direction |
-|---------|-----------|
-| `parachain-v2` | Polkadot → Ethereum |
-| `ethereum-v2` | Ethereum → Polkadot |
-| `primary-governance` | Polkadot → Ethereum |
-| `secondary-governance` | Polkadot → Ethereum |
+| Relayer        | Direction                          |
+| -------------- | ---------------------------------- |
+| `parachain-v2` | Polkadot → Ethereum, Snowbridge V2 |
+| `parachain`    | Polkadot → Ethereum, Snowbridge V1 |
+| `ethereum-v2`  | Ethereum → Polkadot, Snowbridge V2 |
+| `ethereum`     | Ethereum → Polkadot, Snowbridge V1 |
 
-**Note:** The `beefy` relayer is expensive to operate (high gas costs) and is typically run by the Snowbridge team. Only run it if you understand the costs involved.
+**Note:** The `beefy` and `beacon` relayers are consensus relayers that are expensive to operate (high gas costs) and are run exclusively by the Snowfork team. Individual operators do not need to run these.
 
 ### Hardware Requirements
 
 Minimum recommended specifications:
-- **CPU:** 2 cores (dedicated, avoid burstable instances)
-- **RAM:** 4 GB
-- **Storage:** 20 GB SSD
-- **Network:** Stable internet connection with low latency
+
+* **CPU:** 2 cores (dedicated, avoid burstable instances)
+* **RAM:** 4 GB
+* **Storage:** 20 GB SSD
+* **Network:** Stable internet connection with low latency
 
 ## Prerequisites
 
-- Docker and Docker Compose installed
-- Private keys for signing transactions (Ethereum and/or Substrate)
-- RPC endpoints for:
-  - Ethereum execution layer (WebSocket)
-  - Ethereum beacon chain (HTTP)
-  - Polkadot relay chain (WebSocket)
-  - BridgeHub parachain (WebSocket)
-  - AssetHub parachain (WebSocket, for ethereum relay gas estimation)
+* Docker and Docker Compose installed
+* Private keys for signing transactions (Ethereum and/or Substrate)
+* RPC endpoints for:
+  * Ethereum execution layer (WebSocket)
+  * Ethereum beacon chain (HTTP)
+  * Polkadot relay chain (WebSocket)
+  * BridgeHub parachain (WebSocket)
+  * AssetHub parachain (WebSocket, for ethereum relay gas estimation)
 
 ## Quick Start
 
-1. **Download the Docker Compose file and environment template for your network:**
-   ```bash
-   mkdir snowbridge && cd snowbridge
+1.  **Download the Docker Compose file and environment template for your network:**
 
-   # Docker Compose file
-   curl -O https://raw.githubusercontent.com/Snowfork/snowbridge/main/relayer/docker-compose.yml
+    ```bash
+    mkdir snowbridge && cd snowbridge
 
-   # For mainnet (Polkadot + Ethereum)
-   curl -o .env https://raw.githubusercontent.com/Snowfork/snowbridge/main/relayer/.env.mainnet.example
-   ```
+    # Docker Compose file
+    curl -O https://raw.githubusercontent.com/Snowfork/snowbridge/main/relayer/docker-compose.yml
 
+    # For mainnet (Polkadot + Ethereum)
+    curl -o .env https://raw.githubusercontent.com/Snowfork/snowbridge/main/relayer/.env.mainnet.example
+    ```
 2. **Configure your .env file with:**
-   - RPC endpoints
-   - Private key references (see [Private Keys](#private-keys) section)
-   - (Mainnet only) Chainalysis API key for OFAC compliance
+   * RPC endpoints
+   * Private key references (see [Private Keys](run-relayers.md#private-keys) section)
+   * (Mainnet only) Chainalysis API key for OFAC compliance
+3.  **Start the relayers:**
 
-3. **Start the relayers:**
-   ```bash
-   docker compose up -d
-   ```
+    ```bash
+    docker compose up -d
+    ```
+
+To start all services including consensus relayers (Snowfork only):
+
+```bash
+docker compose --profile consensus up -d
+```
 
 ## Architecture
 
 The Docker Compose setup runs the following relayer services:
 
-| Service | Description | Keys Required | Profile |
-|---------|-------------|---------------|---------|
-| `beacon-state-service` | Caches beacon state proofs | None | default |
-| `beacon` | Relays Ethereum beacon headers to Polkadot | Substrate | default |
-| `ethereum-v2` | Relays Ethereum messages to Polkadot (v2) | Substrate | default |
-| `ethereum` | Relays Ethereum messages to Polkadot (v1) | Substrate | default |
-| `parachain-v2` | Relays Polkadot messages to Ethereum (v2) | Ethereum | default |
-| `parachain` | Relays Polkadot messages to Ethereum (v1) | Ethereum | default |
-| `primary-governance` | Relays primary governance messages to Ethereum | Ethereum | default |
-| `secondary-governance` | Relays secondary governance messages to Ethereum | Ethereum | default |
-| `reward` | Processes relayer rewards | Substrate | default |
-| `beefy` | Relays BEEFY commitments to Ethereum | Ethereum | expensive |
-| `beefy-on-demand` | On-demand BEEFY relay | Ethereum | expensive |
+| Service                | Description                                      | Keys Required | Profile   |
+| ---------------------- | ------------------------------------------------ | ------------- | --------- |
+| `beacon-state-service` | Caches beacon state proofs                       | None          | default   |
+| `beacon`               | Relays Ethereum beacon headers to Polkadot       | Substrate     | consensus |
+| `ethereum-v2`          | Relays Ethereum messages to Polkadot (v2)        | Substrate     | default   |
+| `ethereum`             | Relays Ethereum messages to Polkadot (v1)        | Substrate     | default   |
+| `parachain-v2`         | Relays Polkadot messages to Ethereum (v2)        | Ethereum      | default   |
+| `parachain`            | Relays Polkadot messages to Ethereum (v1)        | Ethereum      | default   |
+| `primary-governance`   | Relays primary governance messages to Ethereum   | Ethereum      | default   |
+| `secondary-governance` | Relays secondary governance messages to Ethereum | Ethereum      | default   |
+| `reward`               | Processes relayer rewards                        | Substrate     | default   |
+| `beefy`                | Relays BEEFY commitments to Ethereum             | Ethereum      | consensus |
+| `beefy-on-demand`      | On-demand BEEFY relay                            | Ethereum      | consensus |
 
-**Note:** Services in the `expensive` profile require `--profile expensive` to start.
+**Note:** Services in the `consensus` profile require `--profile` consensus to start.
 
 ### Service Dependencies
 
 ```
 beacon-state-service (starts first, health checked)
-    ├── beacon
+    ├── beacon (consensus profile)
     ├── ethereum-v2
     ├── ethereum
     └── reward
@@ -98,8 +105,8 @@ parachain-v2 (independent)
 parachain (independent)
 primary-governance (independent)
 secondary-governance (independent)
-beefy (independent, expensive profile)
-beefy-on-demand (independent, expensive profile)
+beefy (independent, consensus profile)
+beefy-on-demand (independent, consensus profile)
 ```
 
 ## Configuration
@@ -108,11 +115,11 @@ beefy-on-demand (independent, expensive profile)
 
 Each network has a pre-configured environment file:
 
-| Network | File | Ethereum | Polkadot |
-|---------|------|----------|----------|
+| Network | File                   | Ethereum         | Polkadot |
+| ------- | ---------------------- | ---------------- | -------- |
 | Mainnet | `.env.mainnet.example` | Ethereum Mainnet | Polkadot |
-| Paseo | `.env.paseo.example` | Sepolia | Paseo |
-| Westend | `.env.westend.example` | Sepolia | Westend |
+| Paseo   | `.env.paseo.example`   | Sepolia          | Paseo    |
+| Westend | `.env.westend.example` | Sepolia          | Westend  |
 
 ### Private Keys
 
@@ -138,21 +145,21 @@ Create secrets in AWS Secrets Manager containing the raw private key strings. Re
 
 All endpoints are configured via environment variables:
 
-| Variable | Description |
-|----------|-------------|
-| `ETHEREUM_ENDPOINT` | Ethereum execution layer RPC (WebSocket) |
-| `BEACON_ENDPOINT` | Ethereum beacon chain HTTP endpoint |
-| `POLKADOT_ENDPOINT` | Polkadot relay chain RPC (WebSocket) |
-| `BRIDGEHUB_ENDPOINT` | BridgeHub parachain RPC (WebSocket) |
-| `ASSETHUB_ENDPOINT` | AssetHub parachain RPC (WebSocket) |
-| `FLASHBOTS_ENDPOINT` | Flashbots RPC for private transactions |
+| Variable             | Description                              |
+| -------------------- | ---------------------------------------- |
+| `ETHEREUM_ENDPOINT`  | Ethereum execution layer RPC (WebSocket) |
+| `BEACON_ENDPOINT`    | Ethereum beacon chain HTTP endpoint      |
+| `POLKADOT_ENDPOINT`  | Polkadot relay chain RPC (WebSocket)     |
+| `BRIDGEHUB_ENDPOINT` | BridgeHub parachain RPC (WebSocket)      |
+| `ASSETHUB_ENDPOINT`  | AssetHub parachain RPC (WebSocket)       |
+| `FLASHBOTS_ENDPOINT` | Flashbots RPC for private transactions   |
 
 ### OFAC Compliance
 
 The execution and parachain relays support OFAC compliance checking via Chainalysis.
 
-- **Mainnet**: Enabled by default, requires `CHAINALYSIS_API_KEY`
-- **Testnets**: Disabled by default
+* **Mainnet**: Enabled by default, requires `CHAINALYSIS_API_KEY`
+* **Testnets**: Disabled by default
 
 ### Fund Relayer Accounts
 
@@ -209,10 +216,12 @@ Or specify a specific version via the `IMAGE_TAG` environment variable in your `
 ## Volumes
 
 The setup creates persistent volumes for:
-- `beacon-state-data` — Beacon state service cache and persistence
-- `beacon-data` — Beacon relay local datastore
+
+* `beacon-state-data` — Beacon state service cache and persistence
+* `beacon-data` — Beacon relay local datastore
 
 To reset state:
+
 ```bash
 docker compose down -v
 ```
@@ -221,8 +230,8 @@ docker compose down -v
 
 Relayers earn rewards for successfully delivering messages:
 
-- **Polkadot → Ethereum** (`parachain-v2`): Rewards are paid in ETH on Ethereum
-- **Ethereum → Polkadot** (`ethereum-v2`): Rewards are paid in DOT on AssetHub
+* **Polkadot → Ethereum** (`parachain-v2`): Rewards are paid in ETH on Ethereum
+* **Ethereum → Polkadot** (`ethereum-v2`): Rewards are paid in DOT on AssetHub
 
 To claim rewards, configure the `REWARD_ADDRESS` environment variable with your reward destination address.
 
@@ -265,30 +274,32 @@ docker compose ps
 ### Beacon state service not healthy
 
 Check the logs:
+
 ```bash
 docker compose logs beacon-state-service
 ```
 
 Common issues:
-- Beacon endpoint not reachable
-- Incorrect fork versions (check your .env matches the network)
+
+* Beacon endpoint not reachable
+* Incorrect fork versions (check your .env matches the network)
 
 ### Relayer failing to submit transactions
 
-- Check private key is correctly configured
-- If using AWS Secrets Manager, verify AWS credentials in `.env`
-- Check endpoint connectivity
+* Check private key is correctly configured
+* If using AWS Secrets Manager, verify AWS credentials in `.env`
+* Check endpoint connectivity
 
 ### Gas estimation failures (ethereum relay)
 
-- Verify AssetHub and BridgeHub endpoints are correct
+* Verify AssetHub and BridgeHub endpoints are correct
 
 ### Relayer not picking up messages
 
-- Ensure your endpoints are synced and not lagging
-- Check logs for connectivity issues
+* Ensure your endpoints are synced and not lagging
+* Check logs for connectivity issues
 
 ## Getting Help
 
-- Telegram: [Snowbridge Relayer Group](https://t.me/+I8Iel-Eaxcw3NjU0)
-- GitHub Issues: https://github.com/Snowfork/snowbridge/issues
+* Telegram: [Snowbridge Relayer Group](https://t.me/+I8Iel-Eaxcw3NjU0)
+* GitHub Issues: https://github.com/Snowfork/snowbridge/issues
