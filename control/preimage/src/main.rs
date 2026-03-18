@@ -74,6 +74,7 @@ pub enum Command {
     /// Set BridgeHubEthereumBaseFeeV2 on Paseo
     SetPaseoFeeV2,
     /// Upgrade to FiatShamir on Polkadot
+    #[command(alias = "upgrade-202603")]
     Upgrade202603,
 }
 
