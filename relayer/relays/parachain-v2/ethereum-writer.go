@@ -95,7 +95,12 @@ func (wr *EthereumWriter) writeMessagesLoop(ctx context.Context) error {
 			if !ok {
 				return nil
 			}
-			err := wr.WriteChannels(ctx, options, task)
+			err := util.RetryOnErrorSubstring(
+				ctx,
+				log.WithField("component", "parachain-v2/ethereum-writer"),
+				util.DefaultRetryableSubstring,
+				func() error { return wr.WriteChannels(ctx, options, task) },
+			)
 			if err != nil {
 				return fmt.Errorf("write message: %w", err)
 			}
