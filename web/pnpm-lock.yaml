@@ -165,6 +165,9 @@ importers:
       '@snowbridge/provider-ethers':
         specifier: workspace:*
         version: link:../provider-ethers
+      '@snowbridge/provider-viem':
+        specifier: workspace:*
+        version: link:../provider-viem
       '@snowbridge/registry':
         specifier: workspace:*
         version: link:../registry
