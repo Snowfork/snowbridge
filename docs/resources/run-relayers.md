@@ -211,7 +211,7 @@ docker compose pull
 docker compose up -d
 ```
 
-Or specify a specific version via the `IMAGE_TAG` environment variable in your `.env` file. The example `.env` files are pre-configured with the correct image tag (`snowbridge-relayers-v1`).
+Or specify a specific version via the `IMAGE_TAG` environment variable in your `.env` file. The example `.env` files are pre-configured with the correct image tag (`latest`).
 
 ## Volumes
 
