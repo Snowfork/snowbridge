@@ -12,6 +12,7 @@ on:
 
 jobs:
   control:
+    if: false # temporarily disable control building
     runs-on: snowbridge-runner
     env:
       CARGO_INCREMENTAL: 0
