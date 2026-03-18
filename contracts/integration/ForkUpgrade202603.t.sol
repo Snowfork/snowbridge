@@ -31,6 +31,7 @@ import {
     MintForeignTokenParams
 } from "../src/v1/Types.sol";
 import {MultiAddress, multiAddressFromBytes32} from "../src/v1/MultiAddress.sol";
+import {Payload, Asset, makeRawXCM} from "../src/v2/Types.sol";
 import {
     ForkTestFixtures,
     SubmitMessageFixture,
@@ -190,7 +191,6 @@ contract ForkUpgrade202603Test is Test {
             .submitV1(fixture.message, fixture.leafProof, fixture.headerProof);
     }
 
-    // Send Ether can work with the upgraded Gateway
     function testUpgradedGatewayStillCanSendEtherWithV1SendToken() public {
         selectFork24681921();
         upgradeTo202602();
@@ -220,5 +220,42 @@ contract ForkUpgrade202603Test is Test {
         uint256 balanceAfter = assetHubAgent.balance;
         assertEq(balanceAfter, balanceBefore + amount);
         assertEq(user.balance, 0);
+    }
+
+    function testUpgradedGatewayStillCanSendEtherWithV2SendMessage() public {
+        selectFork24681921();
+        upgradeTo202602();
+        // Create a mock user
+        address user = makeAddr("user");
+        uint128 amount = uint128(0.1 ether);
+        ParaID paraID = ParaID.wrap(1000);
+
+        uint128 executionFee = 0.01 ether;
+        uint128 relayerFee = 0.01 ether;
+        uint128 fee = executionFee + relayerFee;
+
+        uint256 balanceBefore = assetHubAgent.balance;
+        uint64 nonceBefore = IGatewayV2(address(GATEWAY_PROXY)).v2_outboundNonce();
+
+        vm.expectEmit(true, false, false, false);
+        emit IGatewayV2.OutboundMessageAccepted(
+            1,
+            Payload({
+                origin: user,
+                assets: new Asset[](0),
+                xcm: makeRawXCM(""),
+                claimer: "",
+                value: amount,
+                executionFee: executionFee,
+                relayerFee: relayerFee})
+        );
+
+        hoax(user, amount + fee);
+        IGatewayV2(payable(address(GATEWAY_PROXY)))
+        .v2_sendMessage{value: amount + fee}("", new bytes[](0), "", executionFee, relayerFee);
+
+        // Verify asset balances
+        assertEq(assetHubAgent.balance, balanceBefore + amount + fee);
+        assertEq(IGatewayV2(address(GATEWAY_PROXY)).v2_outboundNonce(), nonceBefore + 1);
     }
 }
