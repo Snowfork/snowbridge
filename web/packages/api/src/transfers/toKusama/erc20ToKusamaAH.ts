@@ -36,6 +36,10 @@ import {
     MessageReceipt,
 } from "../../toKusamaSnowbridgeV2"
 import { ValidationKind } from "../../toPolkadot_v2"
+import {
+    buildParachainERC20ReceivedXcmOnDestination,
+} from "../../xcmbuilders/toPolkadot/erc20ToParachain"
+import { erc20Location as erc20Loc } from "../../xcmBuilder"
 
 export class ERC20ToKusamaAH<T extends EthereumProviderTypes> implements TransferInterface<T> {
     constructor(
@@ -437,7 +441,38 @@ export class ERC20ToKusamaAH<T extends EthereumProviderTypes> implements Transfe
                 logs.push({
                     kind: ValidationKind.Error,
                     reason: ValidationReason.DryRunFailed,
-                    message: "Dry run on Asset Hub failed.",
+                    message: "Dry run on Polkadot Asset Hub failed.",
+                })
+            }
+        }
+
+        // Dry run on Kusama AH
+        let kusamaDryRunError: string | undefined
+        const kusamaAssetHub = await context.kusamaAssetHub()
+        const kusamaAHParachain = registry.kusama.parachains[`kusama_${kusamaAHParaId}`]
+        if (kusamaAHParachain?.features?.hasDryRunApi) {
+            const kusamaAHImpl = await this.context.paraImplementation(kusamaAssetHub)
+            // Build the XCM that Kusama AH will receive (tokens deposited to beneficiary)
+            const kusamaDestXcm = buildParachainERC20ReceivedXcmOnDestination(
+                kusamaAssetHub.registry,
+                registry.ethChainId,
+                tokenAddress,
+                amount,
+                transfer.input.fee.kusamaExecutionFeeEther,
+                beneficiaryAddressHex,
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
+            )
+            // Dry run with origin as Polkadot AH (via bridge)
+            const kusamaResult = await kusamaAHImpl.dryRunXcm(
+                registry.kusama.bridgeHubParaId,
+                kusamaDestXcm,
+            )
+            if (!kusamaResult.success) {
+                kusamaDryRunError = kusamaResult.errorMessage
+                logs.push({
+                    kind: ValidationKind.Error,
+                    reason: ValidationReason.DryRunFailed,
+                    message: "Dry run on Kusama Asset Hub failed.",
                 })
             }
         }
@@ -453,6 +488,7 @@ export class ERC20ToKusamaAH<T extends EthereumProviderTypes> implements Transfe
                 feeInfo,
                 bridgeStatus,
                 assetHubDryRunError,
+                kusamaDryRunError,
             },
             ...transfer,
         }

@@ -36,6 +36,9 @@ import {
     MessageReceipt,
 } from "../../toKusamaSnowbridgeV2"
 import { ValidationKind } from "../../toPolkadot_v2"
+import {
+    buildParachainERC20ReceivedXcmOnDestination,
+} from "../../xcmbuilders/toPolkadot/erc20ToParachain"
 
 export class PNAToKusamaAH<T extends EthereumProviderTypes> implements TransferInterface<T> {
     constructor(
@@ -403,6 +406,83 @@ export class PNAToKusamaAH<T extends EthereumProviderTypes> implements TransferI
             })
         }
 
+        // Dry run on Polkadot AH
+        if (!registry.kusama) {
+            throw Error("Kusama config is not set in the registry.")
+        }
+        const kusamaAHParaId = registry.kusama.assetHubParaId
+        const assetHubImpl = await this.context.paraImplementation(assetHub)
+        let assetHubDryRunError: string | undefined
+
+        const ahParachain = registry.parachains[`polkadot_${registry.assetHubParaId}`]
+        const ahAssetMetadata =
+            registry.parachains[`polkadot_${registry.assetHubParaId}`].assets[
+                tokenAddress.toLowerCase()
+            ]
+        if (ahParachain.features.hasDryRunApi && ahAssetMetadata) {
+            const assetHubFee =
+                transfer.input.fee.assetHubExecutionFeeEther +
+                transfer.input.fee.kusamaDeliveryFeeEther
+
+            let xcm = buildAssetHubPNAReceivedXcmForKusama(
+                assetHub.registry,
+                registry.ethChainId,
+                ahAssetMetadata.location,
+                transfer.computed.totalValue - assetHubFee,
+                assetHubFee,
+                transfer.input.fee.kusamaExecutionFeeEther,
+                amount,
+                transfer.computed.claimer,
+                transfer.input.sourceAccount,
+                transfer.computed.beneficiaryAddressHex,
+                kusamaAHParaId,
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
+            )
+            let result = await assetHubImpl.dryRunXcm(
+                registry.bridgeHubParaId,
+                xcm,
+                kusamaAHParaId,
+            )
+            if (!result.success) {
+                assetHubDryRunError = result.errorMessage
+                logs.push({
+                    kind: ValidationKind.Error,
+                    reason: ValidationReason.DryRunFailed,
+                    message: "Dry run on Polkadot Asset Hub failed.",
+                })
+            }
+        }
+
+        // Dry run on Kusama AH
+        let kusamaDryRunError: string | undefined
+        const kusamaAssetHub = await this.context.kusamaAssetHub()
+        const kusamaAHParachain = registry.kusama.parachains[`kusama_${kusamaAHParaId}`]
+        if (kusamaAHParachain?.features?.hasDryRunApi) {
+            const kusamaAHImpl = await this.context.paraImplementation(kusamaAssetHub)
+            // Build a dest XCM simulating what Kusama AH receives
+            const kusamaDestXcm = buildParachainERC20ReceivedXcmOnDestination(
+                kusamaAssetHub.registry,
+                registry.ethChainId,
+                tokenAddress,
+                amount,
+                transfer.input.fee.kusamaExecutionFeeEther,
+                transfer.computed.beneficiaryAddressHex,
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
+            )
+            const kusamaResult = await kusamaAHImpl.dryRunXcm(
+                registry.kusama.bridgeHubParaId,
+                kusamaDestXcm,
+            )
+            if (!kusamaResult.success) {
+                kusamaDryRunError = kusamaResult.errorMessage
+                logs.push({
+                    kind: ValidationKind.Error,
+                    reason: ValidationReason.DryRunFailed,
+                    message: "Dry run on Kusama Asset Hub failed.",
+                })
+            }
+        }
+
         const success = logs.find((l) => l.kind === ValidationKind.Error) === undefined
 
         return {
@@ -413,6 +493,8 @@ export class PNAToKusamaAH<T extends EthereumProviderTypes> implements TransferI
                 tokenBalance,
                 feeInfo,
                 bridgeStatus,
+                assetHubDryRunError,
+                kusamaDryRunError,
             },
             ...transfer,
         }
