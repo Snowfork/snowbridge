@@ -60,12 +60,19 @@ contract ForkUpgrade202603Test is Test {
 
     event Transfer(address indexed from, address indexed to, uint256 value);
 
-    function setUp() public {
+    function setUp() public {}
+
+    function selectFork24677447() public {
         vm.createSelectFork(
             "https://virtual.mainnet.eu.rpc.tenderly.co/a2b5dc8d-c06a-40a9-b893-d86dc7c9ecd4",
             24_677_447
         );
+    }
 
+    // This function is used to upgrade the gateway to the new implementation. It can be called
+    // at the beginning of other tests in this contract to ensure that the gateway is upgraded
+    // before running the test logic.
+    function upgradeTo202602() public {
         (uint64 inbound, uint64 outbound) =
             IGatewayV1(GATEWAY_PROXY).channelNoncesOf(ASSETHUB_CHANNEL);
 
@@ -132,7 +139,9 @@ contract ForkUpgrade202603Test is Test {
         assertEq(balanceAfter, balance);
     }
 
-    function testUpgradedGatewayStillAcceptsUnlockNativeEther() public {
+    function testUpgradedGatewayStillAcceptsV2UnlockNativeEther() public {
+        selectFork24677447();
+        upgradeTo202602();
         SubmitV2MessageFixture memory fixture = ForkTestFixtures.makeSubmitV2MessageFixture(
             "/test/data/mainnet-gateway-submitv2-unlock-ether.json"
         );
