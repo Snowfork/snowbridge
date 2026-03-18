@@ -69,6 +69,13 @@ contract ForkUpgrade202603Test is Test {
         );
     }
 
+    function selectFork24681921() public {
+        vm.createSelectFork(
+            "https://virtual.mainnet.eu.rpc.tenderly.co/390efc23-bb26-460c-b641-b5275f790bd7",
+            24_681_921
+        );
+    }
+
     // This function is used to upgrade the gateway to the new implementation. It can be called
     // at the beginning of other tests in this contract to ensure that the gateway is upgraded
     // before running the test logic.
@@ -160,5 +167,26 @@ contract ForkUpgrade202603Test is Test {
             .v2_submit(
                 fixture.message, fixture.leafProof, fixture.headerProof, fixture.rewardAddress
             );
+    }
+
+    function testUpgradedGatewayStillAcceptsV1UnlockNativeEther() public {
+        selectFork24681921();
+        upgradeTo202602();
+        SubmitMessageFixture memory fixture = ForkTestFixtures.makeSubmitMessageFixture(
+            "/test/data/mainnet-gateway-submitv1-unlock-ether-202603.json"
+        );
+
+        // Expect the gateway to emit InboundMessageDispatched event
+        vm.expectEmit(true, true, true, true);
+        emit IGatewayV1.InboundMessageDispatched(
+            fixture.message.channelID, fixture.message.nonce, fixture.message.id, true
+        );
+
+        address relayer = makeAddr("relayer");
+        vm.deal(relayer, 10 ether);
+
+        vm.prank(relayer);
+        IGatewayV1(address(GATEWAY_PROXY))
+            .submitV1(fixture.message, fixture.leafProof, fixture.headerProof);
     }
 }
