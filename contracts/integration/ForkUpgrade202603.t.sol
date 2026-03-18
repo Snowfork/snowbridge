@@ -13,8 +13,6 @@ import {IGatewayV1} from "../src/v1/IGateway.sol";
 import {IGatewayV2} from "../src/v2/IGateway.sol";
 import {Verification} from "../src/Verification.sol";
 import {Gateway} from "../src/Gateway.sol";
-import {Gateway202602} from "../src/upgrade/Gateway202602.sol";
-import {AgentExecutor} from "../src/AgentExecutor.sol";
 import {
     UpgradeParams,
     SetOperatingModeParams,
@@ -41,6 +39,7 @@ import {
 contract ForkUpgrade202603Test is Test {
     address private constant GATEWAY_PROXY = 0x27ca963C279c93801941e1eB8799c23f407d68e7;
     address private constant BEEFY_CLIENT = 0x7cfc5C8b341991993080Af67D940B6aD19a010E1;
+    address private constant GATEWAY_LOGIC_202602 = 0x36e74FCAAcb07773b144Ca19Ef2e32Fc972aC50b;
 
     // NOTE: Can use tenderly transaction debugger to retrieve existing library address
     address private constant VERIFICATION_ADDR_V1 = 0x4058bE4f048F55F1e9C88da09738070C0a7F1593;
@@ -102,14 +101,12 @@ contract ForkUpgrade202603Test is Test {
             abi.encode(true)
         );
 
-        // Deploy new implementation contract
-        Gateway202602 newLogic = new Gateway202602(BEEFY_CLIENT, address(new AgentExecutor()));
+        // Use already deployed implementation contract
+        address newLogic = GATEWAY_LOGIC_202602;
 
         // Prepare upgrade command
         UpgradeParams memory params = UpgradeParams({
-            impl: address(newLogic),
-            implCodeHash: address(newLogic).codehash,
-            initParams: bytes("")
+            impl: newLogic, implCodeHash: newLogic.codehash, initParams: bytes("")
         });
 
         (bytes32[] memory proof1, Verification.Proof memory proof2) =
@@ -117,7 +114,7 @@ contract ForkUpgrade202603Test is Test {
         (uint64 nonce,) = IGatewayV1(GATEWAY_PROXY).channelNoncesOf(GOVERNANCE_CHANNEL);
 
         vm.expectEmit();
-        emit IUpgradable.Upgraded(address(newLogic));
+        emit IUpgradable.Upgraded(newLogic);
 
         // Issue the upgrade
         IGatewayV1(GATEWAY_PROXY)
