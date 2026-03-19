@@ -2,6 +2,19 @@ import type { SnowbridgeApi } from "@snowbridge/api"
 import type { EthersEthereumProvider } from "@snowbridge/provider-ethers"
 import { polkadot_mainnet } from "@snowbridge/registry"
 
+function printEvmTx(route: string, token: string, tx: { data?: string; from?: string; to?: string | null; value?: bigint | null }) {
+    console.log(
+        JSON.stringify({
+            route,
+            token,
+            from: tx.from,
+            to: tx.to,
+            ethValue: (tx.value ?? 0n).toString(),
+            txHex: tx.data,
+        }),
+    )
+}
+
 export async function eth1ToPolkadot1000Dot(api: SnowbridgeApi<EthersEthereumProvider>) {
     const sourceAccount = process.env.ETHEREUM_ACCOUNT_PUBLIC
     const beneficiaryAccount = process.env.SUBSTRATE_ACCOUNT_PUBLIC
@@ -20,13 +33,7 @@ export async function eth1ToPolkadot1000Dot(api: SnowbridgeApi<EthersEthereumPro
         100000000n,
     )
 
-    console.log(
-        JSON.stringify({
-            route: "ethereum:1 -> polkadot:1000",
-            token: "DOT",
-            txHex: transfer.tx.data,
-        }),
-    )
+    printEvmTx("ethereum:1 -> polkadot:1000", "DOT", transfer.tx)
 }
 
 export async function eth1ToPolkadot2000Eth(api: SnowbridgeApi<EthersEthereumProvider>) {
@@ -47,13 +54,7 @@ export async function eth1ToPolkadot2000Eth(api: SnowbridgeApi<EthersEthereumPro
         15000000000000n,
     )
 
-    console.log(
-        JSON.stringify({
-            route: "ethereum:1 -> polkadot:2000",
-            token: "ETH",
-            txHex: transfer.tx.data,
-        }),
-    )
+    printEvmTx("ethereum:1 -> polkadot:2000", "ETH", transfer.tx)
 }
 
 export async function eth1ToPolkadot2004Weth(api: SnowbridgeApi<EthersEthereumProvider>) {
@@ -74,13 +75,7 @@ export async function eth1ToPolkadot2004Weth(api: SnowbridgeApi<EthersEthereumPr
         15000000000000n,
     )
 
-    console.log(
-        JSON.stringify({
-            route: "ethereum:1 -> polkadot:2004",
-            token: "WETH",
-            txHex: transfer.tx.data,
-        }),
-    )
+    printEvmTx("ethereum:1 -> polkadot:2004", "WETH", transfer.tx)
 }
 
 export async function eth1ToPolkadot2030Eth(api: SnowbridgeApi<EthersEthereumProvider>) {
@@ -101,13 +96,7 @@ export async function eth1ToPolkadot2030Eth(api: SnowbridgeApi<EthersEthereumPro
         15000000000000n,
     )
 
-    console.log(
-        JSON.stringify({
-            route: "ethereum:1 -> polkadot:2030",
-            token: "ETH",
-            txHex: transfer.tx.data,
-        }),
-    )
+    printEvmTx("ethereum:1 -> polkadot:2030", "ETH", transfer.tx)
 }
 
 export async function eth1ToPolkadot2034Usdc(api: SnowbridgeApi<EthersEthereumProvider>) {
@@ -128,13 +117,7 @@ export async function eth1ToPolkadot2034Usdc(api: SnowbridgeApi<EthersEthereumPr
         10000n,
     )
 
-    console.log(
-        JSON.stringify({
-            route: "ethereum:1 -> polkadot:2034",
-            token: "USDC",
-            txHex: transfer.tx.data,
-        }),
-    )
+    printEvmTx("ethereum:1 -> polkadot:2034", "USDC", transfer.tx)
 }
 
 export async function eth1ToPolkadot2043Trac(api: SnowbridgeApi<EthersEthereumProvider>) {
@@ -153,13 +136,7 @@ export async function eth1ToPolkadot2043Trac(api: SnowbridgeApi<EthersEthereumPr
     const sender = api.sender(ethereum, neuroWeb)
     const transfer = await sender.build(sourceAccount, beneficiaryAccount, tokenAddress, amount)
 
-    console.log(
-        JSON.stringify({
-            route: "ethereum:1 -> polkadot:2043",
-            token: "TRAC",
-            txHex: transfer.tx.data,
-        }),
-    )
+    printEvmTx("ethereum:1 -> polkadot:2043", "TRAC", transfer.tx)
 }
 
 export async function eth1ToPolkadot3369Myth(api: SnowbridgeApi<EthersEthereumProvider>) {
@@ -178,13 +155,7 @@ export async function eth1ToPolkadot3369Myth(api: SnowbridgeApi<EthersEthereumPr
     const sender = api.sender(ethereum, mythos)
     const transfer = await sender.build(sourceAccount, beneficiaryAccount, tokenAddress, amount)
 
-    console.log(
-        JSON.stringify({
-            route: "ethereum:1 -> polkadot:3369",
-            token: "MYTH",
-            txHex: transfer.tx.data,
-        }),
-    )
+    printEvmTx("ethereum:1 -> polkadot:3369", "MYTH", transfer.tx)
 }
 
 export async function ethereum1284ToEth1Weth(api: SnowbridgeApi<EthersEthereumProvider>) {
@@ -205,13 +176,7 @@ export async function ethereum1284ToEth1Weth(api: SnowbridgeApi<EthersEthereumPr
         1n,
     )
 
-    console.log(
-        JSON.stringify({
-            route: "ethereum:1284 -> ethereum:1",
-            token: "WETH",
-            txHex: transfer.tx.data,
-        }),
-    )
+    printEvmTx("ethereum:1284 -> ethereum:1", "WETH", transfer.tx)
 }
 
 export async function ethereumL210ToPolkadot1000Eth(api: SnowbridgeApi<EthersEthereumProvider>) {
@@ -236,13 +201,7 @@ export async function ethereumL210ToPolkadot1000Eth(api: SnowbridgeApi<EthersEth
         beneficiaryAccount,
     )
 
-    console.log(
-        JSON.stringify({
-            route: "ethereum_l2:10 -> polkadot:1000",
-            token: "ETH",
-            txHex: transfer.tx.data,
-        }),
-    )
+    printEvmTx("ethereum_l2:10 -> polkadot:1000", "ETH", transfer.tx)
 }
 
 export async function ethereumL242161ToPolkadot1000Weth(
@@ -269,13 +228,7 @@ export async function ethereumL242161ToPolkadot1000Weth(
         beneficiaryAccount,
     )
 
-    console.log(
-        JSON.stringify({
-            route: "ethereum_l2:42161 -> polkadot:1000",
-            token: "WETH",
-            txHex: transfer.tx.data,
-        }),
-    )
+    printEvmTx("ethereum_l2:42161 -> polkadot:1000", "WETH", transfer.tx)
 }
 
 export async function ethereumL28453ToPolkadot1000Usdc(api: SnowbridgeApi<EthersEthereumProvider>) {
@@ -295,13 +248,7 @@ export async function ethereumL28453ToPolkadot1000Usdc(api: SnowbridgeApi<Ethers
     const sender = api.sender(base, assetHub)
     const transfer = await sender.build(tokenAddress, 1000000n, sourceAccount, beneficiaryAccount)
 
-    console.log(
-        JSON.stringify({
-            route: "ethereum_l2:8453 -> polkadot:1000",
-            token: "USDC",
-            txHex: transfer.tx.data,
-        }),
-    )
+    printEvmTx("ethereum_l2:8453 -> polkadot:1000", "USDC", transfer.tx)
 }
 
 export async function polkadot1000ToEth1Dot(api: SnowbridgeApi<EthersEthereumProvider>) {
@@ -647,6 +594,9 @@ export async function createAgent(api: SnowbridgeApi<EthersEthereumProvider>) {
         JSON.stringify({
             route: "ethereum:1 -> createAgent",
             agentId,
+            from: validation.tx.from,
+            to: validation.tx.to,
+            ethValue: (validation.tx.value ?? 0n).toString(),
             txHex: validation.tx.data,
             estimatedGas: validation.data.feeInfo?.estimatedGas?.toString(),
         }),
@@ -675,6 +625,9 @@ export async function registerToken(api: SnowbridgeApi<EthersEthereumProvider>) 
         JSON.stringify({
             route: "ethereum:1 -> registerToken",
             token: tokenAddress.toLowerCase(),
+            from: validation.tx.from,
+            to: validation.tx.to,
+            ethValue: (validation.tx.value ?? 0n).toString(),
             txHex: validation.tx.data,
             estimatedGas: validation.data.feeInfo?.estimatedGas?.toString(),
         }),
