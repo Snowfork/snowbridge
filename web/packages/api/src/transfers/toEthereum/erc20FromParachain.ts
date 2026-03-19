@@ -60,7 +60,7 @@ export class ERC20FromParachain<T extends EthereumProviderTypes> implements Tran
     async fee(
         tokenAddress: string,
         options?: {
-            padPercentage?: bigint
+            padFeeByPercentage?: bigint
             slippagePadPercentage?: bigint
             defaultFee?: bigint
             feeTokenLocation?: any
@@ -282,7 +282,7 @@ export class ERC20FromParachain<T extends EthereumProviderTypes> implements Tran
         amount: bigint,
         options?: {
             fee?: {
-                padPercentage?: bigint
+                padFeeByPercentage?: bigint
                 slippagePadPercentage?: bigint
                 defaultFee?: bigint
                 feeTokenLocation?: any

@@ -61,7 +61,7 @@ export class PNAFromParachain<T extends EthereumProviderTypes> implements Transf
     async fee(
         tokenAddress: string,
         options?: {
-            padPercentage?: bigint
+            padFeeByPercentage?: bigint
             slippagePadPercentage?: bigint
             defaultFee?: bigint
             feeTokenLocation?: any
@@ -292,7 +292,7 @@ export class PNAFromParachain<T extends EthereumProviderTypes> implements Transf
         amount: bigint,
         options?: {
             fee?: {
-                padPercentage?: bigint
+                padFeeByPercentage?: bigint
                 slippagePadPercentage?: bigint
                 defaultFee?: bigint
                 feeTokenLocation?: any

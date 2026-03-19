@@ -122,7 +122,7 @@ export class V1ToEthereumAdapter<T extends EthereumProviderTypes>
     async fee(
         tokenAddress: string,
         options?: {
-            padPercentage?: bigint
+            padFeeByPercentage?: bigint
             slippagePadPercentage?: bigint
             defaultFee?: bigint
             feeTokenLocation?: any
@@ -152,7 +152,7 @@ export class V1ToEthereumAdapter<T extends EthereumProviderTypes>
             this.registry,
             tokenAddress,
             {
-                padPercentage: options?.padPercentage,
+                padFeeByPercentage: options?.padFeeByPercentage,
                 slippagePadPercentage: options?.slippagePadPercentage,
                 defaultFee: options?.defaultFee,
                 kind: "polkadot->ethereum",
@@ -305,7 +305,7 @@ export class V1ToEthereumAdapter<T extends EthereumProviderTypes>
         amount: bigint,
         options?: {
             fee?: {
-                padPercentage?: bigint
+                padFeeByPercentage?: bigint
                 slippagePadPercentage?: bigint
                 defaultFee?: bigint
                 feeTokenLocation?: any
@@ -726,14 +726,14 @@ export async function getDeliveryFeeV1(
     registry: AssetRegistry,
     tokenAddress: string,
     options?: {
-        padPercentage?: bigint
+        padFeeByPercentage?: bigint
         slippagePadPercentage?: bigint
         defaultFee?: bigint
         kind?: Extract<TransferKind, "polkadot->ethereum" | "ethereum->ethereum">
     },
 ): Promise<DeliveryFee> {
     // Fees stored in 0x5fbc5c7ba58845ad1f1a9a7c5bc12fad
-    const feePadPercentage = options?.padPercentage ?? 33n
+    const feePadPercentage = options?.padFeeByPercentage ?? 33n
     const feeSlippagePadPercentage = options?.slippagePadPercentage ?? 20n
     const feeStorageKey = xxhashAsHex(":BridgeHubEthereumBaseFee:", 128, true)
     const snowbridgeBaseFee = await assetHubImpl.getDeliveryFeeFromStorage(feeStorageKey)

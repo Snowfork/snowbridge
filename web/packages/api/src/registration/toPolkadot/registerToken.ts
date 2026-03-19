@@ -31,14 +31,14 @@ export class RegisterToken<T extends EthereumProviderTypes> implements Registrat
     async fee(
         relayerFee: bigint,
         options?: {
-            paddFeeByPercentage?: bigint
+            padFeeByPercentage?: bigint
         },
     ): Promise<RegistrationFee> {
         const { context, registry } = this
         const assetHub = await context.assetHub()
         const bridgeHub = await context.bridgeHub()
 
-        const paddFeeByPercentage = options?.paddFeeByPercentage ?? 33n
+        const feePadPercentage = options?.padFeeByPercentage ?? 33n
         const ether = erc20Location(registry.ethChainId, ETHER_TOKEN_ADDRESS)
 
         const assetDepositDOT = getAssetDeposit(assetHub)
@@ -75,7 +75,7 @@ export class RegisterToken<T extends EthereumProviderTypes> implements Registrat
 
         const assetHubExecutionFeeEther = padFeeByPercentage(
             await assetHubImpl.swapAsset1ForAsset2(DOT_LOCATION, ether, assetHubExecutionFeeDOT),
-            paddFeeByPercentage,
+            feePadPercentage,
         )
 
         // Convert asset deposit from DOT to Ether
@@ -267,7 +267,7 @@ export class RegisterToken<T extends EthereumProviderTypes> implements Registrat
         tokenAddress: string,
         relayerFee: bigint,
         options?: {
-            paddFeeByPercentage?: bigint
+            padFeeByPercentage?: bigint
         },
     ): Promise<ValidatedRegisterToken<T>> {
         const fee = await this.fee(relayerFee, options)

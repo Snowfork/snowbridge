@@ -8,7 +8,7 @@ To transact from Polkadot to Ethereum, you need to create an agent on Ethereum. 
 
 ### Step 1: Get Agent ID
 
-Snowbridge has a runtime API on BridgeHub to determine the agent ID that you should register. Use `controlV2Api::agentId(location)` to determine your agent ID. You can copy the location input from the screenshot below, replacing your AccountId32 with your source account on Polkadot.
+Snowbridge has a runtime API on BridgeHub to determine the agent ID that you should create. Use `controlV2Api::agentId(location)` to determine your agent ID. You can copy the location input from the screenshot below, replacing your AccountId32 with your source account on Polkadot.
 
 The resulting ID will be your agent ID, which you need to use in the next step.
 
@@ -26,23 +26,10 @@ The Snowbridge V2 SDK supports creating an Agent:
 
 ```typescript
 // Step 1. Create an agent creation tx
-const creation = await agentCreationImpl.createAgentCreation(
-    {
-        ethereum: context.ethereum(),
-    },
-    registry,
-    ETHEREUM_ACCOUNT_PUBLIC,
-    agentId,
-)
+const creation = await agentCreationImpl.tx(ETHEREUM_ACCOUNT_PUBLIC, agentId)
 
 // Step 2. Validate the transaction.
-const validation = await agentCreationImpl.validateAgentCreation(
-    {
-        ethereum: context.ethereum(),
-        gateway: context.gatewayV2(),
-    },
-    creation,
-)
+const validation = await agentCreationImpl.validate(creation)
 
 // Check validation logs for errors
 const errorLogs = validation.logs.filter(

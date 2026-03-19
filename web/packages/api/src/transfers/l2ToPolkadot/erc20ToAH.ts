@@ -56,7 +56,7 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
         l2TokenAddress: string,
         amount: bigint,
         options?: {
-            paddFeeByPercentage?: bigint
+            padFeeByPercentage?: bigint
             feeAsset?: any
             customXcm?: any[]
             overrideRelayerFee?: bigint
@@ -102,7 +102,7 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             "0x0000000000000000000000000000000000000000000000000000000000000000",
         )
         let ether = erc20Location(registry.ethChainId, ETHER_TOKEN_ADDRESS)
-        const paddFeeByPercentage = options?.paddFeeByPercentage
+        const feePadPercentage = options?.padFeeByPercentage
         const feeAsset = options?.feeAsset || ether
 
         if (feeAsset !== ether) {
@@ -127,7 +127,7 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
 
         let assetHubExecutionFeeEther = padFeeByPercentage(
             await assetHubImpl.swapAsset1ForAsset2(DOT_LOCATION, ether, assetHubExecutionFeeDOT),
-            paddFeeByPercentage ?? 33n,
+            feePadPercentage ?? 33n,
         )
 
         const { relayerFee, extrinsicFeeDot, extrinsicFeeEther } = await calculateRelayerFee(
@@ -419,7 +419,7 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
         beneficiaryAccount: string,
         options?: {
             fee?: {
-                paddFeeByPercentage?: bigint
+                padFeeByPercentage?: bigint
                 feeAsset?: any
                 customXcm?: any[]
                 overrideRelayerFee?: bigint

@@ -174,7 +174,7 @@ export class InterParachainTransfer<T extends EthereumProviderTypes>
     async fee(
         tokenAddress: string,
         options?: {
-            padPercentage?: bigint
+            padFeeByPercentage?: bigint
         },
     ): Promise<DeliveryFee> {
         const sourceParachain = await this.context.parachain(this.from.id)
@@ -214,11 +214,11 @@ export class InterParachainTransfer<T extends EthereumProviderTypes>
 
         const deliveryFee = padFeeByPercentage(
             await source.calculateDeliveryFeeInDOT(destination.parachainId, xcm),
-            options?.padPercentage ?? 33n,
+            options?.padFeeByPercentage ?? 33n,
         )
         const executionFee = padFeeByPercentage(
             await destination.calculateXcmFee(xcm, DOT_LOCATION),
-            options?.padPercentage ?? 33n,
+            options?.padFeeByPercentage ?? 33n,
         )
 
         return {
@@ -304,7 +304,7 @@ export class InterParachainTransfer<T extends EthereumProviderTypes>
         amount: bigint,
         options?: {
             fee?: {
-                padPercentage?: bigint
+                padFeeByPercentage?: bigint
             }
         },
     ): Promise<ValidatedTransfer> {

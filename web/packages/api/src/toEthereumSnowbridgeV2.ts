@@ -115,7 +115,7 @@ export class TransferToEthereum<T extends EthereumProviderTypes> implements Tran
     async fee(
         tokenAddress: string,
         options?: {
-            padPercentage?: bigint
+            padFeeByPercentage?: bigint
             slippagePadPercentage?: bigint
             defaultFee?: bigint
             feeTokenLocation?: any
@@ -154,7 +154,7 @@ export class TransferToEthereum<T extends EthereumProviderTypes> implements Tran
         amount: bigint,
         options?: {
             fee?: {
-                padPercentage?: bigint
+                padFeeByPercentage?: bigint
                 slippagePadPercentage?: bigint
                 defaultFee?: bigint
                 feeTokenLocation?: any
@@ -385,7 +385,7 @@ export const estimateFeesFromAssetHub = async <T extends EthereumProviderTypes>(
     tokenAddress: string,
     deliveryXcm: DeliveryXcm,
     options?: {
-        padPercentage?: bigint
+        padFeeByPercentage?: bigint
         slippagePadPercentage?: bigint
         defaultFee?: bigint
         feeTokenLocation?: any
@@ -400,7 +400,7 @@ export const estimateFeesFromAssetHub = async <T extends EthereumProviderTypes>(
     const assetHub = await context.parachain(registry.assetHubParaId)
     const assetHubImpl = await context.paraImplementation(assetHub)
 
-    const feePadPercentage = options?.padPercentage ?? 33n
+    const feePadPercentage = options?.padFeeByPercentage ?? 33n
     const feeSlippagePadPercentage = options?.slippagePadPercentage ?? 20n
 
     let localExecutionFeeDOT = 0n
@@ -510,7 +510,7 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
     tokenAddress: string,
     deliveryXcm: DeliveryXcm,
     options?: {
-        padPercentage?: bigint
+        padFeeByPercentage?: bigint
         slippagePadPercentage?: bigint
         defaultFee?: bigint
         feeTokenLocation?: any
@@ -525,7 +525,7 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
     const assetHub = await context.parachain(registry.assetHubParaId)
     const assetHubImpl = await context.paraImplementation(assetHub)
 
-    const feePadPercentage = options?.padPercentage ?? 33n
+    const feePadPercentage = options?.padFeeByPercentage ?? 33n
     const feeSlippagePadPercentage = options?.slippagePadPercentage ?? 20n
 
     let localExecutionFeeDOT = 0n
