@@ -62,10 +62,10 @@ export const transferToEthereumL2 = async (
 
         // Step 2. Create a transfer tx
         const transfer = await transferImpl.tx(
-            TOKEN_CONTRACT,
-            amount,
             POLKADOT_ACCOUNT_PUBLIC,
             ETHEREUM_ACCOUNT_PUBLIC,
+            TOKEN_CONTRACT,
+            amount,
             fee,
             options,
         )
