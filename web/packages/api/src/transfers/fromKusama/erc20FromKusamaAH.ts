@@ -500,8 +500,13 @@ async function dryRunSourceAssetHub(
     sourceAccount: string,
 ) {
     const origin = { system: { signed: sourceAccount } }
-    const { Result } = await import("@polkadot/types")
-    let result = await source.call.dryRunApi.dryRunCall<any>(origin, tx, 4)
+    // Use version 5 for the dry-run API to handle V5 XCM in forwarded results
+    let result: any
+    try {
+        result = await source.call.dryRunApi.dryRunCall<any>(origin, tx.inner.toHex(), 5)
+    } catch {
+        result = await source.call.dryRunApi.dryRunCall<any>(origin, tx.inner.toHex())
+    }
 
     const success = result.isOk && result.asOk.executionResult.isOk
     let bridgeHubForwarded
@@ -513,15 +518,25 @@ async function dryRunSourceAssetHub(
             result.toHuman(true),
         )
     } else {
-        bridgeHubForwarded = result.asOk.forwardedXcms.find((x: any) => {
-            return (
-                x[0].isV4 &&
-                x[0].asV4.parents.toNumber() === 1 &&
-                x[0].asV4.interior.isX1 &&
-                x[0].asV4.interior.asX1[0].isParachain &&
-                x[0].asV4.interior.asX1[0].asParachain.toNumber() === bridgeHubParaId
-            )
-        })
+        bridgeHubForwarded =
+            result.asOk.forwardedXcms.find((x: any) => {
+                return (
+                    x[0].isV4 &&
+                    x[0].asV4.parents.toNumber() === 1 &&
+                    x[0].asV4.interior.isX1 &&
+                    x[0].asV4.interior.asX1[0].isParachain &&
+                    x[0].asV4.interior.asX1[0].asParachain.toNumber() === bridgeHubParaId
+                )
+            }) ??
+            result.asOk.forwardedXcms.find((x: any) => {
+                return (
+                    x[0].isV5 &&
+                    x[0].asV5.parents.toNumber() === 1 &&
+                    x[0].asV5.interior.isX1 &&
+                    x[0].asV5.interior.asX1[0].isParachain &&
+                    x[0].asV5.interior.asX1[0].asParachain.toNumber() === bridgeHubParaId
+                )
+            })
     }
     return {
         success: success && bridgeHubForwarded,
