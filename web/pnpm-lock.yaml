@@ -294,9 +294,6 @@ importers:
       '@snowbridge/base-types':
         specifier: workspace:*
         version: link:../base-types
-      '@snowbridge/provider-ethers':
-        specifier: workspace:*
-        version: link:../provider-ethers
     devDependencies:
       '@polkadot/api':
         specifier: 16.5.4
@@ -310,6 +307,9 @@ importers:
       '@snowbridge/contract-types':
         specifier: workspace:*
         version: link:../contract-types
+      '@snowbridge/provider-ethers':
+        specifier: workspace:*
+        version: link:../provider-ethers
       '@types/node':
         specifier: 24.6.2
         version: 24.6.2

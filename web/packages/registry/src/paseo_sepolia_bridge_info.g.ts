@@ -108,7 +108,7 @@ const registry = {
         },
     ],
     registry: {
-        timestamp: "2026-03-12T12:22:16.496Z",
+        timestamp: "2026-03-19T10:22:34.627Z",
         environment: "paseo_sepolia",
         ethChainId: 11155111,
         gatewayAddress: "0x1607c1368bc943130258318c91bbd8cff3d063e6",
@@ -288,7 +288,7 @@ const registry = {
                     ss58Format: 101,
                     isEthereum: false,
                     accountType: "AccountId32",
-                    name: "Neuro Testnet",
+                    name: "NeuroWeb Testnet",
                     specName: "origintrail-parachain",
                     specVersion: 151,
                 },
@@ -357,7 +357,7 @@ const registry = {
             kind: "polkadot",
             id: 1000,
         },
-        neuroTestnet: {
+        neuroWebTestnet: {
             key: "polkadot_2043",
             kind: "polkadot",
             id: 2043,

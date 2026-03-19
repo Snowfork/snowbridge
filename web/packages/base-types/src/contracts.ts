@@ -1,7 +1,3 @@
-export type MultiAddressStruct = {
-  kind: number;
-  data: string;
-};
 
 export type QuoteExactOutputSingleParamsStruct = {
   tokenIn: string;

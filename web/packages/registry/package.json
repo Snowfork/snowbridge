@@ -21,6 +21,7 @@
     "@polkadot/util": "14.0.1",
     "@snowbridge/api": "workspace:*",
     "@snowbridge/contract-types": "workspace:*",
+    "@snowbridge/provider-ethers": "workspace:*",
     "@types/node": "24.6.2",
     "@typescript-eslint/eslint-plugin": "8.45.0",
     "@typescript-eslint/parser": "8.45.0",
@@ -34,7 +35,6 @@
     "typescript": "5.9.3"
   },
   "dependencies": {
-    "@snowbridge/base-types": "workspace:*",
-    "@snowbridge/provider-ethers": "workspace:*"
+    "@snowbridge/base-types": "workspace:*"
   }
 }
