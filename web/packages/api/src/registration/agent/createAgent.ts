@@ -4,6 +4,8 @@ import { ValidationKind } from "../../toPolkadotSnowbridgeV2"
 import { ValidationLog, ValidationReason } from "../../toPolkadot_v2"
 import { AssetRegistry, EthereumProviderTypes } from "@snowbridge/base-types"
 import { ensureValidationSuccess } from "../../utils"
+import { hexToU8a, isHex, u8aToHex } from "@polkadot/util"
+import { decodeAddress } from "@polkadot/util-crypto"
 
 export class CreateAgent<T extends EthereumProviderTypes>
     implements AgentCreationInterface<T["ContractTransaction"]>
@@ -12,6 +14,51 @@ export class CreateAgent<T extends EthereumProviderTypes>
         readonly context: Context<T>,
         private readonly registry: AssetRegistry,
     ) {}
+
+    async agentIdForAccount(parachainId: number, account: string): Promise<string> {
+        let decoded: Uint8Array
+        if (isHex(account)) {
+            if (account.length !== 42 && account.length !== 66) {
+                throw new Error(
+                    `Unsupported account hex length ${account.length}. Expected 20-byte or 32-byte hex.`,
+                )
+            }
+            decoded = hexToU8a(account)
+        } else {
+            decoded = decodeAddress(account)
+        }
+
+        let sourceAccountLocation
+        if (decoded.length === 32) {
+            sourceAccountLocation = {
+                accountId32: {
+                    id: u8aToHex(decoded),
+                },
+            }
+        } else if (decoded.length === 20) {
+            sourceAccountLocation = {
+                accountKey20: {
+                    key: u8aToHex(decoded),
+                },
+            }
+        } else {
+            throw new Error(
+                `Unsupported account length ${decoded.length}. Expected 20-byte or 32-byte account.`,
+            )
+        }
+
+        const bridgeHub = await this.context.bridgeHub()
+        const versionedLocation = bridgeHub.registry.createType("XcmVersionedLocation", {
+            v5: {
+                parents: 1,
+                interior: {
+                    x2: [{ parachain: parachainId }, sourceAccountLocation],
+                },
+            },
+        })
+
+        return (await bridgeHub.call.controlV2Api.agentId(versionedLocation)).toHex()
+    }
 
     async tx(
         sourceAccount: string,

@@ -5,9 +5,7 @@ import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { Wallet } from "ethers"
 import { bridgeInfoFor } from "@snowbridge/registry"
 
-// TODO add the ability to specify a location to create a agent from, using the EthereumSystemV2::agent_id API,
-// once https://github.com/polkadot-fellows/runtimes/pull/978 has been released on-chain.
-export const createAgent = async (agentId: string) => {
+export const createAgent = async () => {
     await cryptoWaitReady()
 
     let env = "local_e2e"
@@ -28,21 +26,27 @@ export const createAgent = async (agentId: string) => {
 
     console.log("eth", ETHEREUM_ACCOUNT_PUBLIC)
 
-    console.log("Creating agent with ID:", agentId)
-
     console.log("Agent Creation on Snowbridge V2")
     {
         // Step 0. Create an agent implementation
-        const agentCreationImpl = api.createAgent()
+        const creator = api.createAgent()
+        const parachainAccount = "5CXiZE6z6w78EuqGdmJao7PFnmArgoHJbHbjWPftW5otnBKs"
+        const agentId = await creator.agentIdForAccount(
+            info.registry.assetHubParaId,
+            parachainAccount,
+        )
+
+        console.log("Source parachain account:", parachainAccount)
+        console.log("Creating agent with ID:", agentId)
 
         // Step 1. Create an agent creation tx
-        const creation = await agentCreationImpl.tx(ETHEREUM_ACCOUNT_PUBLIC, agentId)
+        const creation = await creator.tx(ETHEREUM_ACCOUNT_PUBLIC, agentId)
 
         // Step 2. Validate the transaction.
-        const validation = await agentCreationImpl.validate(creation)
+        const agentCreate = await creator.validate(creation)
 
         // Check validation logs for errors
-        const errorLogs = validation.logs.filter(
+        const errorLogs = agentCreate.logs.filter(
             (l: any) => l.kind === toEthereumSnowbridgeV2.ValidationKind.Error,
         )
         if (errorLogs.length > 0) {
@@ -53,7 +57,7 @@ export const createAgent = async (agentId: string) => {
             throw Error(`Validation has ${errorLogs.length} error(s).`)
         }
 
-        console.log("validation result", validation)
+        console.log("agent create result", agentCreate)
 
         if (process.env["DRY_RUN"] != "true") {
             // Step 3. Submit the transaction
@@ -69,9 +73,12 @@ export const createAgent = async (agentId: string) => {
 
             console.log(`Agent created successfully!
                 tx hash: ${receipt.hash}
+                source account: ${parachainAccount}
                 agent address: ${await context.gatewayV2().agentOf(agentId)}`)
         } else {
-            console.log(`DRY_RUN mode: Agent would be created with ID ${agentId}`)
+            console.log(
+                `DRY_RUN mode: Agent would be created with ID ${agentId} for source account ${parachainAccount}`,
+            )
         }
     }
     await context.destroyContext()
@@ -79,15 +86,7 @@ export const createAgent = async (agentId: string) => {
 
 // Only run if this is the main module (not imported)
 if (require.main === module) {
-    if (process.argv.length != 3) {
-        console.error("Expected arguments: `agentId`")
-        console.error(
-            "Example: npm run createAgent 0x03170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c111314",
-        )
-        process.exit(1)
-    }
-
-    createAgent(process.argv[2])
+    createAgent()
         .then(() => process.exit(0))
         .catch((error) => {
             console.error("Error:", error)
