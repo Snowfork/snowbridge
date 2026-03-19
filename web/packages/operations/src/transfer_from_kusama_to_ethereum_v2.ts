@@ -88,10 +88,14 @@ export const transferFromKusamaToEthereum = async (symbol: string, amount: bigin
 
         // Step 3. Estimate the cost of the execution cost of the transaction
         console.log("call:", transfer.tx.inner.toHex())
-        const feePayment = (
-            await transfer.tx.paymentInfo(KUSAMA_ACCOUNT, { withSignedTransaction: true })
-        ).toPrimitive() as any
-        console.log("execution fee (KSM):", formatUnits(feePayment.partialFee, 12))
+        try {
+            const feePayment = (
+                await transfer.tx.paymentInfo(KUSAMA_ACCOUNT, { withSignedTransaction: true })
+            ).toPrimitive() as any
+            console.log("execution fee (KSM):", formatUnits(feePayment.partialFee, 12))
+        } catch (e) {
+            console.warn("Could not estimate execution fee:", e)
+        }
         console.log("total delivery fee (KSM):", formatUnits(fee.totalFeeInKSM, 12))
 
         // Step 4. Validate the transaction.

@@ -35,6 +35,7 @@ import {
     ksmLocationOnPolkadotAssetHub,
     dotLocationOnKusamaAssetHub,
     buildAssetHubERC20TransferToKusama,
+    isDOTOnOtherConsensusSystem,
 } from "../../xcmBuilder"
 import { buildPolkadotAHCustomXcm } from "../../xcmbuilders/fromKusama/erc20FromKusamaAH"
 import {
@@ -269,18 +270,30 @@ export class ERC20FromKusamaAH<T extends EthereumProviderTypes> implements Trans
             throw Error("KSM transfers from Kusama to Ethereum are not supported.")
         }
 
-        // DOT fee for Polkadot AH execution + the ERC20 token
-        assets = {
-            v5: [
-                {
-                    id: dotLocationOnKusamaAssetHub,
-                    fun: { Fungible: fee.totalFeeInDOT },
-                },
-                {
-                    id: tokenLocationOnKusama,
-                    fun: { Fungible: amount },
-                },
-            ],
+        if (isDOTOnOtherConsensusSystem(tokenLocationOnKusama)) {
+            // Token is DOT — same asset as the fee, merge into a single entry
+            assets = {
+                v5: [
+                    {
+                        id: dotLocationOnKusamaAssetHub,
+                        fun: { Fungible: fee.totalFeeInDOT + amount },
+                    },
+                ],
+            }
+        } else {
+            // DOT fee for Polkadot AH execution + the ERC20 token
+            assets = {
+                v5: [
+                    {
+                        id: dotLocationOnKusamaAssetHub,
+                        fun: { Fungible: fee.totalFeeInDOT },
+                    },
+                    {
+                        id: tokenLocationOnKusama,
+                        fun: { Fungible: amount },
+                    },
+                ],
+            }
         }
 
         const destination = { v5: polkadotAssetHubLocation(this.registry.assetHubParaId) }
@@ -387,8 +400,13 @@ export class ERC20FromKusamaAH<T extends EthereumProviderTypes> implements Trans
             })
         }
 
-        const paymentInfo = await transfer.tx.paymentInfo(sourceAccountHex)
-        const sourceExecutionFee = paymentInfo["partialFee"].toBigInt()
+        let sourceExecutionFee = 0n
+        try {
+            const paymentInfo = await transfer.tx.paymentInfo(sourceAccountHex)
+            sourceExecutionFee = paymentInfo["partialFee"].toBigInt()
+        } catch (e) {
+            console.warn("Could not estimate source execution fee:", e)
+        }
 
         if (sourceExecutionFee + fee.totalFeeInKSM > nativeBalance) {
             logs.push({
