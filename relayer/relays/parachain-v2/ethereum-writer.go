@@ -173,6 +173,11 @@ func (wr *EthereumWriter) isRelayMessageProfitable(ctx context.Context, proof *M
 	if proof.Message.Fee.Cmp(gasFee) >= 0 {
 		return true, nil
 	}
+	log.WithField("provided fee", proof.Message.Fee.String()).
+		WithField("required fee", gasFee.String()).
+		WithField("nonce", proof.Message.OriginalMessage.Nonce).
+		WithField("topic", proof.Message.OriginalMessage.Topic).
+		Warn("Skipping unprofitable message relay to Ethereum")
 	return false, nil
 }
 
