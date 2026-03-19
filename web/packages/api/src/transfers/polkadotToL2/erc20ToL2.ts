@@ -118,10 +118,10 @@ export class ERC20FromAH<T extends EthereumProviderTypes> implements TransferInt
     }
 
     async tx(
-        tokenAddress: string,
-        amount: bigint,
         sourceAccount: string,
         beneficiaryAccount: string,
+        tokenAddress: string,
+        amount: bigint,
         fee: DeliveryFee,
         options?: {
             claimerLocation?: any
@@ -253,10 +253,10 @@ export class ERC20FromAH<T extends EthereumProviderTypes> implements TransferInt
     }
 
     async build(
-        tokenAddress: string,
-        amount: bigint,
         sourceAccount: string,
         beneficiaryAccount: string,
+        tokenAddress: string,
+        amount: bigint,
         options?: {
             fee?: {
                 padFeeByPercentage?: bigint
@@ -277,10 +277,10 @@ export class ERC20FromAH<T extends EthereumProviderTypes> implements TransferInt
     ): Promise<ValidatedTransfer> {
         const fee = await this.fee(tokenAddress, amount, options?.fee)
         const transfer = await this.tx(
-            tokenAddress,
-            amount,
             sourceAccount,
             beneficiaryAccount,
+            tokenAddress,
+            amount,
             fee,
             options?.tx,
         )

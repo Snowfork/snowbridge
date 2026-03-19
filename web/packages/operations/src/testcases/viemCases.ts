@@ -199,10 +199,10 @@ export async function ethereumL210ToPolkadot1000Eth(api: SnowbridgeApi<ViemEther
 
     const sender = api.sender(optimism, assetHub)
     const transfer = await sender.build(
-        tokenAddress,
-        400000000000000n,
         sourceAccount,
         beneficiaryAccount,
+        tokenAddress,
+        400000000000000n,
     )
 
     printEvmTx("ethereum_l2:10 -> polkadot:1000", "ETH", transfer.tx)
@@ -224,10 +224,10 @@ export async function ethereumL242161ToPolkadot1000Weth(api: SnowbridgeApi<ViemE
 
     const sender = api.sender(arbitrum, assetHub)
     const transfer = await sender.build(
-        tokenAddress,
-        400000000000000n,
         sourceAccount,
         beneficiaryAccount,
+        tokenAddress,
+        400000000000000n,
     )
 
     printEvmTx("ethereum_l2:42161 -> polkadot:1000", "WETH", transfer.tx)
@@ -248,7 +248,7 @@ export async function ethereumL28453ToPolkadot1000Usdc(api: SnowbridgeApi<ViemEt
         ].token
 
     const sender = api.sender(base, assetHub)
-    const transfer = await sender.build(tokenAddress, 1000000n, sourceAccount, beneficiaryAccount)
+    const transfer = await sender.build(sourceAccount, beneficiaryAccount, tokenAddress, 1000000n)
 
     printEvmTx("ethereum_l2:8453 -> polkadot:1000", "USDC", transfer.tx)
 }
@@ -292,10 +292,10 @@ export async function polkadot1000ToEthereumL210Eth(api: SnowbridgeApi<ViemEther
 
     const sender = api.sender(assetHub, optimism)
     const transfer = await sender.build(
-        "0x0000000000000000000000000000000000000000",
-        400000000000000n,
         sourceAccount,
         beneficiaryAccount,
+        "0x0000000000000000000000000000000000000000",
+        400000000000000n,
     )
 
     console.log(
@@ -319,10 +319,10 @@ export async function polkadot1000ToEthereumL242161Weth(api: SnowbridgeApi<ViemE
 
     const sender = api.sender(assetHub, arbitrum)
     const transfer = await sender.build(
-        "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
-        400000000000000n,
         sourceAccount,
         beneficiaryAccount,
+        "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+        400000000000000n,
     )
 
     console.log(
@@ -346,10 +346,10 @@ export async function polkadot1000ToEthereumL28453Usdc(api: SnowbridgeApi<ViemEt
 
     const sender = api.sender(assetHub, base)
     const transfer = await sender.build(
-        "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-        1000000n,
         sourceAccount,
         beneficiaryAccount,
+        "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        1000000n,
     )
 
     console.log(

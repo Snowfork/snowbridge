@@ -24,10 +24,10 @@ export interface TransferInterface<T extends EthereumProviderTypes> {
     ): Promise<DeliveryFee>
 
     tx(
-        tokenAddress: string,
-        amount: bigint,
         sourceAccount: string,
         beneficiaryAccount: string,
+        tokenAddress: string,
+        amount: bigint,
         fee: DeliveryFee,
         options?: {
             customXcm?: any[] // Optional custom XCM instructions to append
@@ -38,10 +38,10 @@ export interface TransferInterface<T extends EthereumProviderTypes> {
     validate(transfer: Transfer<T>): Promise<ValidatedTransfer<T>>
 
     build(
-        tokenAddress: string,
-        amount: bigint,
         sourceAccount: string,
         beneficiaryAccount: string,
+        tokenAddress: string,
+        amount: bigint,
         options?: {
             fee?: {
                 padFeeByPercentage?: bigint

@@ -220,10 +220,10 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
     }
 
     async tx(
-        l2TokenAddress: string,
-        amount: bigint,
         sourceAccount: string,
         beneficiaryAccount: string,
+        l2TokenAddress: string,
+        amount: bigint,
         fee: DeliveryFee,
         options?: {
             customXcm?: any[]
@@ -413,10 +413,10 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
     }
 
     async build(
-        tokenAddress: string,
-        amount: bigint,
         sourceAccount: string,
         beneficiaryAccount: string,
+        tokenAddress: string,
+        amount: bigint,
         options?: {
             fee?: {
                 padFeeByPercentage?: bigint
@@ -434,10 +434,10 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
     ): Promise<ValidatedTransfer<T>> {
         const fee = await this.fee(tokenAddress, amount, options?.fee)
         const transfer = await this.tx(
-            tokenAddress,
-            amount,
             sourceAccount,
             beneficiaryAccount,
+            tokenAddress,
+            amount,
             fee,
             options?.tx,
         )
