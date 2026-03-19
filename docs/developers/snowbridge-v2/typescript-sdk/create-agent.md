@@ -8,13 +8,25 @@ To transact from Polkadot to Ethereum, you need to create an agent on Ethereum. 
 
 ### Step 1: Get Agent ID
 
-Snowbridge has a runtime API on BridgeHub to determine the agent ID that you should create. Use `controlV2Api::agentId(location)` to determine your agent ID. You can copy the location input from the screenshot below, replacing your AccountId32 with your source account on Polkadot.
+Use the create-agent helper to derive the `agentId` for your source parachain account:
 
-The resulting ID will be your agent ID, which you need to use in the next step.
+```typescript
+import { createApi } from "@snowbridge/api"
+import { EthersEthereumProvider } from "@snowbridge/provider-ethers"
+import { polkadot_mainnet } from "@snowbridge/registry"
 
-**Please note:** This API is not on available on Polkadot BridgeHub yet, it will be added soon. It is available on BridgeHub Westend and Paseo.
+const {
+    chains: { assetHub },
+} = polkadot_mainnet
 
-<figure><img src="../../../.gitbook/assets/Screenshot 2025-11-03 at 15.24.50.png" alt=""><figcaption></figcaption></figure>
+const api = createApi({ info: polkadot_mainnet, ethereumProvider: new EthersEthereumProvider() })
+const creator = api.createAgent()
+
+const agentId = await creator.agentIdForAccount(
+    assetHub.id,
+    "5CXiZE6z6w78EuqGdmJao7PFnmArgoHJbHbjWPftW5otnBKs", // source account on the parachain
+)
+```
 
 ### Step 2: Create Agent
 
@@ -25,42 +37,13 @@ You have the option of creating an agent through the Snowbridge SDK, or by calli
 The Snowbridge V2 SDK supports creating an Agent:
 
 ```typescript
-// Step 1. Create an agent creation tx
-const creation = await agentCreationImpl.tx(ETHEREUM_ACCOUNT_PUBLIC, agentId)
-
-// Step 2. Validate the transaction.
-const validation = await agentCreationImpl.validate(creation)
-
-// Check validation logs for errors
-const errorLogs = validation.logs.filter(
-    (l) => l.kind === toEthereumSnowbridgeV2.ValidationKind.Error,
+const agentCreate = await creator.build(
+    "0x...", // source Ethereum account submitting the create-agent transaction
+    agentId,
 )
-if (errorLogs.length > 0) {
-    console.error("Validation failed with errors:")
-    errorLogs.forEach((log) => {
-        console.error(`  [ERROR] ${log.message}`)
-    })
-    throw Error(`Validation has ${errorLogs.length} error(s).`)
-}
-
-console.log("validation result", validation)
-
-// Step 3. Submit the transaction
-const response = await ETHEREUM_ACCOUNT.sendTransaction(creation.tx)
-const receipt = await response.wait(1)
-if (!receipt) {
-    throw Error(`Transaction ${response.hash} not included.`)
-}
-
-if (receipt.status !== 1) {
-    throw Error(`Transaction ${receipt.hash} failed with status ${receipt.status}`)
-}
-
-console.log(`Agent created successfully!
-    tx hash: ${receipt.hash}
-    agent address: ${await context.gatewayV2().agentOf(agentId)}`)
-
 ```
+
+The returned `agentCreate.tx` can then be submitted to the wallet by your application.
 
 The full script is available at [https://github.com/Snowfork/snowbridge/blob/main/web/packages/operations/src/create\_agent.ts](../../../../web/packages/operations/src/create_agent.ts)
 

@@ -579,11 +579,14 @@ export async function polkadot3369ToEth1Myth(api: SnowbridgeApi<EthersEthereumPr
 
 export async function createAgent(api: SnowbridgeApi<EthersEthereumProvider>) {
     const sourceAccount = process.env.ETHEREUM_ACCOUNT_PUBLIC
-    const agentId = process.env.TEST_AGENT_ID
     if (!sourceAccount) throw new Error("Missing required env var for source account.")
-    if (!agentId) throw new Error("Missing required env var TEST_AGENT_ID.")
 
     const creationImpl = api.createAgent()
+    const {
+        chains: { assetHub },
+    } = polkadot_mainnet
+    const parachainAccount = "5CXiZE6z6w78EuqGdmJao7PFnmArgoHJbHbjWPftW5otnBKs"
+    const agentId = await creationImpl.agentIdForAccount(assetHub.id, parachainAccount)
     const validation = await creationImpl.build(sourceAccount, agentId)
 
     if (!validation.success) {
@@ -593,6 +596,8 @@ export async function createAgent(api: SnowbridgeApi<EthersEthereumProvider>) {
     console.log(
         JSON.stringify({
             route: "ethereum:1 -> createAgent",
+            parachainId: assetHub.id,
+            account: parachainAccount,
             agentId,
             from: validation.tx.from,
             to: validation.tx.to,

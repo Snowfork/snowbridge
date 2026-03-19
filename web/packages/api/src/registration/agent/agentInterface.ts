@@ -23,6 +23,8 @@ export type ValidatedCreateAgent<ContractTransaction> = AgentCreation<ContractTr
 }
 
 export interface AgentCreationInterface<ContractTransaction> {
+    agentIdForAccount(parachainId: number, account: string): Promise<string>
+
     tx(sourceAccount: string, agentId: string): Promise<AgentCreation<ContractTransaction>>
 
     validate(
