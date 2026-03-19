@@ -40,12 +40,10 @@ import { buildPolkadotAHCustomXcm } from "../../xcmbuilders/fromKusama/erc20From
 import {
     estimateEthereumExecutionFee,
     getSnowbridgeDeliveryFee,
-    dryRunAssetHub,
 } from "../../toEthereumSnowbridgeV2"
 import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
 import {
     buildExportXcm,
-    buildTransferXcmFromAssetHub,
 } from "../../xcmbuilders/toEthereum/erc20FromAH"
 
 function buildMessageId(
@@ -249,8 +247,9 @@ export class ERC20FromKusamaAH<T extends EthereumProviderTypes> implements Trans
         }
 
         // Build the custom XCM for Polkadot AH (receives from Kusama, forwards to Ethereum)
+        // Must use kusamaAssetHub.registry since the extrinsic is submitted on Kusama AH
         const customXcm = buildPolkadotAHCustomXcm(
-            polkadotAssetHub.registry,
+            kusamaAssetHub.registry,
             this.registry.ethChainId,
             sourceAccountHex,
             beneficiaryAddressHex,
@@ -272,7 +271,7 @@ export class ERC20FromKusamaAH<T extends EthereumProviderTypes> implements Trans
 
         // DOT fee for Polkadot AH execution + the ERC20 token
         assets = {
-            v4: [
+            v5: [
                 {
                     id: dotLocationOnKusamaAssetHub,
                     fun: { Fungible: fee.totalFeeInDOT },
@@ -284,10 +283,10 @@ export class ERC20FromKusamaAH<T extends EthereumProviderTypes> implements Trans
             ],
         }
 
-        const destination = { v4: polkadotAssetHubLocation(this.registry.assetHubParaId) }
+        const destination = { v5: polkadotAssetHubLocation(this.registry.assetHubParaId) }
 
         const feeAsset = {
-            v4: dotLocationOnKusamaAssetHub,
+            v5: dotLocationOnKusamaAssetHub,
         }
 
         const tx: SubmittableExtrinsic<"promise", ISubmittableResult> =
@@ -417,45 +416,9 @@ export class ERC20FromKusamaAH<T extends EthereumProviderTypes> implements Trans
             })
         }
 
-        // Dry run on Polkadot AH (the forwarded XCM that swaps DOT→Ether and sends to Ethereum)
-        let polkadotAHDryRunError: string | undefined
-        const polkadotAssetHub = await this.context.assetHub()
-        const ahParachain = this.registry.parachains[`polkadot_${this.registry.assetHubParaId}`]
-        if (ahParachain.features.hasDryRunApi) {
-            const ahAssetMetadata =
-                this.registry.parachains[`polkadot_${this.registry.assetHubParaId}`].assets[
-                    tokenAddress.toLowerCase()
-                ]
-            if (ahAssetMetadata) {
-                // Build the custom XCM that will execute on Polkadot AH
-                const polkadotAHXcm = buildPolkadotAHCustomXcm(
-                    polkadotAssetHub.registry,
-                    this.registry.ethChainId,
-                    sourceAccountHex,
-                    transfer.input.beneficiaryAccount,
-                    transfer.computed.messageId ?? "0x0000000000000000000000000000000000000000000000000000000000000000",
-                    ahAssetMetadata,
-                    amount,
-                    fee.polkadotAHExecutionFee,
-                    fee.ethereumExecutionFee,
-                )
-                // Dry run on Polkadot AH with origin as Kusama BridgeHub (via Polkadot BridgeHub)
-                const polkadotResult = await dryRunAssetHub(
-                    polkadotAssetHub,
-                    this.registry.kusama.bridgeHubParaId,
-                    this.registry.bridgeHubParaId,
-                    polkadotAHXcm,
-                )
-                if (!polkadotResult.success) {
-                    polkadotAHDryRunError = polkadotResult.errorMessage
-                    logs.push({
-                        kind: ValidationKind.Error,
-                        reason: ValidationReason.DryRunFailed,
-                        message: "Dry run on Polkadot Asset Hub failed.",
-                    })
-                }
-            }
-        }
+        // Note: Polkadot AH dry-run is not performed for the custom_xcm_on_dest because
+        // it executes in a context where assets are already in the holding register from
+        // the bridge transfer. Dry-running it in isolation would always fail (Barrier error).
 
         const success = logs.find((l) => l.kind === ValidationKind.Error) === undefined
 
@@ -467,7 +430,6 @@ export class ERC20FromKusamaAH<T extends EthereumProviderTypes> implements Trans
                 sourceExecutionFee,
                 tokenBalance,
                 dryRunError,
-                polkadotAHDryRunError,
             },
             ...transfer,
         }

@@ -37,8 +37,8 @@ import {
 } from "../../toKusamaSnowbridgeV2"
 import { ValidationKind } from "../../toPolkadot_v2"
 import {
-    buildParachainERC20ReceivedXcmOnDestination,
-} from "../../xcmbuilders/toPolkadot/erc20ToParachain"
+    buildPolkadotToKusamaDestAssetHubXCM,
+} from "../../xcmBuilderKusama"
 
 export class PNAToKusamaAH<T extends EthereumProviderTypes> implements TransferInterface<T> {
     constructor(
@@ -136,8 +136,11 @@ export class PNAToKusamaAH<T extends EthereumProviderTypes> implements TransferI
         )
 
         // Kusama AH execution fee
+        // Calculate in KSM (DOT_LOCATION on Kusama AH resolves to KSM, the relay token)
+        let kusamaExecutionFeeKSM = await kusamaAHImpl.calculateXcmFee(assetHubXcm, DOT_LOCATION)
+        // Convert KSM → Ether via Polkadot AH (KSM on Polkadot AH → DOT → Ether)
         let kusamaExecutionFeeEther = padFeeByPercentage(
-            await kusamaAHImpl.calculateXcmFee(assetHubXcm, ether),
+            await assetHubImpl.swapAsset1ForAsset2(DOT_LOCATION, ether, kusamaExecutionFeeKSM),
             paddFeeByPercentage ?? 33n,
         )
 
@@ -458,18 +461,27 @@ export class PNAToKusamaAH<T extends EthereumProviderTypes> implements TransferI
         const kusamaAssetHub = await this.context.kusamaAssetHub()
         const kusamaAHParachain = registry.kusama.parachains[`kusama_${kusamaAHParaId}`]
         if (kusamaAHParachain?.features?.hasDryRunApi) {
-            const kusamaAHImpl = await this.context.paraImplementation(kusamaAssetHub)
-            // Build a dest XCM simulating what Kusama AH receives
-            const kusamaDestXcm = buildParachainERC20ReceivedXcmOnDestination(
+            // Build the XCM that Kusama AH will receive via the Polkadot↔Kusama bridge
+            const ahAssetMeta =
+                registry.parachains[`polkadot_${registry.assetHubParaId}`].assets[
+                    tokenAddress.toLowerCase()
+                ]
+            let tokenLocation = ahAssetMeta?.location
+            if (!tokenLocation) {
+                tokenLocation = erc20Location(registry.ethChainId, tokenAddress)
+            }
+            const kusamaDestXcm = buildPolkadotToKusamaDestAssetHubXCM(
                 kusamaAssetHub.registry,
-                registry.ethChainId,
-                tokenAddress,
-                amount,
                 transfer.input.fee.kusamaExecutionFeeEther,
+                registry.assetHubParaId,
+                tokenLocation,
+                amount,
                 transfer.computed.beneficiaryAddressHex,
                 "0x0000000000000000000000000000000000000000000000000000000000000000",
             )
-            const kusamaResult = await kusamaAHImpl.dryRunXcm(
+            const { dryRunDestAssetHub } = await import("../../forKusama")
+            const kusamaResult = await dryRunDestAssetHub(
+                kusamaAssetHub,
                 registry.kusama.bridgeHubParaId,
                 kusamaDestXcm,
             )

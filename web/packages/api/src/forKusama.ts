@@ -833,7 +833,7 @@ async function dryRunSourceAssetHub(
     }
 }
 
-async function dryRunDestAssetHub(assetHub: ApiPromise, parachainId: number, xcm: any) {
+export async function dryRunDestAssetHub(assetHub: ApiPromise, parachainId: number, xcm: any) {
     const sourceParachain = { v4: { parents: 1, interior: { x1: [{ parachain: parachainId }] } } }
     const result = await assetHub.call.dryRunApi.dryRunXcm<
         Result<XcmDryRunEffects, XcmDryRunApiError>

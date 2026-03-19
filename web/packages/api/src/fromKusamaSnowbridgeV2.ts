@@ -77,7 +77,6 @@ export type ValidatedTransfer = Transfer & {
         sourceExecutionFee: bigint
         tokenBalance: bigint
         dryRunError: any
-        polkadotAHDryRunError?: string
     }
 }
 
