@@ -14,7 +14,7 @@ export interface TransferInterface<T extends EthereumProviderTypes> {
         tokenAddress: string,
         amount: bigint,
         options?: {
-            paddFeeByPercentage?: bigint
+            padFeeByPercentage?: bigint
             feeAsset?: any
             customXcm?: any[] // Optional custom XCM instructions to append
             overrideRelayerFee?: bigint
@@ -44,7 +44,7 @@ export interface TransferInterface<T extends EthereumProviderTypes> {
         beneficiaryAccount: string,
         options?: {
             fee?: {
-                paddFeeByPercentage?: bigint
+                padFeeByPercentage?: bigint
                 feeAsset?: any
                 customXcm?: any[]
                 overrideRelayerFee?: bigint

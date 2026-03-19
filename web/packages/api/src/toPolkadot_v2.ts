@@ -222,7 +222,7 @@ export class V1ToPolkadotAdapter<T extends EthereumProviderTypes>
     async fee(
         tokenAddress: string,
         options?: {
-            paddFeeByPercentage?: bigint
+            padFeeByPercentage?: bigint
             feeAsset?: any
             customXcm?: any[]
             overrideRelayerFee?: bigint
@@ -287,7 +287,7 @@ export class V1ToPolkadotAdapter<T extends EthereumProviderTypes>
             const destinationImpl = await this.context.paraImplementation(destinationApi)
             destinationExecutionFeeDOT = padFeeByPercentage(
                 await destinationImpl.calculateXcmFee(destinationXcm, DOT_LOCATION),
-                options?.paddFeeByPercentage ?? 33n,
+                options?.padFeeByPercentage ?? 33n,
             )
         }
         const totalFeeInDOT = destinationExecutionFeeDOT + destinationDeliveryFeeDOT
@@ -393,7 +393,7 @@ export class V1ToPolkadotAdapter<T extends EthereumProviderTypes>
         amount: bigint,
         options?: {
             fee?: {
-                paddFeeByPercentage?: bigint
+                padFeeByPercentage?: bigint
                 feeAsset?: any
                 customXcm?: any[]
                 overrideRelayerFee?: bigint

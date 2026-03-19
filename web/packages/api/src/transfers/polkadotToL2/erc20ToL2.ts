@@ -60,7 +60,7 @@ export class ERC20FromAH<T extends EthereumProviderTypes> implements TransferInt
         tokenAddress: string,
         amount: bigint,
         options?: {
-            padPercentage?: bigint
+            padFeeByPercentage?: bigint
             slippagePadPercentage?: bigint
             defaultFee?: bigint
             feeTokenLocation?: any
@@ -259,7 +259,7 @@ export class ERC20FromAH<T extends EthereumProviderTypes> implements TransferInt
         beneficiaryAccount: string,
         options?: {
             fee?: {
-                padPercentage?: bigint
+                padFeeByPercentage?: bigint
                 slippagePadPercentage?: bigint
                 defaultFee?: bigint
                 feeTokenLocation?: any

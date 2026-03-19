@@ -59,7 +59,7 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
     async fee(
         tokenAddress: string,
         options?: {
-            paddFeeByPercentage?: bigint
+            padFeeByPercentage?: bigint
             feeAsset?: any
             customXcm?: any[]
             overrideRelayerFee?: bigint
@@ -98,7 +98,7 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
         const bridgeHubImpl = await this.context.paraImplementation(bridgeHub)
         const assetHubImpl = await this.context.paraImplementation(assetHub)
         let ether = erc20Location(registry.ethChainId, ETHER_TOKEN_ADDRESS)
-        const paddFeeByPercentage = options?.paddFeeByPercentage
+        const feePadPercentage = options?.padFeeByPercentage
         const feeAsset = options?.feeAsset || ether
 
         // Delivery fee BridgeHub to AssetHub
@@ -116,7 +116,7 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
         )
         let assetHubExecutionFeeEther = padFeeByPercentage(
             await assetHubImpl.swapAsset1ForAsset2(DOT_LOCATION, ether, assetHubExecutionFeeDOT),
-            paddFeeByPercentage ?? 33n,
+            feePadPercentage ?? 33n,
         )
 
         // Destination fees
@@ -176,12 +176,12 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
                     ether,
                     destinationExecutionFeeDOT,
                 ),
-                paddFeeByPercentage ?? 33n,
+                feePadPercentage ?? 33n,
             )
         } else if (feeAsset == ether) {
             destinationExecutionFeeEther = padFeeByPercentage(
                 await destinationImpl.calculateXcmFee(destinationXcm, ether),
-                paddFeeByPercentage ?? 33n,
+                feePadPercentage ?? 33n,
             )
         } else {
             throw Error(`Unsupported fee asset`)
@@ -363,7 +363,7 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
         amount: bigint,
         options?: {
             fee?: {
-                paddFeeByPercentage?: bigint
+                padFeeByPercentage?: bigint
                 feeAsset?: any
                 customXcm?: any[]
                 overrideRelayerFee?: bigint

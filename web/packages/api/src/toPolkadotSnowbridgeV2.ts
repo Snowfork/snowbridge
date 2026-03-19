@@ -187,7 +187,7 @@ export class TransferToPolkadot<T extends EthereumProviderTypes> implements Tran
     async fee(
         tokenAddress: string,
         options?: {
-            paddFeeByPercentage?: bigint
+            padFeeByPercentage?: bigint
             feeAsset?: any
             customXcm?: any[]
             overrideRelayerFee?: bigint
@@ -221,7 +221,7 @@ export class TransferToPolkadot<T extends EthereumProviderTypes> implements Tran
         amount: bigint,
         options?: {
             fee?: {
-                paddFeeByPercentage?: bigint
+                padFeeByPercentage?: bigint
                 feeAsset?: any
                 customXcm?: any[]
                 overrideRelayerFee?: bigint

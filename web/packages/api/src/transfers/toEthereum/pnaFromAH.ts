@@ -58,7 +58,7 @@ export class PNAFromAH<T extends EthereumProviderTypes> implements TransferInter
     async fee(
         tokenAddress: string,
         options?: {
-            padPercentage?: bigint
+            padFeeByPercentage?: bigint
             slippagePadPercentage?: bigint
             defaultFee?: bigint
             feeTokenLocation?: any
@@ -233,7 +233,7 @@ export class PNAFromAH<T extends EthereumProviderTypes> implements TransferInter
         amount: bigint,
         options?: {
             fee?: {
-                padPercentage?: bigint
+                padFeeByPercentage?: bigint
                 slippagePadPercentage?: bigint
                 defaultFee?: bigint
                 feeTokenLocation?: any

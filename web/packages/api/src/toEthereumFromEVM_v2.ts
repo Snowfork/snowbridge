@@ -66,7 +66,7 @@ export class V1ToEthereumEvmAdapter<T extends EthereumProviderTypes>
     async fee(
         tokenAddress: string,
         options?: {
-            padPercentage?: bigint
+            padFeeByPercentage?: bigint
             slippagePadPercentage?: bigint
             defaultFee?: bigint
             feeTokenLocation?: any
@@ -99,7 +99,7 @@ export class V1ToEthereumEvmAdapter<T extends EthereumProviderTypes>
             this.registry,
             tokenAddress,
             {
-                padPercentage: options?.padPercentage,
+                padFeeByPercentage: options?.padFeeByPercentage,
                 slippagePadPercentage: options?.slippagePadPercentage,
                 defaultFee: options?.defaultFee,
                 kind: "ethereum->ethereum",
@@ -256,7 +256,7 @@ export class V1ToEthereumEvmAdapter<T extends EthereumProviderTypes>
         amount: bigint,
         options?: {
             fee?: {
-                padPercentage?: bigint
+                padFeeByPercentage?: bigint
                 slippagePadPercentage?: bigint
                 defaultFee?: bigint
                 feeTokenLocation?: any

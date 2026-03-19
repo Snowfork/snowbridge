@@ -42,7 +42,7 @@ export interface RegistrationInterface<T extends EthereumProviderTypes> {
     fee(
         relayerFee: bigint,
         options?: {
-            paddFeeByPercentage?: bigint
+            padFeeByPercentage?: bigint
         },
     ): Promise<RegistrationFee>
 
@@ -59,7 +59,7 @@ export interface RegistrationInterface<T extends EthereumProviderTypes> {
         tokenAddress: string,
         relayerFee: bigint,
         options?: {
-            paddFeeByPercentage?: bigint
+            padFeeByPercentage?: bigint
         },
     ): Promise<ValidatedRegisterToken<T>>
 

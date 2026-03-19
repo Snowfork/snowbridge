@@ -10,7 +10,7 @@ export interface TransferInterface<T extends EthereumProviderTypes> {
         tokenAddress: string,
         amount: bigint,
         options?: {
-            padPercentage?: bigint
+            padFeeByPercentage?: bigint
             slippagePadPercentage?: bigint
             defaultFee?: bigint
             feeTokenLocation?: any
@@ -43,7 +43,7 @@ export interface TransferInterface<T extends EthereumProviderTypes> {
         beneficiaryAccount: string,
         options?: {
             fee?: {
-                padPercentage?: bigint
+                padFeeByPercentage?: bigint
                 slippagePadPercentage?: bigint
                 defaultFee?: bigint
                 feeTokenLocation?: any
