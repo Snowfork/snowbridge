@@ -91,15 +91,5 @@ CONTRACTS_DIR=""
 [ -d "../contracts" ] && CONTRACTS_DIR="../contracts"
 
 if [ -n "$CONTRACTS_DIR" ] && [ -d "$CONTRACTS_DIR" ]; then
-  echo "Installing forge dependencies in $CONTRACTS_DIR"
-  pushd "$CONTRACTS_DIR"
-    [ -d "lib" ] && rm -rf lib
-    forge install foundry-rs/forge-std --no-git
-    forge install https://github.com/dapphub/ds-test --no-git
-    forge install https://github.com/Snowfork/canonical-weth --no-git
-    forge install https://github.com/PaulRBerg/prb-math --no-git
-    forge install https://github.com/OpenZeppelin/openzeppelin-contracts --no-git
-  popd
-  echo "Forge dependencies installed."
   (cd "$CONTRACTS_DIR" && forge build)
 fi
