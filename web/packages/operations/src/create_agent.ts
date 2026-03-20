@@ -1,5 +1,6 @@
 import "dotenv/config"
-import { createApi, toEthereumSnowbridgeV2 } from "@snowbridge/api"
+import { createApi } from "@snowbridge/api"
+import { ValidationKind } from "@snowbridge/api/dist/types/toPolkadot"
 import { EthersEthereumProvider } from "@snowbridge/provider-ethers"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { Wallet } from "ethers"
@@ -47,7 +48,7 @@ export const createAgent = async () => {
 
         // Check validation logs for errors
         const errorLogs = agentCreate.logs.filter(
-            (l: any) => l.kind === toEthereumSnowbridgeV2.ValidationKind.Error,
+            (l: any) => l.kind === ValidationKind.Error,
         )
         if (errorLogs.length > 0) {
             console.error("Validation failed with errors:")

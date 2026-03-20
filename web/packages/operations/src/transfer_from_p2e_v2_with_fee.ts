@@ -1,14 +1,15 @@
 import "dotenv/config"
 import { transferToEthereum } from "./transfer_to_ethereum_v2"
-import { xcmBuilder } from "@snowbridge/api"
+import { assetsV2 } from "@snowbridge/api"
+import { parachainLocation } from "@snowbridge/api/dist/xcmBuilder"
 
 const transfer = async (sourceParaId: number, symbol: string, feeType: number, amount: bigint) => {
     let feeTokenLocation: any
     // Currently, we only support two types of fees to maintain V1 behavior
     if (feeType == 0) {
-        feeTokenLocation = xcmBuilder.DOT_LOCATION
+        feeTokenLocation = assetsV2.DOT_LOCATION
     } else {
-        feeTokenLocation = xcmBuilder.parachainLocation(sourceParaId)
+        feeTokenLocation = parachainLocation(sourceParaId)
     }
     await transferToEthereum(sourceParaId, symbol, amount, feeTokenLocation)
 }

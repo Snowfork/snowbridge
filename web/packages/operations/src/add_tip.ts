@@ -1,5 +1,6 @@
 import { Keyring } from "@polkadot/keyring"
-import { addTip, createApi } from "@snowbridge/api"
+import { createApi } from "@snowbridge/api"
+import * as addTip from "@snowbridge/api/dist/addTip"
 import { EthersEthereumProvider } from "@snowbridge/provider-ethers"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { bridgeInfoFor } from "@snowbridge/registry"

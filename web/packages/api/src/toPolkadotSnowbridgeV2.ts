@@ -4,16 +4,12 @@ import { ERC20ToAH } from "./transfers/toPolkadot/erc20ToAH"
 import { ERC20ToAH as ERC20FromL2ToAH } from "./transfers/l2ToPolkadot/erc20ToAH"
 import { RegisterToken } from "./registration/toPolkadot/registerToken"
 import {
-    Asset,
     AssetRegistry,
     ChainId,
-    ERC20Metadata,
     EthereumChain,
     EthereumProvider,
     EthereumProviderTypes,
-    MultiAddressStruct,
     Parachain,
-    TransferKind,
     TransferRoute,
 } from "@snowbridge/base-types"
 import { PNAToAH } from "./transfers/toPolkadot/pnaToAH"
@@ -21,91 +17,26 @@ import { ERC20ToParachain } from "./transfers/toPolkadot/erc20ToParachain"
 import { PNAToParachain } from "./transfers/toPolkadot/pnaToParachain"
 import { hexToU8a, stringToU8a } from "@polkadot/util"
 import { blake2AsHex } from "@polkadot/util-crypto"
-import { OperationStatus } from "./status"
-import { FeeInfo, ValidationLog } from "./toPolkadot_v2"
 import { ApiPromise } from "@polkadot/api"
-import { accountToLocation, DOT_LOCATION, erc20Location } from "./xcmBuilder"
+import { accountToLocation, erc20Location } from "./xcmBuilder"
 import { Codec } from "@polkadot/types/types"
-import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
+import { DOT_LOCATION, ETHER_TOKEN_ADDRESS } from "./assets_v2"
 import { ensureValidationSuccess, padFeeByPercentage } from "./utils"
 import { Context } from "./index"
-export { ValidationKind } from "./toPolkadot_v2"
+export { ValidationKind } from "./types/toPolkadot"
 import { ParachainBase } from "./parachains/parachainBase"
-
-export type DeliveryFee = {
-    kind: Extract<TransferKind, "ethereum->polkadot" | "ethereum_l2->polkadot">
-    feeAsset: any
-    assetHubDeliveryFeeEther: bigint
-    assetHubExecutionFeeEther: bigint
-    destinationDeliveryFeeEther: bigint
-    destinationExecutionFeeEther?: bigint
-    destinationExecutionFeeDOT?: bigint
-    relayerFee: bigint
-    extrinsicFeeDot: bigint // Fee for submitting to BridgeHub in DOT (part of relayerFee)
-    extrinsicFeeEther: bigint // Fee for submitting to BridgeHub in Ether (part of relayerFee)
-    totalFeeInWei: bigint
-    bridgeFeeInL2Token?: bigint // Fee for the actual token transfer in the input L2 token.
-    swapFeeInL1Token?: bigint // Fee for Gateway.v2_sendMessage in the output L1 token.
-}
-
-export type Transfer<T extends EthereumProviderTypes> = {
-    kind: Extract<TransferKind, "ethereum->polkadot" | "ethereum_l2->polkadot">
-    input: {
-        registry: AssetRegistry
-        sourceAccount: string
-        beneficiaryAccount: string
-        tokenAddress: string
-        destinationParaId: number
-        amount: bigint
-        fee: DeliveryFee
-        customXcm?: any[] // Optional custom XCM instructions
-        l2TokenAddress?: string
-        sourceChainId?: number
-    }
-    computed: {
-        gatewayAddress: string
-        beneficiaryAddressHex: string
-        beneficiaryMultiAddress: MultiAddressStruct
-        totalValue: bigint
-        tokenErcMetadata: ERC20Metadata
-        ahAssetMetadata: Asset
-        destAssetMetadata: Asset
-        destParachain: Parachain
-        minimalBalance: bigint
-        claimer: any
-        topic: string
-        l2AdapterAddress?: string
-        totalInputAmount: bigint
-    }
-    tx: T["ContractTransaction"]
-}
-
-export type ValidatedTransfer<T extends EthereumProviderTypes> = Transfer<T> & {
-    logs: ValidationLog[]
-    success: boolean
-    data: {
-        etherBalance: bigint
-        totalInputAmount?: bigint
-        tokenBalance: {
-            balance: bigint
-            gatewayAllowance: bigint
-        }
-        feeInfo?: FeeInfo
-        bridgeStatus: OperationStatus
-        assetHubDryRunError?: string
-        destinationParachainDryRunError?: string
-        l2BridgeDryRunError?: string
-    }
-}
-
-export type MessageReceipt = {
-    nonce: bigint
-    payload: any
-    blockNumber: number
-    blockHash: string
-    txHash: string
-    txIndex: number
-}
+import type {
+    DeliveryFee,
+    MessageReceipt,
+    Transfer,
+    ValidatedTransfer,
+} from "./types/toPolkadotSnowbridgeV2"
+export type {
+    DeliveryFee,
+    MessageReceipt,
+    Transfer,
+    ValidatedTransfer,
+} from "./types/toPolkadotSnowbridgeV2"
 
 // Re-export registration types for convenience
 export type {
@@ -113,7 +44,7 @@ export type {
     ValidatedRegisterToken,
     RegistrationFee,
     RegistrationInterface,
-} from "./registration/toPolkadot/registrationInterface"
+} from "./types/registration/toPolkadot"
 
 export class TransferToPolkadot<T extends EthereumProviderTypes> implements TransferInterface<T> {
     #pnaImpl?: TransferInterface<T>

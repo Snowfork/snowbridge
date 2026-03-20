@@ -1,7 +1,6 @@
 import { AgentCreationInterface, AgentCreation, ValidatedCreateAgent } from "./agentInterface"
 import type { Context } from "../../index"
-import { ValidationKind } from "../../toPolkadotSnowbridgeV2"
-import { ValidationLog, ValidationReason } from "../../toPolkadot_v2"
+import { ValidationKind, ValidationLog, ValidationReason } from "../../types/toPolkadot"
 import { AssetRegistry, EthereumProviderTypes } from "@snowbridge/base-types"
 import { ensureValidationSuccess } from "../../utils"
 import { hexToU8a, isHex, u8aToHex } from "@polkadot/util"

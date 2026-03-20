@@ -1,11 +1,11 @@
 import { EthereumProviderTypes } from "@snowbridge/base-types"
 import { Context } from "../.."
-import {
+import type {
     DeliveryFee,
     MessageReceipt,
     Transfer,
     ValidatedTransfer,
-} from "../../toPolkadotSnowbridgeV2"
+} from "../../types/toPolkadotSnowbridgeV2"
 
 export interface TransferInterface<T extends EthereumProviderTypes> {
     readonly context: Context<T>

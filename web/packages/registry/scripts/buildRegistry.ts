@@ -28,7 +28,9 @@ import { isFunction } from "@polkadot/util"
 import { writeFile } from "fs/promises"
 import { AbstractProvider, Contract, ethers } from "ethers"
 import { IGatewayV1__factory as IGateway__factory } from "@snowbridge/contract-types"
-import { parachains as ParaImpl, xcmBuilder, assetsV2 } from "@snowbridge/api"
+import { assetsV2 } from "@snowbridge/api"
+import { ParachainBase, paraImplementation } from "@snowbridge/api/dist/parachains"
+import { buildParachainERC20ReceivedXcmOnDestination } from "@snowbridge/api/dist/xcmBuilder"
 import { EthersEthereumProvider, EthersProviderTypes } from "@snowbridge/provider-ethers"
 import { buildFriendlyChains } from "./friendlyChains"
 
@@ -573,7 +575,7 @@ async function buildRegistry(environment: Environment): Promise<AssetRegistry> {
                 ? new HttpProvider(relaychainUrl)
                 : new WsProvider(relaychainUrl),
         })
-        relayInfo = await (await ParaImpl.paraImplementation(provider)).chainProperties()
+        relayInfo = await (await paraImplementation(provider)).chainProperties()
 
         await provider.disconnect()
     }
@@ -614,7 +616,7 @@ async function buildRegistry(environment: Environment): Promise<AssetRegistry> {
                 ? new HttpProvider(bridgeHubUrl)
                 : new WsProvider(bridgeHubUrl),
         })
-        bridgeHubInfo = await (await ParaImpl.paraImplementation(provider)).chainProperties()
+        bridgeHubInfo = await (await paraImplementation(provider)).chainProperties()
         pnaAssets = await getRegisteredPnas(
             provider,
             ethProviders[ethChainId].provider,
@@ -626,7 +628,7 @@ async function buildRegistry(environment: Environment): Promise<AssetRegistry> {
 
     // Connect to all substrate parachains.
     const providers: {
-        [paraIdKey: string]: { parachainId: number; accessor: ParaImpl.ParachainBase }
+        [paraIdKey: string]: { parachainId: number; accessor: ParachainBase }
     } = {}
     {
         for (const { parachainId, accessor } of await Promise.all(
@@ -638,7 +640,7 @@ async function buildRegistry(environment: Environment): Promise<AssetRegistry> {
                         ? new HttpProvider(parachainUrl)
                         : new WsProvider(parachainUrl),
                 })
-                const accessor = await ParaImpl.paraImplementation(
+                const accessor = await paraImplementation(
                     provider,
                     new EthersEthereumProvider(),
                 )
@@ -708,7 +710,7 @@ async function buildRegistry(environment: Environment): Promise<AssetRegistry> {
                 ? new HttpProvider(assetHubUrl)
                 : new WsProvider(assetHubUrl),
         })
-        const accessor = await ParaImpl.paraImplementation<EthersProviderTypes>(
+        const accessor = await paraImplementation<EthersProviderTypes>(
             provider,
             new EthersEthereumProvider(),
         )
@@ -763,7 +765,7 @@ async function buildRegistry(environment: Environment): Promise<AssetRegistry> {
 }
 
 async function checkSnowbridgeV2Support(
-    parachain: ParaImpl.ParachainBase,
+    parachain: ParachainBase,
     ethChainId: number,
 ): Promise<{
     xcmVersion: XcmVersion
@@ -832,8 +834,8 @@ async function checkSnowbridgeV2Support(
 }
 
 async function indexParachain(
-    parachain: ParaImpl.ParachainBase,
-    assetHub: ParaImpl.ParachainBase,
+    parachain: ParachainBase,
+    assetHub: ParachainBase,
     kind: ParachainKind,
     ethChainId: number,
     parachainId: number,
@@ -897,7 +899,7 @@ async function indexParachain(
     let estimatedExecutionFeeDOT = 0n
     let estimatedDeliveryFeeDOT = 0n
     if (parachainId !== assetHubParaId) {
-        const destinationXcm = xcmBuilder.buildParachainERC20ReceivedXcmOnDestination(
+        const destinationXcm = buildParachainERC20ReceivedXcmOnDestination(
             parachain.provider.registry,
             ethChainId,
             assetsV2.ETHER_TOKEN_ADDRESS,
@@ -914,7 +916,7 @@ async function indexParachain(
         )
         estimatedExecutionFeeDOT = await parachain.calculateXcmFee(
             destinationXcm,
-            xcmBuilder.DOT_LOCATION,
+            assetsV2.DOT_LOCATION,
         )
     }
     return {

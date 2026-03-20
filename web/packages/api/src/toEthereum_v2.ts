@@ -7,7 +7,6 @@ import {
     bridgeLocation,
     buildResultXcmAssetHubERC20TransferFromParachain,
     buildAssetHubERC20TransferFromParachain,
-    DOT_LOCATION,
     erc20Location,
     parachainLocation,
     buildParachainERC20ReceivedXcmOnDestination,
@@ -19,23 +18,20 @@ import {
     HERE_LOCATION,
     buildAssetHubERC20TransferFromParachainWithNativeFee,
 } from "./xcmBuilder"
-import { getOperatingStatus, OperationStatus } from "./status"
+import { getOperatingStatus } from "./status"
 import {
     Asset,
     AssetRegistry,
     ChainId,
     ContractCall,
-    ERC20Metadata,
     EthereumChain,
     EthereumProviderTypes,
-    FeeData,
     Parachain,
     TransferKind,
     TransferRoute,
 } from "@snowbridge/base-types"
 import {
     CallDryRunEffects,
-    EventRecord,
     XcmDryRunApiError,
     XcmDryRunEffects,
 } from "@polkadot/types/interfaces"
@@ -44,61 +40,25 @@ import { ensureValidationSuccess, padFeeByPercentage, u32ToLeBytes } from "./uti
 import { Context } from "./index"
 import { ParachainBase } from "./parachains/parachainBase"
 import { TransferInterface as ToEthereumTransferInterface } from "./transfers/toEthereum/transferInterface"
-
-export type Transfer = {
-    kind: Extract<TransferKind, "polkadot->ethereum" | "polkadot->ethereum_l2">
-    input: {
-        registry: AssetRegistry
-        sourceAccount: string
-        beneficiaryAccount: any
-        tokenAddress: string
-        amount: bigint
-        fee: DeliveryFee
-        contractCall?: ContractCall
-    }
-    computed: {
-        sourceParaId: number
-        sourceAccountHex: string
-        tokenErcMetadata: ERC20Metadata
-        ahAssetMetadata: Asset
-        sourceAssetMetadata: Asset
-        sourceParachain: Parachain
-        messageId?: string
-        contractCall?: ContractCall
-    }
-    tx: SubmittableExtrinsic<"promise", ISubmittableResult>
-}
-
-export type DeliveryFee = {
-    kind: Extract<
-        TransferKind,
-        "polkadot->ethereum" | "polkadot->ethereum_l2" | "ethereum->ethereum"
-    >
-    snowbridgeDeliveryFeeDOT: bigint
-    bridgeHubDeliveryFeeDOT: bigint
-    assetHubExecutionFeeDOT: bigint
-    returnToSenderExecutionFeeDOT: bigint
-    returnToSenderDeliveryFeeDOT: bigint
-    totalFeeInDot: bigint
-    localExecutionFeeDOT?: bigint
-    localDeliveryFeeDOT?: bigint
-    ethereumExecutionFee?: bigint
-    feeLocation?: any
-    totalFeeInNative?: bigint
-    assetHubExecutionFeeNative?: bigint
-    returnToSenderExecutionFeeNative?: bigint
-    localExecutionFeeInNative?: bigint
-    localDeliveryFeeInNative?: bigint
-    ethereumExecutionFeeInNative?: bigint
-    l2BridgeFeeInL1Token?: bigint // Fee for the actual token bridge to L2 is paid in the L1 input token.
-}
-
-export type FeeInfo = {
-    estimatedGas: bigint
-    feeData: FeeData
-    executionFee: bigint
-    totalTxCost: bigint
-}
+import { DOT_LOCATION } from "./assets_v2"
+import type {
+    DeliveryFee,
+    FeeInfo,
+    MessageReceipt,
+    Transfer,
+    ValidatedTransfer,
+    ValidationLog,
+} from "./types/toEthereum"
+import { ValidationKind, ValidationReason } from "./types/toEthereum"
+export type {
+    DeliveryFee,
+    FeeInfo,
+    MessageReceipt,
+    Transfer,
+    ValidatedTransfer,
+    ValidationLog,
+} from "./types/toEthereum"
+export { ValidationKind, ValidationReason } from "./types/toEthereum"
 
 export class V1ToEthereumAdapter<T extends EthereumProviderTypes>
     implements ToEthereumTransferInterface<T>
@@ -668,55 +628,6 @@ export class V1ToEthereumAdapter<T extends EthereumProviderTypes>
     }
 }
 
-export enum ValidationKind {
-    Warning,
-    Error,
-}
-
-export enum ValidationReason {
-    BridgeStatusNotOperational,
-    InsufficientTokenBalance,
-    FeeEstimationError,
-    InsufficientDotFee,
-    InsufficientNativeFee,
-    DryRunApiNotAvailable,
-    DryRunFailed,
-    InsufficientEtherBalance,
-    ContractCallInvalidTarget,
-    ContractCallAgentNotRegistered,
-}
-
-export type ValidationLog = {
-    kind: ValidationKind
-    reason: ValidationReason
-    message: string
-}
-
-export type ValidatedTransfer = Transfer & {
-    logs: ValidationLog[]
-    success: boolean
-    data: {
-        bridgeStatus: OperationStatus
-        nativeBalance: bigint
-        dotBalance?: bigint
-        sourceExecutionFee: bigint
-        tokenBalance: bigint
-        sourceDryRunError: any
-        assetHubDryRunError: any
-        bridgeHubDryRunError?: any
-    }
-}
-
-export type MessageReceipt = {
-    blockNumber: number
-    blockHash: string
-    txIndex: number
-    txHash: string
-    success: boolean
-    events: EventRecord[]
-    dispatchError?: any
-    messageId?: string
-}
 
 export async function getDeliveryFeeV1(
     assetHubImpl: ParachainBase,

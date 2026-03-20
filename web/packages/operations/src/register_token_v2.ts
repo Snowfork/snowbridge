@@ -1,5 +1,6 @@
 import "dotenv/config"
-import { createApi, toPolkadotSnowbridgeV2 } from "@snowbridge/api"
+import { createApi } from "@snowbridge/api"
+import { ValidationKind } from "@snowbridge/api/dist/types/toPolkadot"
 import { EthersEthereumProvider } from "@snowbridge/provider-ethers"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { Wallet } from "ethers"
@@ -47,7 +48,7 @@ export const registerTokenV2 = async (tokenAddress: string) => {
         const validation = await registrationImpl.validate(registration)
 
         // Check validation logs for errors
-        if (validation.logs.find((l) => l.kind == toPolkadotSnowbridgeV2.ValidationKind.Error)) {
+        if (validation.logs.find((l) => l.kind == ValidationKind.Error)) {
             console.error("Validation failed with errors:")
             validation.logs.forEach((log) => {
                 console.error(`  [${log.kind}] ${log.message}`)

@@ -7,11 +7,11 @@ import {
     ValidatedRegisterToken,
 } from "./registrationInterface"
 import { Context } from "../../index"
-import { messageId as getSharedMessageReceipt, ValidationKind } from "../../toPolkadotSnowbridgeV2"
-import { FeeInfo, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
+import { messageId as getSharedMessageReceipt } from "../../toPolkadotSnowbridgeV2"
 import { getOperatingStatus } from "../../status"
-import { DOT_LOCATION, erc20Location } from "../../xcmBuilder"
-import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
+import { erc20Location } from "../../xcmBuilder"
+import { DOT_LOCATION, ETHER_TOKEN_ADDRESS } from "../../assets_v2"
+import { FeeInfo, ValidationKind, ValidationLog, ValidationReason } from "../../types/toPolkadot"
 import { ensureValidationSuccess, padFeeByPercentage } from "../../utils"
 import {
     buildAssetHubRegisterTokenXcm,

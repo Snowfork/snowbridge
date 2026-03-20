@@ -3,7 +3,6 @@ import { decodeAddress } from "@polkadot/util-crypto"
 import {
     buildResultXcmAssetHubERC20TransferFromParachain,
     buildAssetHubERC20TransferFromParachain,
-    DOT_LOCATION,
 } from "./xcmBuilder"
 import {
     AssetRegistry,
@@ -18,14 +17,9 @@ import { EventRecord } from "@polkadot/types/interfaces"
 import {
     buildMessageId,
     createERC20SourceParachainTx,
-    DeliveryFee,
     dryRunAssetHub,
     dryRunOnSourceParachain,
-    FeeInfo,
     getDeliveryFeeV1,
-    ValidationKind,
-    ValidationLog,
-    ValidationReason,
 } from "./toEthereum_v2"
 import { Context } from "./index"
 import {
@@ -35,6 +29,8 @@ import {
     ValidatedTransferEvm,
 } from "./transfers/toEthereumEvm/transferInterface"
 import { ensureValidationSuccess } from "./utils"
+import { DOT_LOCATION } from "./assets_v2"
+import { DeliveryFee, FeeInfo, ValidationKind, ValidationLog, ValidationReason } from "./types/toEthereum"
 
 export class V1ToEthereumEvmAdapter<T extends EthereumProviderTypes>
     implements ToEthereumEvmTransferInterface<T>

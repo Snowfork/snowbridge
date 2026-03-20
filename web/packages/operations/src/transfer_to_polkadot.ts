@@ -1,5 +1,5 @@
 import { Keyring } from "@polkadot/keyring"
-import { Context, createApi, toPolkadotV2 } from "@snowbridge/api"
+import { Context, createApi } from "@snowbridge/api"
 import { EthersEthereumProvider, EthersProviderTypes } from "@snowbridge/provider-ethers"
 import { formatEther, Wallet } from "ethers"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
@@ -123,7 +123,7 @@ export const transferToPolkadot = async (
         console.log("validation result", validation)
 
         // Step 4. Check validation logs for errors
-        if (validation.logs.find((l) => l.kind == toPolkadotV2.ValidationKind.Error)) {
+        if (!validation.success) {
             throw Error(`validation has one of more errors.`)
         }
 

@@ -1,68 +1,12 @@
 import { Context } from "../.."
-import {
-    Asset,
-    AssetRegistry,
-    ContractCall,
-    ERC20Metadata,
-    EthereumChain,
-    EthereumProviderTypes,
-    Parachain,
-    TransferKind,
-} from "@snowbridge/base-types"
-import { EventRecord } from "@polkadot/types/interfaces"
-import { OperationStatus } from "../../status"
-import { DeliveryFee, FeeInfo, ValidationLog } from "../../toEthereum_v2"
-
-export type TransferEvm<T extends EthereumProviderTypes> = {
-    kind: Extract<TransferKind, "ethereum->ethereum">
-    input: {
-        registry: AssetRegistry
-        sourceAccount: string
-        beneficiaryAccount: any
-        tokenAddress: string
-        amount: bigint
-        fee: DeliveryFee
-    }
-    computed: {
-        sourceParaId: number
-        sourceAccountHex: string
-        tokenErcMetadata: ERC20Metadata
-        ahAssetMetadata: Asset
-        sourceAssetMetadata: Asset
-        sourceParachain: Parachain
-        messageId: string
-        ethChain?: EthereumChain
-        customXcmHex?: string
-        xcTokenAddress?: string
-    }
-    tx: T["ContractTransaction"]
-}
-
-export type ValidatedTransferEvm<T extends EthereumProviderTypes> = TransferEvm<T> & {
-    logs: ValidationLog[]
-    success: boolean
-    data: {
-        bridgeStatus: OperationStatus
-        nativeBalance: bigint
-        dotBalance?: bigint
-        tokenBalance: bigint
-        feeInfo?: FeeInfo
-        sourceDryRunError: any
-        assetHubDryRunError: any
-    }
-}
-
-export type MessageReceiptEvm = {
-    blockNumber: number
-    blockHash: string
-    substrateBlockHash: string
-    txIndex: number
-    txHash: string
-    success: boolean
-    events: EventRecord[]
-    dispatchError?: any
-    messageId?: string
-}
+import { ContractCall, EthereumProviderTypes } from "@snowbridge/base-types"
+import type {
+    MessageReceiptEvm,
+    TransferEvm,
+    ValidatedTransferEvm,
+} from "../../types/toEthereumEvm"
+import type { DeliveryFee } from "../../types/toEthereum"
+export type { MessageReceiptEvm, TransferEvm, ValidatedTransferEvm } from "../../types/toEthereumEvm"
 
 export interface TransferInterface<T extends EthereumProviderTypes> {
     readonly context: Context<T>

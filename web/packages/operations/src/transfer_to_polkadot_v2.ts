@@ -1,5 +1,5 @@
 import { Keyring } from "@polkadot/keyring"
-import { Context, createApi, xcmBuilder } from "@snowbridge/api"
+import { assetsV2, Context, createApi } from "@snowbridge/api"
 import { EthersEthereumProvider, EthersProviderTypes } from "@snowbridge/provider-ethers"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { formatEther, Wallet } from "ethers"
@@ -73,7 +73,7 @@ export const transferToPolkadot = async (
         )
         // Step 1. Get the delivery fee for the transaction
         const feeAssetLocation =
-            feeAsset?.toLowerCase() === "dot" ? xcmBuilder.DOT_LOCATION : undefined
+            feeAsset?.toLowerCase() === "dot" ? assetsV2.DOT_LOCATION : undefined
         let fee = await transferImpl.fee(TOKEN_CONTRACT, {
             feeAsset: feeAssetLocation,
         })

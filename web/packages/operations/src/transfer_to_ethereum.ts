@@ -1,5 +1,5 @@
 import { Keyring } from "@polkadot/keyring"
-import { createApi, toEthereumV2 } from "@snowbridge/api"
+import { createApi } from "@snowbridge/api"
 import { EthersEthereumProvider } from "@snowbridge/provider-ethers"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { formatUnits, Wallet } from "ethers"
@@ -84,7 +84,7 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
         console.log("validation result", validation)
 
         // Step 5. Check validation logs for errors
-        if (validation.logs.find((l) => l.kind == toEthereumV2.ValidationKind.Error)) {
+        if (!validation.success) {
             throw Error(`validation has one of more errors.`)
         }
         if (process.env["DRY_RUN"] != "true") {

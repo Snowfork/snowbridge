@@ -1,6 +1,7 @@
 import { AssetRegistry, Parachain } from "@snowbridge/base-types"
 
 export const ETHER_TOKEN_ADDRESS = "0x0000000000000000000000000000000000000000"
+export const DOT_LOCATION = { parents: 1, interior: "Here" }
 
 export function findL2TokenAddress(
     registry: AssetRegistry,

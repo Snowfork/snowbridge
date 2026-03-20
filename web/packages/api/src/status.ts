@@ -4,7 +4,8 @@ import {
     toEthereumPendingTransfers,
     toPolkadotPendingTransfers,
 } from "./history_v2"
-import { Context, subsquidV2 } from "./index"
+import { Context } from "./index"
+import * as subsquidV2 from "./subsquid_v2"
 import { fetchBeaconSlot, fetchFinalityUpdate } from "./utils"
 import { ApiPromise } from "@polkadot/api"
 import { EthereumProvider, EthereumProviderTypes, IGatewayV1, IGatewayV2 } from "@snowbridge/base-types"

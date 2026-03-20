@@ -13,9 +13,9 @@ import {
     NATIVE_TOKEN_LOCATION,
     dotLocationOnKusamaAssetHub,
     ksmLocationOnPolkadotAssetHub,
-    DOT_LOCATION,
     matchesConsensusSystem,
 } from "./xcmBuilder"
+import { DOT_LOCATION } from "./assets_v2"
 import {
     buildKusamaToPolkadotDestAssetHubXCM,
     buildPolkadotToKusamaDestAssetHubXCM,
@@ -29,55 +29,28 @@ import {
     BridgeInfo,
     ChainId,
     Parachain,
-    TransferKind,
     TransferRoute,
     EthereumProviderTypes,
 } from "@snowbridge/base-types"
 import {
     CallDryRunEffects,
-    EventRecord,
     XcmDryRunApiError,
     XcmDryRunEffects,
 } from "@polkadot/types/interfaces"
 import { Result } from "@polkadot/types"
-import {
-    ensureValidationSuccess,
-    padFeeByPercentage,
-    resolveBeneficiary,
-    u32ToLeBytes,
-} from "./utils"
+import { ensureValidationSuccess, padFeeByPercentage, u32ToLeBytes } from "./utils"
+import { resolveBeneficiary } from "./crypto"
 import { TransferInterface as KusamaTransferInterface } from "./transfers/forKusama/transferInterface"
 import { Context } from "."
-
-export type Transfer = {
-    kind: Extract<TransferKind, "kusama->polkadot" | "polkadot->kusama">
-    input: {
-        registry: AssetRegistry
-        sourceAccount: string
-        beneficiaryAccount: any
-        tokenAddress: string
-        amount: bigint
-        fee: DeliveryFee
-    }
-    computed: {
-        sourceParaId: number
-        beneficiaryAddressHex: string
-        sourceAccountHex: string
-        sourceAssetMetadata: Asset
-        destAssetMetadata: Asset
-        sourceParachain: Parachain
-        messageId?: string
-    }
-    tx: SubmittableExtrinsic<"promise", ISubmittableResult>
-}
-
-export type DeliveryFee = {
-    kind: Extract<TransferKind, "kusama->polkadot" | "polkadot->kusama">
-    xcmBridgeFee: bigint
-    bridgeHubDeliveryFee: bigint
-    destinationFee: bigint
-    totalFeeInNative: bigint
-}
+import type {
+    DeliveryFee,
+    MessageReceipt,
+    Transfer,
+    ValidatedTransfer,
+    ValidationLog,
+} from "./types/forKusama"
+import { ValidationKind, ValidationReason } from "./types/forKusama"
+export { ValidationKind, ValidationReason } from "./types/forKusama"
 
 export enum Direction {
     ToKusama,
@@ -116,46 +89,6 @@ function resolveInputs(
     return { sourceAssetMetadata, destAssetMetadata, sourceParachain }
 }
 
-export enum ValidationKind {
-    Warning,
-    Error,
-}
-
-export enum ValidationReason {
-    InsufficientTokenBalance,
-    InsufficientFee,
-    DryRunFailed,
-    MaxConsumersReached,
-    AccountDoesNotExist,
-}
-
-export type ValidationLog = {
-    kind: ValidationKind
-    reason: ValidationReason
-    message: string
-}
-
-export type ValidatedTransfer = Transfer & {
-    logs: ValidationLog[]
-    success: boolean
-    data: {
-        nativeBalance: bigint
-        sourceExecutionFee: bigint
-        tokenBalance: bigint
-        assetHubDryRunError: any
-    }
-}
-
-export type MessageReceipt = {
-    blockNumber: number
-    blockHash: string
-    txIndex: number
-    txHash: string
-    success: boolean
-    events: EventRecord[]
-    dispatchError?: any
-    messageId?: string
-}
 
 export class KusamaTransfer<T extends EthereumProviderTypes> implements KusamaTransferInterface<T> {
     readonly info: BridgeInfo

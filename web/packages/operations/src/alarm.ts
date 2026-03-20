@@ -1,4 +1,4 @@
-import { status } from "@snowbridge/api"
+import * as status from "@snowbridge/api/dist/status"
 import {
     CloudWatchClient,
     PutMetricDataCommand,
