@@ -69,10 +69,7 @@ export class AddTip<T extends EthereumProviderTypes> implements AddTipInterface<
         }
     }
 
-    async validate(
-        tipAddition: TipAddition,
-        signerAddress: string,
-    ): Promise<ValidatedTipAddition> {
+    async validate(tipAddition: TipAddition, signerAddress: string): Promise<ValidatedTipAddition> {
         const assetHub = await this.context.assetHub()
         const extrinsicFee = await tipAddition.tx
             .paymentInfo(signerAddress)

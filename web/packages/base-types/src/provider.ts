@@ -208,7 +208,9 @@ export interface EthereumProvider<T extends EthereumProviderTypes> {
   getBalance(provider: T["Connection"], address: string): Promise<bigint>;
   getFeeData(provider: T["Connection"]): Promise<FeeData>;
   parseUnits(value: string, decimals: number): bigint;
-  gatewayOperatingMode(gateway: T["Contract"] & (IGatewayV1 | IGatewayV2)): Promise<bigint>;
+  gatewayOperatingMode(
+    gateway: T["Contract"] & (IGatewayV1 | IGatewayV2),
+  ): Promise<bigint>;
   gatewayChannelOperatingModeOf(
     gateway: T["Contract"] & IGatewayV1,
     channelId: string,

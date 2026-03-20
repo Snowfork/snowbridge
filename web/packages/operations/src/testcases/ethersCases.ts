@@ -2,7 +2,11 @@ import type { SnowbridgeApi } from "@snowbridge/api"
 import type { EthersEthereumProvider } from "@snowbridge/provider-ethers"
 import { polkadot_mainnet } from "@snowbridge/registry"
 
-function printEvmTx(route: string, token: string, tx: { data?: string; from?: string; to?: string | null; value?: bigint | null }) {
+function printEvmTx(
+    route: string,
+    token: string,
+    tx: { data?: string; from?: string; to?: string | null; value?: bigint | null },
+) {
     console.log(
         JSON.stringify({
             route,

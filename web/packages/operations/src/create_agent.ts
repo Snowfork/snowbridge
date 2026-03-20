@@ -47,9 +47,7 @@ export const createAgent = async () => {
         const agentCreate = await creator.validate(creation)
 
         // Check validation logs for errors
-        const errorLogs = agentCreate.logs.filter(
-            (l: any) => l.kind === ValidationKind.Error,
-        )
+        const errorLogs = agentCreate.logs.filter((l: any) => l.kind === ValidationKind.Error)
         if (errorLogs.length > 0) {
             console.error("Validation failed with errors:")
             errorLogs.forEach((log: any) => {

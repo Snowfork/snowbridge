@@ -41,7 +41,11 @@ export type {
 } from "./types/addTip"
 export type { AddTipInterface } from "./addTip/addTipInterface"
 export { TipAdditionValidationKind } from "./types/addTip"
-export type { AgentCreation, AgentCreationInterface, ValidatedCreateAgent } from "./types/registration/agent"
+export type {
+    AgentCreation,
+    AgentCreationInterface,
+    ValidatedCreateAgent,
+} from "./types/registration/agent"
 export type {
     RegistrationFee,
     RegistrationInterface,

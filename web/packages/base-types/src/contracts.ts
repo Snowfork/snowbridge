@@ -1,4 +1,3 @@
-
 export type QuoteExactOutputSingleParamsStruct = {
   tokenIn: string;
   tokenOut: string;

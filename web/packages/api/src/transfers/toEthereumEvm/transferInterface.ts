@@ -6,7 +6,11 @@ import type {
     ValidatedTransferEvm,
 } from "../../types/toEthereumEvm"
 import type { DeliveryFee } from "../../types/toEthereum"
-export type { MessageReceiptEvm, TransferEvm, ValidatedTransferEvm } from "../../types/toEthereumEvm"
+export type {
+    MessageReceiptEvm,
+    TransferEvm,
+    ValidatedTransferEvm,
+} from "../../types/toEthereumEvm"
 
 export interface TransferInterface<T extends EthereumProviderTypes> {
     readonly context: Context<T>
