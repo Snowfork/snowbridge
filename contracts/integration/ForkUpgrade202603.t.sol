@@ -47,29 +47,15 @@ contract ForkUpgrade202603Test is Test {
     address internal constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     WETH9 public weth = WETH9(payable(WETH));
 
+    string internal constant FORK_RPC_URL =
+        "https://virtual.mainnet.eu.rpc.tenderly.co/61589e0a-d204-449b-b095-64366ea949cb";
+
     event Transfer(address indexed from, address indexed to, uint256 value);
 
     function setUp() public {}
 
-    function selectFork24677447() public {
-        vm.createSelectFork(
-            "https://virtual.mainnet.eu.rpc.tenderly.co/a2b5dc8d-c06a-40a9-b893-d86dc7c9ecd4",
-            24_677_447
-        );
-    }
-
-    function selectFork24681921() public {
-        vm.createSelectFork(
-            "https://virtual.mainnet.eu.rpc.tenderly.co/390efc23-bb26-460c-b641-b5275f790bd7",
-            24_681_921
-        );
-    }
-
-    function selectFork24683314() public {
-        vm.createSelectFork(
-            "https://virtual.mainnet.eu.rpc.tenderly.co/61589e0a-d204-449b-b095-64366ea949cb",
-            24_683_314
-        );
+    function selectFork(uint256 blockNumber) public {
+        vm.createSelectFork(FORK_RPC_URL, blockNumber);
     }
 
     // This function is used to upgrade the gateway to the new implementation. It can be called
@@ -141,7 +127,7 @@ contract ForkUpgrade202603Test is Test {
     }
 
     function testUpgradedGateway202602StillAcceptsV2UnlockNativeEther() public {
-        selectFork24677447();
+        selectFork(24_677_447);
         upgradeTo202602();
         SubmitV2MessageFixture memory fixture = ForkTestFixtures.makeSubmitV2MessageFixture(
             "/test/data/mainnet-gateway-submitv2-unlock-ether.json"
@@ -164,7 +150,7 @@ contract ForkUpgrade202603Test is Test {
     }
 
     function testUpgradedGateway202602StillAcceptsV1UnlockNativeEther() public {
-        selectFork24681921();
+        selectFork(24_681_921);
         upgradeTo202602();
         SubmitMessageFixture memory fixture = ForkTestFixtures.makeSubmitMessageFixture(
             "/test/data/mainnet-gateway-submitv1-unlock-ether-202603.json"
@@ -185,7 +171,7 @@ contract ForkUpgrade202603Test is Test {
     }
 
     function testUpgradedGateway202602StillCanSendEtherWithV1SendToken() public {
-        selectFork24681921();
+        selectFork(24_681_921);
         upgradeTo202602();
         // Create a mock user
         address user = makeAddr("user");
@@ -207,8 +193,9 @@ contract ForkUpgrade202603Test is Test {
         vm.expectEmit(true, false, false, false);
         emit IGatewayV1.OutboundMessageAccepted(paraID.into(), 1, bytes32("0x"), hex"");
         hoax(user, amount + fee);
-        IGatewayV1(address(GATEWAY_PROXY))
-        .sendToken{value: amount + fee}(address(0), paraID, recipientAddress32, 1, amount);
+        IGatewayV1(address(GATEWAY_PROXY)).sendToken{value: amount + fee}(
+            address(0), paraID, recipientAddress32, 1, amount
+        );
         // After the sendToken call, the asset hub agent should have received the amount, and the user's balance should be 0.
         uint256 balanceAfter = assetHubAgent.balance;
         assertEq(balanceAfter, balanceBefore + amount);
@@ -216,7 +203,7 @@ contract ForkUpgrade202603Test is Test {
     }
 
     function testUpgradedGateway202602StillCanSendEtherWithV2SendMessage() public {
-        selectFork24681921();
+        selectFork(24_681_921);
         upgradeTo202602();
         // Create a mock user
         address user = makeAddr("user");
@@ -240,12 +227,14 @@ contract ForkUpgrade202603Test is Test {
                 claimer: "",
                 value: amount,
                 executionFee: executionFee,
-                relayerFee: relayerFee})
+                relayerFee: relayerFee
+            })
         );
 
         hoax(user, amount + fee);
-        IGatewayV2(payable(address(GATEWAY_PROXY)))
-        .v2_sendMessage{value: amount + fee}("", new bytes[](0), "", executionFee, relayerFee);
+        IGatewayV2(payable(address(GATEWAY_PROXY))).v2_sendMessage{value: amount + fee}(
+            "", new bytes[](0), "", executionFee, relayerFee
+        );
 
         // Verify asset balances
         assertEq(assetHubAgent.balance, balanceBefore + amount + fee);
@@ -253,7 +242,7 @@ contract ForkUpgrade202603Test is Test {
     }
 
     function testUpgradedGateway202602StillAcceptsV1MintDOT() public {
-        selectFork24683314();
+        selectFork(24_683_314);
         upgradeTo202602();
         SubmitMessageFixture memory fixture = ForkTestFixtures.makeSubmitMessageFixture(
             "/test/data/mainnet-gateway-submitv1-mint-dot-202603.json"
@@ -275,7 +264,7 @@ contract ForkUpgrade202603Test is Test {
 
     // Send DOT can work with the upgraded Gateway
     function testUpgradedGatewayStillCanSendDOT() public {
-        selectFork24683314();
+        selectFork(24_683_314);
         upgradeTo202602();
         address user = 0x302F0B71B8aD3CF6dD90aDb668E49b2168d652fd;
         vm.deal(user, 1 ether);
@@ -308,7 +297,8 @@ contract ForkUpgrade202603Test is Test {
             bytes32(0x688eefdb5afe6d8dfbccd6746853dd9ec90695bccaa7a37ea624f1b4d951fbdd),
             hex""
         );
-        IGatewayV1(address(GATEWAY_PROXY))
-        .sendToken{value: fee}(DOT, paraID, recipientAddress32, 1, amount);
+        IGatewayV1(address(GATEWAY_PROXY)).sendToken{value: fee}(
+            DOT, paraID, recipientAddress32, 1, amount
+        );
     }
 }
