@@ -17,6 +17,7 @@ import {
     Parachain,
     TransferKind as BaseTransferKind,
 } from "@snowbridge/base-types"
+import type { AddTipInterface } from "./addTip/addTipInterface"
 import type { AgentCreationInterface } from "./types/registration/agent"
 import type { RegistrationInterface } from "./types/registration/toPolkadot"
 import type { TransferInterface as ForInterParachainTransferInterface } from "./transfers/forInterParachain/transferInterface"
@@ -29,6 +30,17 @@ import type { TransferInterface as ToEthereumEvmTransferInterface } from "./tran
 import { toEthereumTransferById, toPolkadotTransferById } from "./history_v2"
 import type { ToEthereumTransferResult, ToPolkadotTransferResult } from "./history"
 
+export type {
+    MessageDirection,
+    TipAddition,
+    TipAdditionParams,
+    TipAdditionResponse,
+    TipAdditionValidationLog,
+    TipAsset,
+    ValidatedTipAddition,
+} from "./types/addTip"
+export type { AddTipInterface } from "./addTip/addTipInterface"
+export { TipAdditionValidationKind } from "./types/addTip"
 export type { AgentCreation, AgentCreationInterface, ValidatedCreateAgent } from "./types/registration/agent"
 export type {
     RegistrationFee,
@@ -391,66 +403,6 @@ function withKind<K extends TransferImplementation["kind"], T>(
     return Object.assign(implementation as object, { kind }) as T & { kind: K }
 }
 
-function lazyTransferImplementation<T extends EthereumProviderTypes, I extends { context: Context<T> }>(
-    context: Context<T>,
-    load: () => I,
-    methods: readonly (keyof Omit<I, "context">)[],
-): I {
-    let implementation: I | undefined
-    const getImplementation = () => (implementation ??= load())
-    const lazyImplementation = { context } as Record<string, unknown>
-    for (const method of methods) {
-        lazyImplementation[method as string] = (...args: unknown[]) =>
-            (getImplementation()[method] as (...args: unknown[]) => unknown)(...args)
-    }
-    return lazyImplementation as I
-}
-
-function lazyAgentCreation<ContractTransaction>(
-    load: () => AgentCreationInterface<ContractTransaction>,
-): AgentCreationInterface<ContractTransaction> {
-    let implementation: AgentCreationInterface<ContractTransaction> | undefined
-    const getImplementation = () => (implementation ??= load())
-    return {
-        agentIdForAccount(parachainId, account) {
-            return getImplementation().agentIdForAccount(parachainId, account)
-        },
-        tx(sourceAccount, agentId) {
-            return getImplementation().tx(sourceAccount, agentId)
-        },
-        validate(creation) {
-            return getImplementation().validate(creation)
-        },
-        build(sourceAccount, agentId) {
-            return getImplementation().build(sourceAccount, agentId)
-        },
-    }
-}
-
-function lazyRegistration<T extends EthereumProviderTypes>(
-    load: () => RegistrationInterface<T>,
-): RegistrationInterface<T> {
-    let implementation: RegistrationInterface<T> | undefined
-    const getImplementation = () => (implementation ??= load())
-    return {
-        fee(relayerFee, options) {
-            return getImplementation().fee(relayerFee, options)
-        },
-        tx(sourceAccount, tokenAddress, fee) {
-            return getImplementation().tx(sourceAccount, tokenAddress, fee)
-        },
-        validate(registration) {
-            return getImplementation().validate(registration)
-        },
-        build(sourceAccount, tokenAddress, relayerFee, options) {
-            return getImplementation().build(sourceAccount, tokenAddress, relayerFee, options)
-        },
-        messageId(receipt) {
-            return getImplementation().messageId(receipt)
-        },
-    }
-}
-
 type RegistryTransferChain = EthereumChain | Parachain
 
 function resolveRegistryTransferChain(info: BridgeInfo, chain: ChainId): RegistryTransferChain {
@@ -491,26 +443,31 @@ export class SnowbridgeApi<P extends EthereumProvider<any>> {
         )
     }
     createAgent(): AgentCreationInterface<ProviderTypesFor<P>["ContractTransaction"]> {
-        return lazyAgentCreation(() => {
-            const { CreateAgent } = require("./registration/agent/createAgent") as {
-                CreateAgent: new (
-                    context: Context<ProviderTypesFor<P>>,
-                    registry: BridgeInfo["registry"],
-                ) => AgentCreationInterface<ProviderTypesFor<P>["ContractTransaction"]>
-            }
-            return new CreateAgent(this.context, this.info.registry)
-        })
+        const { CreateAgent } = require("./registration/agent/createAgent") as {
+            CreateAgent: new (
+                context: Context<ProviderTypesFor<P>>,
+                registry: BridgeInfo["registry"],
+            ) => AgentCreationInterface<ProviderTypesFor<P>["ContractTransaction"]>
+        }
+        return new CreateAgent(this.context, this.info.registry)
     }
     registerToken(): RegistrationInterface<ProviderTypesFor<P>> {
-        return lazyRegistration(() => {
-            const { RegisterToken } = require("./registration/toPolkadot/registerToken") as {
-                RegisterToken: new (
-                    context: Context<ProviderTypesFor<P>>,
-                    registry: BridgeInfo["registry"],
-                ) => RegistrationInterface<ProviderTypesFor<P>>
-            }
-            return new RegisterToken(this.context, this.info.registry)
-        })
+        const { RegisterToken } = require("./registration/toPolkadot/registerToken") as {
+            RegisterToken: new (
+                context: Context<ProviderTypesFor<P>>,
+                registry: BridgeInfo["registry"],
+            ) => RegistrationInterface<ProviderTypesFor<P>>
+        }
+        return new RegisterToken(this.context, this.info.registry)
+    }
+    addTip(): AddTipInterface<ProviderTypesFor<P>> {
+        const { AddTip } = require("./addTip/addTip") as {
+            AddTip: new (
+                context: Context<ProviderTypesFor<P>>,
+                registry: BridgeInfo["registry"],
+            ) => AddTipInterface<ProviderTypesFor<P>>
+        }
+        return new AddTip(this.context, this.info.registry)
     }
     sender<F extends ChainId, T extends ChainId>(
         from: F,
@@ -544,20 +501,14 @@ export class SnowbridgeApi<P extends EthereumProvider<any>> {
             case "polkadot->polkadot": {
                 const sourceParachain = sourceChain as Parachain
                 const destinationParachain = destinationChain as Parachain
+                const { InterParachainTransfer } = require("./forInterParachain")
                 return withKind(
-                    lazyTransferImplementation(
+                    new InterParachainTransfer(
+                        this.info,
                         this.context,
-                        () => {
-                            const { InterParachainTransfer } = require("./forInterParachain")
-                            return new InterParachainTransfer(
-                                this.info,
-                                this.context,
-                                route,
-                                sourceParachain,
-                                destinationParachain,
-                            )
-                        },
-                        ["fee", "tx", "validate", "build", "signAndSend"],
+                        route,
+                        sourceParachain,
+                        destinationParachain,
                     ),
                     kind,
                 ) as unknown as TransferFromTo<F, T, ProviderTypesFor<P>>
@@ -566,20 +517,14 @@ export class SnowbridgeApi<P extends EthereumProvider<any>> {
             case "polkadot->kusama": {
                 const sourceParachain = sourceChain as Parachain
                 const destinationParachain = destinationChain as Parachain
+                const { KusamaTransfer } = require("./forKusama")
                 return withKind(
-                    lazyTransferImplementation(
+                    new KusamaTransfer(
+                        this.info,
                         this.context,
-                        () => {
-                            const { KusamaTransfer } = require("./forKusama")
-                            return new KusamaTransfer(
-                                this.info,
-                                this.context,
-                                route,
-                                sourceParachain,
-                                destinationParachain,
-                            )
-                        },
-                        ["fee", "tx", "validate", "build", "signAndSend"],
+                        route,
+                        sourceParachain,
+                        destinationParachain,
                     ),
                     kind,
                 ) as unknown as TransferFromTo<F, T, ProviderTypesFor<P>>
@@ -587,30 +532,27 @@ export class SnowbridgeApi<P extends EthereumProvider<any>> {
             case "polkadot->ethereum": {
                 const sourceParachain = sourceChain as Parachain
                 const destinationEthChain = destinationChain as EthereumChain
+                if (sourceParachain.features.supportsV2) {
+                    const { TransferToEthereum } = require("./toEthereumSnowbridgeV2")
+                    return withKind(
+                        new TransferToEthereum(
+                            this.context,
+                            route,
+                            this.info.registry,
+                            sourceParachain,
+                            destinationEthChain,
+                        ),
+                        kind,
+                    ) as unknown as TransferFromTo<F, T, ProviderTypesFor<P>>
+                }
+                const { V1ToEthereumAdapter } = require("./toEthereum_v2")
                 return withKind(
-                    lazyTransferImplementation(
+                    new V1ToEthereumAdapter(
                         this.context,
-                        () => {
-                            if (sourceParachain.features.supportsV2) {
-                                const { TransferToEthereum } = require("./toEthereumSnowbridgeV2")
-                                return new TransferToEthereum(
-                                      this.context,
-                                      route,
-                                      this.info.registry,
-                                      sourceParachain,
-                                      destinationEthChain,
-                                )
-                            }
-                            const { V1ToEthereumAdapter } = require("./toEthereum_v2")
-                            return new V1ToEthereumAdapter(
-                                this.context,
-                                this.info.registry,
-                                route,
-                                sourceParachain,
-                                destinationEthChain,
-                            )
-                        },
-                        ["fee", "tx", "validate", "build", "signAndSend"],
+                        this.info.registry,
+                        route,
+                        sourceParachain,
+                        destinationEthChain,
                     ),
                     kind,
                 ) as unknown as TransferFromTo<F, T, ProviderTypesFor<P>>
@@ -618,30 +560,27 @@ export class SnowbridgeApi<P extends EthereumProvider<any>> {
             case "ethereum->polkadot": {
                 const sourceEthChain = sourceChain as EthereumChain
                 const destinationParachain = destinationChain as Parachain
+                if (destinationParachain.features.supportsV2) {
+                    const { TransferToPolkadot } = require("./toPolkadotSnowbridgeV2")
+                    return withKind(
+                        new TransferToPolkadot(
+                            this.context,
+                            route,
+                            this.info.registry,
+                            sourceEthChain,
+                            destinationParachain,
+                        ),
+                        kind,
+                    ) as unknown as TransferFromTo<F, T, ProviderTypesFor<P>>
+                }
+                const { V1ToPolkadotAdapter } = require("./toPolkadot_v2")
                 return withKind(
-                    lazyTransferImplementation(
+                    new V1ToPolkadotAdapter(
                         this.context,
-                        () => {
-                            if (destinationParachain.features.supportsV2) {
-                                const { TransferToPolkadot } = require("./toPolkadotSnowbridgeV2")
-                                return new TransferToPolkadot(
-                                      this.context,
-                                      route,
-                                      this.info.registry,
-                                      sourceEthChain,
-                                      destinationParachain,
-                                )
-                            }
-                            const { V1ToPolkadotAdapter } = require("./toPolkadot_v2")
-                            return new V1ToPolkadotAdapter(
-                                this.context,
-                                this.info.registry,
-                                route,
-                                sourceEthChain,
-                                destinationParachain,
-                            )
-                        },
-                        ["fee", "tx", "validate", "build", "messageId"],
+                        this.info.registry,
+                        route,
+                        sourceEthChain,
+                        destinationParachain,
                     ),
                     kind,
                 ) as unknown as TransferFromTo<F, T, ProviderTypesFor<P>>
@@ -649,61 +588,41 @@ export class SnowbridgeApi<P extends EthereumProvider<any>> {
             case "ethereum->ethereum": {
                 const sourceEthChain = sourceChain as EthereumChain
                 const destinationEthChain = destinationChain as EthereumChain
+                const { V1ToEthereumEvmAdapter } = require("./toEthereumFromEVM_v2")
                 const tIface: ToEthereumEvmTransferInterface<ProviderTypesFor<P>> =
-                    lazyTransferImplementation(
+                    new V1ToEthereumEvmAdapter(
                         this.context,
-                        () => {
-                            const { V1ToEthereumEvmAdapter } = require("./toEthereumFromEVM_v2")
-                            return new V1ToEthereumEvmAdapter(
-                                this.context,
-                                this.info.registry,
-                                route,
-                                sourceEthChain,
-                                destinationEthChain,
-                            )
-                        },
-                        ["fee", "tx", "validate", "build", "messageId"],
+                        this.info.registry,
+                        route,
+                        sourceEthChain,
+                        destinationEthChain,
                     )
                 return withKind(tIface, kind) as TransferFromTo<F, T, ProviderTypesFor<P>>
             }
             case "polkadot->ethereum_l2": {
                 const sourceParachain = sourceChain as Parachain
                 const destinationEthChain = destinationChain as EthereumChain
-                const tIface: ToEthereumL2TransferInterface<ProviderTypesFor<P>> =
-                    lazyTransferImplementation(
-                        this.context,
-                        () => {
-                            const { ERC20FromAH } = require("./transfers/polkadotToL2/erc20ToL2")
-                            return new ERC20FromAH(
-                                this.context,
-                                this.info.registry,
-                                route,
-                                sourceParachain,
-                                destinationEthChain,
-                            )
-                        },
-                        ["fee", "tx", "validate", "build", "signAndSend"],
-                    )
+                const { ERC20FromAH } = require("./transfers/polkadotToL2/erc20ToL2")
+                const tIface: ToEthereumL2TransferInterface<ProviderTypesFor<P>> = new ERC20FromAH(
+                    this.context,
+                    this.info.registry,
+                    route,
+                    sourceParachain,
+                    destinationEthChain,
+                )
                 return withKind(tIface, kind) as TransferFromTo<F, T, ProviderTypesFor<P>>
             }
             case "ethereum_l2->polkadot": {
                 const sourceEthChain = sourceChain as EthereumChain
                 const destinationParachain = destinationChain as Parachain
-                const tIface: ToPolkadotL2TransferInterface<ProviderTypesFor<P>> =
-                    lazyTransferImplementation(
-                        this.context,
-                        () => {
-                            const { ERC20ToAH } = require("./transfers/l2ToPolkadot/erc20ToAH")
-                            return new ERC20ToAH(
-                                this.context,
-                                this.info.registry,
-                                route,
-                                sourceEthChain,
-                                destinationParachain,
-                            )
-                        },
-                        ["fee", "tx", "validate", "build", "messageId"],
-                    )
+                const { ERC20ToAH } = require("./transfers/l2ToPolkadot/erc20ToAH")
+                const tIface: ToPolkadotL2TransferInterface<ProviderTypesFor<P>> = new ERC20ToAH(
+                    this.context,
+                    this.info.registry,
+                    route,
+                    sourceEthChain,
+                    destinationParachain,
+                )
                 return withKind(tIface, kind) as TransferFromTo<F, T, ProviderTypesFor<P>>
             }
             default:

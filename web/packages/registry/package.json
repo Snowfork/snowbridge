@@ -18,7 +18,7 @@
   },
   "devDependencies": {
     "@polkadot/api": "16.5.4",
-    "@polkadot/util": "14.0.1",
+    "@polkadot/util": "14.0.2",
     "@snowbridge/api": "workspace:*",
     "@snowbridge/contract-types": "workspace:*",
     "@snowbridge/provider-ethers": "workspace:*",
