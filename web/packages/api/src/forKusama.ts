@@ -32,11 +32,7 @@ import {
     TransferRoute,
     EthereumProviderTypes,
 } from "@snowbridge/base-types"
-import {
-    CallDryRunEffects,
-    XcmDryRunApiError,
-    XcmDryRunEffects,
-} from "@polkadot/types/interfaces"
+import { CallDryRunEffects, XcmDryRunApiError, XcmDryRunEffects } from "@polkadot/types/interfaces"
 import { Result } from "@polkadot/types"
 import { ensureValidationSuccess, padFeeByPercentage, u32ToLeBytes } from "./utils"
 import { resolveBeneficiary } from "./crypto"
@@ -88,7 +84,6 @@ function resolveInputs(
 
     return { sourceAssetMetadata, destAssetMetadata, sourceParachain }
 }
-
 
 export class KusamaTransfer<T extends EthereumProviderTypes> implements KusamaTransferInterface<T> {
     readonly info: BridgeInfo

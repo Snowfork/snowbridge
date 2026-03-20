@@ -23,11 +23,7 @@ import { resolveBeneficiary } from "./crypto"
 import { Context } from "."
 import { buildMessageId } from "./toEthereum_v2"
 import { Result } from "@polkadot/types"
-import {
-    CallDryRunEffects,
-    XcmDryRunApiError,
-    XcmDryRunEffects,
-} from "@polkadot/types/interfaces"
+import { CallDryRunEffects, XcmDryRunApiError, XcmDryRunEffects } from "@polkadot/types/interfaces"
 import { u8aToHex } from "@polkadot/util"
 import { TransferInterface as InterParachainTransferInterface } from "./transfers/forInterParachain/transferInterface"
 import type {
@@ -74,7 +70,6 @@ function resolveInputs(
 
     return { sourceAssetMetadata, destAssetMetadata, sourceParachain, destParachain }
 }
-
 
 export class InterParachainTransfer<T extends EthereumProviderTypes>
     implements InterParachainTransferInterface<T>

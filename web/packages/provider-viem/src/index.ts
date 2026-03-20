@@ -81,10 +81,7 @@ function asAbi<TAbi extends Abi>(abi: TAbi): TAbi;
 function asAbi(abi: readonly [string, ...string[]]): Abi;
 function asAbi(abi: Abi | readonly [string, ...string[]]): Abi;
 function asAbi(abi: Abi | readonly [string, ...string[]]): Abi {
-  if (
-    Array.isArray(abi) &&
-    abi.every((item) => typeof item === "string")
-  ) {
+  if (Array.isArray(abi) && abi.every((item) => typeof item === "string")) {
     return parseAbi(abi);
   }
   return abi as Abi;
@@ -94,7 +91,9 @@ function toBytesHex(value: string | Uint8Array): Hex {
   return typeof value === "string" ? (value as Hex) : toHex(value);
 }
 
-function normalizeMultiAddress(address: MultiAddressStruct): MultiAddressStruct {
+function normalizeMultiAddress(
+  address: MultiAddressStruct,
+): MultiAddressStruct {
   return {
     kind: address.kind,
     data: address.data as Hex,
@@ -137,7 +136,9 @@ function normalizeSwapParams(swapParams: SwapParamsStruct): SwapParamsStruct & {
   };
 }
 
-function normalizeDestination(destination: [number, string[]]): [number, Hex[]] {
+function normalizeDestination(
+  destination: [number, string[]],
+): [number, Hex[]] {
   return [destination[0], destination[1].map((item) => item as Hex)];
 }
 

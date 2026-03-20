@@ -21,10 +21,7 @@ import {
 } from "../../toPolkadotSnowbridgeV2"
 import { accountId32Location, erc20Location, isDOT } from "../../xcmBuilder"
 import { DOT_LOCATION, ETHER_TOKEN_ADDRESS } from "../../assets_v2"
-import {
-    ensureValidationSuccess,
-    padFeeByPercentage,
-} from "../../utils"
+import { ensureValidationSuccess, padFeeByPercentage } from "../../utils"
 import { paraIdToSovereignAccount, resolveBeneficiary } from "../../crypto"
 import { FeeInfo, ValidationLog, ValidationReason } from "../../types/toPolkadot"
 import {

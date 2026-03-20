@@ -81,11 +81,7 @@ async function getMoonbeamEvmAssetMetadataWithProvider(
     }
     const retVal = ethereumProvider.decodeFunctionResult<
         string | bigint | readonly [string | bigint]
-    >(
-        MOONBEAM_ERC20_ABI,
-        method,
-        resultJson?.ok?.value,
-    )
+    >(MOONBEAM_ERC20_ABI, method, resultJson?.ok?.value)
     return Array.isArray(retVal) ? retVal[0] : retVal
 }
 

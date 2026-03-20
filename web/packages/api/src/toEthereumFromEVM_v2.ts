@@ -30,7 +30,13 @@ import {
 } from "./transfers/toEthereumEvm/transferInterface"
 import { ensureValidationSuccess } from "./utils"
 import { DOT_LOCATION } from "./assets_v2"
-import { DeliveryFee, FeeInfo, ValidationKind, ValidationLog, ValidationReason } from "./types/toEthereum"
+import {
+    DeliveryFee,
+    FeeInfo,
+    ValidationKind,
+    ValidationLog,
+    ValidationReason,
+} from "./types/toEthereum"
 
 export class V1ToEthereumEvmAdapter<T extends EthereumProviderTypes>
     implements ToEthereumEvmTransferInterface<T>
