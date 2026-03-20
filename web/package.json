@@ -7,7 +7,8 @@
   },
   "scripts": {
     "preinstall": "npx only-allow pnpm",
-    "build": "turbo run build --concurrency=1 --no-cache",
+    "build": "turbo run build --concurrency=1",
+    "build:vercel": "export PATH=\"$(pwd)/scripts/.foundry/bin:$(pwd)/.foundry/bin:${HOME}/.foundry/bin:${PATH}\" && pnpm run build",
     "test": "turbo run test",
     "lint": "turbo run lint",
     "format": "turbo run format",
@@ -15,11 +16,30 @@
     "coverage": "turbo run coverage",
     "remixd": "./node_modules/.bin/remixd"
   },
+  "dependencies": {
+    "@aws-sdk/client-cloudwatch": "^3.901.0",
+    "@polkadot/api": "16.5.4",
+    "@polkadot/keyring": "14.0.1",
+    "@polkadot/types": "16.5.4",
+    "@polkadot/types-codec": "16.5.4",
+    "@polkadot/util": "14.0.1",
+    "@polkadot/util-crypto": "14.0.1",
+    "@snowbridge/api": "workspace:*",
+    "@snowbridge/base-types": "workspace:*",
+    "@snowbridge/contract-types": "workspace:*",
+    "@snowbridge/registry": "workspace:*",
+    "dotenv": "^17.2.3",
+    "ethers": "^6.16.0",
+    "lodash": "^4.17.21",
+    "pino": "^10.0.0",
+    "pino-pretty": "^13.1.1"
+  },
   "devDependencies": {
     "ts-node": "10.9.2",
     "tsconfig-paths": "4.2.0",
     "turbo": "2.5.8",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "@vercel/node": "^3.2.0"
   },
   "packageManager": "pnpm@10.6.4+sha512.da3d715bfd22a9a105e6e8088cfc7826699332ded60c423b14ec613a185f1602206702ff0fe4c438cb15c979081ce4cb02568e364b15174503a63c7a8e2a5f6c"
 }
