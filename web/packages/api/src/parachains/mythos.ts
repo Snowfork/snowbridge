@@ -1,4 +1,5 @@
-import { DOT_LOCATION, erc20Location } from "../xcmBuilder"
+import { erc20Location } from "../xcmBuilder"
+import { DOT_LOCATION } from "../assets_v2"
 import { AssetMap, PNAMap } from "@snowbridge/base-types"
 import { ParachainBase } from "./parachainBase"
 

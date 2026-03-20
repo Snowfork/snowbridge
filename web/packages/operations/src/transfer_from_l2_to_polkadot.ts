@@ -1,10 +1,11 @@
 import { Keyring } from "@polkadot/keyring"
-import { Context, toPolkadotSnowbridgeV2, toPolkadotV2 } from "@snowbridge/api"
+import { Context, createApi } from "@snowbridge/api"
+import { assetsV2 } from "@snowbridge/api"
+import { EthersEthereumProvider, EthersProviderTypes } from "@snowbridge/provider-ethers"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { formatEther, Wallet } from "ethers"
 import { bridgeInfoFor } from "@snowbridge/registry"
 import { IERC20__factory } from "@snowbridge/contract-types"
-import { ETHER_TOKEN_ADDRESS } from "@snowbridge/api/dist/assets_v2"
 
 export const transferToPolkadot = async (
     l2ChainId: number,
@@ -20,8 +21,13 @@ export const transferToPolkadot = async (
     }
     console.log(`Using environment '${env}'`)
 
-    const { registry, environment } = bridgeInfoFor(env)
-    const context = new Context(environment)
+    const info = bridgeInfoFor(env)
+    const { registry } = info
+    const api = createApi({
+        info,
+        ethereumProvider: new EthersEthereumProvider(),
+    })
+    const context: Context<EthersProviderTypes> = api.context
 
     const polkadot_keyring = new Keyring({ type: "sr25519" })
 
@@ -46,10 +52,13 @@ export const transferToPolkadot = async (
 
     console.log("TOKEN_CONTRACT", TOKEN_CONTRACT)
 
-    if (TOKEN_CONTRACT != ETHER_TOKEN_ADDRESS) {
+    if (TOKEN_CONTRACT != assetsV2.ETHER_TOKEN_ADDRESS) {
         console.log("# Approve")
         const erc20 = IERC20__factory.connect(TOKEN_CONTRACT, ETHEREUM_ACCOUNT)
-        const l2AdapterAddress = await context.l2Adapter(l2ChainId).getAddress()
+        const l2AdapterAddress = context.environment.l2Bridge?.l2Chains[l2ChainId].adapterAddress
+        if (!l2AdapterAddress) {
+            throw new Error("L2 bridge configuration is missing.")
+        }
         const [balance, allowance] = await Promise.all([
             erc20.balanceOf(ETHEREUM_ACCOUNT_PUBLIC),
             erc20.allowance(ETHEREUM_ACCOUNT_PUBLIC, l2AdapterAddress),
@@ -75,42 +84,29 @@ export const transferToPolkadot = async (
     console.log("Ethereum to Polkadot")
     {
         // Step 0. Create a transfer implementation
-        const transferImpl = toPolkadotSnowbridgeV2.createL2TransferImplementation(
-            l2ChainId,
-            destParaId,
-            registry,
-            TOKEN_CONTRACT,
+        const transferImpl = api.sender(
+            { kind: "ethereum_l2", id: l2ChainId },
+            { kind: "polkadot", id: destParaId },
         )
         // Step 1. Get the delivery fee for the transaction
-        let fee = await transferImpl.getDeliveryFee(
-            context,
-            registry,
-            l2ChainId,
-            TOKEN_CONTRACT,
-            amount,
-            destParaId,
-        )
+        let fee = await transferImpl.fee(TOKEN_CONTRACT, amount)
 
         console.log("fee: ", fee)
         // Step 2. Create a transfer tx
-        const transfer = await transferImpl.createTransfer(
-            context,
-            registry,
-            l2ChainId,
-            TOKEN_CONTRACT,
-            amount,
-            destParaId,
+        const transfer = await transferImpl.tx(
             ETHEREUM_ACCOUNT_PUBLIC,
             POLKADOT_ACCOUNT_PUBLIC,
+            TOKEN_CONTRACT,
+            amount,
             fee,
         )
 
         // Step 3. Validate the transaction.
-        const validation = await transferImpl.validateTransfer(context, transfer)
+        const validation = await transferImpl.validate(transfer)
         console.log("validation result", validation)
 
         // Step 4. Check validation logs for errors
-        if (validation.logs.find((l) => l.kind == toPolkadotV2.ValidationKind.Error)) {
+        if (!validation.success) {
             throw Error(`validation has one of more errors.` + JSON.stringify(validation.logs))
         }
 
@@ -119,12 +115,15 @@ export const transferToPolkadot = async (
             tx,
             computed: { totalValue },
         } = transfer
-        const estimatedGas = await context.ethChain(l2ChainId).estimateGas(tx)
-        const feeData = await context.ethChain(l2ChainId).getFeeData()
+        const estimatedGas = await context.ethereumProvider.estimateGas(
+            context.ethChain(l2ChainId),
+            tx,
+        )
+        const feeData = await context.ethereumProvider.getFeeData(context.ethChain(l2ChainId))
         const executionFee = (feeData.gasPrice ?? 0n) * estimatedGas
 
         console.log("tx:", tx)
-        console.log("feeData:", feeData.toJSON())
+        console.log("feeData:", feeData)
         console.log("gas:", estimatedGas)
         console.log("relayer fee:", formatEther(fee.relayerFee))
         console.log("execution cost:", formatEther(executionFee))
@@ -143,8 +142,13 @@ export const transferToPolkadot = async (
                 throw Error(`Transaction ${response.hash} not included.`)
             }
 
+            const message = await transferImpl.messageId(receipt)
+            if (!message) {
+                throw Error(`Transaction ${receipt.hash} did not emit a message.`)
+            }
+
             console.log(
-                `Success messages:
+                `Success message with nonce: ${message.nonce}
                 block number: ${receipt.blockNumber}
                 tx hash: ${receipt.hash}`,
             )

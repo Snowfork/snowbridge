@@ -1,8 +1,6 @@
 import { Registry } from "@polkadot/types/types"
-import { beneficiaryMultiAddress } from "../../utils"
 import {
     bridgeLocation,
-    DOT_LOCATION,
     erc20Location,
     erc20LocationReanchored,
     parachainLocation,
@@ -11,8 +9,10 @@ import {
     buildAppendixInstructions,
     buildEthereumInstructions,
 } from "../../xcmBuilder"
+import { DOT_LOCATION } from "../../assets_v2"
 import { Asset } from "@snowbridge/base-types"
 import { DeliveryFee } from "../../toEthereum_v2"
+import { resolveBeneficiary } from "../../crypto"
 
 function buildAssetHubXcmFromParachain(
     ethChainId: number,
@@ -24,10 +24,7 @@ function buildAssetHubXcmFromParachain(
     destinationFee: bigint,
     feeAssetId: any,
 ) {
-    let {
-        hexAddress,
-        address: { kind },
-    } = beneficiaryMultiAddress(sourceAccount)
+    let { hexAddress, kind } = resolveBeneficiary(sourceAccount)
     let sourceAccountLocation
     switch (kind) {
         case 1:

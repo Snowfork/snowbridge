@@ -2,6 +2,7 @@ export type BridgeInfo = {
   environment: Environment;
   routes: readonly TransferRoute[];
   registry: AssetRegistry;
+  chains: ChainMap;
 };
 
 export type AccountType = "AccountId20" | "AccountId32";
@@ -104,6 +105,10 @@ export type Parachain = ChainId & {
 
 export type EthereumChainMap = Record<ChainKey<EthereumKind>, EthereumChain>;
 export type ParachainMap = Record<ChainKey<ParachainKind>, Parachain>;
+export type ChainRef = ChainId & {
+  key: ChainKey<ChainKind>;
+};
+export type ChainMap = Record<string, ChainRef>;
 
 export type KusamaConfig = {
   assetHubParaId: number;
@@ -164,6 +169,16 @@ export type TransferRoute = {
   assets: readonly string[];
 };
 
+export type TransferKind =
+  | "polkadot->polkadot"
+  | "kusama->polkadot"
+  | "polkadot->kusama"
+  | "polkadot->ethereum"
+  | "ethereum->polkadot"
+  | "ethereum->ethereum"
+  | "polkadot->ethereum_l2"
+  | "ethereum_l2->polkadot";
+
 export type ChainKey<T extends string> = `${T}_${number}`;
 
 export type Source = ChainId & {
@@ -218,6 +233,18 @@ export type AssetRegistry = {
   parachains: ParachainMap;
   kusama?: KusamaConfig;
 };
+
+export type {
+  EthereumProvider,
+  EthereumProviderTypes,
+  FeeData,
+  GatewayV1OutboundMessageAccepted,
+  GatewayV2OutboundMessageAccepted,
+  L1AdapterDepositParams,
+  L1LegacySwapRouterExactOutputSingleParams,
+  L1SwapRouterExactOutputSingleParams,
+  MultiAddressStruct,
+} from "./provider";
 
 export type ContractCall = {
   target: string;
@@ -275,3 +302,5 @@ export class FeeEstimateError extends Error {
     this.details = details;
   }
 }
+
+export * from "./contracts";
