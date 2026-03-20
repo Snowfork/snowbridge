@@ -23,8 +23,8 @@
   },
   "on-demand-sync": {
     "asset-hub-channel-id": "0xc173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539",
-    "max-tasks": 3,
-    "merge-period": 900,
-    "expired-period": 3600
+    "max-tasks": 5,
+    "merge-period": 600,
+    "expired-period": 2400
   }
 }
