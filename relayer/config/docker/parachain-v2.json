@@ -2,9 +2,7 @@
   "source": {
     "ethereum": {
       "endpoint": "${ETHEREUM_ENDPOINT}",
-      "heartbeat-secs": 600,
-      "gas-fee-bump-numerator": 100,
-      "gas-fee-bump-denominator": 100
+      "heartbeat-secs": 600
     },
     "polkadot": {
       "endpoint": "${POLKADOT_ENDPOINT}",
@@ -23,9 +21,7 @@
     "ethereum": {
       "endpoint": "${PRIMARY_PRIVATE_ENDPOINT}",
       "fallback-endpoint": "${SECONDARY_PRIVATE_ENDPOINT}",
-      "pending-tx-timeout-secs": 240,
-      "gas-fee-bump-numerator": 100,
-      "gas-fee-bump-denominator": 100
+      "pending-tx-timeout-secs": 240
     },
     "contracts": {
       "Gateway": "${GATEWAY_CONTRACT}"

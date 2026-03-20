@@ -269,11 +269,14 @@ func (co *Connection) WatchTransactionWithClient(ctx context.Context, client *et
 }
 
 // gasFeeBumpScale returns numerator/denominator for scaling suggested caps.
-// Both values must be configured (non-zero), otherwise ApplySuggestedGasFees will fail.
+// When both values are unset (0/0), it defaults to 100/100 (no extra scaling beyond the bind formula).
 func (co *Connection) gasFeeBumpScale() (num, den uint64, err error) {
 	num, den = co.config.GasFeeBumpNumerator, co.config.GasFeeBumpDenominator
+	if num == 0 && den == 0 {
+		return 100, 100, nil
+	}
 	if num == 0 || den == 0 {
-		return 0, 0, errors.New("ethereum config: gas-fee-bump-numerator/denominator must both be set and non-zero")
+		return 0, 0, errors.New("ethereum config: gas-fee-bump-numerator/denominator must either both be 0 (use defaults) or both be non-zero")
 	}
 	return num, den, nil
 }
