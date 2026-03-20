@@ -179,10 +179,6 @@ func (co *Connection) queryFailingErrorWithClient(ctx context.Context, client *e
 
 const PollInterval uint64 = 12
 
-// eip1559BaseFeeWiggleMultiplier matches go-ethereum (const basefeeWiggleMultiplier = 2 in accounts/abi/bind/v2/base.go).
-// With EIP-1559, baseFee increases are capped at 12.5% per block in the worst case, so 2x baseFee gives enough slack for several blocks even under max increase (roughly ~6 blocks of worst-case growth).
-const eip1559BaseFeeWiggleMultiplier int64 = 2
-
 func (co *Connection) waitForTransactionWithClient(ctx context.Context, client *ethclient.Client, tx *types.Transaction, confirmations uint64) (*types.Receipt, error) {
 	if client == nil {
 		client = co.client
@@ -295,6 +291,8 @@ func (co *Connection) suggestedEIP1559GasCaps(ctx context.Context) (*big.Int, *b
 	if err != nil {
 		return nil, nil, fmt.Errorf("suggest gas tip cap: %w", err)
 	}
+	// const basefeeWiggleMultiplier = 2 in accounts/abi/bind/v2/base.go
+	eip1559BaseFeeWiggleMultiplier := int64(2)
 	feeCap := new(big.Int).Add(
 		tip,
 		new(big.Int).Mul(head.BaseFee, big.NewInt(eip1559BaseFeeWiggleMultiplier)),
