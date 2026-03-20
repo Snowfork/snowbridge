@@ -13,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	contracts "github.com/snowfork/snowbridge/relayer/contracts/v1"
@@ -25,11 +26,12 @@ import (
 )
 
 type EthereumWriter struct {
-	config     *SinkConfig
-	conn       *ethereum.Connection
-	gateway    *contracts.Gateway
-	tasks      <-chan *Task
-	gatewayABI abi.ABI
+	config          *SinkConfig
+	conn            *ethereum.Connection
+	gateway         *contracts.Gateway
+	gatewayFallback *contracts.Gateway
+	tasks           <-chan *Task
+	gatewayABI      abi.ABI
 }
 
 func NewEthereumWriter(
@@ -52,6 +54,13 @@ func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group) error {
 		return err
 	}
 	wr.gateway = gateway
+	if wr.conn.FallbackClient() != nil {
+		gwFb, err := contracts.NewGateway(address, wr.conn.FallbackClient())
+		if err != nil {
+			return err
+		}
+		wr.gatewayFallback = gwFb
+	}
 
 	gatewayABI, err := abi.JSON(strings.NewReader(contracts.GatewayABI))
 	if err != nil {
@@ -74,7 +83,10 @@ func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group) error {
 }
 
 func (wr *EthereumWriter) writeMessagesLoop(ctx context.Context) error {
-	options := wr.conn.MakeTxOpts(ctx)
+	options, err := wr.conn.MakeTxOpts(ctx)
+	if err != nil {
+		return fmt.Errorf("transaction options: %w", err)
+	}
 	for {
 		select {
 		case <-ctx.Done():
@@ -83,11 +95,16 @@ func (wr *EthereumWriter) writeMessagesLoop(ctx context.Context) error {
 			if !ok {
 				return nil
 			}
-			err := util.RetryOnErrorSubstring(
+			err := util.RetryOnErrorSubstrings(
 				ctx,
 				log.WithField("component", "parachain/ethereum-writer"),
-				util.DefaultRetryableSubstring,
-				func() error { return wr.WriteChannels(ctx, options, task) },
+				util.DefaultRetryableSubstrings,
+				func() error {
+					if err := wr.conn.ApplySuggestedGasFees(ctx, options); err != nil {
+						return fmt.Errorf("refresh gas fees: %w", err)
+					}
+					return wr.WriteChannels(ctx, options, task)
+				},
 			)
 			if err != nil {
 				return fmt.Errorf("write message: %w", err)
@@ -149,16 +166,34 @@ func (wr *EthereumWriter) WriteChannel(
 		LeafProofOrder: new(big.Int).SetUint64(proof.MMRProof.MerkleProofOrder),
 	}
 
+	primary := wr.conn.Client()
+	fallback := wr.conn.FallbackClient()
+
 	// Use latest nonce to avoid "tx rejected: nonce too high"
-	nonce, err := wr.conn.Client().NonceAt(ctx, wr.conn.Keypair().CommonAddress(), nil)
+	nonce, err := primary.NonceAt(ctx, wr.conn.Keypair().CommonAddress(), nil)
 	if err != nil {
 		return fmt.Errorf("get latest nonce: %w", err)
 	}
 	options.Nonce = big.NewInt(0).SetUint64(nonce)
 
-	tx, err := wr.gateway.SubmitV1(
+	var tx *types.Transaction
+	watchClient := primary
+
+	tx, err = wr.gateway.SubmitV1(
 		options, message, commitmentProof.Proof.InnerHashes, verificationProof,
 	)
+	if err != nil && wr.gatewayFallback != nil && fallback != nil && ethereum.LikelyTransientRPCError(err) {
+		log.WithError(err).Warn("primary RPC failed submitting transaction, retrying via fallback endpoint")
+		nonce, nerr := fallback.NonceAt(ctx, wr.conn.Keypair().CommonAddress(), nil)
+		if nerr != nil {
+			return fmt.Errorf("get latest nonce (fallback): %w", nerr)
+		}
+		options.Nonce = big.NewInt(0).SetUint64(nonce)
+		tx, err = wr.gatewayFallback.SubmitV1(
+			options, message, commitmentProof.Proof.InnerHashes, verificationProof,
+		)
+		watchClient = fallback
+	}
 	if err != nil {
 		return fmt.Errorf("send transaction Gateway.submit: %w", err)
 	}
@@ -181,7 +216,11 @@ func (wr *EthereumWriter) WriteChannel(
 		}).
 		Info("Sent transaction Gateway.submit")
 
-	receipt, err := wr.conn.WatchTransaction(ctx, tx, 1)
+	receipt, err := wr.conn.WatchTransactionWithClient(ctx, watchClient, tx, 1)
+	if err != nil && fallback != nil && watchClient == primary && ethereum.LikelyTransientRPCError(err) {
+		log.WithError(err).Warn("primary RPC failed waiting for receipt, retrying via fallback endpoint")
+		receipt, err = wr.conn.WatchTransactionWithClient(ctx, fallback, tx, 1)
+	}
 
 	if err != nil {
 		log.WithError(err).Error("Failed to SubmitInbound")

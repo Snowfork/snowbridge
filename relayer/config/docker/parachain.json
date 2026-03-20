@@ -10,7 +10,9 @@
     },
     "ethereum": {
       "endpoint": "${ETHEREUM_ENDPOINT}",
-      "heartbeat-secs": 600
+      "heartbeat-secs": 600,
+      "gas-fee-bump-numerator": 130,
+      "gas-fee-bump-denominator": 100
     },
     "contracts": {
       "BeefyClient": "${BEEFY_CLIENT_CONTRACT}",
@@ -21,7 +23,9 @@
   "sink": {
     "ethereum": {
       "endpoint": "${FLASHBOTS_ENDPOINT}",
-      "pending-tx-timeout-secs": 240
+      "pending-tx-timeout-secs": 240,
+      "gas-fee-bump-numerator": 130,
+      "gas-fee-bump-denominator": 100
     },
     "contracts": {
       "Gateway": "${GATEWAY_CONTRACT}"

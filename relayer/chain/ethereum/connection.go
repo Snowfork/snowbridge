@@ -25,11 +25,12 @@ import (
 )
 
 type Connection struct {
-	endpoint string
-	kp       *secp256k1.Keypair
-	client   *ethclient.Client
-	chainID  *big.Int
-	config   *config.EthereumConfig
+	endpoint       string
+	kp             *secp256k1.Keypair
+	client         *ethclient.Client
+	fallbackClient *ethclient.Client
+	chainID        *big.Int
+	config         *config.EthereumConfig
 }
 
 type JsonError interface {
@@ -65,6 +66,27 @@ func (co *Connection) ConnectWithHeartBeat(ctx context.Context, eg *errgroup.Gro
 	co.client = client
 	co.chainID = chainID
 
+	if co.config.FallbackEndpoint != "" {
+		fb, err := ethclient.Dial(co.config.FallbackEndpoint)
+		if err != nil {
+			return fmt.Errorf("dial fallback Ethereum endpoint: %w", err)
+		}
+		fbChainID, err := fb.NetworkID(ctx)
+		if err != nil {
+			fb.Close()
+			return fmt.Errorf("fallback endpoint network id: %w", err)
+		}
+		if fbChainID.Cmp(chainID) != 0 {
+			fb.Close()
+			return fmt.Errorf("fallback endpoint chain ID %s != primary %s", fbChainID.String(), chainID.String())
+		}
+		co.fallbackClient = fb
+		log.WithFields(logrus.Fields{
+			"fallbackEndpoint": co.config.FallbackEndpoint,
+			"chainID":          fbChainID,
+		}).Info("Connected fallback Ethereum RPC")
+	}
+
 	if heartBeat.Abs() > 0 {
 		ticker := time.NewTicker(heartBeat)
 
@@ -91,10 +113,18 @@ func (co *Connection) Close() {
 	if co.client != nil {
 		co.client.Close()
 	}
+	if co.fallbackClient != nil {
+		co.fallbackClient.Close()
+	}
 }
 
 func (co *Connection) Client() *ethclient.Client {
 	return co.client
+}
+
+// FallbackClient returns the optional second RPC client, or nil if not configured.
+func (co *Connection) FallbackClient() *ethclient.Client {
+	return co.fallbackClient
 }
 
 func (co *Connection) Keypair() *secp256k1.Keypair {
@@ -105,8 +135,11 @@ func (co *Connection) ChainID() *big.Int {
 	return co.chainID
 }
 
-func (co *Connection) queryFailingError(ctx context.Context, hash common.Hash) error {
-	tx, _, err := co.client.TransactionByHash(ctx, hash)
+func (co *Connection) queryFailingErrorWithClient(ctx context.Context, client *ethclient.Client, hash common.Hash) error {
+	if client == nil {
+		client = co.client
+	}
+	tx, _, err := client.TransactionByHash(ctx, hash)
 	if err != nil {
 		return err
 	}
@@ -137,7 +170,7 @@ func (co *Connection) queryFailingError(ctx context.Context, hash common.Hash) e
 	// The logger does a test call to the actual contract to check for any revert message and log it, as well
 	// as logging the call info. This is because the golang client can sometimes suppress the log message and so
 	// it can be helpful to use the call info to do the same call in Truffle/Web3js to get better logs.
-	_, err = co.client.CallContract(ctx, params, nil)
+	_, err = client.CallContract(ctx, params, nil)
 	if err != nil {
 		return err
 	}
@@ -146,10 +179,17 @@ func (co *Connection) queryFailingError(ctx context.Context, hash common.Hash) e
 
 const PollInterval uint64 = 12
 
-func (co *Connection) waitForTransaction(ctx context.Context, tx *types.Transaction, confirmations uint64) (*types.Receipt, error) {
+// eip1559BaseFeeWiggleMultiplier matches go-ethereum (const basefeeWiggleMultiplier = 2 in accounts/abi/bind/v2/base.go).
+// With EIP-1559, baseFee increases are capped at 12.5% per block in the worst case, so 2x baseFee gives enough slack for several blocks even under max increase (roughly ~6 blocks of worst-case growth).
+const eip1559BaseFeeWiggleMultiplier int64 = 2
+
+func (co *Connection) waitForTransactionWithClient(ctx context.Context, client *ethclient.Client, tx *types.Transaction, confirmations uint64) (*types.Receipt, error) {
+	if client == nil {
+		client = co.client
+	}
 	var cnt uint64
 	for {
-		receipt, err := co.pollTransaction(ctx, tx, confirmations)
+		receipt, err := co.pollTransactionWithClient(ctx, client, tx, confirmations)
 		if err != nil {
 			return nil, err
 		}
@@ -173,15 +213,18 @@ func (co *Connection) waitForTransaction(ctx context.Context, tx *types.Transact
 	}
 }
 
-func (co *Connection) pollTransaction(ctx context.Context, tx *types.Transaction, confirmations uint64) (*types.Receipt, error) {
-	receipt, err := co.Client().TransactionReceipt(ctx, tx.Hash())
+func (co *Connection) pollTransactionWithClient(ctx context.Context, client *ethclient.Client, tx *types.Transaction, confirmations uint64) (*types.Receipt, error) {
+	if client == nil {
+		client = co.client
+	}
+	receipt, err := client.TransactionReceipt(ctx, tx.Hash())
 	if err != nil {
 		if errors.Is(err, goEthereum.NotFound) {
 			return nil, nil
 		}
 	}
 
-	latestHeader, err := co.Client().HeaderByNumber(ctx, nil)
+	latestHeader, err := client.HeaderByNumber(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -194,12 +237,20 @@ func (co *Connection) pollTransaction(ctx context.Context, tx *types.Transaction
 }
 
 func (co *Connection) WatchTransaction(ctx context.Context, tx *types.Transaction, confirmations uint64) (*types.Receipt, error) {
-	receipt, err := co.waitForTransaction(ctx, tx, confirmations)
+	return co.WatchTransactionWithClient(ctx, co.client, tx, confirmations)
+}
+
+// WatchTransactionWithClient waits for a receipt using the given RPC client (e.g. same endpoint used to broadcast).
+func (co *Connection) WatchTransactionWithClient(ctx context.Context, client *ethclient.Client, tx *types.Transaction, confirmations uint64) (*types.Receipt, error) {
+	if client == nil {
+		client = co.client
+	}
+	receipt, err := co.waitForTransactionWithClient(ctx, client, tx, confirmations)
 	if err != nil {
 		return nil, err
 	}
 	if receipt.Status != 1 {
-		err = co.queryFailingError(ctx, receipt.TxHash)
+		err = co.queryFailingErrorWithClient(ctx, client, receipt.TxHash)
 		logFields := log.Fields{
 			"txHash": tx.Hash().Hex(),
 		}
@@ -217,7 +268,72 @@ func (co *Connection) WatchTransaction(ctx context.Context, tx *types.Transactio
 	return receipt, nil
 }
 
-func (co *Connection) MakeTxOpts(ctx context.Context) *bind.TransactOpts {
+// gasFeeBumpScale returns numerator/denominator for scaling suggested caps.
+// Both values must be configured (non-zero), otherwise ApplySuggestedGasFees will fail.
+func (co *Connection) gasFeeBumpScale() (num, den uint64, err error) {
+	num, den = co.config.GasFeeBumpNumerator, co.config.GasFeeBumpDenominator
+	if num == 0 || den == 0 {
+		return 0, 0, errors.New("ethereum config: gas-fee-bump-numerator/denominator must both be set and non-zero")
+	}
+	return num, den, nil
+}
+
+// suggestedEIP1559GasCaps returns maxPriorityFeePerGas and maxFeePerGas like go-ethereum bind createDynamicTx,
+// then scales both by the configured bump ratio.
+func (co *Connection) suggestedEIP1559GasCaps(ctx context.Context) (*big.Int, *big.Int, error) {
+	head, err := co.client.HeaderByNumber(ctx, nil)
+	if err != nil {
+		return nil, nil, fmt.Errorf("latest header: %w", err)
+	}
+	if head.BaseFee == nil {
+		return nil, nil, errors.New("latest block has no base fee (pre-EIP-1559 chain)")
+	}
+	tip, err := co.client.SuggestGasTipCap(ctx)
+	if err != nil {
+		return nil, nil, fmt.Errorf("suggest gas tip cap: %w", err)
+	}
+	feeCap := new(big.Int).Add(
+		tip,
+		new(big.Int).Mul(head.BaseFee, big.NewInt(eip1559BaseFeeWiggleMultiplier)),
+	)
+
+	num, den, err := co.gasFeeBumpScale()
+	if err != nil {
+		return nil, nil, err
+	}
+	numBig := new(big.Int).SetUint64(num)
+	denBig := new(big.Int).SetUint64(den)
+
+	tipOut := new(big.Int).Mul(tip, numBig)
+	tipOut.Div(tipOut, denBig)
+
+	feeOut := new(big.Int).Mul(feeCap, numBig)
+	feeOut.Div(feeOut, denBig)
+
+	if feeOut.Cmp(tipOut) < 0 {
+		feeOut = new(big.Int).Set(tipOut)
+	}
+	return tipOut, feeOut, nil
+}
+
+// ApplySuggestedGasFees sets opts.GasTipCap and opts.GasFeeCap from the RPC when static caps are not configured.
+func (co *Connection) ApplySuggestedGasFees(ctx context.Context, opts *bind.TransactOpts) error {
+	if co.config.GasFeeCap > 0 && co.config.GasTipCap > 0 {
+		return nil
+	}
+	if co.config.GasFeeCap > 0 || co.config.GasTipCap > 0 {
+		return errors.New("ethereum config: set both gas-fee-cap and gas-tip-cap, or omit both for dynamic EIP-1559 pricing")
+	}
+	tip, fee, err := co.suggestedEIP1559GasCaps(ctx)
+	if err != nil {
+		return err
+	}
+	opts.GasTipCap = tip
+	opts.GasFeeCap = fee
+	return nil
+}
+
+func (co *Connection) MakeTxOpts(ctx context.Context) (*bind.TransactOpts, error) {
 	chainID := co.ChainID()
 	keypair := co.Keypair()
 
@@ -230,14 +346,12 @@ func (co *Connection) MakeTxOpts(ctx context.Context) *bind.TransactOpts {
 	}
 
 	if co.config.GasFeeCap > 0 {
-		fee := big.NewInt(0)
-		fee.SetUint64(co.config.GasFeeCap)
+		fee := new(big.Int).SetUint64(co.config.GasFeeCap)
 		options.GasFeeCap = fee
 	}
 
 	if co.config.GasTipCap > 0 {
-		tip := big.NewInt(0)
-		tip.SetUint64(co.config.GasTipCap)
+		tip := new(big.Int).SetUint64(co.config.GasTipCap)
 		options.GasTipCap = tip
 	}
 
@@ -245,7 +359,15 @@ func (co *Connection) MakeTxOpts(ctx context.Context) *bind.TransactOpts {
 		options.GasLimit = co.config.GasLimit
 	}
 
-	return &options
+	if co.config.GasFeeCap == 0 && co.config.GasTipCap == 0 {
+		if err := co.ApplySuggestedGasFees(ctx, &options); err != nil {
+			return nil, fmt.Errorf("dynamic gas fees: %w", err)
+		}
+	} else if co.config.GasFeeCap == 0 || co.config.GasTipCap == 0 {
+		return nil, errors.New("ethereum config: set both gas-fee-cap and gas-tip-cap, or omit both for dynamic EIP-1559 pricing")
+	}
+
+	return &options, nil
 }
 
 func (co *Connection) WaitForFutureBlock(ctx context.Context, blockNumber uint64, gap uint64) error {

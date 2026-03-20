@@ -14,11 +14,18 @@ type ParachainConfig struct {
 
 type EthereumConfig struct {
 	Endpoint             string `mapstructure:"endpoint"`
+	// FallbackEndpoint optional second JSON-RPC URL (e.g. public relay) used when the primary endpoint fails with a transient error (timeout / 504).
+	FallbackEndpoint     string `mapstructure:"fallback-endpoint"`
 	GasFeeCap            uint64 `mapstructure:"gas-fee-cap"`
 	GasTipCap            uint64 `mapstructure:"gas-tip-cap"`
-	GasLimit             uint64 `mapstructure:"gas-limit"`
-	HeartbeatSecs        uint64 `mapstructure:"heartbeat-secs"`
-	PendingTxTimeoutSecs uint64 `mapstructure:"pending-tx-timeout-secs"`
+	// GasFeeBumpNumerator / GasFeeBumpDenominator scale EIP-1559 caps after eth_estimateGas-style suggestion
+	// (SuggestGasTipCap and feeCap = tip + 2*baseFee, matching go-ethereum bind). Example: 130/100 = +30%.
+	// When both are zero, defaults to 130/100. Use 100/100 for no extra bump beyond the bind formula.
+	GasFeeBumpNumerator   uint64 `mapstructure:"gas-fee-bump-numerator"`
+	GasFeeBumpDenominator uint64 `mapstructure:"gas-fee-bump-denominator"`
+	GasLimit              uint64 `mapstructure:"gas-limit"`
+	HeartbeatSecs         uint64 `mapstructure:"heartbeat-secs"`
+	PendingTxTimeoutSecs  uint64 `mapstructure:"pending-tx-timeout-secs"`
 }
 
 type OFACConfig struct {

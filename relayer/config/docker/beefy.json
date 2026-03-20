@@ -12,7 +12,9 @@
   "sink": {
     "ethereum": {
       "endpoint": "${ETHEREUM_ENDPOINT}",
-      "heartbeat-secs": 600
+      "heartbeat-secs": 600,
+      "gas-fee-bump-numerator": 100,
+      "gas-fee-bump-denominator": 100
     },
     "contracts": {
       "BeefyClient": "${BEEFY_CLIENT_CONTRACT}",

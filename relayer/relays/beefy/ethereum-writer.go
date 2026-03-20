@@ -174,8 +174,12 @@ func (wr *EthereumWriter) submit(ctx context.Context, task *Request) error {
 	}
 	// Commit PrevRandao which will be used as seed to randomly select subset of validators
 	// https://github.com/Snowfork/snowbridge/blob/75a475cbf8fc8e13577ad6b773ac452b2bf82fbb/contracts/contracts/BeefyClient.sol#L446-L447
+	txOpts, err := wr.conn.MakeTxOpts(ctx)
+	if err != nil {
+		return fmt.Errorf("transaction options: %w", err)
+	}
 	tx, err = wr.contract.CommitPrevRandao(
-		wr.conn.MakeTxOpts(ctx),
+		txOpts,
 		*commitmentHash,
 	)
 	if err != nil {
@@ -271,8 +275,12 @@ func (wr *EthereumWriter) doSubmitInitial(ctx context.Context, task *Request) (*
 	}
 
 	var tx *types.Transaction
+	txOpts, err := wr.conn.MakeTxOpts(ctx)
+	if err != nil {
+		return nil, nil, fmt.Errorf("transaction options: %w", err)
+	}
 	tx, err = wr.contract.SubmitInitial(
-		wr.conn.MakeTxOpts(ctx),
+		txOpts,
 		msg.Commitment,
 		msg.Bitfield,
 		msg.Proof,
@@ -323,8 +331,12 @@ func (wr *EthereumWriter) doSubmitFinal(ctx context.Context, commitmentHash [32]
 		return nil, fmt.Errorf("logging params: %w", err)
 	}
 
+	txOpts, err := wr.conn.MakeTxOpts(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("transaction options: %w", err)
+	}
 	tx, err := wr.contract.SubmitFinal(
-		wr.conn.MakeTxOpts(ctx),
+		txOpts,
 		params.Commitment,
 		params.Bitfield,
 		params.Proofs,
@@ -433,8 +445,12 @@ func (wr *EthereumWriter) submitFiatShamir(ctx context.Context, task *Request) e
 		return nil
 	}
 
+	txOpts, err := wr.conn.MakeTxOpts(ctx)
+	if err != nil {
+		return fmt.Errorf("transaction options: %w", err)
+	}
 	tx, err := wr.contract.SubmitFiatShamir(
-		wr.conn.MakeTxOpts(ctx),
+		txOpts,
 		params.Commitment,
 		params.Bitfield,
 		params.Proofs,
