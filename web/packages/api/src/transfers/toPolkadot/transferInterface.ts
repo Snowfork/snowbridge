@@ -1,9 +1,12 @@
 import { EthereumProviderTypes } from "@snowbridge/base-types"
 import { Context } from "../.."
-import type { MessageReceipt as ToPolkadotV1MessageReceipt } from "../../toPolkadot_v2"
-import { DeliveryFee } from "../../toPolkadotSnowbridgeV2"
-import type { MessageReceipt as ToPolkadotV2MessageReceipt } from "../../toPolkadotSnowbridgeV2"
-import type { Transfer, ValidatedTransfer } from "../../toPolkadotSnowbridgeV2"
+import type { MessageReceipt as ToPolkadotV1MessageReceipt } from "../../types/toPolkadot"
+import type {
+    DeliveryFee,
+    MessageReceipt as ToPolkadotV2MessageReceipt,
+    Transfer,
+    ValidatedTransfer,
+} from "../../types/toPolkadotSnowbridgeV2"
 
 export type MessageReceipt = ToPolkadotV1MessageReceipt | ToPolkadotV2MessageReceipt
 

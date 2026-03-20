@@ -1,9 +1,8 @@
 import { Registry } from "@polkadot/types/types"
-import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
-import { resolveBeneficiary } from "./utils"
+import { DOT_LOCATION, ETHER_TOKEN_ADDRESS } from "./assets_v2"
+import { resolveBeneficiary } from "./crypto"
 
 export const HERE_LOCATION = { parents: 0, interior: "Here" }
-export const DOT_LOCATION = { parents: 1, interior: "Here" }
 export const NATIVE_TOKEN_LOCATION = { parents: 1, interior: "Here" }
 export const polkadotNetwork = {
     GlobalConsensus: { Polkadot: { network: null } },

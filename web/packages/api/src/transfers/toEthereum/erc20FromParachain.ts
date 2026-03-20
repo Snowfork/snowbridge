@@ -3,7 +3,8 @@ import { AddressOrPair, SignerOptions, SubmittableExtrinsic } from "@polkadot/ap
 import { ISubmittableResult } from "@polkadot/types/types"
 import { isHex, u8aToHex } from "@polkadot/util"
 import { decodeAddress } from "@polkadot/util-crypto"
-import { DOT_LOCATION, isRelaychainLocation, isParachainNative } from "../../xcmBuilder"
+import { isRelaychainLocation, isParachainNative } from "../../xcmBuilder"
+import { DOT_LOCATION } from "../../assets_v2"
 import { buildExportXcm } from "../../xcmbuilders/toEthereum/erc20FromAH"
 import {
     buildResultXcmAssetHubERC20TransferFromParachain,

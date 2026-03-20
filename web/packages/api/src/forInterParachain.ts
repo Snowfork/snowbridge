@@ -3,12 +3,12 @@ import { AddressOrPair, SignerOptions, SubmittableExtrinsic } from "@polkadot/ap
 import { ISubmittableResult } from "@polkadot/types/types"
 import {
     erc20Location,
-    DOT_LOCATION,
     parachainLocation,
     buildParachainERC20ReceivedXcmOnDestination,
     buildERC20ToAssetHubFromParachain,
     buildDepositAllAssetsWithTopic,
 } from "./xcmBuilder"
+import { DOT_LOCATION } from "./assets_v2"
 import {
     Asset,
     AssetRegistry,
@@ -16,52 +16,29 @@ import {
     ChainId,
     EthereumProviderTypes,
     Parachain,
-    TransferKind,
     TransferRoute,
 } from "@snowbridge/base-types"
-import { ensureValidationSuccess, padFeeByPercentage, resolveBeneficiary } from "./utils"
+import { ensureValidationSuccess, padFeeByPercentage } from "./utils"
+import { resolveBeneficiary } from "./crypto"
 import { Context } from "."
 import { buildMessageId } from "./toEthereum_v2"
 import { Result } from "@polkadot/types"
 import {
     CallDryRunEffects,
-    EventRecord,
     XcmDryRunApiError,
     XcmDryRunEffects,
 } from "@polkadot/types/interfaces"
 import { u8aToHex } from "@polkadot/util"
 import { TransferInterface as InterParachainTransferInterface } from "./transfers/forInterParachain/transferInterface"
-
-export type Transfer = {
-    kind: Extract<TransferKind, "polkadot->polkadot">
-    input: {
-        registry: AssetRegistry
-        sourceAccount: string
-        beneficiaryAccount: any
-        tokenAddress: string
-        destinationParaId: number
-        amount: bigint
-        fee: DeliveryFee
-    }
-    computed: {
-        sourceParaId: number
-        beneficiaryAddressHex: string
-        sourceAccountHex: string
-        sourceAssetMetadata: Asset
-        destAssetMetadata: Asset
-        sourceParachain: Parachain
-        destParachain: Parachain
-        messageId?: string
-    }
-    tx: SubmittableExtrinsic<"promise", ISubmittableResult>
-}
-
-export type DeliveryFee = {
-    kind: Extract<TransferKind, "polkadot->polkadot">
-    deliveryFee: bigint
-    executionFee: bigint
-    totalFeeInDot: bigint
-}
+import type {
+    DeliveryFee,
+    MessageReceipt,
+    Transfer,
+    ValidatedTransfer,
+    ValidationLog,
+} from "./types/forInterParachain"
+import { ValidationKind, ValidationReason } from "./types/forInterParachain"
+export { ValidationKind, ValidationReason } from "./types/forInterParachain"
 
 function resolveInputs(
     registry: AssetRegistry,
@@ -98,47 +75,6 @@ function resolveInputs(
     return { sourceAssetMetadata, destAssetMetadata, sourceParachain, destParachain }
 }
 
-export enum ValidationKind {
-    Warning,
-    Error,
-}
-
-export enum ValidationReason {
-    InsufficientTokenBalance,
-    DryRunFailed,
-    MinimumAmountValidation,
-    InsufficientFee,
-    MaxConsumersReached,
-    AccountDoesNotExist,
-}
-
-export type ValidationLog = {
-    kind: ValidationKind
-    reason: ValidationReason
-    message: string
-}
-
-export type ValidatedTransfer = Transfer & {
-    logs: ValidationLog[]
-    success: boolean
-    data: {
-        nativeBalance: bigint
-        sourceExecutionFee: bigint
-        tokenBalance: bigint
-        dryRunError: any
-    }
-}
-
-export type MessageReceipt = {
-    blockNumber: number
-    blockHash: string
-    txIndex: number
-    txHash: string
-    success: boolean
-    events: EventRecord[]
-    dispatchError?: any
-    messageId?: string
-}
 
 export class InterParachainTransfer<T extends EthereumProviderTypes>
     implements InterParachainTransferInterface<T>

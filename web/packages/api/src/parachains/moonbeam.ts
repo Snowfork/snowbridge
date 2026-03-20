@@ -1,7 +1,8 @@
 import { ApiPromise } from "@polkadot/api"
 import { ParachainBase } from "./parachainBase"
 import { AssetMap, EthereumProvider, EthereumProviderTypes, PNAMap } from "@snowbridge/base-types"
-import { DOT_LOCATION, getTokenFromLocation } from "../xcmBuilder"
+import { getTokenFromLocation } from "../xcmBuilder"
+import { DOT_LOCATION } from "../assets_v2"
 
 const MOONBEAM_ERC20_ABI = [
     "function name() view returns (string)",

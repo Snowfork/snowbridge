@@ -1,12 +1,12 @@
 import { Registry } from "@polkadot/types/types"
 import {
     bridgeLocation,
-    DOT_LOCATION,
     accountToLocation,
     HERE_LOCATION,
     isRelaychainLocation,
     buildEthereumInstructions,
 } from "../../xcmBuilder"
+import { DOT_LOCATION } from "../../assets_v2"
 import { Asset } from "@snowbridge/base-types"
 import { DeliveryFee } from "../../toEthereum_v2"
 

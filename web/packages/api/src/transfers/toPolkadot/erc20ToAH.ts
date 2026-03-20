@@ -20,10 +20,11 @@ import {
     sendMessageXCM,
     buildAssetHubERC20ReceivedXcm,
 } from "../../xcmbuilders/toPolkadot/erc20ToAH"
-import { accountId32Location, DOT_LOCATION, erc20Location } from "../../xcmBuilder"
-import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
-import { ensureValidationSuccess, padFeeByPercentage, resolveBeneficiary } from "../../utils"
-import { FeeInfo, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
+import { accountId32Location, erc20Location } from "../../xcmBuilder"
+import { DOT_LOCATION, ETHER_TOKEN_ADDRESS } from "../../assets_v2"
+import { ensureValidationSuccess, padFeeByPercentage } from "../../utils"
+import { resolveBeneficiary } from "../../crypto"
+import { FeeInfo, ValidationLog, ValidationReason } from "../../types/toPolkadot"
 import { buildMessageId, Transfer, ValidatedTransfer } from "../../toPolkadotSnowbridgeV2"
 import { getOperatingStatus } from "../../status"
 import { hexToU8a } from "@polkadot/util"

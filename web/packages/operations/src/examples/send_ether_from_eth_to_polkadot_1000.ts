@@ -1,5 +1,6 @@
 import { Keyring } from "@polkadot/keyring"
-import { assetsV2, createApi, TransferStatus } from "@snowbridge/api"
+import { assetsV2, createApi } from "@snowbridge/api"
+import { TransferStatus } from "@snowbridge/api/dist/history_v2"
 import { EthersEthereumProvider } from "@snowbridge/provider-ethers"
 import { polkadot_mainnet } from "@snowbridge/registry"
 import { getDefaultProvider, Wallet } from "ethers"

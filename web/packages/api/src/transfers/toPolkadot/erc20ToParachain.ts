@@ -19,15 +19,14 @@ import {
     ValidationKind,
     ValidatedTransfer,
 } from "../../toPolkadotSnowbridgeV2"
-import { accountId32Location, DOT_LOCATION, erc20Location, isDOT } from "../../xcmBuilder"
-import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
+import { accountId32Location, erc20Location, isDOT } from "../../xcmBuilder"
+import { DOT_LOCATION, ETHER_TOKEN_ADDRESS } from "../../assets_v2"
 import {
     ensureValidationSuccess,
     padFeeByPercentage,
-    paraIdToSovereignAccount,
-    resolveBeneficiary,
 } from "../../utils"
-import { FeeInfo, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
+import { paraIdToSovereignAccount, resolveBeneficiary } from "../../crypto"
+import { FeeInfo, ValidationLog, ValidationReason } from "../../types/toPolkadot"
 import {
     buildAssetHubERC20ReceivedXcm,
     buildParachainERC20ReceivedXcmOnDestWithDOTFee,

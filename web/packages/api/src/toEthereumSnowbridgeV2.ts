@@ -12,16 +12,7 @@ import {
 } from "@snowbridge/base-types"
 import { CallDryRunEffects, XcmDryRunApiError, XcmDryRunEffects } from "@polkadot/types/interfaces"
 import { Result } from "@polkadot/types"
-import {
-    DeliveryFee,
-    dryRunBridgeHub,
-    MessageReceipt,
-    Transfer,
-    ValidationKind,
-    ValidationLog,
-    ValidationReason,
-    ValidatedTransfer,
-} from "./toEthereum_v2"
+import { DeliveryFee, dryRunBridgeHub } from "./toEthereum_v2"
 import { PNAFromAH } from "./transfers/toEthereum/pnaFromAH"
 import { TransferInterface } from "./transfers/toEthereum/transferInterface"
 import { ERC20FromAH } from "./transfers/toEthereum/erc20FromAH"
@@ -30,7 +21,6 @@ import { ERC20FromParachain } from "./transfers/toEthereum/erc20FromParachain"
 import {
     isRelaychainLocation,
     isParachainNative,
-    DOT_LOCATION,
     HERE_LOCATION,
     bridgeLocation,
 } from "./xcmBuilder"
@@ -38,11 +28,14 @@ import { xxhashAsHex } from "@polkadot/util-crypto"
 import { BN } from "@polkadot/util"
 import { ensureValidationSuccess, padFeeByPercentage } from "./utils"
 import { Context } from "./index"
-import { ETHER_TOKEN_ADDRESS, findL2TokenAddress } from "./assets_v2"
+import { DOT_LOCATION, ETHER_TOKEN_ADDRESS, findL2TokenAddress } from "./assets_v2"
 import { getOperatingStatus } from "./status"
 import { estimateFees } from "./across/api"
+import type { MessageReceipt, Transfer, ValidatedTransfer, ValidationLog } from "./types/toEthereum"
+import { ValidationKind, ValidationReason } from "./types/toEthereum"
 
-export { ValidationKind, signAndSendTransfer } from "./toEthereum_v2"
+export { signAndSendTransfer } from "./toEthereum_v2"
+export { ValidationKind } from "./types/toEthereum"
 
 export class TransferToEthereum<T extends EthereumProviderTypes> implements TransferInterface<T> {
     #pnaImpl?: TransferInterface<T>

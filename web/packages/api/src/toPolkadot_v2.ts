@@ -1,19 +1,15 @@
-import { ensureValidationSuccess, padFeeByPercentage, resolveBeneficiary } from "./utils"
-import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
+import { ensureValidationSuccess, padFeeByPercentage } from "./utils"
+import { resolveBeneficiary } from "./crypto"
+import { DOT_LOCATION, ETHER_TOKEN_ADDRESS } from "./assets_v2"
 import {
-    Asset,
     AssetRegistry,
     ChainId,
-    ERC20Metadata,
     EthereumChain,
     EthereumProviderTypes,
-    FeeData,
-    MultiAddressStruct,
     Parachain,
-    TransferKind,
     TransferRoute,
 } from "@snowbridge/base-types"
-import { getOperatingStatus, OperationStatus } from "./status"
+import { getOperatingStatus } from "./status"
 import { ApiPromise } from "@polkadot/api"
 import {
     buildAssetHubERC20ReceivedXcm,
@@ -22,7 +18,6 @@ import {
     buildParachainERC20ReceivedXcmOnDestination,
     buildParachainPNAReceivedXcmOnAssetHub,
     buildParachainPNAReceivedXcmOnDestination,
-    DOT_LOCATION,
 } from "./xcmBuilder"
 import { Result } from "@polkadot/types"
 import { XcmDryRunApiError, XcmDryRunEffects } from "@polkadot/types/interfaces"
@@ -32,98 +27,16 @@ import type {
     DeliveryFee as ToPolkadotV2DeliveryFee,
     Transfer as ToPolkadotV2Transfer,
     ValidatedTransfer as ToPolkadotV2ValidatedTransfer,
-} from "./toPolkadotSnowbridgeV2"
-
-export type Transfer<T extends EthereumProviderTypes> = {
-    kind: Extract<TransferKind, "ethereum->polkadot">
-    input: {
-        registry: AssetRegistry
-        sourceAccount: string
-        beneficiaryAccount: string
-        tokenAddress: string
-        destinationParaId: number
-        amount: bigint
-        fee: DeliveryFee
-    }
-    computed: {
-        gatewayAddress: string
-        beneficiaryAddressHex: string
-        beneficiaryMultiAddress: MultiAddressStruct
-        totalValue: bigint
-        tokenErcMetadata: ERC20Metadata
-        ahAssetMetadata: Asset
-        destAssetMetadata: Asset
-        destParachain: Parachain
-        destinationFeeInDOT: bigint
-        minimalBalance: bigint
-    }
-    tx: T["ContractTransaction"]
-}
-
-export enum ValidationKind {
-    Warning,
-    Error,
-}
-
-export enum ValidationReason {
-    MinimumAmountValidation,
-    GatewaySpenderLimitReached,
-    InsufficientTokenBalance,
-    FeeEstimationError,
-    InsufficientEther,
-    BridgeStatusNotOperational,
-    DryRunNotSupportedOnDestination,
-    NoDestinationParachainConnection,
-    DryRunFailed,
-    MaxConsumersReached,
-    AccountDoesNotExist,
-}
-
-export type ValidationLog = {
-    kind: ValidationKind
-    reason: ValidationReason
-    message: string
-}
-
-export type FeeInfo = {
-    estimatedGas: bigint
-    feeData: FeeData
-    executionFee: bigint
-    totalTxCost: bigint
-}
-
-export type DeliveryFee = {
-    kind: Extract<TransferKind, "ethereum->polkadot">
-    destinationDeliveryFeeDOT: bigint
-    destinationExecutionFeeDOT: bigint
-    totalFeeInWei: bigint
-}
-
-export type ValidatedTransfer<T extends EthereumProviderTypes> = Transfer<T> & {
-    logs: ValidationLog[]
-    success: boolean
-    data: {
-        etherBalance: bigint
-        tokenBalance: {
-            balance: bigint
-            gatewayAllowance: bigint
-        }
-        feeInfo?: FeeInfo
-        bridgeStatus: OperationStatus
-        assetHubDryRunError?: string
-        destinationParachainDryRunError?: string
-    }
-}
-
-export type MessageReceipt = {
-    channelId: string
-    nonce: bigint
-    messageId: string
-    blockNumber: number
-    blockHash: string
-    txHash: string
-    txIndex: number
-}
+} from "./types/toPolkadotSnowbridgeV2"
+import type {
+    DeliveryFee,
+    FeeInfo,
+    MessageReceipt,
+    Transfer,
+    ValidatedTransfer,
+} from "./types/toPolkadot"
+import { ValidationKind, ValidationReason } from "./types/toPolkadot"
+import type { ValidationLog } from "./types/toPolkadot"
 
 function toV2DeliveryFee(fee: DeliveryFee): ToPolkadotV2DeliveryFee {
     return {

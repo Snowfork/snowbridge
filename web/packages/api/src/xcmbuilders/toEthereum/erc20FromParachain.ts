@@ -1,7 +1,6 @@
 import { Registry } from "@polkadot/types/types"
 import {
     bridgeLocation,
-    DOT_LOCATION,
     erc20Location,
     erc20LocationReanchored,
     parachainLocation,
@@ -10,9 +9,10 @@ import {
     buildAppendixInstructions,
     buildEthereumInstructions,
 } from "../../xcmBuilder"
+import { DOT_LOCATION } from "../../assets_v2"
 import { Asset } from "@snowbridge/base-types"
 import { DeliveryFee } from "../../toEthereum_v2"
-import { resolveBeneficiary } from "../../utils"
+import { resolveBeneficiary } from "../../crypto"
 
 function buildAssetHubXcmFromParachain(
     ethChainId: number,

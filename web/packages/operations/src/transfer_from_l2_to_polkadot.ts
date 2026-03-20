@@ -1,10 +1,10 @@
 import { Keyring } from "@polkadot/keyring"
 import { Context, createApi } from "@snowbridge/api"
+import { assetsV2 } from "@snowbridge/api"
 import { EthersEthereumProvider, EthersProviderTypes } from "@snowbridge/provider-ethers"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { formatEther, Wallet } from "ethers"
 import { bridgeInfoFor } from "@snowbridge/registry"
-import { ETHER_TOKEN_ADDRESS } from "@snowbridge/api/dist/assets_v2"
 import { IERC20__factory } from "@snowbridge/contract-types"
 
 export const transferToPolkadot = async (
@@ -52,7 +52,7 @@ export const transferToPolkadot = async (
 
     console.log("TOKEN_CONTRACT", TOKEN_CONTRACT)
 
-    if (TOKEN_CONTRACT != ETHER_TOKEN_ADDRESS) {
+    if (TOKEN_CONTRACT != assetsV2.ETHER_TOKEN_ADDRESS) {
         console.log("# Approve")
         const erc20 = IERC20__factory.connect(TOKEN_CONTRACT, ETHEREUM_ACCOUNT)
         const l2AdapterAddress = context.environment.l2Bridge?.l2Chains[l2ChainId].adapterAddress
