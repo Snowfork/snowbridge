@@ -42,16 +42,15 @@ contract ForkUpgradeTest is Test {
         0x4e241583d94b5d48a27a22064cd49b2ed6f5231d2d950e432f9b7c2e0ade52b2;
     address internal constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     WETH9 public weth = WETH9(payable(WETH));
+    string internal constant FORK_RPC_URL =
+        "https://virtual.mainnet.eu.rpc.tenderly.co/61589e0a-d204-449b-b095-64366ea949cb";
 
     event Transfer(address indexed from, address indexed to, uint256 value);
 
     function setUp() public {}
 
     function setUp23432697() public {
-        vm.createSelectFork(
-            "https://virtual.mainnet.eu.rpc.tenderly.co/dc7e68d7-5fac-4a88-a797-01ed4155f437",
-            23_432_697
-        );
+        vm.createSelectFork(FORK_RPC_URL, 23_432_697);
 
         (UD60x18 exchangeRate, uint128 deliveryCost) =
             IGatewayV1(GATEWAY_PROXY).pricingParameters();
@@ -173,16 +172,14 @@ contract ForkUpgradeTest is Test {
         vm.expectEmit(true, false, false, false);
         emit IGatewayV1.OutboundMessageAccepted(paraID.into(), 1, bytes32("0x"), hex"");
         hoax(user, amount + fee);
-        IGatewayV1(address(GATEWAY_PROXY))
-        .sendToken{value: amount + fee}(address(0), paraID, recipientAddress32, 1, amount);
+        IGatewayV1(address(GATEWAY_PROXY)).sendToken{value: amount + fee}(
+            address(0), paraID, recipientAddress32, 1, amount
+        );
         assertEq(user.balance, 0);
     }
 
     function setUp23526799() public {
-        vm.createSelectFork(
-            "https://virtual.mainnet.eu.rpc.tenderly.co/1d4ab8c5-01fe-45a7-8583-8b4925e5a435",
-            23_526_799
-        );
+        vm.createSelectFork(FORK_RPC_URL, 23_526_799);
 
         // Mock call to Verification.verifyCommitment to bypass BEEFY verification.
         // Note that after the gateway is upgraded, the gateway will be linked to a new Verification
@@ -301,8 +298,9 @@ contract ForkUpgradeTest is Test {
             bytes32(0x65b3c8970f6316e368291bddf21059f298f18ad356faafed0ac19244f15dc67f),
             hex""
         );
-        IGatewayV1(address(GATEWAY_PROXY))
-        .sendToken{value: fee}(DOT, paraID, recipientAddress32, 1, amount);
+        IGatewayV1(address(GATEWAY_PROXY)).sendToken{value: fee}(
+            DOT, paraID, recipientAddress32, 1, amount
+        );
     }
 
     // Send WETH can work with the upgraded Gateway
@@ -327,7 +325,8 @@ contract ForkUpgradeTest is Test {
         emit IGatewayV1.TokenSent(WETH, user, paraID, recipientAddress32, amount);
         vm.expectEmit(true, false, false, false);
         emit IGatewayV1.OutboundMessageAccepted(paraID.into(), 1, bytes32("0x"), hex"");
-        IGatewayV1(address(GATEWAY_PROXY))
-        .sendToken{value: fee}(WETH, paraID, recipientAddress32, 1, amount);
+        IGatewayV1(address(GATEWAY_PROXY)).sendToken{value: fee}(
+            WETH, paraID, recipientAddress32, 1, amount
+        );
     }
 }
