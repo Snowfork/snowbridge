@@ -1,0 +1,141 @@
+import { Keyring } from "@polkadot/keyring"
+import { Context, createApi } from "@snowbridge/api"
+import { EthersEthereumProvider, EthersProviderTypes } from "@snowbridge/provider-ethers"
+import { cryptoWaitReady } from "@polkadot/util-crypto"
+import { formatEther, Wallet } from "ethers"
+import { bridgeInfoFor } from "@snowbridge/registry"
+import { WETH9__factory } from "@snowbridge/contract-types"
+
+export const transferToKusama = async (symbol: string, amount: bigint) => {
+    await cryptoWaitReady()
+
+    let env = "local_e2e"
+    if (process.env.NODE_ENV !== undefined) {
+        env = process.env.NODE_ENV
+    }
+    console.log(`Using environment '${env}'`)
+
+    const info = bridgeInfoFor(env)
+    const { registry } = info
+
+    if (!registry.kusama) {
+        throw Error("Kusama config is not set in the registry.")
+    }
+
+    const api = createApi({
+        info,
+        ethereumProvider: new EthersEthereumProvider(),
+    })
+    const context: Context<EthersProviderTypes> = api.context
+
+    const polkadot_keyring = new Keyring({ type: "sr25519" })
+
+    const ETHEREUM_ACCOUNT = new Wallet(
+        process.env.ETHEREUM_KEY ?? "Your Key Goes Here",
+        context.ethereum(),
+    )
+    const ETHEREUM_ACCOUNT_PUBLIC = await ETHEREUM_ACCOUNT.getAddress()
+    const KUSAMA_ACCOUNT = polkadot_keyring.addFromUri(
+        process.env.KUSAMA_SUBSTRATE_KEY ?? process.env.SUBSTRATE_KEY ?? "//Ferdie",
+    )
+    const KUSAMA_ACCOUNT_PUBLIC = KUSAMA_ACCOUNT.address
+
+    console.log("eth", ETHEREUM_ACCOUNT_PUBLIC, "kusama", KUSAMA_ACCOUNT_PUBLIC)
+
+    const assets = registry.ethereumChains[`ethereum_${registry.ethChainId}`].assets
+    const TOKEN_CONTRACT = Object.keys(assets)
+        .map((t) => assets[t])
+        .find((asset) => asset.symbol.toLowerCase().startsWith(symbol.toLowerCase()))?.token
+    if (!TOKEN_CONTRACT) {
+        console.error("no token contract exists, check it and rebuild asset registry.")
+        throw Error(`No token found for ${symbol}`)
+    }
+
+    console.log("TOKEN_CONTRACT", TOKEN_CONTRACT)
+    if (symbol.toLowerCase().startsWith("weth")) {
+        console.log("# Deposit and Approve WETH")
+        {
+            const weth9 = WETH9__factory.connect(TOKEN_CONTRACT, ETHEREUM_ACCOUNT)
+            const depositResult = await weth9.deposit({ value: amount })
+            const depositReceipt = await depositResult.wait()
+
+            const approveResult = await weth9.approve(context.environment.gatewayContract, amount)
+            const approveReceipt = await approveResult.wait()
+
+            console.log("deposit tx", depositReceipt?.hash, "approve tx", approveReceipt?.hash)
+        }
+    }
+
+    console.log("Ethereum to Kusama AssetHub")
+    {
+        // Step 0. Create a transfer implementation
+        const transferImpl = api.sender(
+            { kind: "ethereum", id: registry.ethChainId },
+            { kind: "kusama", id: registry.kusama.assetHubParaId },
+        )
+
+        // Step 1. Get the delivery fee for the transaction
+        let fee = await transferImpl.fee(TOKEN_CONTRACT)
+        console.log("fee: ", fee)
+
+        // Step 2. Create a transfer tx
+        const transfer = await transferImpl.tx(
+            ETHEREUM_ACCOUNT_PUBLIC,
+            KUSAMA_ACCOUNT_PUBLIC,
+            TOKEN_CONTRACT,
+            amount,
+            fee,
+        )
+
+        // Step 3. Validate the transaction.
+        const validation = await transferImpl.validate(transfer)
+        console.log("validation result", validation)
+
+        // Step 4. Check validation logs for errors
+        if (!validation.success) {
+            throw Error(`validation has one of more errors.`)
+        }
+
+        // Step 5. Estimate the cost of the execution cost of the transaction
+        const {
+            tx,
+            computed: { totalValue },
+        } = transfer
+        const estimatedGas = await context.ethereumProvider.estimateGas(context.ethereum(), tx)
+        const feeData = await context.ethereumProvider.getFeeData(context.ethereum())
+        const executionFee = (feeData.gasPrice ?? 0n) * estimatedGas
+
+        console.log("tx:", tx)
+        console.log("feeData:", feeData)
+        console.log("gas:", estimatedGas)
+        console.log("relayer fee:", formatEther(fee.relayerFee))
+        console.log("execution cost:", formatEther(executionFee))
+        console.log("total cost:", formatEther(fee.totalFeeInWei + executionFee))
+        console.log("ether sent:", formatEther(totalValue - fee.totalFeeInWei))
+        console.log("dry run:", await context.ethereum().call(tx))
+
+        if (process.env["DRY_RUN"] != "true") {
+            console.log("sending tx")
+            // Step 6. Submit the transaction
+            const response = await ETHEREUM_ACCOUNT.sendTransaction(tx)
+            console.log("sent transaction")
+            const receipt = await response.wait(1)
+            console.log("got receipt")
+            if (!receipt) {
+                throw Error(`Transaction ${response.hash} not included.`)
+            }
+
+            // Step 7. Get the message receipt for tracking purposes
+            const message = await transferImpl.messageId(receipt)
+            if (!message) {
+                throw Error(`Transaction ${receipt.hash} did not emit a message.`)
+            }
+            console.log(
+                `Success message with nonce: ${message.nonce}
+                block number: ${message.blockNumber}
+                tx hash: ${message.txHash}`,
+            )
+        }
+    }
+    await context.destroyContext()
+}

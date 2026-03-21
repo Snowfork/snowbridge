@@ -22,7 +22,17 @@ import {
     buildTransferKusamaToPolkadotExportXCM,
     buildTransferPolkadotToKusamaExportXCM,
 } from "./xcmBuilderKusama"
-import { Asset, AssetRegistry, Parachain, AssetMap } from "@snowbridge/base-types"
+import {
+    Asset,
+    AssetRegistry,
+    AssetMap,
+    BridgeInfo,
+    ChainId,
+    Parachain,
+    TransferKind,
+    TransferRoute,
+    EthereumProviderTypes,
+} from "@snowbridge/base-types"
 import {
     CallDryRunEffects,
     EventRecord,
@@ -30,10 +40,17 @@ import {
     XcmDryRunEffects,
 } from "@polkadot/types/interfaces"
 import { Result } from "@polkadot/types"
-import { beneficiaryMultiAddress, padFeeByPercentage, u32ToLeBytes } from "./utils"
-import { paraImplementation } from "./parachains"
+import {
+    ensureValidationSuccess,
+    padFeeByPercentage,
+    resolveBeneficiary,
+    u32ToLeBytes,
+} from "./utils"
+import { TransferInterface as KusamaTransferInterface } from "./transfers/forKusama/transferInterface"
+import { Context } from "."
 
 export type Transfer = {
+    kind: Extract<TransferKind, "kusama->polkadot" | "polkadot->kusama">
     input: {
         registry: AssetRegistry
         sourceAccount: string
@@ -55,6 +72,7 @@ export type Transfer = {
 }
 
 export type DeliveryFee = {
+    kind: Extract<TransferKind, "kusama->polkadot" | "polkadot->kusama">
     xcmBridgeFee: bigint
     bridgeHubDeliveryFee: bigint
     destinationFee: bigint
@@ -98,245 +116,6 @@ function resolveInputs(
     return { sourceAssetMetadata, destAssetMetadata, sourceParachain }
 }
 
-export async function getDeliveryFee(
-    sourceAssetHub: ApiPromise,
-    destAssetHub: ApiPromise,
-    direction: Direction,
-    registry: AssetRegistry,
-    tokenAddress: string,
-): Promise<DeliveryFee> {
-    // Get base bridge fee
-    // https://github.com/polkadot-fellows/runtimes/blob/main/system-parachains/asset-hubs/asset-hub-polkadot/src/xcm_config.rs#L546
-    let baseFeeInStorage = await getStorageItem(sourceAssetHub, ":XcmBridgeHubRouterBaseFee:")
-    let xcmBridgeBaseFee: bigint
-    if (baseFeeInStorage.eqn(0)) {
-        console.warn("Asset Hub onchain XcmBridgeHubRouterBaseFee not set. Using default fee.")
-        if (direction == Direction.ToPolkadot) {
-            xcmBridgeBaseFee = KUSAMA_BASE_FEE
-        } else {
-            xcmBridgeBaseFee = POLKADOT_BASE_FEE
-        }
-    } else {
-        xcmBridgeBaseFee = BigInt(baseFeeInStorage.toString())
-    }
-
-    // Get fee per byte
-    // https://github.com/polkadot-fellows/runtimes/blob/main/system-parachains/asset-hubs/asset-hub-polkadot/src/xcm_config.rs#L551
-    let feePerByteInStorage = await getStorageItem(sourceAssetHub, ":XcmBridgeHubRouterByteFee:")
-    let xcmFeePerByte: bigint
-    if (feePerByteInStorage.eqn(0)) {
-        console.warn(
-            "Asset Hub onchain XcmBridgeHubRouterByteFee not set. Using default fee per byte.",
-        )
-        if (direction == Direction.ToPolkadot) {
-            xcmFeePerByte = KUSAMA_FEE_PER_BYTE
-        } else {
-            xcmFeePerByte = POLKADOT_FEE_PER_BYTE
-        }
-    } else {
-        xcmFeePerByte = BigInt(baseFeeInStorage.toString())
-    }
-
-    let tokenLocation = getTokenLocation(registry, direction, tokenAddress)
-
-    if (!registry.kusama) {
-        throw Error("Kusama config is not set")
-    }
-
-    let forwardedXcm
-    // Message from dest AH to BH
-    if (direction == Direction.ToPolkadot) {
-        forwardedXcm = buildTransferKusamaToPolkadotExportXCM(
-            sourceAssetHub.registry,
-            tokenLocation,
-            xcmBridgeBaseFee,
-            xcmBridgeBaseFee,
-            registry.kusama?.assetHubParaId,
-            registry.assetHubParaId,
-            100000000000n,
-            "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "0x0000000000000000000000000000000000000000000000000000000000000000",
-        )
-    } else {
-        forwardedXcm = buildTransferPolkadotToKusamaExportXCM(
-            sourceAssetHub.registry,
-            tokenLocation,
-            xcmBridgeBaseFee,
-            xcmBridgeBaseFee,
-            registry.assetHubParaId,
-            registry.kusama?.assetHubParaId,
-            100000000000n,
-            "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "0x0000000000000000000000000000000000000000000000000000000000000000",
-        )
-    }
-
-    let bytes = forwardedXcm.toU8a().length
-    console.log("forwardedXcm length:", bytes)
-    let xcmBytesFee = BigInt(bytes) * xcmFeePerByte
-    let totalXcmBridgeFee = xcmBridgeBaseFee + xcmBytesFee
-    console.info("xcmBridgeBaseFee:", xcmBridgeBaseFee)
-    console.info("xcmBytesFee:", xcmBytesFee)
-
-    // Message from dest AH to BH
-    let destXcm
-    if (direction == Direction.ToPolkadot) {
-        destXcm = buildKusamaToPolkadotDestAssetHubXCM(
-            destAssetHub.registry,
-            totalXcmBridgeFee,
-            registry.assetHubParaId,
-            tokenLocation,
-            100000000000n,
-            "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "0x0000000000000000000000000000000000000000000000000000000000000000",
-        )
-    } else {
-        destXcm = buildPolkadotToKusamaDestAssetHubXCM(
-            destAssetHub.registry,
-            totalXcmBridgeFee,
-            registry.assetHubParaId,
-            tokenLocation,
-            100000000000n,
-            "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "0x0000000000000000000000000000000000000000000000000000000000000000",
-        )
-    }
-    const destAssetHubImpl = await paraImplementation(destAssetHub)
-    let destinationFeeInDestNative = await destAssetHubImpl.calculateXcmFee(destXcm, DOT_LOCATION)
-
-    const sourceAssetHubImpl = await paraImplementation(sourceAssetHub)
-    let bridgeHubDeliveryFee = await sourceAssetHubImpl.calculateDeliveryFeeInDOT(
-        registry.bridgeHubParaId,
-        forwardedXcm,
-    )
-
-    let feeAssetOnDest
-    let minBalanceFeeDest: bigint
-    if (direction == Direction.ToPolkadot) {
-        feeAssetOnDest = ksmLocationOnPolkadotAssetHub
-        minBalanceFeeDest = getDestFeeAssetMinimumBalance(
-            registry.parachains[`polkadot_${registry.assetHubParaId}`].assets,
-            "kusama",
-        )
-    } else {
-        feeAssetOnDest = dotLocationOnKusamaAssetHub
-        minBalanceFeeDest = getDestFeeAssetMinimumBalance(
-            registry.kusama.parachains[`kusama_${registry.kusama.assetHubParaId}`].assets,
-            "polkadot",
-        )
-    }
-    let destinationFee = await destAssetHubImpl.getAssetHubConversionPalletSwap(
-        feeAssetOnDest,
-        NATIVE_TOKEN_LOCATION,
-        destinationFeeInDestNative,
-    )
-    // pad destination XCM fee
-    destinationFee = padFeeByPercentage(destinationFee, 33n)
-
-    // add minimum balance to the dest fee, to avoid not being able to deposit leftover fees
-    destinationFee = destinationFee + BigInt(minBalanceFeeDest)
-
-    // pad destination XCM fee
-    totalXcmBridgeFee = padFeeByPercentage(totalXcmBridgeFee, 33n)
-
-    let totalFee = totalXcmBridgeFee + bridgeHubDeliveryFee + destinationFee
-
-    return {
-        xcmBridgeFee: totalXcmBridgeFee,
-        destinationFee,
-        bridgeHubDeliveryFee,
-        totalFeeInNative: totalFee,
-    }
-}
-
-export async function createTransfer(
-    parachain: ApiPromise,
-    direction: Direction,
-    registry: AssetRegistry,
-    sourceAccount: string,
-    beneficiaryAccount: string,
-    tokenAddress: string,
-    amount: bigint,
-    fee: DeliveryFee,
-): Promise<Transfer> {
-    const { assetHubParaId } = registry
-    const destParaId = registry.kusama?.assetHubParaId
-    let sourceParaId = assetHubParaId
-    const sourceParachainImpl = await paraImplementation(parachain)
-
-    let sourceAccountHex = sourceAccount
-    if (!isHex(sourceAccountHex)) {
-        sourceAccountHex = u8aToHex(decodeAddress(sourceAccount))
-    }
-
-    if (!destParaId) {
-        throw Error("Kusama destination para ID is not set")
-    }
-
-    let { hexAddress: beneficiaryAddressHex } = beneficiaryMultiAddress(beneficiaryAccount)
-
-    const { sourceAssetMetadata, destAssetMetadata, sourceParachain } = resolveInputs(
-        registry,
-        tokenAddress,
-        sourceParaId,
-        destParaId,
-    )
-    const accountNonce = await sourceParachainImpl.accountNonce(sourceAccountHex)
-    let messageId = buildMessageId(
-        sourceParaId,
-        sourceAccountHex,
-        accountNonce,
-        tokenAddress,
-        beneficiaryAccount,
-        amount,
-    )
-
-    let tokenLocationOnSource = getTokenLocation(registry, direction, tokenAddress)
-    let tx
-    if (direction == Direction.ToPolkadot) {
-        tx = createERC20ToPolkadotTx(
-            sourceParaId,
-            parachain,
-            tokenLocationOnSource,
-            beneficiaryAddressHex,
-            amount,
-            fee.destinationFee,
-            messageId,
-        )
-    } else {
-        tx = createERC20ToKusamaTx(
-            destParaId,
-            parachain,
-            tokenLocationOnSource,
-            beneficiaryAddressHex,
-            amount,
-            fee.destinationFee,
-            messageId,
-        )
-    }
-
-    return {
-        input: {
-            registry,
-            sourceAccount,
-            beneficiaryAccount,
-            tokenAddress,
-            amount,
-            fee,
-        },
-        computed: {
-            sourceParaId,
-            sourceParachain,
-            sourceAssetMetadata,
-            sourceAccountHex,
-            destAssetMetadata,
-            messageId,
-            beneficiaryAddressHex,
-        },
-        tx,
-    }
-}
-
 export enum ValidationKind {
     Warning,
     Error,
@@ -356,7 +135,7 @@ export type ValidationLog = {
     message: string
 }
 
-export type ValidationResult = {
+export type ValidatedTransfer = Transfer & {
     logs: ValidationLog[]
     success: boolean
     data: {
@@ -364,164 +143,6 @@ export type ValidationResult = {
         sourceExecutionFee: bigint
         tokenBalance: bigint
         assetHubDryRunError: any
-    }
-    transfer: Transfer
-}
-
-export async function validateTransfer(
-    connections: {
-        sourceAssetHub: ApiPromise
-        destAssetHub: ApiPromise
-    },
-    direction: Direction,
-    transfer: Transfer,
-): Promise<ValidationResult> {
-    let sourceAssetHub = connections.sourceAssetHub
-    let destAssetHub = connections.destAssetHub
-
-    const { registry, fee, tokenAddress, amount } = transfer.input
-    const {
-        sourceAccountHex,
-        sourceParachain: source,
-        beneficiaryAddressHex,
-        destAssetMetadata,
-    } = transfer.computed
-    const { tx } = transfer
-
-    let tokenLocation = getTokenLocation(registry, direction, tokenAddress)
-
-    const sourceAssetHubImpl = await paraImplementation(sourceAssetHub)
-    let nativeBalance = await sourceAssetHubImpl.getNativeBalance(sourceAccountHex, true)
-
-    let tokenAsset = getTransferAsset(direction, tokenAddress, transfer.input.registry)
-
-    let tokenBalance: bigint
-    if (isRelaychainLocation(tokenLocation)) {
-        tokenBalance = nativeBalance
-    } else {
-        tokenBalance = await sourceAssetHubImpl.getTokenBalance(
-            sourceAccountHex,
-            registry.ethChainId,
-            tokenAddress,
-            tokenAsset,
-        )
-    }
-
-    const logs: ValidationLog[] = []
-
-    if (amount > tokenBalance) {
-        logs.push({
-            kind: ValidationKind.Error,
-            reason: ValidationReason.InsufficientTokenBalance,
-            message: "Insufficient token balance to submit transaction.",
-        })
-    }
-
-    let assetHubDryRunError
-
-    const dryRunSource = await dryRunSourceAssetHub(
-        sourceAssetHub,
-        registry.assetHubParaId,
-        registry.bridgeHubParaId,
-        transfer.tx,
-        sourceAccountHex,
-    )
-    if (!dryRunSource.success) {
-        logs.push({
-            kind: ValidationKind.Error,
-            reason: ValidationReason.DryRunFailed,
-            message: "Dry run call on source failed.",
-        })
-        assetHubDryRunError = dryRunSource.error
-    }
-
-    const paymentInfo = await tx.paymentInfo(sourceAccountHex)
-    const sourceExecutionFee = paymentInfo["partialFee"].toBigInt()
-
-    if (sourceExecutionFee + fee.totalFeeInNative > nativeBalance) {
-        logs.push({
-            kind: ValidationKind.Error,
-            reason: ValidationReason.InsufficientFee,
-            message:
-                "Insufficient " +
-                nativeFeeAsset(direction) +
-                " balance to submit transaction on the source parachain.",
-        })
-    }
-
-    let destAssetHubXCM: any
-    if (direction == Direction.ToPolkadot) {
-        destAssetHubXCM = buildKusamaToPolkadotDestAssetHubXCM(
-            destAssetHub.registry,
-            fee.destinationFee,
-            registry.assetHubParaId,
-            tokenLocation,
-            transfer.input.amount,
-            transfer.computed.beneficiaryAddressHex,
-            "0x0000000000000000000000000000000000000000000000000000000000000000",
-        )
-    } else {
-        destAssetHubXCM = buildPolkadotToKusamaDestAssetHubXCM(
-            destAssetHub.registry,
-            fee.destinationFee,
-            registry.assetHubParaId,
-            tokenLocation,
-            transfer.input.amount,
-            transfer.computed.beneficiaryAddressHex,
-            "0x0000000000000000000000000000000000000000000000000000000000000000",
-        )
-    }
-
-    const dryRunAssetHubDest = await dryRunDestAssetHub(
-        destAssetHub,
-        registry.bridgeHubParaId,
-        destAssetHubXCM,
-    )
-    if (!dryRunAssetHubDest.success) {
-        logs.push({
-            kind: ValidationKind.Error,
-            reason: ValidationReason.DryRunFailed,
-            message: "Dry run call on destination AH failed: " + dryRunAssetHubDest.errorMessage,
-        })
-        assetHubDryRunError = dryRunAssetHubDest.errorMessage
-
-        // Only run the account validation if the dry run failed.
-        const destAssetHubImpl = await paraImplementation(destAssetHub)
-        const { accountMaxConsumers, accountExists } = await destAssetHubImpl.validateAccount(
-            beneficiaryAddressHex,
-            registry.ethChainId,
-            tokenAddress,
-            destAssetMetadata,
-        )
-        if (accountMaxConsumers) {
-            logs.push({
-                kind: ValidationKind.Error,
-                reason: ValidationReason.MaxConsumersReached,
-                message:
-                    "Beneficiary account has reached the max consumer limit on the destination chain.",
-            })
-        }
-        if (!accountExists) {
-            logs.push({
-                kind: ValidationKind.Error,
-                reason: ValidationReason.AccountDoesNotExist,
-                message: "Beneficiary account does not exist on the destination chain.",
-            })
-        }
-    }
-
-    const success = logs.find((l) => l.kind === ValidationKind.Error) === undefined
-
-    return {
-        logs,
-        success,
-        data: {
-            nativeBalance,
-            sourceExecutionFee,
-            tokenBalance,
-            assetHubDryRunError,
-        },
-        transfer,
     }
 }
 
@@ -536,65 +157,504 @@ export type MessageReceipt = {
     messageId?: string
 }
 
-export async function signAndSend(
-    parachain: ApiPromise,
-    transfer: Transfer,
-    account: AddressOrPair,
-    options: Partial<SignerOptions>,
-): Promise<MessageReceipt> {
-    const result = await new Promise<MessageReceipt>((resolve, reject) => {
-        try {
-            transfer.tx.signAndSend(account, options, (c) => {
-                if (c.isError) {
-                    console.error(c)
-                    reject(c.internalError || c.dispatchError || c)
-                }
-                // We have to check for finalization here because re-orgs will produce a different messageId on Asset Hub.
-                // TODO: Change back to isInBlock when we switch to pallet-xcm.execute for Asset Hub and we can generate the messageId offchain.
-                if (c.isFinalized) {
-                    const result = {
-                        txHash: u8aToHex(c.txHash),
-                        txIndex: c.txIndex || 0,
-                        blockNumber: Number((c as any).blockNumber),
-                        blockHash: "",
-                        events: c.events,
-                    }
-                    for (const e of c.events) {
-                        if (parachain.events.system.ExtrinsicFailed.is(e.event)) {
-                            resolve({
-                                ...result,
-                                success: false,
-                                dispatchError: (e.event.data.toHuman(true) as any)?.dispatchError,
-                            })
-                        }
+export class KusamaTransfer<T extends EthereumProviderTypes> implements KusamaTransferInterface<T> {
+    readonly info: BridgeInfo
+    readonly context: Context<T>
+    readonly route: TransferRoute
+    readonly source: Parachain
+    readonly destination: Parachain
 
-                        if (parachain.events.polkadotXcm.Sent.is(e.event)) {
-                            resolve({
-                                ...result,
-                                success: true,
-                                messageId: (e.event.data.toPrimitive() as any)[3],
-                            })
-                        }
-                    }
-                    resolve({
-                        ...result,
-                        success: false,
-                    })
-                }
-            })
-        } catch (e) {
-            console.error(e)
-            reject(e)
+    constructor(
+        info: BridgeInfo,
+        context: Context<T>,
+        route: TransferRoute,
+        source: Parachain,
+        destination: Parachain,
+    ) {
+        this.info = info
+        this.context = context
+        this.route = route
+        this.source = source
+        this.destination = destination
+    }
+
+    get from(): ChainId {
+        return this.route.from
+    }
+
+    get to(): ChainId {
+        return this.route.to
+    }
+
+    #direction() {
+        return this.from.kind === "kusama" ? Direction.ToPolkadot : Direction.ToKusama
+    }
+
+    async #connections() {
+        const [polkadotAssetHub, kusamaAssetHub] = await Promise.all([
+            this.context.assetHub(),
+            this.context.kusamaAssetHub(),
+        ])
+        if (this.#direction() === Direction.ToPolkadot) {
+            return { sourceAssetHub: kusamaAssetHub, destAssetHub: polkadotAssetHub }
         }
-    })
+        return { sourceAssetHub: polkadotAssetHub, destAssetHub: kusamaAssetHub }
+    }
 
-    result.blockHash = u8aToHex(await parachain.rpc.chain.getBlockHash(result.blockNumber))
-    result.messageId = transfer.computed.messageId ?? result.messageId
+    async fee(tokenAddress: string): Promise<DeliveryFee> {
+        const { sourceAssetHub, destAssetHub } = await this.#connections()
+        let baseFeeInStorage = await getStorageItem(sourceAssetHub, ":XcmBridgeHubRouterBaseFee:")
+        let xcmBridgeBaseFee: bigint
+        if (baseFeeInStorage.eqn(0)) {
+            console.warn("Asset Hub onchain XcmBridgeHubRouterBaseFee not set. Using default fee.")
+            if (this.#direction() == Direction.ToPolkadot) {
+                xcmBridgeBaseFee = KUSAMA_BASE_FEE
+            } else {
+                xcmBridgeBaseFee = POLKADOT_BASE_FEE
+            }
+        } else {
+            xcmBridgeBaseFee = BigInt(baseFeeInStorage.toString())
+        }
 
-    return result
+        let feePerByteInStorage = await getStorageItem(
+            sourceAssetHub,
+            ":XcmBridgeHubRouterByteFee:",
+        )
+        let xcmFeePerByte: bigint
+        if (feePerByteInStorage.eqn(0)) {
+            console.warn(
+                "Asset Hub onchain XcmBridgeHubRouterByteFee not set. Using default fee per byte.",
+            )
+            if (this.#direction() == Direction.ToPolkadot) {
+                xcmFeePerByte = KUSAMA_FEE_PER_BYTE
+            } else {
+                xcmFeePerByte = POLKADOT_FEE_PER_BYTE
+            }
+        } else {
+            xcmFeePerByte = BigInt(baseFeeInStorage.toString())
+        }
+
+        let tokenLocation = getTokenLocation(this.info.registry, this.#direction(), tokenAddress)
+
+        if (!this.info.registry.kusama) {
+            throw Error("Kusama config is not set")
+        }
+
+        let forwardedXcm
+        if (this.#direction() == Direction.ToPolkadot) {
+            forwardedXcm = buildTransferKusamaToPolkadotExportXCM(
+                sourceAssetHub.registry,
+                tokenLocation,
+                xcmBridgeBaseFee,
+                xcmBridgeBaseFee,
+                this.info.registry.kusama?.assetHubParaId,
+                this.info.registry.assetHubParaId,
+                100000000000n,
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
+            )
+        } else {
+            forwardedXcm = buildTransferPolkadotToKusamaExportXCM(
+                sourceAssetHub.registry,
+                tokenLocation,
+                xcmBridgeBaseFee,
+                xcmBridgeBaseFee,
+                this.info.registry.assetHubParaId,
+                this.info.registry.kusama?.assetHubParaId,
+                100000000000n,
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
+            )
+        }
+
+        let bytes = forwardedXcm.toU8a().length
+        console.log("forwardedXcm length:", bytes)
+        let xcmBytesFee = BigInt(bytes) * xcmFeePerByte
+        let totalXcmBridgeFee = xcmBridgeBaseFee + xcmBytesFee
+        console.info("xcmBridgeBaseFee:", xcmBridgeBaseFee)
+        console.info("xcmBytesFee:", xcmBytesFee)
+
+        let destXcm
+        if (this.#direction() == Direction.ToPolkadot) {
+            destXcm = buildKusamaToPolkadotDestAssetHubXCM(
+                destAssetHub.registry,
+                totalXcmBridgeFee,
+                this.info.registry.assetHubParaId,
+                tokenLocation,
+                100000000000n,
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
+            )
+        } else {
+            destXcm = buildPolkadotToKusamaDestAssetHubXCM(
+                destAssetHub.registry,
+                totalXcmBridgeFee,
+                this.info.registry.assetHubParaId,
+                tokenLocation,
+                100000000000n,
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
+            )
+        }
+        const destAssetHubImpl = await this.context.paraImplementation(destAssetHub)
+        let destinationFeeInDestNative = await destAssetHubImpl.calculateXcmFee(
+            destXcm,
+            DOT_LOCATION,
+        )
+
+        const sourceAssetHubImpl = await this.context.paraImplementation(sourceAssetHub)
+        let bridgeHubDeliveryFee = await sourceAssetHubImpl.calculateDeliveryFeeInDOT(
+            this.info.registry.bridgeHubParaId,
+            forwardedXcm,
+        )
+
+        let feeAssetOnDest
+        let minBalanceFeeDest: bigint
+        if (this.#direction() == Direction.ToPolkadot) {
+            feeAssetOnDest = ksmLocationOnPolkadotAssetHub
+            minBalanceFeeDest = getDestFeeAssetMinimumBalance(
+                this.info.registry.parachains[`polkadot_${this.info.registry.assetHubParaId}`]
+                    .assets,
+                "kusama",
+            )
+        } else {
+            feeAssetOnDest = dotLocationOnKusamaAssetHub
+            minBalanceFeeDest = getDestFeeAssetMinimumBalance(
+                this.info.registry.kusama.parachains[
+                    `kusama_${this.info.registry.kusama.assetHubParaId}`
+                ].assets,
+                "polkadot",
+            )
+        }
+        let destinationFee = await destAssetHubImpl.getAssetHubConversionPalletSwap(
+            feeAssetOnDest,
+            NATIVE_TOKEN_LOCATION,
+            destinationFeeInDestNative,
+        )
+        destinationFee = padFeeByPercentage(destinationFee, 33n)
+        destinationFee = destinationFee + BigInt(minBalanceFeeDest)
+        totalXcmBridgeFee = padFeeByPercentage(totalXcmBridgeFee, 33n)
+
+        let totalFee = totalXcmBridgeFee + bridgeHubDeliveryFee + destinationFee
+
+        return {
+            kind: this.from.kind === "kusama" ? "kusama->polkadot" : "polkadot->kusama",
+            xcmBridgeFee: totalXcmBridgeFee,
+            destinationFee,
+            bridgeHubDeliveryFee,
+            totalFeeInNative: totalFee,
+        }
+    }
+
+    async tx(
+        sourceAccount: string,
+        beneficiaryAccount: string,
+        tokenAddress: string,
+        amount: bigint,
+        fee: DeliveryFee,
+    ): Promise<Transfer> {
+        const { sourceAssetHub } = await this.#connections()
+        const { assetHubParaId } = this.info.registry
+        const destParaId = this.info.registry.kusama?.assetHubParaId
+        let sourceParaId = assetHubParaId
+        const sourceParachainImpl = await this.context.paraImplementation(sourceAssetHub)
+
+        let sourceAccountHex = sourceAccount
+        if (!isHex(sourceAccountHex)) {
+            sourceAccountHex = u8aToHex(decodeAddress(sourceAccount))
+        }
+
+        if (!destParaId) {
+            throw Error("Kusama destination para ID is not set")
+        }
+
+        let { hexAddress: beneficiaryAddressHex } = resolveBeneficiary(beneficiaryAccount)
+
+        const { sourceAssetMetadata, destAssetMetadata, sourceParachain } = resolveInputs(
+            this.info.registry,
+            tokenAddress,
+            sourceParaId,
+            destParaId,
+        )
+        const accountNonce = await sourceParachainImpl.accountNonce(sourceAccountHex)
+        let messageId = buildMessageId(
+            sourceParaId,
+            sourceAccountHex,
+            accountNonce,
+            tokenAddress,
+            beneficiaryAccount,
+            amount,
+        )
+
+        let tokenLocationOnSource = getTokenLocation(
+            this.info.registry,
+            this.#direction(),
+            tokenAddress,
+        )
+        let tx
+        if (this.#direction() == Direction.ToPolkadot) {
+            tx = createERC20ToPolkadotTx(
+                sourceParaId,
+                sourceAssetHub,
+                tokenLocationOnSource,
+                beneficiaryAddressHex,
+                amount,
+                fee.destinationFee,
+                messageId,
+            )
+        } else {
+            tx = createERC20ToKusamaTx(
+                destParaId,
+                sourceAssetHub,
+                tokenLocationOnSource,
+                beneficiaryAddressHex,
+                amount,
+                fee.destinationFee,
+                messageId,
+            )
+        }
+
+        return {
+            kind: `${this.from.kind}->${this.to.kind}` as Transfer["kind"],
+            input: {
+                registry: this.info.registry,
+                sourceAccount,
+                beneficiaryAccount,
+                tokenAddress,
+                amount,
+                fee,
+            },
+            computed: {
+                sourceParaId,
+                sourceParachain,
+                sourceAssetMetadata,
+                sourceAccountHex,
+                destAssetMetadata,
+                messageId,
+                beneficiaryAddressHex,
+            },
+            tx,
+        }
+    }
+
+    async build(
+        sourceAccount: string,
+        beneficiaryAccount: string,
+        tokenAddress: string,
+        amount: bigint,
+    ): Promise<ValidatedTransfer> {
+        const fee = await this.fee(tokenAddress)
+        const transfer = await this.tx(sourceAccount, beneficiaryAccount, tokenAddress, amount, fee)
+        return ensureValidationSuccess(await this.validate(transfer))
+    }
+
+    async validate(transfer: Transfer): Promise<ValidatedTransfer> {
+        const connections = await this.#connections()
+        let sourceAssetHub = connections.sourceAssetHub
+        let destAssetHub = connections.destAssetHub
+
+        const { registry, fee, tokenAddress, amount } = transfer.input
+        const {
+            sourceAccountHex,
+            sourceParachain: _source,
+            beneficiaryAddressHex,
+            destAssetMetadata,
+        } = transfer.computed
+        const { tx } = transfer
+
+        let tokenLocation = getTokenLocation(registry, this.#direction(), tokenAddress)
+
+        const sourceAssetHubImpl = await this.context.paraImplementation(sourceAssetHub)
+        let nativeBalance = await sourceAssetHubImpl.getNativeBalance(sourceAccountHex, true)
+
+        let tokenAsset = getTransferAsset(this.#direction(), tokenAddress, transfer.input.registry)
+
+        let tokenBalance: bigint
+        if (isRelaychainLocation(tokenLocation)) {
+            tokenBalance = nativeBalance
+        } else {
+            tokenBalance = await sourceAssetHubImpl.getTokenBalance(
+                sourceAccountHex,
+                registry.ethChainId,
+                tokenAddress,
+                tokenAsset,
+            )
+        }
+
+        const logs: ValidationLog[] = []
+
+        if (amount > tokenBalance) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.InsufficientTokenBalance,
+                message: "Insufficient token balance to submit transaction.",
+            })
+        }
+
+        let assetHubDryRunError
+
+        const dryRunSource = await dryRunSourceAssetHub(
+            sourceAssetHub,
+            registry.assetHubParaId,
+            registry.bridgeHubParaId,
+            transfer.tx,
+            sourceAccountHex,
+        )
+        if (!dryRunSource.success) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.DryRunFailed,
+                message: "Dry run call on source failed.",
+            })
+            assetHubDryRunError = dryRunSource.error
+        }
+
+        const paymentInfo = await tx.paymentInfo(sourceAccountHex)
+        const sourceExecutionFee = paymentInfo["partialFee"].toBigInt()
+
+        if (sourceExecutionFee + fee.totalFeeInNative > nativeBalance) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.InsufficientFee,
+                message:
+                    "Insufficient " +
+                    nativeFeeAsset(this.#direction()) +
+                    " balance to submit transaction on the source parachain.",
+            })
+        }
+
+        let destAssetHubXCM: any
+        if (this.#direction() == Direction.ToPolkadot) {
+            destAssetHubXCM = buildKusamaToPolkadotDestAssetHubXCM(
+                destAssetHub.registry,
+                fee.destinationFee,
+                registry.assetHubParaId,
+                tokenLocation,
+                transfer.input.amount,
+                transfer.computed.beneficiaryAddressHex,
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
+            )
+        } else {
+            destAssetHubXCM = buildPolkadotToKusamaDestAssetHubXCM(
+                destAssetHub.registry,
+                fee.destinationFee,
+                registry.assetHubParaId,
+                tokenLocation,
+                transfer.input.amount,
+                transfer.computed.beneficiaryAddressHex,
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
+            )
+        }
+
+        const dryRunAssetHubDest = await dryRunDestAssetHub(
+            destAssetHub,
+            registry.bridgeHubParaId,
+            destAssetHubXCM,
+        )
+        if (!dryRunAssetHubDest.success) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.DryRunFailed,
+                message:
+                    "Dry run call on destination AH failed: " + dryRunAssetHubDest.errorMessage,
+            })
+            assetHubDryRunError = dryRunAssetHubDest.errorMessage
+
+            const destAssetHubImpl = await this.context.paraImplementation(destAssetHub)
+            const { accountMaxConsumers, accountExists } = await destAssetHubImpl.validateAccount(
+                beneficiaryAddressHex,
+                registry.ethChainId,
+                tokenAddress,
+                destAssetMetadata,
+            )
+            if (accountMaxConsumers) {
+                logs.push({
+                    kind: ValidationKind.Error,
+                    reason: ValidationReason.MaxConsumersReached,
+                    message:
+                        "Beneficiary account has reached the max consumer limit on the destination chain.",
+                })
+            }
+            if (!accountExists) {
+                logs.push({
+                    kind: ValidationKind.Error,
+                    reason: ValidationReason.AccountDoesNotExist,
+                    message: "Beneficiary account does not exist on the destination chain.",
+                })
+            }
+        }
+
+        const success = logs.find((l) => l.kind === ValidationKind.Error) === undefined
+
+        return {
+            logs,
+            success,
+            data: {
+                nativeBalance,
+                sourceExecutionFee,
+                tokenBalance,
+                assetHubDryRunError,
+            },
+            ...transfer,
+        }
+    }
+
+    async signAndSend(
+        transfer: Transfer,
+        account: AddressOrPair,
+        options: Partial<SignerOptions>,
+    ): Promise<MessageReceipt> {
+        const { sourceAssetHub } = await this.#connections()
+        const result = await new Promise<MessageReceipt>((resolve, reject) => {
+            try {
+                transfer.tx.signAndSend(account, options, (c) => {
+                    if (c.isError) {
+                        console.error(c)
+                        reject(c.internalError || c.dispatchError || c)
+                    }
+                    if (c.isFinalized) {
+                        const result = {
+                            txHash: u8aToHex(c.txHash),
+                            txIndex: c.txIndex || 0,
+                            blockNumber: Number((c as any).blockNumber),
+                            blockHash: "",
+                            events: c.events,
+                        }
+                        for (const e of c.events) {
+                            if (sourceAssetHub.events.system.ExtrinsicFailed.is(e.event)) {
+                                resolve({
+                                    ...result,
+                                    success: false,
+                                    dispatchError: (e.event.data.toHuman(true) as any)
+                                        ?.dispatchError,
+                                })
+                            }
+                            if (sourceAssetHub.events.polkadotXcm.Sent.is(e.event)) {
+                                resolve({
+                                    ...result,
+                                    success: true,
+                                    messageId: (e.event.data.toPrimitive() as any)[3],
+                                })
+                            }
+                        }
+                        resolve({
+                            ...result,
+                            success: false,
+                        })
+                    }
+                })
+            } catch (e) {
+                console.error(e)
+                reject(e)
+            }
+        })
+        result.blockHash = u8aToHex(await sourceAssetHub.rpc.chain.getBlockHash(result.blockNumber))
+        result.messageId = transfer.computed.messageId ?? result.messageId
+        return result
+    }
 }
 
-export function createERC20ToKusamaTx(
+function createERC20ToKusamaTx(
     destParaId: number,
     parachain: ApiPromise,
     tokenLocation: any,
@@ -654,7 +714,7 @@ export function createERC20ToKusamaTx(
     )
 }
 
-export function createERC20ToPolkadotTx(
+function createERC20ToPolkadotTx(
     destParaId: number,
     parachain: ApiPromise,
     tokenLocation: any,
@@ -712,7 +772,7 @@ export function createERC20ToPolkadotTx(
     )
 }
 
-export async function dryRunSourceAssetHub(
+async function dryRunSourceAssetHub(
     source: ApiPromise,
     assetHubParaId: number,
     bridgeHubParaId: number,
@@ -773,7 +833,7 @@ export async function dryRunSourceAssetHub(
     }
 }
 
-async function dryRunDestAssetHub(assetHub: ApiPromise, parachainId: number, xcm: any) {
+export async function dryRunDestAssetHub(assetHub: ApiPromise, parachainId: number, xcm: any) {
     const sourceParachain = { v4: { parents: 1, interior: { x1: [{ parachain: parachainId }] } } }
     const result = await assetHub.call.dryRunApi.dryRunXcm<
         Result<XcmDryRunEffects, XcmDryRunApiError>

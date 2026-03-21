@@ -1,5 +1,6 @@
 import { Keyring } from "@polkadot/keyring"
-import { Context, toPolkadotV2 } from "@snowbridge/api"
+import { Context, createApi, toPolkadotV2 } from "@snowbridge/api"
+import { EthersEthereumProvider, EthersProviderTypes } from "@snowbridge/provider-ethers"
 import { formatEther, Wallet } from "ethers"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { bridgeInfoFor } from "@snowbridge/registry"
@@ -18,8 +19,13 @@ export const transferToPolkadot = async (
     }
     console.log(`Using environment '${env}'`)
 
-    const { registry, environment } = bridgeInfoFor(env)
-    const context = new Context(environment)
+    const info = bridgeInfoFor(env)
+    const { registry } = info
+    const api = createApi({
+        info,
+        ethereumProvider: new EthersEthereumProvider(),
+    })
+    const context: Context<EthersProviderTypes> = api.context
 
     const ETHEREUM_ACCOUNT = new Wallet(
         process.env.ETHEREUM_KEY ?? "Your Key Goes Here",
@@ -95,45 +101,25 @@ export const transferToPolkadot = async (
 
     console.log("# Ethereum to Asset Hub")
     {
-        // Step 1. Get the delivery fee for the transaction
-        const fee = await toPolkadotV2.getDeliveryFee(
-            {
-                gateway: context.gateway(),
-                assetHub: await context.assetHub(),
-                destination: await context.parachain(destinationChainId),
-            },
-            registry,
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            TOKEN_CONTRACT!,
-            destinationChainId,
+        const transferImpl = api.sender(
+            { kind: "ethereum", id: registry.ethChainId },
+            { kind: "polkadot", id: destinationChainId },
         )
+        // Step 1. Get the delivery fee for the transaction
+        const fee = await transferImpl.fee(TOKEN_CONTRACT!)
 
         // Step 2. Create a transfer tx
-        const transfer = await toPolkadotV2.createTransfer(
-            registry,
+        const transfer = await transferImpl.tx(
             ETHEREUM_ACCOUNT_PUBLIC,
             POLKADOT_ACCOUNT_PUBLIC,
             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
             TOKEN_CONTRACT!,
-            destinationChainId,
             amount,
             fee,
         )
 
         // Step 3. Validate the transaction.
-        const validation = await toPolkadotV2.validateTransfer(
-            {
-                ethereum: context.ethereum(),
-                gateway: context.gateway(),
-                bridgeHub: await context.bridgeHub(),
-                assetHub: await context.assetHub(),
-                destParachain:
-                    destinationChainId !== 1000
-                        ? await context.parachain(destinationChainId)
-                        : undefined,
-            },
-            transfer,
-        )
+        const validation = await transferImpl.validate(transfer)
         console.log("validation result", validation)
 
         // Step 4. Check validation logs for errors
@@ -146,12 +132,12 @@ export const transferToPolkadot = async (
             tx,
             computed: { totalValue },
         } = transfer
-        const estimatedGas = await context.ethereum().estimateGas(tx)
-        const feeData = await context.ethereum().getFeeData()
+        const estimatedGas = await context.ethereumProvider.estimateGas(context.ethereum(), tx)
+        const feeData = await context.ethereumProvider.getFeeData(context.ethereum())
         const executionFee = (feeData.gasPrice ?? 0n) * estimatedGas
 
         console.log("tx:", tx)
-        console.log("feeData:", feeData.toJSON())
+        console.log("feeData:", feeData)
         console.log("gas:", estimatedGas)
         console.log("delivery cost:", formatEther(fee.totalFeeInWei))
         console.log("execution cost:", formatEther(executionFee))
@@ -168,12 +154,12 @@ export const transferToPolkadot = async (
             }
 
             // Step 7. Get the message receipt for tracking purposes
-            const message = await toPolkadotV2.getMessageReceipt(receipt)
+            const message = await transferImpl.messageId(receipt)
             if (!message) {
                 throw Error(`Transaction ${receipt.hash} did not emit a message.`)
             }
             console.log(
-                `Success message with message id: ${message.messageId}
+                `Success message with nonce: ${message.nonce}
                 block number: ${message.blockNumber}
                 tx hash: ${message.txHash}`,
             )

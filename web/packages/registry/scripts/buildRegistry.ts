@@ -17,6 +17,7 @@ import {
     XC20TokenMap,
     XcmVersion,
     BridgeInfo,
+    ChainMap,
     TransferRoute,
     ChainId,
     ChainKey,
@@ -28,6 +29,8 @@ import { writeFile } from "fs/promises"
 import { AbstractProvider, Contract, ethers } from "ethers"
 import { IGatewayV1__factory as IGateway__factory } from "@snowbridge/contract-types"
 import { parachains as ParaImpl, xcmBuilder, assetsV2 } from "@snowbridge/api"
+import { EthersEthereumProvider, EthersProviderTypes } from "@snowbridge/provider-ethers"
+import { buildFriendlyChains } from "./friendlyChains"
 
 export type Path = {
     source: ChainId
@@ -450,6 +453,38 @@ function buildTransferLocations(
         }
     }
 
+    // Kusama paths (Ethereum ↔ Kusama AH)
+    if (registry.kusama) {
+        const kusamaParachains = Object.values(registry.kusama.parachains)
+        for (const kusamaPara of kusamaParachains) {
+            const kusamaAssets = Object.keys(kusamaPara.assets)
+            // Find assets common to both Ethereum and Kusama AH
+            const commonAssets = new Set(
+                ethAssets.filter((ea) => kusamaAssets.find((ka) => ka === ea)),
+            )
+            for (const asset of commonAssets) {
+                // Ethereum → Kusama
+                const p1: Path = {
+                    source: { kind: ethChain.kind, id: ethChain.id },
+                    destination: { kind: kusamaPara.kind, id: kusamaPara.id },
+                    asset,
+                }
+                if (pathFilter(p1)) {
+                    locations.push(p1)
+                }
+                // Kusama → Ethereum
+                const p2: Path = {
+                    source: { kind: kusamaPara.kind, id: kusamaPara.id },
+                    destination: { kind: ethChain.kind, id: ethChain.id },
+                    asset,
+                }
+                if (pathFilter(p2)) {
+                    locations.push(p2)
+                }
+            }
+        }
+    }
+
     // L2 paths
     if (environment.l2Bridge) {
         // Do asset hub only, in future we can loop through all v2 enabled parachains.
@@ -631,7 +666,10 @@ async function buildRegistry(environment: Environment): Promise<AssetRegistry> {
                         ? new HttpProvider(parachainUrl)
                         : new WsProvider(parachainUrl),
                 })
-                const accessor = await ParaImpl.paraImplementation(provider)
+                const accessor = await ParaImpl.paraImplementation(
+                    provider,
+                    new EthersEthereumProvider(),
+                )
                 return { parachainId: accessor.parachainId, accessor }
             }),
         )) {
@@ -698,7 +736,10 @@ async function buildRegistry(environment: Environment): Promise<AssetRegistry> {
                 ? new HttpProvider(assetHubUrl)
                 : new WsProvider(assetHubUrl),
         })
-        const accessor = await ParaImpl.paraImplementation(provider)
+        const accessor = await ParaImpl.paraImplementation<EthersProviderTypes>(
+            provider,
+            new EthersEthereumProvider(),
+        )
 
         const para = await indexParachain(
             accessor,
@@ -1185,7 +1226,12 @@ async function getRegisteredPnas(
     const environment = SNOWBRIDGE_ENV[env]
     const registry = await buildRegistry(environment)
     const routes = buildTransferLocations(registry, environment)
-    const bridge: BridgeInfo = { environment, routes, registry }
+    const chains = buildFriendlyChains([
+        ...Object.values(registry.ethereumChains),
+        ...Object.values(registry.parachains),
+        ...Object.values(registry.kusama?.parachains ?? {}),
+    ])
+    const bridge: BridgeInfo = { environment, routes, registry, chains }
     const json = generateTsObject(bridge, 4)
     const fileContents = `const registry = ${json} as const\nexport default registry\n`
     const filepath = `src/${env}_bridge_info.g.ts`

@@ -1,5 +1,6 @@
 import { Keyring } from "@polkadot/keyring"
-import { Context, addTip } from "@snowbridge/api"
+import { addTip, createApi } from "@snowbridge/api"
+import { EthersEthereumProvider } from "@snowbridge/provider-ethers"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { bridgeInfoFor } from "@snowbridge/registry"
 
@@ -34,8 +35,9 @@ export const addTipToMessage = async () => {
     }
     console.log(`Using environment '${env}'`)
 
-    const { registry, environment } = bridgeInfoFor(env)
-    const context = new Context(environment)
+    const info = bridgeInfoFor(env)
+    const { registry } = info
+    const context = createApi({ info, ethereumProvider: new EthersEthereumProvider() }).context
 
     // Get user's Polkadot account
     const keyring = new Keyring({ type: "sr25519" })

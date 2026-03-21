@@ -3,28 +3,37 @@ import { TransferInterface as L2TransferInterface } from "./transfers/l2ToPolkad
 import { ERC20ToAH } from "./transfers/toPolkadot/erc20ToAH"
 import { ERC20ToAH as ERC20FromL2ToAH } from "./transfers/l2ToPolkadot/erc20ToAH"
 import { RegisterToken } from "./registration/toPolkadot/registerToken"
-import { TokenRegistration } from "./registration/toPolkadot/registrationInterface"
-import { Asset, AssetRegistry, ERC20Metadata, Parachain } from "@snowbridge/base-types"
+import {
+    Asset,
+    AssetRegistry,
+    ChainId,
+    ERC20Metadata,
+    EthereumChain,
+    EthereumProvider,
+    EthereumProviderTypes,
+    MultiAddressStruct,
+    Parachain,
+    TransferKind,
+    TransferRoute,
+} from "@snowbridge/base-types"
 import { PNAToAH } from "./transfers/toPolkadot/pnaToAH"
 import { ERC20ToParachain } from "./transfers/toPolkadot/erc20ToParachain"
 import { PNAToParachain } from "./transfers/toPolkadot/pnaToParachain"
-import { MultiAddressStruct } from "@snowbridge/contract-types/dist/IGateway.sol/IGatewayV1"
-import { AbiCoder, ContractTransaction, LogDescription, TransactionReceipt, Wallet } from "ethers"
 import { hexToU8a, stringToU8a } from "@polkadot/util"
 import { blake2AsHex } from "@polkadot/util-crypto"
-import { IGatewayV2__factory } from "@snowbridge/contract-types"
 import { OperationStatus } from "./status"
 import { FeeInfo, ValidationLog } from "./toPolkadot_v2"
 import { ApiPromise } from "@polkadot/api"
 import { accountToLocation, DOT_LOCATION, erc20Location } from "./xcmBuilder"
 import { Codec } from "@polkadot/types/types"
 import { ETHER_TOKEN_ADDRESS } from "./assets_v2"
-import { padFeeByPercentage } from "./utils"
+import { ensureValidationSuccess, padFeeByPercentage } from "./utils"
 import { Context } from "./index"
 export { ValidationKind } from "./toPolkadot_v2"
 import { ParachainBase } from "./parachains/parachainBase"
 
 export type DeliveryFee = {
+    kind: Extract<TransferKind, "ethereum->polkadot" | "ethereum_l2->polkadot">
     feeAsset: any
     assetHubDeliveryFeeEther: bigint
     assetHubExecutionFeeEther: bigint
@@ -39,7 +48,8 @@ export type DeliveryFee = {
     swapFeeInL1Token?: bigint // Fee for Gateway.v2_sendMessage in the output L1 token.
 }
 
-export type Transfer = {
+export type Transfer<T extends EthereumProviderTypes> = {
+    kind: Extract<TransferKind, "ethereum->polkadot" | "ethereum_l2->polkadot">
     input: {
         registry: AssetRegistry
         sourceAccount: string
@@ -67,10 +77,10 @@ export type Transfer = {
         l2AdapterAddress?: string
         totalInputAmount: bigint
     }
-    tx: ContractTransaction
+    tx: T["ContractTransaction"]
 }
 
-export type ValidationResult = {
+export type ValidatedTransfer<T extends EthereumProviderTypes> = Transfer<T> & {
     logs: ValidationLog[]
     success: boolean
     data: {
@@ -86,7 +96,6 @@ export type ValidationResult = {
         destinationParachainDryRunError?: string
         l2BridgeDryRunError?: string
     }
-    transfer: Transfer
 }
 
 export type MessageReceipt = {
@@ -101,84 +110,144 @@ export type MessageReceipt = {
 // Re-export registration types for convenience
 export type {
     TokenRegistration,
-    RegistrationValidationResult,
+    ValidatedRegisterToken,
     RegistrationFee,
     RegistrationInterface,
 } from "./registration/toPolkadot/registrationInterface"
 
-export function createTransferImplementation(
-    destinationParaId: number,
-    registry: AssetRegistry,
-    tokenAddress: string,
-): TransferInterface {
-    const { ahAssetMetadata } = resolveInputs(registry, tokenAddress, destinationParaId)
+export class TransferToPolkadot<T extends EthereumProviderTypes> implements TransferInterface<T> {
+    #pnaImpl?: TransferInterface<T>
+    #erc20Impl?: TransferInterface<T>
 
-    let transferImpl: TransferInterface
-    if (destinationParaId == registry.assetHubParaId) {
-        if (ahAssetMetadata.location) {
-            transferImpl = new PNAToAH()
-        } else {
-            transferImpl = new ERC20ToAH()
+    constructor(
+        public readonly context: Context<T>,
+        private readonly route: TransferRoute,
+        private readonly registry: AssetRegistry,
+        private readonly source: EthereumChain,
+        private readonly destination: Parachain,
+    ) {}
+
+    get from(): ChainId {
+        return this.route.from
+    }
+
+    get to(): ChainId {
+        return this.route.to
+    }
+
+    #resolveByTokenAddress(tokenAddress: string): TransferInterface<T> {
+        const destinationParaId = this.route.to.id
+        const ahAssetMetadata =
+            this.registry.parachains[`polkadot_${this.registry.assetHubParaId}`].assets[
+                tokenAddress.toLowerCase()
+            ]
+        if (!ahAssetMetadata) {
+            throw Error(`Token ${tokenAddress} not registered on asset hub.`)
         }
-    } else {
+
         if (ahAssetMetadata.location) {
-            transferImpl = new PNAToParachain()
-        } else {
-            transferImpl = new ERC20ToParachain()
+            this.#pnaImpl ??=
+                destinationParaId == this.registry.assetHubParaId
+                    ? new PNAToAH(
+                          this.context,
+                          this.registry,
+                          this.route,
+                          this.source,
+                          this.destination,
+                      )
+                    : new PNAToParachain(
+                          this.context,
+                          this.registry,
+                          this.route,
+                          this.source,
+                          this.destination,
+                      )
+            return this.#pnaImpl
         }
-    }
-    return transferImpl
-}
 
-export function createL2TransferImplementation(
-    l2ChainId: number,
-    destinationParaId: number,
-    registry: AssetRegistry,
-    l2TokenAddress: string,
-): L2TransferInterface {
-    const assets = registry.ethereumChains[`ethereum_l2_${l2ChainId}`].assets
-    const tokenMetadata = assets[l2TokenAddress]
-    if (!tokenMetadata) {
-        throw Error(`No token ${l2TokenAddress} registered on ethereum chain ${l2ChainId}.`)
-    }
-    const tokenAddress = tokenMetadata.swapTokenAddress
-    if (!tokenAddress) {
-        throw Error(`No swap token address for ${l2TokenAddress} on ethereum chain ${l2ChainId}.`)
-    }
-
-    // Todo: Resolve inputs based on the token address and support non-system destination parachain
-    let transferImpl: L2TransferInterface = new ERC20FromL2ToAH()
-    return transferImpl
-}
-
-function resolveInputs(registry: AssetRegistry, tokenAddress: string, destinationParaId: number) {
-    const tokenErcMetadata =
-        registry.ethereumChains[`ethereum_${registry.ethChainId}`].assets[
-            tokenAddress.toLowerCase()
-        ]
-    if (!tokenErcMetadata) {
-        throw Error(`No token ${tokenAddress} registered on ethereum chain ${registry.ethChainId}.`)
-    }
-    const destParachain = registry.parachains[`polkadot_${destinationParaId}`]
-    if (!destParachain) {
-        throw Error(`Could not find ${destinationParaId} in the asset registry.`)
-    }
-    const ahAssetMetadata =
-        registry.parachains[`polkadot_${registry.assetHubParaId}`].assets[
-            tokenAddress.toLowerCase()
-        ]
-    if (!ahAssetMetadata) {
-        throw Error(`Token ${tokenAddress} not registered on asset hub.`)
+        this.#erc20Impl ??=
+            destinationParaId == this.registry.assetHubParaId
+                ? new ERC20ToAH(
+                      this.context,
+                      this.registry,
+                      this.route,
+                      this.source,
+                      this.destination,
+                  )
+                : new ERC20ToParachain(
+                      this.context,
+                      this.registry,
+                      this.route,
+                      this.source,
+                      this.destination,
+                  )
+        return this.#erc20Impl
     }
 
-    const destAssetMetadata = destParachain.assets[tokenAddress.toLowerCase()]
-    if (!destAssetMetadata) {
-        throw Error(
-            `Token ${tokenAddress} not registered on destination parachain ${destinationParaId}.`,
+    async fee(
+        tokenAddress: string,
+        options?: {
+            paddFeeByPercentage?: bigint
+            feeAsset?: any
+            customXcm?: any[]
+            overrideRelayerFee?: bigint
+        },
+    ): Promise<DeliveryFee> {
+        return this.#resolveByTokenAddress(tokenAddress).fee(tokenAddress, options)
+    }
+
+    async tx(
+        sourceAccount: string,
+        beneficiaryAccount: string,
+        tokenAddress: string,
+        amount: bigint,
+        fee: DeliveryFee,
+        customXcm?: any[],
+    ): Promise<Transfer<T>> {
+        return this.#resolveByTokenAddress(tokenAddress).tx(
+            sourceAccount,
+            beneficiaryAccount,
+            tokenAddress,
+            amount,
+            fee,
+            customXcm,
         )
     }
 
-    return { tokenErcMetadata, destParachain, ahAssetMetadata, destAssetMetadata }
+    async build(
+        sourceAccount: string,
+        beneficiaryAccount: string,
+        tokenAddress: string,
+        amount: bigint,
+        options?: {
+            fee?: {
+                paddFeeByPercentage?: bigint
+                feeAsset?: any
+                customXcm?: any[]
+                overrideRelayerFee?: bigint
+            }
+            customXcm?: any[]
+        },
+    ): Promise<ValidatedTransfer<T>> {
+        const fee = await this.fee(tokenAddress, options?.fee)
+        const transfer = await this.tx(
+            sourceAccount,
+            beneficiaryAccount,
+            tokenAddress,
+            amount,
+            fee,
+            options?.customXcm,
+        )
+        return ensureValidationSuccess(await this.validate(transfer))
+    }
+
+    async validate(transfer: Transfer<T>): Promise<ValidatedTransfer<T>> {
+        return this.#resolveByTokenAddress(transfer.input.tokenAddress).validate(transfer)
+    }
+
+    async messageId(receipt: T["TransactionReceipt"]): Promise<MessageReceipt | null> {
+        return messageId(this.context.ethereumProvider, receipt)
+    }
 }
 
 export function buildMessageId(
@@ -202,45 +271,13 @@ export function buildMessageId(
     return blake2AsHex(entropy)
 }
 
-// ERC20 asset: abi.encode(0, tokenAddress, amount)
-// 0 = AssetKind.NativeTokenERC20 from Solidity Types.sol
-export function encodeNativeAsset(tokenAddress: string, amount: bigint) {
-    return AbiCoder.defaultAbiCoder().encode(
-        ["uint8", "address", "uint128"],
-        [0, tokenAddress, amount],
-    )
-}
-
-// Encode assets array as bytes[] for the gateway contract
-export function encodeAssetsArray(encodedAssets: string[]) {
-    return AbiCoder.defaultAbiCoder().encode(["bytes[]"], [encodedAssets])
-}
-
-export async function getMessageReceipt(
-    receipt: TransactionReceipt,
+export async function messageId<T extends EthereumProviderTypes>(
+    ethereumProvider: EthereumProvider<T>,
+    receipt: T["TransactionReceipt"],
 ): Promise<MessageReceipt | null> {
-    const events: LogDescription[] = []
-    const gatewayInterface = IGatewayV2__factory.createInterface()
-    receipt.logs.forEach((log) => {
-        let event = gatewayInterface.parseLog({
-            topics: [...log.topics],
-            data: log.data,
-        })
-        if (event !== null) {
-            events.push(event)
-        }
-    })
-
-    const messageAccepted = events.find((log) => log.name === "OutboundMessageAccepted")
+    const messageAccepted = ethereumProvider.scanGatewayV2OutboundMessageAccepted(receipt)
     if (!messageAccepted) return null
-    return {
-        nonce: BigInt(messageAccepted.args[0]),
-        payload: messageAccepted.args[1],
-        blockNumber: receipt.blockNumber,
-        blockHash: receipt.blockHash,
-        txHash: receipt.hash,
-        txIndex: receipt.index,
-    }
+    return messageAccepted
 }
 
 export function claimerFromBeneficiary(assetHub: ApiPromise, beneficiaryAddressHex: string) {
@@ -253,24 +290,6 @@ export function claimerFromBeneficiary(assetHub: ApiPromise, beneficiaryAddressH
 
 export function claimerLocationToBytes(claimerLocation: Codec) {
     return hexToU8a(claimerLocation.toHex())
-}
-
-export function createRegistrationImplementation() {
-    return new RegisterToken()
-}
-
-export async function sendRegistration(
-    registration: TokenRegistration,
-    wallet: Wallet,
-): Promise<TransactionReceipt> {
-    const response = await wallet.sendTransaction(registration.tx)
-    const receipt = await response.wait(1)
-
-    if (!receipt) {
-        throw Error(`Transaction ${response.hash} not included.`)
-    }
-
-    return receipt
 }
 
 export async function inboundMessageExtrinsicFee(
@@ -316,8 +335,8 @@ export async function calculateRelayerFee(
     return { relayerFee, extrinsicFeeDot, extrinsicFeeEther }
 }
 
-export async function buildSwapCallData(
-    context: Context,
+export async function buildSwapCallData<T extends EthereumProviderTypes>(
+    context: Context<T>,
     registry: AssetRegistry,
     l2ChainId: number,
     l2TokenAddress: string,
@@ -332,38 +351,37 @@ export async function buildSwapCallData(
     }
     let swapFee =
         registry.ethereumChains?.[`ethereum_l2_${l2ChainId}`]?.assets[l2TokenAddress]?.swapFee
+    const l1FeeTokenAddress = context.environment.l2Bridge?.l1FeeTokenAddress
+    const l1HandlerAddress = context.environment.l2Bridge?.l1HandlerAddress
+    if (!l1FeeTokenAddress || !l1HandlerAddress) {
+        throw new Error("L2 bridge configuration is missing.")
+    }
     let swapCalldata: string
     if (registry.environment === "polkadot_mainnet") {
-        const l1SwapRouter = context.l1SwapRouter()
-        swapCalldata = l1SwapRouter.interface.encodeFunctionData("exactOutputSingle", [
-            {
-                tokenIn: tokenIn,
-                tokenOut: context.l1FeeTokenAddress(),
-                fee: swapFee ?? 500, // Stable default to 0.05% pool fee
-                recipient: context.l1HandlerAddress(),
-                deadline: Math.floor(Date.now() / 1000) + 600, // 10 minutes from now
-                amountOut: amountOut,
-                amountInMaximum: amountInMaximum,
-                sqrtPriceLimitX96: 0n, // No price limit should be fine as we protect the swap using amountInMaximum
-            },
-        ])
+        swapCalldata = context.ethereumProvider.l1SwapRouterExactOutputSingle({
+            tokenIn: tokenIn,
+            tokenOut: l1FeeTokenAddress,
+            fee: BigInt(swapFee ?? 500), // Stable default to 0.05% pool fee
+            recipient: l1HandlerAddress,
+            deadline: BigInt(Math.floor(Date.now() / 1000) + 600), // 10 minutes from now
+            amountOut: amountOut,
+            amountInMaximum: amountInMaximum,
+            sqrtPriceLimitX96: 0n, // No price limit should be fine as we protect the swap using amountInMaximum
+        })
     } // On Sepolia, only the legacy swap router is available, and it supports exactOutputSingle parameters without a deadline.
     else if (
         registry.environment === "paseo_sepolia" ||
         registry.environment === "westend_sepolia"
     ) {
-        const l1SwapRouter = context.l1LegacySwapRouter()
-        swapCalldata = l1SwapRouter.interface.encodeFunctionData("exactOutputSingle", [
-            {
-                tokenIn: tokenIn,
-                tokenOut: context.l1FeeTokenAddress(),
-                fee: swapFee ?? 500, // Stable default to 0.05% pool fee
-                recipient: context.l1HandlerAddress(),
-                amountOut: amountOut,
-                amountInMaximum: amountInMaximum,
-                sqrtPriceLimitX96: 0n, // No price limit should be fine as we protect the swap using amountInMaximum
-            },
-        ])
+        swapCalldata = context.ethereumProvider.l1LegacySwapRouterExactOutputSingle({
+            tokenIn: tokenIn,
+            tokenOut: l1FeeTokenAddress,
+            fee: BigInt(swapFee ?? 500), // Stable default to 0.05% pool fee
+            recipient: l1HandlerAddress,
+            amountOut: amountOut,
+            amountInMaximum: amountInMaximum,
+            sqrtPriceLimitX96: 0n, // No price limit should be fine as we protect the swap using amountInMaximum
+        })
     } else {
         throw new Error(`Unsupported environment ${registry.environment} for L1 swap router.`)
     }

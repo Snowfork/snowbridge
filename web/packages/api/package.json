@@ -33,8 +33,6 @@
     "@polkadot/types": "16.5.4",
     "@polkadot/util": "14.0.1",
     "@polkadot/util-crypto": "14.0.1",
-    "@snowbridge/base-types": "workspace:*",
-    "@snowbridge/contract-types": "workspace:*",
-    "ethers": "6.16.0"
+    "@snowbridge/base-types": "workspace:*"
   }
 }

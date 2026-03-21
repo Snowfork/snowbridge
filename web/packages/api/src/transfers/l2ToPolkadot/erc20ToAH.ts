@@ -1,4 +1,16 @@
-import { AssetRegistry } from "@snowbridge/base-types"
+import {
+    AssetRegistry,
+    ChainId,
+    DepositParamsStruct,
+    EthereumChain,
+    EthereumProviderTypes,
+    ISwapQuoter,
+    Parachain,
+    QuoteExactOutputSingleParamsStruct,
+    SendParamsStruct,
+    SwapParamsStruct,
+    TransferRoute,
+} from "@snowbridge/base-types"
 import { TransferInterface } from "./transferInterface"
 import { Context } from "../../index"
 import {
@@ -7,7 +19,7 @@ import {
     claimerFromBeneficiary,
     claimerLocationToBytes,
     DeliveryFee,
-    encodeNativeAsset,
+    messageId as getSharedMessageReceipt,
     ValidationKind,
 } from "../../toPolkadotSnowbridgeV2"
 import {
@@ -15,30 +27,34 @@ import {
     buildAssetHubERC20ReceivedXcm,
 } from "../../xcmbuilders/toPolkadot/erc20ToAH"
 import { accountId32Location, DOT_LOCATION, erc20Location } from "../../xcmBuilder"
-import { paraImplementation } from "../../parachains"
-import { erc20Balance, ETHER_TOKEN_ADDRESS } from "../../assets_v2"
-import { beneficiaryMultiAddress, padFeeByPercentage } from "../../utils"
-import { FeeInfo, resolveInputs, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
-import { buildMessageId, Transfer, ValidationResult } from "../../toPolkadotSnowbridgeV2"
+import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
+import { ensureValidationSuccess, padFeeByPercentage, resolveBeneficiary } from "../../utils"
+import { FeeInfo, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
+import { buildMessageId, Transfer, ValidatedTransfer } from "../../toPolkadotSnowbridgeV2"
 import { getOperatingStatus } from "../../status"
 import { hexToU8a } from "@polkadot/util"
-import {
-    DepositParamsStruct,
-    SendParamsStruct,
-    SwapParamsStruct,
-} from "@snowbridge/contract-types/dist/SnowbridgeL2Adaptor"
 import { estimateFees } from "../../across/api"
-import { ContractTransaction } from "ethers/lib.commonjs/contract/types"
-import { ISwapQuoter } from "@snowbridge/contract-types"
 
-export class ERC20ToAH implements TransferInterface {
-    async getDeliveryFee(
-        context: Context,
-        registry: AssetRegistry,
-        l2ChainId: number,
+export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInterface<T> {
+    constructor(
+        public readonly context: Context<T>,
+        public readonly registry: AssetRegistry,
+        public readonly route: TransferRoute,
+        public readonly source: EthereumChain,
+        public readonly destination: Parachain,
+    ) {}
+
+    get from(): ChainId {
+        return this.route.from
+    }
+
+    get to(): ChainId {
+        return this.route.to
+    }
+
+    async fee(
         l2TokenAddress: string,
         amount: bigint,
-        _destinationParaId: number,
         options?: {
             paddFeeByPercentage?: bigint
             feeAsset?: any
@@ -48,23 +64,25 @@ export class ERC20ToAH implements TransferInterface {
             fillDeadlineBuffer?: bigint
         },
     ): Promise<DeliveryFee> {
+        const context = this.context
+        const registry = this.registry
         const { assetHub, bridgeHub } = {
             assetHub: await context.assetHub(),
             bridgeHub: await context.bridgeHub(),
         }
-        if (registry.ethereumChains?.[`ethereum_l2_${l2ChainId}`] == undefined) {
-            throw new Error(`L2 Chain ID ${l2ChainId} is not supported in the provided registry`)
+        if (registry.ethereumChains?.[`ethereum_l2_${this.from.id}`] == undefined) {
+            throw new Error(`L2 Chain ID ${this.from.id} is not supported in the provided registry`)
         }
         if (
-            registry.ethereumChains?.[`ethereum_l2_${l2ChainId}`]?.assets[l2TokenAddress] ==
+            registry.ethereumChains?.[`ethereum_l2_${this.from.id}`]?.assets[l2TokenAddress] ==
             undefined
         ) {
             throw new Error(
-                `L2 Token Address ${l2TokenAddress} is not supported in the provided registry for L2 Chain ID ${l2ChainId}`,
+                `L2 Token Address ${l2TokenAddress} is not supported in the provided registry for L2 Chain ID ${this.from.id}`,
             )
         }
         let tokenAddress =
-            registry.ethereumChains?.[`ethereum_l2_${l2ChainId}`]?.assets[l2TokenAddress]
+            registry.ethereumChains?.[`ethereum_l2_${this.from.id}`]?.assets[l2TokenAddress]
                 ?.swapTokenAddress
         if (!tokenAddress) {
             throw new Error("Token is not registered on Ethereum")
@@ -92,13 +110,13 @@ export class ERC20ToAH implements TransferInterface {
         }
 
         // Delivery fee BridgeHub to AssetHub
-        const bridgeHubImpl = await paraImplementation(bridgeHub)
+        const bridgeHubImpl = await this.context.paraImplementation(bridgeHub)
         const deliveryFeeInDOT = await bridgeHubImpl.calculateDeliveryFeeInDOT(
             registry.assetHubParaId,
             assetHubXcm,
         )
 
-        const assetHubImpl = await paraImplementation(assetHub)
+        const assetHubImpl = await this.context.paraImplementation(assetHub)
         const deliveryFeeInEther = await assetHubImpl.swapAsset1ForAsset2(
             DOT_LOCATION,
             ether,
@@ -123,19 +141,24 @@ export class ERC20ToAH implements TransferInterface {
         let bridgeFeeInL2Token = 0n,
             swapFeeInL1Token = 0n
         let totalFeeInWei = assetHubExecutionFeeEther + relayerFee
-        let l2FeeTokenAddress = context.l2FeeTokenAddress(l2ChainId)
+        const acrossApiUrl = context.environment.l2Bridge?.acrossAPIUrl
+        const l2FeeTokenAddress =
+            context.environment.l2Bridge?.l2Chains[this.from.id]?.feeTokenAddress
+        if (!acrossApiUrl || !l2FeeTokenAddress) {
+            throw new Error("L2 bridge configuration is missing.")
+        }
         if (l2TokenAddress == ETHER_TOKEN_ADDRESS || l2TokenAddress == l2FeeTokenAddress) {
             const l1FeeTokenAddress =
-                registry.ethereumChains?.[`ethereum_l2_${l2ChainId}`]?.assets[l2FeeTokenAddress]
+                registry.ethereumChains?.[`ethereum_l2_${this.from.id}`]?.assets[l2FeeTokenAddress]
                     ?.swapTokenAddress
             if (!l1FeeTokenAddress) {
                 throw new Error("Fee token is not registered on Ethereum")
             }
             bridgeFeeInL2Token = await estimateFees(
-                context.acrossApiUrl(),
+                acrossApiUrl,
                 l2FeeTokenAddress,
                 l1FeeTokenAddress,
-                l2ChainId,
+                this.from.id,
                 registry.ethChainId,
                 assetHubExecutionFeeEther + relayerFee + amount,
             )
@@ -146,12 +169,16 @@ export class ERC20ToAH implements TransferInterface {
             totalFeeInWei += bridgeFeeInL2Token
         } else {
             let swapFee =
-                registry.ethereumChains?.[`ethereum_l2_${l2ChainId}`]?.assets[l2TokenAddress]
+                registry.ethereumChains?.[`ethereum_l2_${this.from.id}`]?.assets[l2TokenAddress]
                     ?.swapFee
-            let swapQuoter = context.l1SwapQuoter()
-            let params: ISwapQuoter.QuoteExactOutputSingleParamsStruct = {
+            const swapQuoter = context.l1SwapQuoter() as T["Contract"] & ISwapQuoter
+            const l1FeeTokenAddress = context.environment.l2Bridge?.l1FeeTokenAddress
+            if (!l1FeeTokenAddress) {
+                throw new Error("L2 bridge configuration is missing.")
+            }
+            let params: QuoteExactOutputSingleParamsStruct = {
                 tokenIn: tokenAddress,
-                tokenOut: context.l1FeeTokenAddress(),
+                tokenOut: l1FeeTokenAddress,
                 amount: assetHubExecutionFeeEther + relayerFee,
                 fee: swapFee ?? 500, // 0.05% pool fee
                 sqrtPriceLimitX96: 0, // no price limit
@@ -163,10 +190,10 @@ export class ERC20ToAH implements TransferInterface {
                 options?.l2PadFeeByPercentage ?? 33n,
             )
             bridgeFeeInL2Token = await estimateFees(
-                context.acrossApiUrl(),
+                acrossApiUrl,
                 l2TokenAddress,
                 tokenAddress,
-                l2ChainId,
+                this.from.id,
                 registry.ethChainId,
                 amount + swapFeeInL1Token,
             )
@@ -177,6 +204,7 @@ export class ERC20ToAH implements TransferInterface {
         }
 
         return {
+            kind: "ethereum_l2->polkadot",
             assetHubDeliveryFeeEther: deliveryFeeInEther,
             assetHubExecutionFeeEther: assetHubExecutionFeeEther,
             destinationDeliveryFeeEther: 0n,
@@ -191,13 +219,9 @@ export class ERC20ToAH implements TransferInterface {
         }
     }
 
-    async createTransfer(
-        context: Context,
-        registry: AssetRegistry,
-        l2ChainId: number,
+    async tx(
         l2TokenAddress: string,
         amount: bigint,
-        destinationParaId: number,
         sourceAccount: string,
         beneficiaryAccount: string,
         fee: DeliveryFee,
@@ -205,36 +229,62 @@ export class ERC20ToAH implements TransferInterface {
             customXcm?: any[]
             fillDeadlineBuffer?: bigint
         },
-    ): Promise<Transfer> {
+    ): Promise<Transfer<T>> {
+        const context = this.context
+        const registry = this.registry
         const assetHub = await context.assetHub()
-        const l2Chain = context.ethChain(l2ChainId)
+        const l2Chain = context.ethChain(this.from.id)
 
         let tokenAddress =
-            registry.ethereumChains?.[`ethereum_l2_${l2ChainId}`]?.assets[l2TokenAddress]
+            registry.ethereumChains?.[`ethereum_l2_${this.from.id}`]?.assets[l2TokenAddress]
                 ?.swapTokenAddress
         if (!tokenAddress) {
             throw new Error("Token is not registered on Ethereum")
         }
 
-        const { tokenErcMetadata, destParachain, ahAssetMetadata, destAssetMetadata } =
-            resolveInputs(registry, tokenAddress, destinationParaId)
+        const tokenErcMetadata =
+            registry.ethereumChains[`ethereum_${registry.ethChainId}`].assets[
+                tokenAddress.toLowerCase()
+            ]
+        if (!tokenErcMetadata) {
+            throw Error(
+                `No token ${tokenAddress} registered on ethereum chain ${registry.ethChainId}.`,
+            )
+        }
+        const ahAssetMetadata =
+            registry.parachains[`polkadot_${registry.assetHubParaId}`].assets[
+                tokenAddress.toLowerCase()
+            ]
+        if (!ahAssetMetadata) {
+            throw Error(`Token ${tokenAddress} not registered on asset hub.`)
+        }
+        const destParachain = this.destination
+        const destAssetMetadata = destParachain.assets[tokenAddress.toLowerCase()]
+        if (!destAssetMetadata) {
+            throw Error(
+                `Token ${tokenAddress} not registered on destination parachain ${destParachain.id}.`,
+            )
+        }
         const minimalBalance =
             ahAssetMetadata.minimumBalance > destAssetMetadata.minimumBalance
                 ? ahAssetMetadata.minimumBalance
                 : destAssetMetadata.minimumBalance
 
-        let { address: beneficiary, hexAddress: beneficiaryAddressHex } =
-            beneficiaryMultiAddress(beneficiaryAccount)
+        const { hexAddress: beneficiaryAddressHex } = resolveBeneficiary(beneficiaryAccount)
+        const beneficiary = context.ethereumProvider.beneficiaryMultiAddress(beneficiaryAddressHex)
 
         let assets: any = []
         let value: bigint
         let inputAmount: bigint = amount
 
-        const l2Adapter = context.l2Adapter(l2ChainId)
-        const accountNonce = await l2Chain.getTransactionCount(sourceAccount, "pending")
+        const accountNonce = await context.ethereumProvider.getTransactionCount(
+            l2Chain,
+            sourceAccount,
+            "pending",
+        )
 
         const topic = buildMessageId(
-            destinationParaId,
+            this.to.id,
             sourceAccount,
             l2TokenAddress,
             beneficiaryAddressHex,
@@ -252,7 +302,7 @@ export class ERC20ToAH implements TransferInterface {
         )
         let claimer = claimerFromBeneficiary(assetHub, beneficiaryAddressHex)
 
-        let depositParams: DepositParamsStruct, tx: ContractTransaction
+        let depositParams: DepositParamsStruct, tx: T["ContractTransaction"]
 
         let sendParams: SendParamsStruct = {
             xcm: xcm,
@@ -261,9 +311,17 @@ export class ERC20ToAH implements TransferInterface {
             executionFee: fee.assetHubExecutionFeeEther,
             relayerFee: fee.relayerFee,
         }
-        let l2FeeTokenAddress = context.l2FeeTokenAddress(l2ChainId)
+        const l2FeeTokenAddress =
+            context.environment.l2Bridge?.l2Chains[this.from.id]?.feeTokenAddress
+        const l1SwapRouterAddress = context.environment.l2Bridge?.l1SwapRouterAddress
+        if (!l2FeeTokenAddress || !l1SwapRouterAddress) {
+            throw new Error("L2 chain configuration is missing.")
+        }
         if (l2TokenAddress === ETHER_TOKEN_ADDRESS || l2TokenAddress === l2FeeTokenAddress) {
             value = fee.totalFeeInWei + amount
+            inputAmount =
+                amount +
+                (l2TokenAddress === l2FeeTokenAddress ? (fee.bridgeFeeInL2Token ?? 0n) : 0n)
             depositParams = {
                 inputToken: l2TokenAddress,
                 outputToken: tokenAddress,
@@ -272,17 +330,20 @@ export class ERC20ToAH implements TransferInterface {
                 destinationChainId: BigInt(registry.ethChainId),
                 fillDeadlineBuffer: options?.fillDeadlineBuffer ?? 600n,
             }
-            let txOptions: any = { from: sourceAccount }
-            if (l2TokenAddress === ETHER_TOKEN_ADDRESS) {
-                txOptions = { ...txOptions, value: value }
-            }
-            tx = await l2Adapter
-                .getFunction("sendEtherAndCall")
-                .populateTransaction(depositParams, sendParams, sourceAccount, topic, txOptions)
+            tx = await context.ethereumProvider.l2AdapterSendEtherAndCall(
+                context.ethChain(this.from.id),
+                context.environment.l2Bridge!.l2Chains[this.from.id].adapterAddress,
+                sourceAccount,
+                depositParams,
+                sendParams,
+                sourceAccount,
+                topic,
+                l2TokenAddress === ETHER_TOKEN_ADDRESS ? value : undefined,
+            )
         } else {
             value = fee.totalFeeInWei
             inputAmount = amount + fee.bridgeFeeInL2Token! + fee.swapFeeInL1Token!
-            assets = [encodeNativeAsset(tokenAddress, amount)]
+            assets = [context.ethereumProvider.encodeNativeAsset(tokenAddress, amount)]
             sendParams.assets = assets
             depositParams = {
                 inputToken: l2TokenAddress,
@@ -295,35 +356,41 @@ export class ERC20ToAH implements TransferInterface {
             let swapCalldata = await buildSwapCallData(
                 context,
                 registry,
-                l2ChainId,
+                this.from.id,
                 l2TokenAddress,
                 fee.assetHubExecutionFeeEther + fee.relayerFee,
                 fee.swapFeeInL1Token!,
             )
             let swapParams: SwapParamsStruct = {
                 inputAmount: fee.swapFeeInL1Token!,
-                router: context.l1SwapRouterAddress(),
+                router: l1SwapRouterAddress,
                 callData: swapCalldata,
             }
-            tx = await l2Adapter
-                .getFunction("sendTokenAndCall")
-                .populateTransaction(depositParams, swapParams, sendParams, sourceAccount, topic, {
-                    from: sourceAccount,
-                })
+            tx = await context.ethereumProvider.l2AdapterSendTokenAndCall(
+                context.ethChain(this.from.id),
+                context.environment.l2Bridge!.l2Chains[this.from.id].adapterAddress,
+                sourceAccount,
+                depositParams,
+                swapParams,
+                sendParams,
+                sourceAccount,
+                topic,
+            )
         }
 
         return {
+            kind: "ethereum_l2->polkadot",
             input: {
                 registry,
                 sourceAccount,
                 beneficiaryAccount,
                 tokenAddress,
-                destinationParaId,
+                destinationParaId: this.to.id,
                 amount,
                 fee,
                 customXcm: options?.customXcm,
                 l2TokenAddress,
-                sourceChainId: l2ChainId,
+                sourceChainId: this.from.id,
             },
             computed: {
                 gatewayAddress: registry.gatewayAddress,
@@ -337,14 +404,48 @@ export class ERC20ToAH implements TransferInterface {
                 destParachain,
                 claimer,
                 topic,
-                l2AdapterAddress: l2Adapter.target.toString(),
+                l2AdapterAddress:
+                    context.environment.l2Bridge!.l2Chains[this.from.id].adapterAddress,
                 totalInputAmount: inputAmount,
             },
             tx,
         }
     }
 
-    async validateTransfer(context: Context, transfer: Transfer): Promise<ValidationResult> {
+    async build(
+        tokenAddress: string,
+        amount: bigint,
+        sourceAccount: string,
+        beneficiaryAccount: string,
+        options?: {
+            fee?: {
+                paddFeeByPercentage?: bigint
+                feeAsset?: any
+                customXcm?: any[]
+                overrideRelayerFee?: bigint
+                l2PadFeeByPercentage?: bigint
+                fillDeadlineBuffer?: bigint
+            }
+            tx?: {
+                customXcm?: any[]
+                fillDeadlineBuffer?: bigint
+            }
+        },
+    ): Promise<ValidatedTransfer<T>> {
+        const fee = await this.fee(tokenAddress, amount, options?.fee)
+        const transfer = await this.tx(
+            tokenAddress,
+            amount,
+            sourceAccount,
+            beneficiaryAccount,
+            fee,
+            options?.tx,
+        )
+        return ensureValidationSuccess(await this.validate(transfer))
+    }
+
+    async validate(transfer: Transfer<T>): Promise<ValidatedTransfer<T>> {
+        const context = this.context
         const { tx } = transfer
         const { amount, sourceAccount, tokenAddress, registry, l2TokenAddress, sourceChainId } =
             transfer.input
@@ -373,11 +474,11 @@ export class ERC20ToAH implements TransferInterface {
                 message: "The amount transferred is less than the minimum amount.",
             })
         }
-        const etherBalance = await l2Chain.getBalance(sourceAccount)
+        const etherBalance = await context.ethereumProvider.getBalance(l2Chain, sourceAccount)
 
         let tokenBalance: { balance: bigint; gatewayAllowance: bigint }
         if (tokenAddress !== ETHER_TOKEN_ADDRESS) {
-            tokenBalance = await erc20Balance(
+            tokenBalance = await context.ethereumProvider.erc20Balance(
                 l2Chain,
                 l2TokenAddress!,
                 sourceAccount,
@@ -411,7 +512,7 @@ export class ERC20ToAH implements TransferInterface {
         if (logs.length === 0) {
             let estimatedGas: bigint
             try {
-                estimatedGas = await l2Chain.estimateGas(tx)
+                estimatedGas = await context.ethereumProvider.estimateGas(l2Chain, tx)
             } catch (e) {
                 l2BridgeDryRunError =
                     "Could not estimate gas for l2 transaction." + (e as Error).message
@@ -422,7 +523,7 @@ export class ERC20ToAH implements TransferInterface {
                 })
                 estimatedGas = 0n
             }
-            const feeData = await l2Chain.getFeeData()
+            const feeData = await context.ethereumProvider.getFeeData(l2Chain)
             const executionFee = (feeData.gasPrice ?? 0n) * estimatedGas
             if (executionFee === 0n) {
                 logs.push({
@@ -458,7 +559,7 @@ export class ERC20ToAH implements TransferInterface {
             })
         }
 
-        const assetHubImpl = await paraImplementation(assetHub)
+        const assetHubImpl = await this.context.paraImplementation(assetHub)
 
         // Check if asset can be received on asset hub (dry run)
         const ahParachain = registry.parachains[`polkadot_${registry.assetHubParaId}`]
@@ -539,7 +640,11 @@ export class ERC20ToAH implements TransferInterface {
                 assetHubDryRunError,
                 l2BridgeDryRunError,
             },
-            transfer,
+            ...transfer,
         }
+    }
+
+    async messageId(receipt: T["TransactionReceipt"]) {
+        return getSharedMessageReceipt(this.context.ethereumProvider, receipt)
     }
 }
