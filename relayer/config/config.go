@@ -14,11 +14,13 @@ type ParachainConfig struct {
 
 type EthereumConfig struct {
 	Endpoint             string `mapstructure:"endpoint"`
+	// FallbackEndpoint optional second JSON-RPC URL (e.g. public relay) used when the primary endpoint fails with a transient error (timeout / 504).
+	FallbackEndpoint     string `mapstructure:"fallback-endpoint"`
 	GasFeeCap            uint64 `mapstructure:"gas-fee-cap"`
 	GasTipCap            uint64 `mapstructure:"gas-tip-cap"`
-	GasLimit             uint64 `mapstructure:"gas-limit"`
-	HeartbeatSecs        uint64 `mapstructure:"heartbeat-secs"`
-	PendingTxTimeoutSecs uint64 `mapstructure:"pending-tx-timeout-secs"`
+	GasLimit              uint64 `mapstructure:"gas-limit"`
+	HeartbeatSecs         uint64 `mapstructure:"heartbeat-secs"`
+	PendingTxTimeoutSecs  uint64 `mapstructure:"pending-tx-timeout-secs"`
 }
 
 type OFACConfig struct {

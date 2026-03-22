@@ -13,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/contracts"
@@ -25,14 +26,15 @@ import (
 )
 
 type EthereumWriter struct {
-	config          *SinkConfig
-	conn            *ethereum.Connection
-	readConn        *ethereum.Connection
-	gateway         *contracts.Gateway
-	gatewayReadOnly *contracts.Gateway
-	tasks           <-chan *Task
-	gatewayABI      abi.ABI
-	relayConfig     *Config
+	config            *SinkConfig
+	conn              *ethereum.Connection
+	readConn          *ethereum.Connection
+	gateway           *contracts.Gateway
+	gatewayFallback   *contracts.Gateway
+	gatewayReadOnly   *contracts.Gateway
+	tasks             <-chan *Task
+	gatewayABI        abi.ABI
+	relayConfig       *Config
 }
 
 func NewEthereumWriter(
@@ -64,6 +66,13 @@ func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group) error {
 	}
 	wr.gateway = gateway
 	wr.gatewayReadOnly = gatewayReadOnly
+	if wr.conn.FallbackClient() != nil {
+		gwFb, err := contracts.NewGateway(address, wr.conn.FallbackClient())
+		if err != nil {
+			return err
+		}
+		wr.gatewayFallback = gwFb
+	}
 
 	gatewayABI, err := abi.JSON(strings.NewReader(contracts.GatewayABI))
 	if err != nil {
@@ -86,7 +95,10 @@ func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group) error {
 }
 
 func (wr *EthereumWriter) writeMessagesLoop(ctx context.Context) error {
-	options := wr.conn.MakeTxOpts(ctx)
+	options, err := wr.conn.MakeTxOpts(ctx)
+	if err != nil {
+		return fmt.Errorf("transaction options: %w", err)
+	}
 	for {
 		select {
 		case <-ctx.Done():
@@ -95,11 +107,13 @@ func (wr *EthereumWriter) writeMessagesLoop(ctx context.Context) error {
 			if !ok {
 				return nil
 			}
-			err := util.RetryOnErrorSubstring(
+			err := util.RetryOnErrorSubstrings(
 				ctx,
 				log.WithField("component", "parachain-v2/ethereum-writer"),
-				util.DefaultRetryableSubstring,
-				func() error { return wr.WriteChannels(ctx, options, task) },
+				util.DefaultRetryableSubstrings,
+				func() error {
+					return wr.WriteChannels(ctx, options, task)
+				},
 			)
 			if err != nil {
 				return fmt.Errorf("write message: %w", err)
@@ -237,9 +251,22 @@ func (wr *EthereumWriter) WriteChannel(
 		return fmt.Errorf("convert to reward address: %w", err)
 	}
 
-	tx, err := wr.gateway.V2Submit(
+	primary := wr.conn.Client()
+	fallback := wr.conn.FallbackClient()
+
+	var tx *types.Transaction
+	watchClient := primary
+
+	tx, err = wr.gateway.V2Submit(
 		options, message, commitmentProof.Proof.InnerHashes, verificationProof, rewardAddress,
 	)
+	if err != nil && wr.gatewayFallback != nil && fallback != nil && ethereum.LikelyTransientRPCError(err) {
+		log.WithError(err).Warn("primary RPC failed submitting transaction, retrying via fallback endpoint")
+		tx, err = wr.gatewayFallback.V2Submit(
+			options, message, commitmentProof.Proof.InnerHashes, verificationProof, rewardAddress,
+		)
+		watchClient = fallback
+	}
 	if err != nil {
 		// Check if error is due to message already being dispatched (duplicate)
 		if strings.Contains(err.Error(), "AlreadyDispatched") || strings.Contains(err.Error(), "already dispatched") {
@@ -267,7 +294,11 @@ func (wr *EthereumWriter) WriteChannel(
 		}).
 		Info("Sent transaction Gateway.submit")
 
-	receipt, err := wr.conn.WatchTransaction(ctx, tx, 1)
+	receipt, err := wr.conn.WatchTransactionWithClient(ctx, watchClient, tx, 1)
+	if err != nil && fallback != nil && watchClient == primary && ethereum.LikelyTransientRPCError(err) {
+		log.WithError(err).Warn("primary RPC failed waiting for receipt, retrying via fallback endpoint")
+		receipt, err = wr.conn.WatchTransactionWithClient(ctx, fallback, tx, 1)
+	}
 
 	if err != nil {
 		log.WithError(err).Error("Failed to SubmitInbound")

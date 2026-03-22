@@ -19,7 +19,8 @@
   },
   "sink": {
     "ethereum": {
-      "endpoint": "${FLASHBOTS_ENDPOINT}",
+      "endpoint": "${PRIMARY_PRIVATE_ENDPOINT}",
+      "fallback-endpoint": "${SECONDARY_PRIVATE_ENDPOINT}",
       "pending-tx-timeout-secs": 240
     },
     "contracts": {
