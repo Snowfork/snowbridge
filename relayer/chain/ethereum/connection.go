@@ -264,76 +264,6 @@ func (co *Connection) WatchTransactionWithClient(ctx context.Context, client *et
 	return receipt, nil
 }
 
-// gasFeeBumpScale returns numerator/denominator for scaling suggested caps.
-// When both values are unset (0/0), it defaults to 100/100 (no extra scaling beyond the bind formula).
-func (co *Connection) gasFeeBumpScale() (num, den uint64, err error) {
-	num, den = co.config.GasFeeBumpNumerator, co.config.GasFeeBumpDenominator
-	if num == 0 && den == 0 {
-		return 100, 100, nil
-	}
-	if num == 0 || den == 0 {
-		return 0, 0, errors.New("ethereum config: gas-fee-bump-numerator/denominator must either both be 0 (use defaults) or both be non-zero")
-	}
-	return num, den, nil
-}
-
-// suggestedEIP1559GasCaps returns maxPriorityFeePerGas and maxFeePerGas like go-ethereum bind createDynamicTx,
-// then scales both by the configured bump ratio.
-func (co *Connection) suggestedEIP1559GasCaps(ctx context.Context) (*big.Int, *big.Int, error) {
-	head, err := co.client.HeaderByNumber(ctx, nil)
-	if err != nil {
-		return nil, nil, fmt.Errorf("latest header: %w", err)
-	}
-	if head.BaseFee == nil {
-		return nil, nil, errors.New("latest block has no base fee (pre-EIP-1559 chain)")
-	}
-	tip, err := co.client.SuggestGasTipCap(ctx)
-	if err != nil {
-		return nil, nil, fmt.Errorf("suggest gas tip cap: %w", err)
-	}
-	// const basefeeWiggleMultiplier = 2 in accounts/abi/bind/v2/base.go
-	eip1559BaseFeeWiggleMultiplier := int64(2)
-	feeCap := new(big.Int).Add(
-		tip,
-		new(big.Int).Mul(head.BaseFee, big.NewInt(eip1559BaseFeeWiggleMultiplier)),
-	)
-
-	num, den, err := co.gasFeeBumpScale()
-	if err != nil {
-		return nil, nil, err
-	}
-	numBig := new(big.Int).SetUint64(num)
-	denBig := new(big.Int).SetUint64(den)
-
-	tipOut := new(big.Int).Mul(tip, numBig)
-	tipOut.Div(tipOut, denBig)
-
-	feeOut := new(big.Int).Mul(feeCap, numBig)
-	feeOut.Div(feeOut, denBig)
-
-	if feeOut.Cmp(tipOut) < 0 {
-		feeOut = new(big.Int).Set(tipOut)
-	}
-	return tipOut, feeOut, nil
-}
-
-// ApplySuggestedGasFees sets opts.GasTipCap and opts.GasFeeCap from the RPC when static caps are not configured.
-func (co *Connection) ApplySuggestedGasFees(ctx context.Context, opts *bind.TransactOpts) error {
-	if co.config.GasFeeCap > 0 && co.config.GasTipCap > 0 {
-		return nil
-	}
-	if co.config.GasFeeCap > 0 || co.config.GasTipCap > 0 {
-		return errors.New("ethereum config: set both gas-fee-cap and gas-tip-cap, or omit both for dynamic EIP-1559 pricing")
-	}
-	tip, fee, err := co.suggestedEIP1559GasCaps(ctx)
-	if err != nil {
-		return err
-	}
-	opts.GasTipCap = tip
-	opts.GasFeeCap = fee
-	return nil
-}
-
 func (co *Connection) MakeTxOpts(ctx context.Context) (*bind.TransactOpts, error) {
 	chainID := co.ChainID()
 	keypair := co.Keypair()
@@ -360,11 +290,7 @@ func (co *Connection) MakeTxOpts(ctx context.Context) (*bind.TransactOpts, error
 		options.GasLimit = co.config.GasLimit
 	}
 
-	if co.config.GasFeeCap == 0 && co.config.GasTipCap == 0 {
-		if err := co.ApplySuggestedGasFees(ctx, &options); err != nil {
-			return nil, fmt.Errorf("dynamic gas fees: %w", err)
-		}
-	} else if co.config.GasFeeCap == 0 || co.config.GasTipCap == 0 {
+	if (co.config.GasFeeCap == 0) != (co.config.GasTipCap == 0) {
 		return nil, errors.New("ethereum config: set both gas-fee-cap and gas-tip-cap, or omit both for dynamic EIP-1559 pricing")
 	}
 

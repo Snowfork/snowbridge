@@ -100,9 +100,6 @@ func (wr *EthereumWriter) writeMessagesLoop(ctx context.Context) error {
 				log.WithField("component", "parachain/ethereum-writer"),
 				util.DefaultRetryableSubstrings,
 				func() error {
-					if err := wr.conn.ApplySuggestedGasFees(ctx, options); err != nil {
-						return fmt.Errorf("refresh gas fees: %w", err)
-					}
 					return wr.WriteChannels(ctx, options, task)
 				},
 			)
