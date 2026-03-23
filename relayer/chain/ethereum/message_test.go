@@ -7,6 +7,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/trie"
 	gethTrie "github.com/ethereum/go-ethereum/trie"
@@ -21,9 +22,9 @@ type TestProof parachain.ProofData
 
 // For interface gethTrie.KeyValueReader
 func (tp *TestProof) Get(key []byte) ([]byte, error) {
-	for i, k := range tp.Keys {
-		if bytes.Equal(k, key) {
-			return tp.Values[i], nil
+	for _, v := range tp.Values {
+		if hashed := crypto.Keccak256(v); bytes.Equal(hashed, key) {
+			return v, nil
 		}
 	}
 	return nil, fmt.Errorf("Value for key %s does not exist", key)

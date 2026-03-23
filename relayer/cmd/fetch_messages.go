@@ -181,16 +181,12 @@ func printEthContractEventForSub(event *gethTypes.Log, trie *gethTrie.Trie) erro
 			proof: Proof {
 				block_hash: hex!("%x").into(),
 				tx_index: %d,
-				data: (
-					%s,
-					%s,
-				),
+				data: %s,
 			},
 		}`,
 		hex.EncodeToString(msgInner.Data),
 		msgInner.Proof.BlockHash,
 		msgInner.Proof.TxIndex,
-		formatProofVec(msgInner.Proof.Data.Keys),
 		formatProofVec(msgInner.Proof.Data.Values),
 	)
 	fmt.Println("")

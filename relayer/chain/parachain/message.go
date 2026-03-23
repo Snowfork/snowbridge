@@ -33,7 +33,6 @@ type Proof struct {
 }
 
 type ProofData struct {
-	Keys   []types.Bytes
 	Values []types.Bytes
 }
 
@@ -54,20 +53,17 @@ type ProofJSON struct {
 }
 
 type ProofDataJSON struct {
-	Keys   []string `json:"keys"`
 	Values []string `json:"values"`
 }
 
 func NewProofData() *ProofData {
 	return &ProofData{
-		Keys:   make([]types.Bytes, 0),
 		Values: make([]types.Bytes, 0),
 	}
 }
 
 // For interface ethdb.KeyValueWriter
-func (p *ProofData) Put(key []byte, value []byte) error {
-	p.Keys = append(p.Keys, types.NewBytes(gethCommon.CopyBytes(key)))
+func (p *ProofData) Put(_ []byte, value []byte) error {
 	p.Values = append(p.Values, types.NewBytes(gethCommon.CopyBytes(value)))
 	return nil
 }
@@ -86,7 +82,6 @@ func (m Message) ToJSON() MessageJSON {
 		},
 		Proof: ProofJSON{
 			ReceiptProof: &ProofDataJSON{
-				Keys:   util.ScaleBytesToArrayHexArray(m.Proof.ReceiptProof.Keys),
 				Values: util.ScaleBytesToArrayHexArray(m.Proof.ReceiptProof.Values),
 			},
 			ExecutionProof: m.Proof.ExecutionProof.ToJSON(),
@@ -111,7 +106,6 @@ func (p *ProofJSON) RemoveLeadingZeroHashes() {
 }
 
 func (p *ProofDataJSON) RemoveLeadingZeroHashes() {
-	p.Keys = removeLeadingZeroHashForSlice(p.Keys)
 	p.Values = removeLeadingZeroHashForSlice(p.Values)
 }
 

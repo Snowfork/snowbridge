@@ -24,15 +24,11 @@ pub fn make_{{TestCase}}_message() -> EventFixture {
                 data: hex!("{{InboundMessage.EventLog.Data}}").into(),
             },
             proof: Proof {
-                receipt_proof: (vec![
-                {{#InboundMessage.Proof.ReceiptProof.Keys}}
-                    hex!("{{.}}").to_vec(),
-                {{/InboundMessage.Proof.ReceiptProof.Keys}}
-                ], vec![
+                receipt_proof: vec![
                 {{#InboundMessage.Proof.ReceiptProof.Values}}
                     hex!("{{.}}").to_vec(),
                 {{/InboundMessage.Proof.ReceiptProof.Values}}
-                ]),
+                ],
                 execution_proof: ExecutionProof {
                     header: BeaconHeader {
                         slot: {{HeaderUpdate.Header.Slot}},
