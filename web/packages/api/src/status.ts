@@ -1,3 +1,9 @@
+import {
+    ToEthereumTransferResult,
+    ToPolkadotTransferResult,
+    toEthereumPendingTransfers,
+    toPolkadotPendingTransfers,
+} from "./history_v2"
 import { Context, subsquidV2 } from "./index"
 import { fetchBeaconSlot, fetchFinalityUpdate } from "./utils"
 import { ApiPromise } from "@polkadot/api"
@@ -46,6 +52,8 @@ export type ChannelStatusInfo = {
         estimatedDeliveryTime?: number
         // The timeout duration of the oldest undelivered message.
         undeliveredTimeout?: number
+        // Pending transfers
+        pendingTransfers?: ToEthereumTransferResult[]
     }
     toPolkadot: {
         operatingMode: {
@@ -57,6 +65,8 @@ export type ChannelStatusInfo = {
         v2Inbound?: number
         estimatedDeliveryTime?: number
         undeliveredTimeout?: number
+        // Pending transfers
+        pendingTransfers?: ToPolkadotTransferResult[]
     }
 }
 
@@ -226,7 +236,9 @@ export const channelStatusInfo = async (
 
     let estimatedDeliveryTime: any,
         toEthereumUndeliveredTimeout: number | undefined,
-        toPolkadotUndeliveredTimeout: number | undefined = undefined
+        toPolkadotUndeliveredTimeout: number | undefined = undefined,
+        toEthereumPendings: ToEthereumTransferResult[] = [],
+        toPolkadotPendings: ToPolkadotTransferResult[] = []
 
     if (channelId.toLowerCase() == ASSET_HUB_CHANNEL_ID.toLowerCase()) {
         estimatedDeliveryTime = await subsquidV2.fetchEstimatedDeliveryTime(context.graphqlApiUrl())
@@ -239,6 +251,10 @@ export const channelStatusInfo = async (
         if (latency && latency.elapse) {
             toPolkadotUndeliveredTimeout = latency.elapse
         }
+
+        // Pending transfers
+        toEthereumPendings = await toEthereumPendingTransfers(context.graphqlApiUrl(), 10)
+        toPolkadotPendings = await toPolkadotPendingTransfers(context.graphqlApiUrl(), 10)
     }
 
     return {
@@ -249,6 +265,7 @@ export const channelStatusInfo = async (
             v2Inbound: v2_max_delivered_nonce_to_ethereum,
             estimatedDeliveryTime: estimatedDeliveryTime?.toEthereumV2Elapse?.elapse,
             undeliveredTimeout: toEthereumUndeliveredTimeout,
+            pendingTransfers: toEthereumPendings.length > 0 ? toEthereumPendings : undefined,
         },
         toPolkadot: {
             operatingMode: {
@@ -260,6 +277,7 @@ export const channelStatusInfo = async (
             v2Inbound: v2_max_delivered_nonce_to_polkadot,
             estimatedDeliveryTime: estimatedDeliveryTime?.toPolkadotV2Elapse?.elapse,
             undeliveredTimeout: toPolkadotUndeliveredTimeout,
+            pendingTransfers: toPolkadotPendings.length > 0 ? toPolkadotPendings : undefined,
         },
     }
 }
