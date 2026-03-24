@@ -13,3 +13,4 @@
 
 /scratch
 chopsticks-execute-upgrade.js
+runtimes/**/*metadata.bin

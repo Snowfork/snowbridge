@@ -22,8 +22,7 @@ contract DeployGateway is Script {
             keccak256(abi.encodePacked(vm.envString("SNOWBRIDGE_DEPLOY_STAGE")))
                 == keccak256(abi.encodePacked("polkadot_mainnet"))
         ) {
-            // Todo: Update Beefy client address on Polkadot mainnet with the correct one before deploying.
-            address beefyClient = 0x1817874feAb3ce053d0F40AbC23870DB35C2AFfc;
+            address beefyClient = 0x7cfc5C8b341991993080Af67D940B6aD19a010E1;
             gatewayLogic = new Gateway202602(address(beefyClient), address(executor));
         } else if (
             keccak256(abi.encodePacked(vm.envString("SNOWBRIDGE_DEPLOY_STAGE")))
