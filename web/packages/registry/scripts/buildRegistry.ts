@@ -453,16 +453,17 @@ function buildTransferLocations(
         }
     }
 
-    // Kusama paths (Ethereum ↔ Kusama AH)
+    // Kusama paths (Ethereum ↔ Kusama AH + Polkadot AH ↔ Kusama AH)
     if (registry.kusama) {
         const kusamaParachains = Object.values(registry.kusama.parachains)
+        const assetHubAssets = Object.keys(assetHub.assets)
         for (const kusamaPara of kusamaParachains) {
             const kusamaAssets = Object.keys(kusamaPara.assets)
-            // Find assets common to both Ethereum and Kusama AH
-            const commonAssets = new Set(
+            // Ethereum ↔ Kusama: assets common to both Ethereum and Kusama AH
+            const ethKusamaCommon = new Set(
                 ethAssets.filter((ea) => kusamaAssets.find((ka) => ka === ea)),
             )
-            for (const asset of commonAssets) {
+            for (const asset of ethKusamaCommon) {
                 // Ethereum → Kusama
                 const p1: Path = {
                     source: { kind: ethChain.kind, id: ethChain.id },
@@ -476,6 +477,31 @@ function buildTransferLocations(
                 const p2: Path = {
                     source: { kind: kusamaPara.kind, id: kusamaPara.id },
                     destination: { kind: ethChain.kind, id: ethChain.id },
+                    asset,
+                }
+                if (pathFilter(p2)) {
+                    locations.push(p2)
+                }
+            }
+
+            // Polkadot AH ↔ Kusama AH: assets common to both Polkadot AH and Kusama AH
+            const pahKahCommon = new Set(
+                assetHubAssets.filter((pa) => kusamaAssets.find((ka) => ka === pa)),
+            )
+            for (const asset of pahKahCommon) {
+                // Polkadot AH → Kusama AH
+                const p1: Path = {
+                    source: { kind: assetHub.kind, id: assetHub.id },
+                    destination: { kind: kusamaPara.kind, id: kusamaPara.id },
+                    asset,
+                }
+                if (pathFilter(p1)) {
+                    locations.push(p1)
+                }
+                // Kusama AH → Polkadot AH
+                const p2: Path = {
+                    source: { kind: kusamaPara.kind, id: kusamaPara.id },
+                    destination: { kind: assetHub.kind, id: assetHub.id },
                     asset,
                 }
                 if (pathFilter(p2)) {
