@@ -252,9 +252,13 @@ export const channelStatusInfo = async (
             toPolkadotUndeliveredTimeout = latency.elapse
         }
 
-        // Pending transfers
-        toEthereumPendings = await toEthereumPendingTransfers(context.graphqlApiUrl(), 10)
-        toPolkadotPendings = await toPolkadotPendingTransfers(context.graphqlApiUrl(), 10)
+        try {
+            // Pending transfers
+            toEthereumPendings = await toEthereumPendingTransfers(context.graphqlApiUrl(), 10)
+            toPolkadotPendings = await toPolkadotPendingTransfers(context.graphqlApiUrl(), 10)
+        } catch (error) {
+            console.error("Error fetching pending transfers:", error)
+        }
     }
 
     return {
