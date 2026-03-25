@@ -139,7 +139,7 @@ func (co *Connection) GenerateSubmitMessagePayload(payload *Message) (interface{
 	if err != nil {
 		return nil, err
 	}
-	if strings.Contains(string(runtimeSpecVersion.SpecName), "westend") || (strings.Contains(string(runtimeSpecVersion.SpecName), "polkadot") && runtimeSpecVersion.SpecVersion >= 2_100_000) {
+	if strings.Contains(string(runtimeSpecVersion.SpecName), "westend") || (strings.Contains(string(runtimeSpecVersion.SpecName), "polkadot") && runtimeSpecVersion.SpecVersion >= 2_001_001) {
 		return ConvertToV2Message(payload)
 	}
 	return payload, nil
