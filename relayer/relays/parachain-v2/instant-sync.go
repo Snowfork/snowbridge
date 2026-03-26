@@ -18,7 +18,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type OnDemandRelay struct {
+type InstantRelay struct {
 	config                *Config
 	parachainConn         *parachain.Connection
 	relaychainConn        *relaychain.Connection
@@ -29,7 +29,7 @@ type OnDemandRelay struct {
 	beefyInstantSyncer    *BeefyInstantSyncer
 }
 
-func NewOnDemandRelay(config *Config, beefyConfig *beefy.Config, keypair *secp256k1.Keypair) (*OnDemandRelay, error) {
+func NewInstantRelay(config *Config, beefyConfig *beefy.Config, keypair *secp256k1.Keypair) (*InstantRelay, error) {
 	log.Info("Creating worker")
 
 	parachainConn := parachain.NewConnection(config.Source.Parachain.Endpoint, nil)
@@ -69,11 +69,12 @@ func NewOnDemandRelay(config *Config, beefyConfig *beefy.Config, keypair *secp25
 	}
 
 	beefyInstantSyncer := NewBeefyInstantSyncer(
+		config,
 		beefyListener,
 		beefyOnDemandRelay,
 	)
 
-	return &OnDemandRelay{
+	return &InstantRelay{
 		config:                config,
 		parachainConn:         parachainConn,
 		relaychainConn:        relaychainConn,
@@ -85,7 +86,7 @@ func NewOnDemandRelay(config *Config, beefyConfig *beefy.Config, keypair *secp25
 	}, nil
 }
 
-func (relay *OnDemandRelay) Start(ctx context.Context, eg *errgroup.Group) error {
+func (relay *InstantRelay) Start(ctx context.Context, eg *errgroup.Group) error {
 	err := relay.parachainConn.ConnectWithHeartBeat(ctx, eg, time.Second*time.Duration(relay.config.Source.Parachain.HeartbeatSecs))
 	if err != nil {
 		return err

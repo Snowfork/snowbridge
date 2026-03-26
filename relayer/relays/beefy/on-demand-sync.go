@@ -720,3 +720,7 @@ func (relay *OnDemandRelay) queueAll(ctx context.Context) error {
 	}
 	return nil
 }
+
+func (relay *OnDemandRelay) GetConfig() *Config {
+	return relay.config
+}

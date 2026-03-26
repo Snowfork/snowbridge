@@ -18,12 +18,12 @@ import (
 )
 
 var (
-	configFile      string
-	privateKey      string
-	privateKeyFile  string
-	privateKeyID    string
-	beefyConfigFile string
-	onDemand        bool
+	configFile          string
+	privateKey          string
+	privateKeyFile      string
+	privateKeyID        string
+	beefyConfigFile     string
+	instantVerification bool
 )
 
 func Command() *cobra.Command {
@@ -42,7 +42,7 @@ func Command() *cobra.Command {
 	cmd.Flags().StringVar(&privateKeyID, "ethereum.private-key-id", "", "The secret id to lookup the private key in AWS Secrets Manager")
 
 	cmd.Flags().StringVar(&beefyConfigFile, "beefy.config", "", "Path to beefy configuration file")
-	cmd.Flags().BoolVarP(&onDemand, "on-demand", "", false, "Synchronize beefy commitments on demand together with parachain messages")
+	cmd.Flags().BoolVarP(&instantVerification, "instant-verification", "", false, "Enable instant verification of parachain messages")
 
 	return cmd
 }
@@ -98,7 +98,7 @@ func run(_ *cobra.Command, _ []string) error {
 		return nil
 	})
 
-	if !onDemand {
+	if !instantVerification {
 		err = relay.Start(ctx, eg)
 	} else {
 		viper.SetConfigFile(beefyConfigFile)
@@ -111,7 +111,7 @@ func run(_ *cobra.Command, _ []string) error {
 		if err != nil {
 			return err
 		}
-		relay, err := parachain.NewOnDemandRelay(&config, &beefyConfig, keypair)
+		relay, err := parachain.NewInstantRelay(&config, &beefyConfig, keypair)
 		if err != nil {
 			return err
 		}
