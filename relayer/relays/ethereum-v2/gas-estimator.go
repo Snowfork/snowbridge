@@ -107,7 +107,12 @@ func (g *GasEstimator) EstimateGas(ctx context.Context, ev *contracts.GatewayOut
 
 	eventLogData := fmt.Sprintf("0x%x", inboundMsg.EventLog.Data)
 
-	proofEncoded, err := types.EncodeToBytes(&inboundMsg.Proof)
+	inboundV2Msg, err := parachain.ConvertToV2Message(inboundMsg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert to v2 message: %w", err)
+	}
+
+	proofEncoded, err := types.EncodeToBytes(&inboundV2Msg.Proof)
 	if err != nil {
 		return nil, fmt.Errorf("failed to encode proof: %w", err)
 	}
