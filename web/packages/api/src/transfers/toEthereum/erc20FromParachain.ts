@@ -42,6 +42,7 @@ export class ERC20FromParachain implements TransferInterface {
             feeTokenLocation?: any
             claimerLocation?: any
             contractCall?: ContractCall
+            accelerated?: boolean
         },
     ): Promise<DeliveryFee> {
         const { assetHub, parachain } =

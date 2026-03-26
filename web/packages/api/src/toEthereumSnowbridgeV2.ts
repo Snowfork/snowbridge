@@ -240,6 +240,7 @@ export const estimateEthereumExecutionFee = async (
     options?: {
         contractCall?: ContractCall
         fillDeadlineBuffer?: bigint
+        accelerated?: boolean
     },
 ): Promise<bigint> => {
     const ethereum = await context.ethereum()
@@ -250,9 +251,10 @@ export const estimateEthereumExecutionFee = async (
     let feeData = await ethereum.getFeeData()
     let ethereumExecutionFee =
         (feeData.gasPrice ?? 2_000_000_000n) *
-        ((tokenErcMetadata.deliveryGas ?? 80_000n) +
+        ((tokenErcMetadata.deliveryGas ?? 100_000n) +
             (ethereumChain.baseDeliveryGas ?? 120_000n) +
-            (options?.contractCall?.gas ?? 0n))
+            (options?.contractCall?.gas ?? 0n) +
+            (options?.accelerated ? (ethereumChain.submitFiatShamirGas ?? 2_200_000n) : 0n))
     return ethereumExecutionFee
 }
 
@@ -270,6 +272,7 @@ export const estimateFeesFromAssetHub = async (
         l2PadFeeByPercentage?: bigint
         l2TransferGasLimit?: bigint
         fillDeadlineBuffer?: bigint
+        accelerated?: boolean
     },
     l2ChainId?: number,
     tokenAmount?: bigint,
@@ -391,6 +394,7 @@ export const estimateFeesFromParachains = async (
         defaultFee?: bigint
         feeTokenLocation?: any
         contractCall?: ContractCall
+        accelerated?: boolean
     },
 ): Promise<DeliveryFee> => {
     const sourceParachain = registry.parachains[`polkadot_${sourceParaId}`]

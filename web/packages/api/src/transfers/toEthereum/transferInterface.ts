@@ -14,6 +14,7 @@ export interface TransferInterface {
             feeTokenLocation?: any
             claimerLocation?: any
             contractCall?: ContractCall
+            accelerated?: boolean
         },
     ): Promise<DeliveryFee>
 
