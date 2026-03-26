@@ -10,13 +10,12 @@ tests=(
   transfer_native_eth
 
   # ERC20 Tests
-  register_token
   send_token_to_ah
   send_token_to_penpal
   transfer_token
 
   # PNA Tests
-  register_polkadot_token 
+  register_polkadot_token
   transfer_polkadot_token
   send_polkadot_token
 
@@ -24,8 +23,11 @@ tests=(
   set_pricing_params
   set_token_transfer_fees
   upgrade_gateway
+
+  # Equivocation Tests
+  malicious_payload
 )
 
-for test in ${tests[@]}; do 
+for test in ${tests[@]}; do
   cargo test --features legacy-v1 --test v1 $test -- --nocapture
 done

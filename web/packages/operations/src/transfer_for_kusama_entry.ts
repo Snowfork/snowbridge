@@ -6,7 +6,7 @@ const transfer = async (
     transferName: string,
     direction: number,
     symbol: string,
-    amount: bigint
+    amount: bigint,
 ) => {
     const directionEnum = direction === 1 ? Direction.ToPolkadot : Direction.ToKusama
     await transferForKusama(transferName, directionEnum, amount, symbol)

@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.28;
+pragma solidity 0.8.34;
 
 import {SubstrateMerkleProof} from "./utils/SubstrateMerkleProof.sol";
 import {BeefyClient} from "./BeefyClient.sol";
 import {ScaleCodec} from "./utils/ScaleCodec.sol";
-import {SubstrateTypes} from "./SubstrateTypes.sol";
 
 library Verification {
     /// @dev Merkle proof for parachain header finalized by BEEFY
@@ -142,11 +141,11 @@ library Verification {
         bool isV2
     ) internal pure returns (bool) {
         bytes1 digestItemOtherKind = isV2 ? DIGEST_ITEM_OTHER_SNOWBRIDGE_V2 : DIGEST_ITEM_OTHER_SNOWBRIDGE;
-        
+
         for (uint256 i = 0; i < header.digestItems.length; i++) {
             // First check if the digest item is of the correct kind (DIGEST_ITEM_OTHER)
             // and has the correct length (33 bytes)
-            if (header.digestItems[i].kind == DIGEST_ITEM_OTHER && 
+            if (header.digestItems[i].kind == DIGEST_ITEM_OTHER &&
                 header.digestItems[i].data.length == 33 &&
                 header.digestItems[i].data[0] == digestItemOtherKind &&
                 commitment == bytes32(header.digestItems[i].data[1:])
@@ -190,12 +189,15 @@ library Verification {
             );
         } else if (digestItem.kind == DIGEST_ITEM_OTHER) {
             return bytes.concat(
+                // forge-lint: disable-next-line(unsafe-typecast) // digest item kind is a small constant
                 bytes1(uint8(DIGEST_ITEM_OTHER)),
                 ScaleCodec.checkedEncodeCompactU32(digestItem.data.length),
                 digestItem.data
             );
         } else if (digestItem.kind == DIGEST_ITEM_RUNTIME_ENVIRONMENT_UPDATED) {
-            return bytes.concat(bytes1(uint8(DIGEST_ITEM_RUNTIME_ENVIRONMENT_UPDATED)));
+            return bytes.concat(
+                // forge-lint: disable-next-line(unsafe-typecast) // digest item kind is a small constant
+                bytes1(uint8(DIGEST_ITEM_RUNTIME_ENVIRONMENT_UPDATED)));
         } else {
             revert InvalidParachainHeader();
         }

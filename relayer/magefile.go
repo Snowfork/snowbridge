@@ -1,5 +1,4 @@
 //go:build mage
-// +build mage
 
 package main
 
@@ -13,7 +12,7 @@ func Build() {
 }
 
 func BuildMain() error {
-	err := sh.Run("sszgen", "--path", "relays/beacon/state", "--objs", "BlockRootsContainerMainnet,TransactionsRootContainer,WithdrawalsRootContainerMainnet,BeaconStateDenebMainnet,BeaconBlockDenebMainnet,SignedBeaconBlockDeneb,SignedBeaconBlockElectra,BeaconStateElectra,BeaconBlockElectra")
+	err := sh.Run("sszgen", "--path", "relays/beacon/state", "--objs", "BlockRootsContainerMainnet,TransactionsRootContainer,WithdrawalsRootContainerMainnet,BeaconStateDenebMainnet,BeaconBlockDenebMainnet,SignedBeaconBlockDeneb,SignedBeaconBlockElectra,BeaconStateElectra,BeaconBlockElectra,BeaconStateFulu")
 	if err != nil {
 		return err
 	}

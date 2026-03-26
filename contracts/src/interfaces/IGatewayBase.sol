@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.28;
+pragma solidity 0.8.34;
 
 import {OperatingMode} from "../types/Common.sol";
 
@@ -32,7 +32,4 @@ interface IGatewayBase {
 
     // Emitted when foreign token from polkadot registered
     event ForeignTokenRegistered(bytes32 indexed tokenID, address token);
-
-    /// @dev Emitted when a command is sent to register a new wrapped token on AssetHub
-    event TokenRegistrationSent(address token);
 }

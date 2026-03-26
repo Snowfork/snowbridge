@@ -1,6 +1,9 @@
 # Overview
 
-Snowbridge provides a secure point-to-point bridge between the BridgeHub parachain and our Gateway contract on Ethereum.
+Snowbridge provides a secure point-to-point bridge between Ethereum and the Polkadot Hub.
 
-Our bridge enables communication between any Polkadot parachain and Ethereum using Polkadot's XCMP messaging protocol. Specifically, parachains can send XCM instructions to BridgeHub to use the bridge.
+Users on Ethereum interact with our Gateway contract to either send tokens or generalised messages. After having received them, the Polkadot Hub can execute them locally, or in turn relay them to other parachains on Polkadot.
 
+
+
+<figure><img src="../.gitbook/assets/high-level-overview-3.svg" alt=""><figcaption></figcaption></figure>

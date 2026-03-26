@@ -1,7 +1,6 @@
-import { PNAMap } from "../assets_v2"
-import { AssetMap } from "@snowbridge/base-types"
+import { AssetMap, PNAMap } from "@snowbridge/base-types"
 import { ParachainBase } from "./parachainBase"
-import { convertToXcmV3X1, DOT_LOCATION, getTokenFromLocation } from "../xcmBuilder"
+import { DOT_LOCATION, getTokenFromLocation } from "../xcmBuilder"
 
 export class HydrationParachain extends ParachainBase {
     getXC20DOT() {
@@ -10,7 +9,7 @@ export class HydrationParachain extends ParachainBase {
 
     async getLocationBalance(location: any, account: string, _pnaAssetId?: any): Promise<bigint> {
         const paraAssetId = (
-            await this.provider.query.assetRegistry.locationAssets(convertToXcmV3X1(location))
+            await this.provider.query.assetRegistry.locationAssets(location)
         ).toPrimitive()
         if (!paraAssetId) {
             throw Error(`DOT not registered for spec ${this.specName}.`)
@@ -35,7 +34,7 @@ export class HydrationParachain extends ParachainBase {
                 continue
             }
 
-            const assetId = Number(id.args.at(0)?.toString())
+            const assetId = Number(id.args[0]?.toString())
             const asset: any = (
                 await this.provider.query.assetRegistry.assets(assetId)
             ).toPrimitive()
@@ -56,7 +55,7 @@ export class HydrationParachain extends ParachainBase {
         const result = (
             await this.provider.call.xcmPaymentApi.queryDeliveryFees(
                 { v4: { parents: 1, interior: { x1: [{ parachain: destParachainId }] } } },
-                xcm
+                xcm,
             )
         ).toPrimitive() as any
         if (!result.ok) {
@@ -73,11 +72,23 @@ export class HydrationParachain extends ParachainBase {
             console.warn(
                 "Could not find DOT in result",
                 result,
-                "using 0 as delivery fee. Dry run will fail if this is incorrect."
+                "using 0 as delivery fee. Dry run will fail if this is incorrect.",
             )
             return 0n
         }
         const deliveryFee = BigInt(dotAsset.fun.fungible.toString())
         return deliveryFee
+    }
+
+    swapAsset1ForAsset2(_asset1: any, _asset2: any, _exactAsset1Balance: bigint): Promise<bigint> {
+        throw Error(`${this.specName} does not support.`)
+    }
+
+    getAssetHubConversionPalletSwap(
+        asset1: any,
+        asset2: any,
+        exactAsset2Balance: bigint,
+    ): Promise<bigint> {
+        throw Error(`${this.specName} does not support.`)
     }
 }

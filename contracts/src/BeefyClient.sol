@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.28;
+pragma solidity 0.8.34;
 
 import {ECDSA} from "openzeppelin/utils/cryptography/ECDSA.sol";
 import {SubstrateMerkleProof} from "./utils/SubstrateMerkleProof.sol";
@@ -12,15 +12,27 @@ import {ScaleCodec} from "./utils/ScaleCodec.sol";
 
 /**
  * @title BeefyClient
+ * @dev This is a client for verifying BEEFY commitments from the Polkadot network.
+ * it contains two ways to verify BEEFY commitments from a Substrate-based chain,
+ * one through an interactive protocol, and one through Fiat-Shamir transformation.
  *
- * High-level documentation at https://docs.snowbridge.network/architecture/verification/polkadot
+ * The interactive protocol is defined in https://eprint.iacr.org/2025/057.pdf. Higher level documentation
+ * is available at https://docs.snowbridge.network/architecture/verification/polkadot.
  *
  * To submit new commitments, relayers must call the following methods sequentially:
- * 1. submitInitial: Setup the session for the interactive submission
+ * 1. submitInitial: Initializes the session for interactive submission and waits for the Randao delay period
  * 2. commitPrevRandao: Commit to a random seed for generating a validator subsampling
  * 3. createFinalBitfield: Generate the validator subsampling
  * 4. submitFinal: Complete submission after providing the request validator signatures
  *
+ *
+ * The non-interactive protocol eliminates the need for interaction by applying Fiat-Shamir transform.
+ * It is defined in Section 6 of https://eprint.iacr.org/2025/057.pdf, with higher-level documentation
+ * available at https://hackmd.io/8Jd7V74iSSeeHOIG76REWw
+ *
+ * To submit new commitments using the Fiat-Shamir approach, relayers call the following methods sequentially:
+ * 1. createFiatShamirFinalBitfield: Generate the validator subsampling using Fiat-Shamir
+ * 2. submitFiatShamir: Complete submission after providing the request validator signatures
  */
 contract BeefyClient {
     using Math for uint16;
@@ -41,6 +53,11 @@ contract BeefyClient {
      * @param blockNumber the parent block number of the candidate MMR root
      */
     event NewTicket(address relayer, uint64 blockNumber);
+
+    /**
+     * @dev Interactive session has expired
+     */
+    event TicketExpired();
 
     /* Types */
 
@@ -168,9 +185,15 @@ contract BeefyClient {
     /* Constants */
 
     /**
+     * @dev Fiat-Shamir domain separator ID
+     */
+    bytes public constant FIAT_SHAMIR_DOMAIN_ID = bytes("SNOWBRIDGE-FIAT-SHAMIR-V1");
+
+    /**
      * @dev Beefy payload id for MMR Root payload items:
      * https://github.com/paritytech/substrate/blob/fe1f8ba1c4f23931ae89c1ada35efb3d908b50f5/primitives/consensus/beefy/src/payload.rs#L33
      */
+    // forge-lint: disable-next-line(unsafe-typecast)
     bytes2 public constant MMR_ROOT_ID = bytes2("mh");
 
     /**
@@ -189,12 +212,16 @@ contract BeefyClient {
     uint256 public immutable randaoCommitExpiration;
 
     /**
-     * @dev Minimum number of signatures required to validate a new commitment. This parameter
-     * is calculated based on `randaoCommitExpiration`. See ~/scripts/beefy_signature_sampling.py
-     * for the calculation.
+     * @dev The lower bound on the number of signatures required to validate a new commitment. Note
+     * that the final number of signatures is calculated dynamically with Randao randomness.
      */
     uint256 public immutable minNumRequiredSignatures;
 
+    /**
+     * @dev The signatures required to validate a new commitment using Fiat-Shamir transform. Note
+     * that Fiat-shamir comes from the assumption on the hash-power of adversary
+     * and its not a crypto-economic argument.
+     */
     uint256 public immutable fiatShamirRequiredSignatures;
 
     /* Errors */
@@ -209,11 +236,9 @@ contract BeefyClient {
     error InvalidValidatorProof();
     error InvalidValidatorProofLength();
     error CommitmentNotRelevant();
-    error NotEnoughClaims();
     error PrevRandaoAlreadyCaptured();
     error PrevRandaoNotCaptured();
     error StaleCommitment();
-    error TicketExpired();
     error WaitPeriodNotOver();
 
     constructor(
@@ -260,14 +285,12 @@ contract BeefyClient {
             revert StaleCommitment();
         }
 
-        ValidatorSetState storage vset;
+        ValidatorSetState storage vset = currentValidatorSet;
         uint16 signatureUsageCount;
         if (commitment.validatorSetID == currentValidatorSet.id) {
             signatureUsageCount = currentValidatorSet.usageCounters.get(proof.index);
-            currentValidatorSet.usageCounters.set(
-                proof.index, signatureUsageCount.saturatingAdd(1)
-            );
-            vset = currentValidatorSet;
+            currentValidatorSet.usageCounters
+                .set(proof.index, signatureUsageCount.saturatingAdd(1));
         } else if (commitment.validatorSetID == nextValidatorSet.id) {
             signatureUsageCount = nextValidatorSet.usageCounters.get(proof.index);
             nextValidatorSet.usageCounters.set(proof.index, signatureUsageCount.saturatingAdd(1));
@@ -293,9 +316,16 @@ contract BeefyClient {
 
         // For the initial submission, the supplied bitfield should claim that more than
         // two thirds of the validator set have sign the commitment
-        if (Bitfield.countSetBits(bitfield) < computeQuorum(vset.length)) {
-            revert NotEnoughClaims();
+        if (
+            bitfield.length != Bitfield.containerLength(vset.length)
+                || Bitfield.countSetBits(bitfield, vset.length) < computeQuorum(vset.length)
+        ) {
+            revert InvalidBitfield();
         }
+
+        // Validate that all padding bits (beyond vset.length) are zero
+        // This ensures the bitfield was created by createInitialBitfield or equivalent
+        Bitfield.validatePadding(bitfield, vset.length);
 
         tickets[createTicketID(msg.sender, commitmentHash)] = Ticket({
             blockNumber: uint64(block.number),
@@ -336,7 +366,8 @@ contract BeefyClient {
         // relayer can capture within `randaoCommitExpiration` blocks
         if (block.number > ticket.blockNumber + randaoCommitDelay + randaoCommitExpiration) {
             delete tickets[ticketID];
-            revert TicketExpired();
+            emit TicketExpired();
+            return;
         }
 
         // Post-merge, the difficulty opcode now returns PREVRANDAO
@@ -365,22 +396,26 @@ contract BeefyClient {
         validateTicket(ticketID, commitment, bitfield);
 
         bool is_next_session = false;
-        ValidatorSetState storage vset;
+        ValidatorSetState storage vset = currentValidatorSet;
         if (commitment.validatorSetID == nextValidatorSet.id) {
             is_next_session = true;
             vset = nextValidatorSet;
-        } else if (commitment.validatorSetID == currentValidatorSet.id) {
-            vset = currentValidatorSet;
-        } else {
+        } else if (commitment.validatorSetID != currentValidatorSet.id) {
             revert InvalidCommitment();
         }
+
+        // Validate that all padding bits (beyond vset.length) are zero
+        // This ensures the bitfield was created by createInitialBitfield or equivalent
+        Bitfield.validatePadding(bitfield, vset.length);
 
         verifyCommitment(commitmentHash, ticketID, bitfield, vset, proofs);
 
         bytes32 newMMRRoot = ensureProvidesMMRRoot(commitment);
 
         if (is_next_session) {
-            if (leaf.nextAuthoritySetID != nextValidatorSet.id + 1) {
+            // The id for candidate nextValidatorSet should be greater than the current
+            // nextValidatorSet id
+            if (leaf.nextAuthoritySetID <= nextValidatorSet.id) {
                 revert InvalidMMRLeaf();
             }
             bool leafIsValid = MMRProof.verifyLeafProof(
@@ -434,6 +469,14 @@ contract BeefyClient {
     }
 
     /**
+     * @dev Compute the hash of a commitment
+     * @param commitment the commitment to hash
+     */
+    function computeCommitmentHash(Commitment calldata commitment) external pure returns (bytes32) {
+        return keccak256(encodeCommitment(commitment));
+    }
+
+    /**
      * @dev Helper to create a final bitfield, with subsampled validator selections
      * @param commitmentHash contains the commitmentHash signed by the validators
      * @param bitfield claiming which validators have signed the commitment
@@ -448,7 +491,7 @@ contract BeefyClient {
             revert InvalidBitfield();
         }
         return Bitfield.subsample(
-            ticket.prevRandao, bitfield, ticket.numRequiredSignatures, ticket.validatorSetLen
+            ticket.prevRandao, bitfield, ticket.validatorSetLen, ticket.numRequiredSignatures
         );
     }
 
@@ -461,23 +504,23 @@ contract BeefyClient {
         Commitment calldata commitment,
         uint256[] calldata bitfield
     ) external view returns (uint256[] memory) {
-        ValidatorSetState storage vset;
+        ValidatorSetState storage vset = currentValidatorSet;
         if (commitment.validatorSetID == nextValidatorSet.id) {
             vset = nextValidatorSet;
-        } else if (commitment.validatorSetID == currentValidatorSet.id) {
-            vset = currentValidatorSet;
-        } else {
+        } else if (commitment.validatorSetID != currentValidatorSet.id) {
             revert InvalidCommitment();
         }
 
-        bytes32 bitFieldHash = keccak256(abi.encodePacked(bitfield));
+        if (
+            bitfield.length != Bitfield.containerLength(vset.length)
+                || Bitfield.countSetBits(bitfield, vset.length) < computeQuorum(vset.length)
+        ) {
+            revert InvalidBitfield();
+        }
+
         bytes32 commitmentHash = keccak256(encodeCommitment(commitment));
-        bytes32 fiatShamirHash =
-            sha256(bytes.concat(sha256(bytes.concat(commitmentHash, bitFieldHash, vset.root))));
-        uint256 requiredSignatures =
-            Math.min(fiatShamirRequiredSignatures, computeQuorum(vset.length));
-        return
-            Bitfield.subsample(uint256(fiatShamirHash), bitfield, requiredSignatures, vset.length);
+
+        return fiatShamirFinalBitfield(commitmentHash, bitfield, vset);
     }
 
     /**
@@ -498,29 +541,37 @@ contract BeefyClient {
         uint256 leafProofOrder
     ) external {
         if (commitment.blockNumber <= latestBeefyBlock) {
-            // ticket is obsolete
             revert StaleCommitment();
         }
 
         bool is_next_session = false;
-        ValidatorSetState storage vset;
+        ValidatorSetState storage vset = currentValidatorSet;
         if (commitment.validatorSetID == nextValidatorSet.id) {
             is_next_session = true;
             vset = nextValidatorSet;
-        } else if (commitment.validatorSetID == currentValidatorSet.id) {
-            vset = currentValidatorSet;
-        } else {
+        } else if (commitment.validatorSetID != currentValidatorSet.id) {
             revert InvalidCommitment();
         }
 
-        bytes32 commitmentHash = keccak256(encodeCommitment(commitment));
-
-        verifyFiatShamirCommitment(commitmentHash, bitfield, vset, proofs);
+        if (
+            bitfield.length != Bitfield.containerLength(vset.length)
+                || Bitfield.countSetBits(bitfield, vset.length) < computeQuorum(vset.length)
+        ) {
+            revert InvalidBitfield();
+        }
+        // Validate that all padding bits (beyond vset.length) are zero
+        // This ensures the bitfield was created by createInitialBitfield or equivalent
+        Bitfield.validatePadding(bitfield, vset.length);
 
         bytes32 newMMRRoot = ensureProvidesMMRRoot(commitment);
 
+        bytes32 commitmentHash = keccak256(encodeCommitment(commitment));
+        verifyFiatShamirCommitment(commitmentHash, bitfield, vset, proofs);
+
         if (is_next_session) {
-            if (leaf.nextAuthoritySetID != nextValidatorSet.id + 1) {
+            // The id for candidate nextValidatorSet should be greater than the current
+            // nextValidatorSet id
+            if (leaf.nextAuthoritySetID <= nextValidatorSet.id) {
                 revert InvalidMMRLeaf();
             }
             bool leafIsValid = MMRProof.verifyLeafProof(
@@ -577,8 +628,8 @@ contract BeefyClient {
         numRequiredSignatures += Math.log2(validatorSetLen, Math.Rounding.Ceil);
         // Add signatures based on the signature usage count.
         numRequiredSignatures += 1 + (2 * Math.log2(signatureUsageCount, Math.Rounding.Ceil));
-        // Never require more signatures than a 2/3 majority
-        return Math.min(numRequiredSignatures, computeQuorum(validatorSetLen));
+        // Never require more signatures than a 1/3 + 1 which is sufficient to ensure at least one honest validator.
+        return Math.min(numRequiredSignatures, computeMaxRequiredSignatures(validatorSetLen));
     }
 
     /**
@@ -586,6 +637,14 @@ contract BeefyClient {
      * @param numValidators The number of validators in the validator set.
      */
     function computeQuorum(uint256 numValidators) internal pure returns (uint256) {
+        return numValidators / 3 + 1;
+    }
+
+    /**
+     * @dev We have 2/3rd +1 honesty assumption on polkadot validators. Hence it is sufficient (for both random sampling and Fiat Shamir) to check 1/3rd +1 validator signatures to ensure at least 1 honest validator signed the payload.
+     * @param numValidators The number of validators in the validator set.
+     */
+    function computeMaxRequiredSignatures(uint256 numValidators) internal pure returns (uint256) {
         return numValidators / 3 + 1;
     }
 
@@ -608,18 +667,18 @@ contract BeefyClient {
 
         // Generate final bitfield indicating which validators need to be included in the proofs.
         uint256[] memory finalbitfield =
-            Bitfield.subsample(ticket.prevRandao, bitfield, numRequiredSignatures, vset.length);
+            Bitfield.subsample(ticket.prevRandao, bitfield, vset.length, numRequiredSignatures);
 
         for (uint256 i = 0; i < proofs.length; i++) {
             ValidatorProof calldata proof = proofs[i];
 
-            // Check that validator is in bitfield
-            if (!Bitfield.isSet(finalbitfield, proof.index)) {
+            // Check that validator is actually in a validator set
+            if (!isValidatorInSet(vset, proof.account, proof.index, proof.proof)) {
                 revert InvalidValidatorProof();
             }
 
-            // Check that validator is actually in a validator set
-            if (!isValidatorInSet(vset, proof.account, proof.index, proof.proof)) {
+            // Check that validator is in bitfield
+            if (!Bitfield.isSet(finalbitfield, proof.index)) {
                 revert InvalidValidatorProof();
             }
 
@@ -642,17 +701,14 @@ contract BeefyClient {
         ValidatorSetState storage vset,
         ValidatorProof[] calldata proofs
     ) internal view {
-        bytes32 bitFieldHash = keccak256(abi.encodePacked(bitfield));
-        bytes32 fiatShamirHash =
-            sha256(bytes.concat(sha256(bytes.concat(commitmentHash, bitFieldHash, vset.root))));
-        uint256 requiredSignatures =
-            Math.min(fiatShamirRequiredSignatures, computeQuorum(vset.length));
+        uint256 requiredSignatures = Math.min(
+            fiatShamirRequiredSignatures, computeMaxRequiredSignatures(vset.length)
+        );
         if (proofs.length != requiredSignatures) {
             revert InvalidValidatorProofLength();
         }
 
-        uint256[] memory finalbitfield =
-            Bitfield.subsample(uint256(fiatShamirHash), bitfield, requiredSignatures, vset.length);
+        uint256[] memory finalbitfield = fiatShamirFinalBitfield(commitmentHash, bitfield, vset);
 
         for (uint256 i = 0; i < proofs.length; i++) {
             ValidatorProof calldata proof = proofs[i];
@@ -677,6 +733,46 @@ contract BeefyClient {
         }
     }
 
+    function createFiatShamirHash(
+        bytes32 commitmentHash,
+        bytes32 bitFieldHash,
+        ValidatorSetState storage vset
+    ) internal view returns (bytes32) {
+        return sha256(
+            bytes.concat(
+                FIAT_SHAMIR_DOMAIN_ID,
+                sha256(
+                    bytes.concat(
+                        commitmentHash,
+                        bitFieldHash,
+                        vset.root,
+                        bytes32(uint256(vset.id)),
+                        bytes32(uint256(vset.length))
+                    )
+                )
+            )
+        );
+    }
+
+    /**
+     * @dev Helper to create a final bitfield with subsampled validator selections using the Fiat-Shamir approach
+     * @param commitmentHash the hash of the full commitment that was used for the commitmentHash
+     * @param bitfield claiming which validators have signed the commitment
+     * @param vset the validator set state
+     */
+    function fiatShamirFinalBitfield(
+        bytes32 commitmentHash,
+        uint256[] calldata bitfield,
+        ValidatorSetState storage vset
+    ) internal view returns (uint256[] memory) {
+        bytes32 bitFieldHash = keccak256(abi.encodePacked(bitfield));
+        bytes32 fiatShamirHash = createFiatShamirHash(commitmentHash, bitFieldHash, vset);
+        uint256 requiredSignatures =
+            Math.min(fiatShamirRequiredSignatures, computeMaxRequiredSignatures(vset.length));
+        return
+            Bitfield.subsample(uint256(fiatShamirHash), bitfield, vset.length, requiredSignatures);
+    }
+
     // Ensure that the commitment provides a new MMR root
     function ensureProvidesMMRRoot(Commitment calldata commitment)
         internal
@@ -685,11 +781,7 @@ contract BeefyClient {
     {
         for (uint256 i = 0; i < commitment.payload.length; i++) {
             if (commitment.payload[i].payloadID == MMR_ROOT_ID) {
-                if (commitment.payload[i].data.length != 32) {
-                    revert InvalidMMRRootLength();
-                } else {
-                    return bytes32(commitment.payload[i].data);
-                }
+                return bytes32(commitment.payload[i].data);
             }
         }
         revert CommitmentNotRelevant();

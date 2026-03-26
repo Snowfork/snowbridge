@@ -1,7 +1,7 @@
 [profile.default]
-solc_version = "0.8.28"
+solc_version = "0.8.34"
 optimizer = true
-optimizer_runs = 20000
+optimizer_runs = 200
 via_ir = false
 test = 'test'
 script = 'scripts'
@@ -9,25 +9,46 @@ fs_permissions = [
     { access = "read-write", path = "test/data" },
     { access = "read", path = "./" },
 ]
+memory_limit = 1073741824
+gas_limit = 8000000000
 
 ignored_error_codes = [
     # DeployLocal.sol is never deployed
     5574,
     # tstore
     2394,
+    # Natspec memory-safe-assembly special comment
+    2424,
+    # Too many warnings
+    4591,
+    # Deprecated transfer() in lib/canonical-weth and external deps
+    9207,
+    # Contract initcode size exceeds Shanghai limit (test contracts only)
+    3860,
 ]
 
-# To clean up, we disabled 3 signature tests. You can regenerate the test fixtures by setting the environment variable 
-# SIGNATURE_USAGE_COUNT=3 and enabling these tests again.
-no_match_test = "testSubmitWith3SignatureCount*"
+no_match_test = "testRegenerate*"
 
-evm_version = 'Cancun'
+[lint]
+exclude_lints = [
+    "mixed-case-function",
+    "mixed-case-variable",
+    "asm-keccak256",
+    "unsafe-cheatcode",
+    "screaming-snake-case-immutable",
+    "screaming-snake-case-const",
+    "pascal-case-struct",
+]
 
+# Production profile: via_ir enabled for deployment contracts
 [profile.production]
 via_ir = true
+optimizer_runs = 20000
 
-[profile.production.etherscan]
-mainnet = { key = "${ETHERSCAN_API_KEY}" }
+# Integration profile: for running fork tests (compile with lower optimization)
+# Usage: FOUNDRY_PROFILE=integration forge test --match-contract ForkUpgrade
+[profile.integration]
+test = 'integration'
 
 [fmt]
 number_underscore = "thousands"

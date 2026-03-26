@@ -1,4 +1,4 @@
-package parachain
+package parachainv1
 
 import (
 	"context"
@@ -15,7 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
-	"github.com/snowfork/snowbridge/relayer/contracts"
+	contracts "github.com/snowfork/snowbridge/relayer/contracts/v1"
 	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
 	"github.com/snowfork/snowbridge/relayer/relays/util"
 
@@ -25,26 +25,23 @@ import (
 )
 
 type EthereumWriter struct {
-	config      *SinkConfig
-	conn        *ethereum.Connection
-	gateway     *contracts.Gateway
-	tasks       <-chan *Task
-	gatewayABI  abi.ABI
-	relayConfig *Config
+	config     *SinkConfig
+	conn       *ethereum.Connection
+	gateway    *contracts.Gateway
+	tasks      <-chan *Task
+	gatewayABI abi.ABI
 }
 
 func NewEthereumWriter(
 	config *SinkConfig,
 	conn *ethereum.Connection,
 	tasks <-chan *Task,
-	relayConfig *Config,
 ) (*EthereumWriter, error) {
 	return &EthereumWriter{
-		config:      config,
-		conn:        conn,
-		gateway:     nil,
-		tasks:       tasks,
-		relayConfig: relayConfig,
+		config:  config,
+		conn:    conn,
+		gateway: nil,
+		tasks:   tasks,
 	}, nil
 }
 
@@ -86,7 +83,12 @@ func (wr *EthereumWriter) writeMessagesLoop(ctx context.Context) error {
 			if !ok {
 				return nil
 			}
-			err := wr.WriteChannels(ctx, options, task)
+			err := util.RetryOnErrorSubstring(
+				ctx,
+				log.WithField("component", "parachain/ethereum-writer"),
+				util.DefaultRetryableSubstring,
+				func() error { return wr.WriteChannels(ctx, options, task) },
+			)
 			if err != nil {
 				return fmt.Errorf("write message: %w", err)
 			}
@@ -100,55 +102,13 @@ func (wr *EthereumWriter) WriteChannels(
 	task *Task,
 ) error {
 	for _, proof := range *task.MessageProofs {
-		profitable, err := wr.isRelayMessageProfitable(ctx, &proof)
+		err := wr.WriteChannel(ctx, options, &proof, task.ProofOutput)
 		if err != nil {
-			return fmt.Errorf("check message profitable: %w", err)
-		}
-		if profitable {
-			err = wr.WriteChannel(ctx, options, &proof, task.ProofOutput)
-			if err != nil {
-				return fmt.Errorf("write eth gateway: %w", err)
-			}
+			return fmt.Errorf("write eth gateway: %w", err)
 		}
 	}
 
 	return nil
-}
-
-func (wr *EthereumWriter) commandGas(command *CommandWrapper) uint64 {
-	var gas uint64
-	switch command.Kind {
-	// ERC20 transfer
-	case 2:
-		// BaseUnlockGas should cover most of the ERC20 token. Specific gas costs can be set per token if needed
-		gas = wr.config.Ethereum.BaseUnlockGas
-	// PNA transfer
-	case 4:
-		gas = wr.config.Ethereum.BaseMintGas
-	default:
-		gas = uint64(command.MaxDispatchGas)
-	}
-	return gas
-}
-
-func (wr *EthereumWriter) isRelayMessageProfitable(ctx context.Context, proof *MessageProof) (bool, error) {
-	var result bool
-	gasPrice, err := wr.conn.Client().SuggestGasPrice(ctx)
-	if err != nil {
-		return result, err
-	}
-	var totalDispatchGas uint64
-	commands := proof.Message.OriginalMessage.Commands
-	for _, command := range commands {
-		totalDispatchGas = totalDispatchGas + wr.commandGas(&command)
-	}
-	totalDispatchGas = totalDispatchGas + wr.config.Ethereum.BaseDeliveryGas
-	gasFee := new(big.Int)
-	gasFee.Mul(gasPrice, big.NewInt(int64(totalDispatchGas)))
-	if proof.Message.Fee.Cmp(gasFee) >= 0 {
-		return true, nil
-	}
-	return false, nil
 }
 
 // Submit sends a SCALE-encoded message to an application deployed on the Ethereum network
@@ -158,7 +118,7 @@ func (wr *EthereumWriter) WriteChannel(
 	commitmentProof *MessageProof,
 	proof *ProofOutput,
 ) error {
-	message := commitmentProof.Message.OriginalMessage.IntoInboundMessage()
+	message := commitmentProof.Message.IntoInboundMessage()
 
 	convertedHeader, err := convertHeader(proof.Header)
 	if err != nil {
@@ -189,13 +149,15 @@ func (wr *EthereumWriter) WriteChannel(
 		LeafProofOrder: new(big.Int).SetUint64(proof.MMRProof.MerkleProofOrder),
 	}
 
-	rewardAddress, err := util.HexStringTo32Bytes(wr.relayConfig.RewardAddress)
+	// Use latest nonce to avoid "tx rejected: nonce too high"
+	nonce, err := wr.conn.Client().NonceAt(ctx, wr.conn.Keypair().CommonAddress(), nil)
 	if err != nil {
-		return fmt.Errorf("convert to reward address: %w", err)
+		return fmt.Errorf("get latest nonce: %w", err)
 	}
+	options.Nonce = big.NewInt(0).SetUint64(nonce)
 
-	tx, err := wr.gateway.V2Submit(
-		options, message, commitmentProof.Proof.InnerHashes, verificationProof, rewardAddress,
+	tx, err := wr.gateway.SubmitV1(
+		options, message, commitmentProof.Proof.InnerHashes, verificationProof,
 	)
 	if err != nil {
 		return fmt.Errorf("send transaction Gateway.submit: %w", err)
@@ -234,8 +196,9 @@ func (wr *EthereumWriter) WriteChannel(
 				return fmt.Errorf("unpack event log: %w", err)
 			}
 			log.WithFields(log.Fields{
-				"nonce":   holder.Nonce,
-				"success": holder.Success,
+				"channelID": Hex(holder.ChannelID[:]),
+				"nonce":     holder.Nonce,
+				"success":   holder.Success,
 			}).Info("Message dispatched")
 		}
 	}

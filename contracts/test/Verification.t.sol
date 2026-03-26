@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.28;
+pragma solidity 0.8.34;
 
-import "openzeppelin/utils/Strings.sol";
-import "forge-std/Test.sol";
-import "forge-std/console.sol";
+import {Test} from "forge-std/Test.sol";
 
 import {ScaleCodec} from "../src/utils/ScaleCodec.sol";
+import {BeefyClient} from "../src/BeefyClient.sol";
 import {BeefyClientMock} from "./mocks/BeefyClientMock.sol";
 import {Verification, VerificationWrapper} from "./mocks/VerificationWrapper.sol";
 
@@ -17,17 +16,23 @@ contract VerificationTest is Test {
     bytes4 public encodedParachainID;
 
     function setUp() public {
-        beefyClient = new BeefyClientMock(3, 8, 16, 101);
+        beefyClient = new BeefyClientMock(
+            3,
+            8,
+            16,
+            101,
+            0,
+            BeefyClient.ValidatorSet(0, 0, 0x0),
+            BeefyClient.ValidatorSet(1, 0, 0x0)
+        );
         encodedParachainID = ScaleCodec.encodeU32(BRIDGE_HUB_PARA_ID);
         v = new VerificationWrapper();
     }
 
-    function testCreateParachainHeaderMerkleLeaf() public {
+    function testCreateParachainHeaderMerkleLeaf() public view {
         Verification.DigestItem[] memory digestItems = new Verification.DigestItem[](3);
         digestItems[0] = Verification.DigestItem({
-            kind: 6,
-            consensusEngineID: 0x61757261,
-            data: hex"c1f05e0800000000"
+            kind: 6, consensusEngineID: 0x61757261, data: hex"c1f05e0800000000"
         });
         digestItems[1] = Verification.DigestItem({
             kind: 4,
@@ -67,9 +72,7 @@ contract VerificationTest is Test {
         Verification.DigestItem[] memory digestItems = new Verification.DigestItem[](1);
         // Create an invalid digest item
         digestItems[0] = Verification.DigestItem({
-            kind: 666,
-            consensusEngineID: 0x61757261,
-            data: hex"c1f05e0800000000"
+            kind: 666, consensusEngineID: 0x61757261, data: hex"c1f05e0800000000"
         });
 
         Verification.ParachainHeader memory header = Verification.ParachainHeader({
@@ -87,9 +90,7 @@ contract VerificationTest is Test {
     function testIsCommitmentInHeaderDigest() public view {
         Verification.DigestItem[] memory digestItems = new Verification.DigestItem[](4);
         digestItems[0] = Verification.DigestItem({
-            kind: 6,
-            consensusEngineID: 0x61757261,
-            data: hex"c1f05e0800000000"
+            kind: 6, consensusEngineID: 0x61757261, data: hex"c1f05e0800000000"
         });
         digestItems[1] = Verification.DigestItem({
             kind: 4,
@@ -131,7 +132,7 @@ contract VerificationTest is Test {
         );
     }
 
-    function testIsCommitmentInHeaderDigestVersionedItems() public {
+    function testIsCommitmentInHeaderDigestVersionedItems() public view {
         // Test the V1 vs V2 digest item validation logic
 
         // Create a test commitment

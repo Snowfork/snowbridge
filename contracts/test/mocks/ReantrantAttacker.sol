@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.28;
+pragma solidity 0.8.34;
 
 import {IGatewayV1} from "../../src/v1/IGateway.sol";
 import {ParaID} from "../../src/Types.sol";
 import {MultiAddress, multiAddressFromBytes32} from "../../src/v1/MultiAddress.sol";
-import {console} from "forge-std/console.sol";
 
 contract ReantrantAttacker {
     address public owner;

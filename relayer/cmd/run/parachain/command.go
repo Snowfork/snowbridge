@@ -14,19 +14,17 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/sirupsen/logrus"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
-	para "github.com/snowfork/snowbridge/relayer/chain/parachain"
-	"github.com/snowfork/snowbridge/relayer/relays/parachain"
+	parachainrelay "github.com/snowfork/snowbridge/relayer/relays/parachain"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"golang.org/x/sync/errgroup"
 )
 
 var (
-	configFile          string
-	privateKey          string
-	privateKeyFile      string
-	privateKeyID        string
-	parachainPrivateKey string
+	configFile     string
+	privateKey     string
+	privateKeyFile string
+	privateKeyID   string
 )
 
 func Command() *cobra.Command {
@@ -44,8 +42,6 @@ func Command() *cobra.Command {
 	cmd.Flags().StringVar(&privateKeyFile, "ethereum.private-key-file", "", "The file from which to read the private key")
 	cmd.Flags().StringVar(&privateKeyID, "ethereum.private-key-id", "", "The secret id to lookup the private key in AWS Secrets Manager")
 
-	cmd.Flags().StringVar(&parachainPrivateKey, "substrate.private-key", "", "substrate private key")
-
 	return cmd
 }
 
@@ -53,12 +49,14 @@ func run(_ *cobra.Command, _ []string) error {
 	log.SetOutput(logrus.WithFields(logrus.Fields{"logger": "stdlib"}).WriterLevel(logrus.InfoLevel))
 	logrus.SetLevel(logrus.DebugLevel)
 
+	logrus.Info("Parachain relayer started up")
+
 	viper.SetConfigFile(configFile)
 	if err := viper.ReadInConfig(); err != nil {
 		return err
 	}
 
-	var config parachain.Config
+	var config parachainrelay.Config
 	err := viper.UnmarshalExact(&config, viper.DecodeHook(HexHookFunc()))
 	if err != nil {
 		return err
@@ -74,12 +72,7 @@ func run(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	keypair2, err := para.ResolvePrivateKey(parachainPrivateKey, "", "")
-	if err != nil {
-		return err
-	}
-
-	relay, err := parachain.NewRelay(&config, keypair, keypair2)
+	relay, err := parachainrelay.NewRelay(&config, keypair)
 	if err != nil {
 		return err
 	}
@@ -131,7 +124,7 @@ func HexHookFunc() mapstructure.DecodeHookFuncType {
 		}
 
 		// Check that the target type is our custom type
-		if t != reflect.TypeOf(parachain.ChannelID{}) {
+		if t != reflect.TypeOf(parachainrelay.ChannelID{}) {
 			return data, nil
 		}
 
@@ -144,7 +137,7 @@ func HexHookFunc() mapstructure.DecodeHookFuncType {
 		copy(out[:], foo)
 
 		// Return the parsed value
-		return parachain.ChannelID(out), nil
+		return parachainrelay.ChannelID(out), nil
 	}
 }
 

@@ -31,7 +31,6 @@ import {
 import { Result } from "@polkadot/types"
 import { XcmDryRunApiError, XcmDryRunEffects } from "@polkadot/types/interfaces"
 import { paraImplementation } from "./parachains"
-import { ParachainBase } from "./parachains/parachainBase"
 import { Context } from "./index"
 
 export type Transfer = {
@@ -137,7 +136,7 @@ export async function getDeliveryFee(
     registry: AssetRegistry,
     tokenAddress: string,
     destinationParaId: number,
-    paddFeeByPercentage?: bigint
+    paddFeeByPercentage?: bigint,
 ): Promise<DeliveryFee> {
     const { gateway, assetHub, destination } =
         context instanceof Context
@@ -151,7 +150,7 @@ export async function getDeliveryFee(
     const { destParachain, destAssetMetadata } = resolveInputs(
         registry,
         tokenAddress,
-        destinationParaId
+        destinationParaId,
     )
 
     let destinationDeliveryFeeDOT = 0n
@@ -167,7 +166,7 @@ export async function getDeliveryFee(
                 destParachain.info.accountType === "AccountId32"
                     ? "0x0000000000000000000000000000000000000000000000000000000000000000"
                     : "0x0000000000000000000000000000000000000000",
-                "0x0000000000000000000000000000000000000000000000000000000000000000"
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
             )
         } else {
             destinationXcm = buildParachainERC20ReceivedXcmOnDestination(
@@ -179,19 +178,19 @@ export async function getDeliveryFee(
                 destParachain.info.accountType === "AccountId32"
                     ? "0x0000000000000000000000000000000000000000000000000000000000000000"
                     : "0x0000000000000000000000000000000000000000",
-                "0x0000000000000000000000000000000000000000000000000000000000000000"
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
             )
         }
 
         const assetHubImpl = await paraImplementation(assetHub)
         destinationDeliveryFeeDOT = await assetHubImpl.calculateDeliveryFeeInDOT(
             destinationParaId,
-            destinationXcm
+            destinationXcm,
         )
         const destinationImpl = await paraImplementation(destination)
         destinationExecutionFeeDOT = padFeeByPercentage(
             await destinationImpl.calculateXcmFee(destinationXcm, DOT_LOCATION),
-            paddFeeByPercentage ?? 33n
+            paddFeeByPercentage ?? 33n,
         )
     }
     const totalFeeInDOT = destinationExecutionFeeDOT + destinationDeliveryFeeDOT
@@ -201,7 +200,7 @@ export async function getDeliveryFee(
         totalFeeInWei: await gateway.quoteSendTokenFee(
             tokenAddress,
             destinationParaId,
-            totalFeeInDOT
+            totalFeeInDOT,
         ),
     }
 }
@@ -213,12 +212,12 @@ export async function createTransfer(
     tokenAddress: string,
     destinationParaId: number,
     amount: bigint,
-    fee: DeliveryFee
+    fee: DeliveryFee,
 ): Promise<Transfer> {
     const { tokenErcMetadata, destParachain, ahAssetMetadata, destAssetMetadata } = resolveInputs(
         registry,
         tokenAddress,
-        destinationParaId
+        destinationParaId,
     )
     const minimalBalance =
         ahAssetMetadata.minimumBalance > destAssetMetadata.minimumBalance
@@ -268,33 +267,9 @@ export async function createTransfer(
     }
 }
 
-async function validateAccount(
-    parachainImpl: ParachainBase,
-    beneficiaryAddress: string,
-    ethChainId: number,
-    tokenAddress: string,
-    assetMetadata?: Asset,
-    maxConsumers?: bigint
-) {
-    // Check if the account is created
-    const [beneficiaryAccount, beneficiaryTokenBalance] = await Promise.all([
-        parachainImpl.getNativeAccount(beneficiaryAddress),
-        parachainImpl.getTokenBalance(beneficiaryAddress, ethChainId, tokenAddress, assetMetadata),
-    ])
-    return {
-        accountExists: !(
-            beneficiaryAccount.consumers === 0n &&
-            beneficiaryAccount.providers === 0n &&
-            beneficiaryAccount.sufficients === 0n
-        ),
-        accountMaxConumers:
-            beneficiaryAccount.consumers >= (maxConsumers ?? 63n) && beneficiaryTokenBalance === 0n,
-    }
-}
-
 export async function validateTransfer(
     context: Context | Connections,
-    transfer: Transfer
+    transfer: Transfer,
 ): Promise<ValidationResult> {
     const { tx } = transfer
     const { amount, sourceAccount, tokenAddress, registry, destinationParaId } = transfer.input
@@ -339,7 +314,7 @@ export async function validateTransfer(
             ethereum,
             tokenAddress,
             sourceAccount,
-            registry.gatewayAddress
+            registry.gatewayAddress,
         )
     } else {
         tokenBalance = {
@@ -358,6 +333,7 @@ export async function validateTransfer(
                 "The Snowbridge gateway contract needs to approved as a spender for this token and amount.",
         })
     }
+
     if (tokenBalance.balance < amount) {
         logs.push({
             kind: ValidationKind.Error,
@@ -407,7 +383,7 @@ export async function validateTransfer(
     }
 
     // Check if asset can be received on asset hub (dry run)
-    const ahParachain = registry.parachains[registry.assetHubParaId]
+    const ahParachain = registry.parachains[`polkadot_${registry.assetHubParaId}`]
     let dryRunAhSuccess, forwardedDestination, assetHubDryRunError
     if (!ahParachain.features.hasDryRunApi) {
         logs.push({
@@ -437,12 +413,11 @@ export async function validateTransfer(
         // Check if sovereign account balance for token is at 0 and that consumers is maxxed out.
         if (!ahAssetMetadata.isSufficient && !dryRunAhSuccess) {
             const sovereignAccountId = paraIdToSovereignAccount("sibl", destinationParaId)
-            const { accountMaxConumers, accountExists } = await validateAccount(
-                assetHubImpl,
+            const { accountMaxConsumers, accountExists } = await assetHubImpl.validateAccount(
                 sovereignAccountId,
                 registry.ethChainId,
                 tokenAddress,
-                ahAssetMetadata
+                ahAssetMetadata,
             )
 
             if (!accountExists) {
@@ -452,7 +427,7 @@ export async function validateTransfer(
                     message: "Sovereign account does not exist on Asset Hub.",
                 })
             }
-            if (accountMaxConumers) {
+            if (accountMaxConsumers) {
                 logs.push({
                     kind: ValidationKind.Error,
                     reason: ValidationReason.MaxConsumersReached,
@@ -513,14 +488,14 @@ export async function validateTransfer(
             ) {
                 const destParachainImpl = await paraImplementation(destParachainApi)
                 // Check if the account is created
-                const { accountMaxConumers, accountExists } = await validateAccount(
-                    destParachainImpl,
-                    beneficiaryAddressHex,
-                    registry.ethChainId,
-                    tokenAddress,
-                    destAssetMetadata
-                )
-                if (accountMaxConumers) {
+                const { accountMaxConsumers, accountExists } =
+                    await destParachainImpl.validateAccount(
+                        beneficiaryAddressHex,
+                        registry.ethChainId,
+                        tokenAddress,
+                        destAssetMetadata,
+                    )
+                if (accountMaxConsumers) {
                     logs.push({
                         kind: ValidationKind.Error,
                         reason: ValidationReason.MaxConsumersReached,
@@ -538,15 +513,14 @@ export async function validateTransfer(
             }
         }
     } else if (!ahAssetMetadata.isSufficient && !dryRunAhSuccess) {
-        const { accountMaxConumers, accountExists } = await validateAccount(
-            assetHubImpl,
+        const { accountMaxConsumers, accountExists } = await assetHubImpl.validateAccount(
             beneficiaryAddressHex,
             registry.ethChainId,
             tokenAddress,
-            ahAssetMetadata
+            ahAssetMetadata,
         )
 
-        if (accountMaxConumers) {
+        if (accountMaxConsumers) {
             logs.push({
                 kind: ValidationKind.Error,
                 reason: ValidationReason.MaxConsumersReached,
@@ -580,7 +554,7 @@ export async function validateTransfer(
 }
 
 export async function getMessageReceipt(
-    receipt: TransactionReceipt
+    receipt: TransactionReceipt,
 ): Promise<MessageReceipt | null> {
     const events: LogDescription[] = []
     const gatewayInterface = IGateway__factory.createInterface()
@@ -611,18 +585,18 @@ export const approveTokenSpend = (
     context: Context,
     sourceAddress: string,
     tokenAddress: string,
-    amount: bigint
+    amount: bigint,
 ): Promise<ContractTransaction> =>
     IERC20__factory.connect(tokenAddress)
         .getFunction("approve")
-        .populateTransaction(context.config.appContracts.gateway, amount, {
+        .populateTransaction(context.environment.gatewayContract, amount, {
             from: sourceAddress,
         })
 
 export const depositWeth = (
     sourceAddress: string,
     tokenAddress: string,
-    amount: bigint
+    amount: bigint,
 ): Promise<ContractTransaction> =>
     WETH9__factory.connect(tokenAddress).getFunction("deposit").populateTransaction({
         from: sourceAddress,
@@ -633,7 +607,7 @@ async function erc20Balance(
     ethereum: AbstractProvider,
     tokenAddress: string,
     owner: string,
-    spender: string
+    spender: string,
 ) {
     const tokenContract = IERC20__factory.connect(tokenAddress, ethereum)
     const [balance, gatewayAllowance] = await Promise.all([
@@ -646,18 +620,26 @@ async function erc20Balance(
     }
 }
 
-function resolveInputs(registry: AssetRegistry, tokenAddress: string, destinationParaId: number) {
+export function resolveInputs(
+    registry: AssetRegistry,
+    tokenAddress: string,
+    destinationParaId: number,
+) {
     const tokenErcMetadata =
-        registry.ethereumChains[registry.ethChainId.toString()].assets[tokenAddress.toLowerCase()]
+        registry.ethereumChains[`ethereum_${registry.ethChainId}`].assets[
+            tokenAddress.toLowerCase()
+        ]
     if (!tokenErcMetadata) {
         throw Error(`No token ${tokenAddress} registered on ethereum chain ${registry.ethChainId}.`)
     }
-    const destParachain = registry.parachains[destinationParaId.toString()]
+    const destParachain = registry.parachains[`polkadot_${destinationParaId}`]
     if (!destParachain) {
         throw Error(`Could not find ${destinationParaId} in the asset registry.`)
     }
     const ahAssetMetadata =
-        registry.parachains[registry.assetHubParaId].assets[tokenAddress.toLowerCase()]
+        registry.parachains[`polkadot_${registry.assetHubParaId}`].assets[
+            tokenAddress.toLowerCase()
+        ]
     if (!ahAssetMetadata) {
         throw Error(`Token ${tokenAddress} not registered on asset hub.`)
     }
@@ -665,7 +647,7 @@ function resolveInputs(registry: AssetRegistry, tokenAddress: string, destinatio
     const destAssetMetadata = destParachain.assets[tokenAddress.toLowerCase()]
     if (!destAssetMetadata) {
         throw Error(
-            `Token ${tokenAddress} not registered on destination parachain ${destinationParaId}.`
+            `Token ${tokenAddress} not registered on destination parachain ${destinationParaId}.`,
         )
     }
 
@@ -696,7 +678,7 @@ async function dryRunAssetHub(assetHub: ApiPromise, transfer: Transfer) {
                 assetHubFee,
                 destinationFeeInDOT,
                 beneficiaryAccount,
-                "0x0000000000000000000000000000000000000000000000000000000000000000"
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
             )
         } else {
             xcm = buildParachainERC20ReceivedXcmOnAssetHub(
@@ -708,7 +690,7 @@ async function dryRunAssetHub(assetHub: ApiPromise, transfer: Transfer) {
                 assetHubFee,
                 destinationFeeInDOT,
                 beneficiaryAccount,
-                "0x0000000000000000000000000000000000000000000000000000000000000000"
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
             )
         }
     } else {
@@ -720,7 +702,7 @@ async function dryRunAssetHub(assetHub: ApiPromise, transfer: Transfer) {
                 amount,
                 assetHubFee,
                 beneficiaryAccount,
-                "0x0000000000000000000000000000000000000000000000000000000000000000"
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
             )
         } else {
             xcm = buildAssetHubERC20ReceivedXcm(
@@ -730,7 +712,7 @@ async function dryRunAssetHub(assetHub: ApiPromise, transfer: Transfer) {
                 amount,
                 assetHubFee,
                 beneficiaryAccount,
-                "0x0000000000000000000000000000000000000000000000000000000000000000"
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
             )
         }
     }

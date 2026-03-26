@@ -1,6 +1,6 @@
 {
   "name": "@snowbridge/contract-types",
-  "version": "0.2.0",
+  "version": "0.4.0",
   "description": "Snowbridge contract type bindings",
   "license": "Apache-2.0",
   "repository": {
@@ -12,17 +12,17 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "rm -rf src && rm -rf dist && cd ../../../contracts && forge build && cd ../web/packages/contract-types && pnpm typechain && tsc --build --force",
-    "typechain": "typechain --target ethers-v6 '../../../contracts/out/?(IERC20.sol|IERC20Metadata.sol|IGateway.sol|BeefyClient.sol|WETH9.sol)/!(*.abi).json' --out-dir src"
+    "typechain": "typechain --target ethers-v6 '../../../contracts/out/?(IERC20.sol|IERC20Metadata.sol|IGateway.sol|BeefyClient.sol|WETH9.sol|SnowbridgeL1Adaptor.sol|SnowbridgeL2Adaptor.sol|ISwapQuoter.sol|ISwapRouter.sol|ISwapLegacyRouter.sol)/!(*.abi).json' --out-dir src"
   },
   "devDependencies": {
-    "@typechain/ethers-v6": "^0.5.1",
-    "@types/node": "^18.19.31",
-    "ts-node": "^10.9.2",
-    "typechain": "^8.3.2",
-    "typescript": "^5.4.5"
+    "@typechain/ethers-v6": "0.5.1",
+    "@types/node": "24.6.2",
+    "ts-node": "10.9.2",
+    "typechain": "8.3.2",
+    "typescript": "5.9.3"
   },
   "dependencies": {
-    "ethers": "^6.13.5",
-    "@snowbridge/contracts": "workspace:*"
+    "@snowbridge/contracts": "workspace:*",
+    "ethers": "6.16.0"
   }
 }

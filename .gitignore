@@ -40,4 +40,5 @@ web/packages/operations/.env.rococo
 lodestar
 db.sqlite*
 .pnpm-store
-deploy
+/deploy
+.envs/

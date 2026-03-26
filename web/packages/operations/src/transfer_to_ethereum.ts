@@ -1,30 +1,26 @@
 import { Keyring } from "@polkadot/keyring"
-import { Context, environment, toEthereumV2, assetsV2, contextConfigFor } from "@snowbridge/api"
+import { Context, toEthereumV2 } from "@snowbridge/api"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { formatUnits, Wallet } from "ethers"
-import { assetRegistryFor } from "@snowbridge/registry"
+import { bridgeInfoFor } from "@snowbridge/registry"
 
 export const transferToEthereum = async (sourceParaId: number, symbol: string, amount: bigint) => {
     let env = "local_e2e"
     if (process.env.NODE_ENV !== undefined) {
         env = process.env.NODE_ENV
     }
-    const snwobridgeEnv = environment.SNOWBRIDGE_ENV[env]
-    if (snwobridgeEnv === undefined) {
-        throw Error(`Unknown environment '${env}'`)
-    }
     console.log(`Using environment '${env}'`)
 
     await cryptoWaitReady()
 
-    const context = new Context(contextConfigFor(env))
+    const { registry, environment } = bridgeInfoFor(env)
+    const context = new Context(environment)
 
     const polkadot_keyring = new Keyring({ type: "sr25519" })
 
     const ETHEREUM_ACCOUNT = new Wallet(
-        process.env.ETHEREUM_KEY ??
-            "0x5e002a1af63fd31f1c25258f3082dc889762664cb8f218d86da85dff8b07b342",
-        context.ethereum()
+        process.env.ETHEREUM_KEY ?? "Your Key Goes Here",
+        context.ethereum(),
     )
     const ETHEREUM_ACCOUNT_PUBLIC = await ETHEREUM_ACCOUNT.getAddress()
     const POLKADOT_ACCOUNT = polkadot_keyring.addFromUri(process.env.SUBSTRATE_KEY ?? "//Ferdie")
@@ -32,9 +28,7 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
 
     console.log("eth", ETHEREUM_ACCOUNT_PUBLIC, "sub", POLKADOT_ACCOUNT_PUBLIC)
 
-    const registry = assetRegistryFor(env)
-
-    const assets = registry.ethereumChains[registry.ethChainId].assets
+    const assets = registry.ethereumChains[`ethereum_${registry.ethChainId}`].assets
     const TOKEN_CONTRACT = Object.keys(assets)
         .map((t) => assets[t])
         .find((asset) => asset.symbol.toLowerCase().startsWith(symbol.toLowerCase()))?.token
@@ -50,7 +44,7 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
             sourceParaId,
             registry,
             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            TOKEN_CONTRACT!
+            TOKEN_CONTRACT!,
         )
 
         // Step 2. Create a transfer tx
@@ -61,7 +55,7 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
             ETHEREUM_ACCOUNT_PUBLIC,
             TOKEN_CONTRACT!,
             amount,
-            fee
+            fee,
         )
 
         // Step 3. Estimate the cost of the execution cost of the transaction
@@ -72,11 +66,14 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
         ).toPrimitive() as any
         console.log(
             `execution fee (${transfer.computed.sourceParachain.info.tokenSymbols}):`,
-            formatUnits(feePayment.partialFee, transfer.computed.sourceParachain.info.tokenDecimals)
+            formatUnits(
+                feePayment.partialFee,
+                transfer.computed.sourceParachain.info.tokenDecimals,
+            ),
         )
         console.log(
-            `delivery fee (${registry.parachains[registry.assetHubParaId].info.tokenSymbols}): `,
-            formatUnits(fee.totalFeeInDot, transfer.computed.sourceParachain.info.tokenDecimals)
+            `delivery fee (${registry.parachains[`polkadot_${registry.assetHubParaId}`].info.tokenSymbols}): `,
+            formatUnits(fee.totalFeeInDot, transfer.computed.sourceParachain.info.tokenDecimals),
         )
         // console.log(
         //     "dryRun: ",
@@ -102,7 +99,7 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
             console.log(
                 `Success message with message id: ${response.messageId}
                 block number: ${response.blockNumber}
-                tx hash: ${response.txHash}`
+                tx hash: ${response.txHash}`,
             )
         }
     }

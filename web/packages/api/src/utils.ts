@@ -28,16 +28,6 @@ export const paraIdToChannelId = (paraId: number): string => {
     return u8aToHex(channelId)
 }
 
-export const forwardedTopicId = (messageId: string): string => {
-    // From rust code
-    // (b"forward_id_for", original_id).using_encoded(sp_io::hashing::blake2_256)
-    const typeEncoded = stringToU8a("forward_id_for")
-    const paraIdEncoded = hexToU8a(messageId)
-    const joined = new Uint8Array([...typeEncoded, ...paraIdEncoded])
-    const newTopicId = blake2AsU8a(joined, 256)
-    return u8aToHex(newTopicId)
-}
-
 export const beneficiaryMultiAddress = (beneficiary: string) => {
     const abi = ethers.AbiCoder.defaultAbiCoder()
 
@@ -73,7 +63,7 @@ export const beneficiaryMultiAddress = (beneficiary: string) => {
 
 export const fetchBeaconSlot = async (
     beaconUrl: string,
-    blockId: `0x${string}` | number | "head" | "finalized"
+    blockId: `0x${string}` | number | "head" | "finalized",
 ): Promise<{
     data: {
         message: {
@@ -100,7 +90,7 @@ export const fetchBeaconSlot = async (
 }
 
 export const fetchFinalityUpdate = async (
-    beaconUrl: string
+    beaconUrl: string,
 ): Promise<{ finalized_slot: number; attested_slot: number }> => {
     let url = beaconUrl.trim()
     if (!url.endsWith("/")) {
@@ -136,4 +126,13 @@ export function padFeeByPercentage(fee: bigint, padPercent: bigint) {
         throw Error(`padPercent ${padPercent} not in range of 0 to 100.`)
     }
     return (fee * (100n + padPercent)) / 100n
+}
+
+export function u32ToLeBytes(value: number): Uint8Array {
+    if (!Number.isInteger(value) || value < 0 || value > 0xffffffff) {
+        throw new Error(`Value out of u32 range: ${value}`)
+    }
+    const out = new Uint8Array(4)
+    new DataView(out.buffer).setUint32(0, value, true)
+    return out
 }

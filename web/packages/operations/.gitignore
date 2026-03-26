@@ -5,3 +5,4 @@ config
 .env.*
 !.env.example
 *.registry.json
+checkpoint.json

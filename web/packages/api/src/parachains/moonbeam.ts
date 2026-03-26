@@ -1,8 +1,7 @@
 import { ApiPromise } from "@polkadot/api"
 import { ethers } from "ethers"
 import { ParachainBase } from "./parachainBase"
-import { PNAMap } from "../assets_v2"
-import { AssetMap } from "@snowbridge/base-types"
+import { AssetMap, PNAMap } from "@snowbridge/base-types"
 import { DOT_LOCATION, getTokenFromLocation } from "../xcmBuilder"
 
 const MOONBEAM_ERC20_ABI = [
@@ -21,7 +20,7 @@ export function toMoonbeamXC20(assetId: bigint) {
 export async function getMoonbeamEvmForeignAssetBalance(
     api: ApiPromise,
     token: string,
-    account: string
+    account: string,
 ) {
     const method = "balanceOf"
     const data = MOONBEAM_ERC20.encodeFunctionData(method, [account])
@@ -35,13 +34,14 @@ export async function getMoonbeamEvmForeignAssetBalance(
         null,
         null,
         false,
-        null
+        null,
+        null,
     )
     const resultJson = result.toPrimitive() as any
     if (!(resultJson?.ok?.exitReason?.succeed === "Returned")) {
         console.error(resultJson)
         throw Error(
-            `Could not fetch balance for ${token}: ${JSON.stringify(resultJson?.ok?.exitReason)}`
+            `Could not fetch balance for ${token}: ${JSON.stringify(resultJson?.ok?.exitReason)}`,
         )
     }
     const retVal = MOONBEAM_ERC20.decodeFunctionResult(method, resultJson?.ok?.value)
@@ -60,13 +60,14 @@ export async function getMoonbeamEvmAssetMetadata(api: ApiPromise, method: strin
         null,
         null,
         false,
-        null
+        null,
+        null,
     )
     const resultJson = result.toPrimitive() as any
     if (!(resultJson?.ok?.exitReason?.succeed === "Returned")) {
         console.error(resultJson)
         throw Error(
-            `Could not fetch metadata for ${token}: ${JSON.stringify(resultJson?.ok?.exitReason)}`
+            `Could not fetch metadata for ${token}: ${JSON.stringify(resultJson?.ok?.exitReason)}`,
         )
     }
     const retVal = MOONBEAM_ERC20.decodeFunctionResult(method, resultJson?.ok?.value)
@@ -111,7 +112,7 @@ export class MoonbeamParachain extends ParachainBase {
         for (const [key, value] of foreignEntries) {
             const location = value.toJSON() as any
 
-            const assetId = BigInt(key.args.at(0)?.toPrimitive() as any)
+            const assetId = BigInt(key.args[0]?.toPrimitive() as any)
             const xc20 = toMoonbeamXC20(assetId)
 
             if (location.parents === 1 && location.interior.here !== undefined) {
@@ -141,5 +142,17 @@ export class MoonbeamParachain extends ParachainBase {
             }
         }
         return assets
+    }
+
+    swapAsset1ForAsset2(_asset1: any, _asset2: any, _exactAsset1Balance: bigint): Promise<bigint> {
+        throw Error(`${this.specName} does not support.`)
+    }
+
+    getAssetHubConversionPalletSwap(
+        asset1: any,
+        asset2: any,
+        exactAsset2Balance: bigint,
+    ): Promise<bigint> {
+        throw Error(`${this.specName} does not support.`)
     }
 }

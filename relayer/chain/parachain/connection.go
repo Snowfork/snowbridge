@@ -5,6 +5,7 @@ package parachain
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -93,7 +94,6 @@ func (co *Connection) ConnectWithHeartBeat(ctx context.Context, eg *errgroup.Gro
 					_, err := co.API().RPC.System.Version()
 					if err != nil {
 						log.WithField("endpoint", co.endpoint).Error("Connection heartbeat failed")
-						return err
 					}
 				}
 			}
@@ -132,4 +132,15 @@ func (co *Connection) GetLatestBlockNumber() (*types.BlockNumber, error) {
 	}
 
 	return &latestBlock.Block.Header.Number, nil
+}
+
+func (co *Connection) GenerateSubmitMessagePayload(payload *Message) (interface{}, error) {
+	runtimeSpecVersion, err := co.api.RPC.State.GetRuntimeVersionLatest()
+	if err != nil {
+		return nil, err
+	}
+	if strings.Contains(string(runtimeSpecVersion.SpecName), "westend") || (strings.Contains(string(runtimeSpecVersion.SpecName), "polkadot") && runtimeSpecVersion.SpecVersion >= 2_001_001) {
+		return ConvertToV2Message(payload)
+	}
+	return payload, nil
 }

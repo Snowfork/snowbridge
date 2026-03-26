@@ -41,13 +41,34 @@ echo "Deploying ethereum contracts"
 source scripts/deploy-contracts.sh
 deploy_contracts
 
-# 6. config substrate
+# 6. start beacon state service
+# The beacon state service is actually required for beacon checkpoint initialization, so it should be moved before that step.
+echo "Starting beacon state service"
+source scripts/deploy-beacon-state.sh
+deploy_beacon_state_service
+# Wait for beacon state service to be ready
+sleep 5
+
+# 7. config substrate
+# For beacon checkpoint initialization and other required setup for all tests.
 echo "Config Substrate"
 source scripts/configure-substrate.sh
 configure_substrate
 
+# 8. config others,
+# This mainly involves configuring Penpal for third-party parachain integrations
+# and running some advanced tests, which takes considerable time to set up.
+# Since most tests do not require this, we should make it optional to configure.
+# It can be run manually when needed.
+if [ "$skip_penpal_config" == "false" ]; then
+  echo "Config Others"
+  source scripts/configure-others.sh
+  configure_all
+fi
+
+# 9. start relayer
+# this is for daily relayer testing, can run it manually if needed
 if [ "$skip_relayer" == "false" ]; then
-  # 7. start relayer
   echo "Starting relayers"
   source scripts/start-relayer.sh
   deploy_relayer

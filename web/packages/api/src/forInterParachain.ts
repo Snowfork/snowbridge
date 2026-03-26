@@ -9,7 +9,7 @@ import {
     buildERC20ToAssetHubFromParachain,
     buildDepositAllAssetsWithTopic,
 } from "./xcmBuilder"
-import { Asset, AssetRegistry, Parachain, AssetMap } from "@snowbridge/base-types"
+import { Asset, AssetRegistry, Parachain } from "@snowbridge/base-types"
 import { beneficiaryMultiAddress, padFeeByPercentage } from "./utils"
 import { paraImplementation } from "./parachains"
 import { Context } from "."
@@ -21,7 +21,6 @@ import {
     XcmDryRunApiError,
     XcmDryRunEffects,
 } from "@polkadot/types/interfaces"
-import { ParachainBase } from "./parachains/parachainBase"
 import { u8aToHex } from "@polkadot/util"
 
 export type Transfer = {
@@ -57,18 +56,18 @@ function resolveInputs(
     registry: AssetRegistry,
     tokenAddress: string,
     sourceParaId: number,
-    destParaId: number
+    destParaId: number,
 ) {
-    const sourceParachain = registry.parachains[sourceParaId.toString()]
+    const sourceParachain = registry.parachains[`polkadot_${sourceParaId}`]
     if (!sourceParachain) {
         throw Error(`Could not find ${sourceParaId} in the asset registry.`)
     }
-    const destParachain = registry.parachains[destParaId.toString()]
+    const destParachain = registry.parachains[`polkadot_${destParaId}`]
     if (!destParachain) {
         throw Error(`Could not find ${destParaId} in the asset registry.`)
     }
 
-    if (destParachain.parachainId === sourceParachain.parachainId) {
+    if (destParachain.id === sourceParachain.id) {
         throw Error("Source and destination are the same.")
     }
 
@@ -96,7 +95,7 @@ export async function getDeliveryFee(
     tokenAddress: string,
     options?: {
         padPercentage?: bigint
-    }
+    },
 ): Promise<DeliveryFee> {
     const { sourceParachain, destParachain } =
         "sourceParaId" in connections
@@ -122,7 +121,7 @@ export async function getDeliveryFee(
             340282366920938463463374607431768211455n,
             340282366920938463463374607431768211455n,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "0x0000000000000000000000000000000000000000000000000000000000000000"
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
         )
     } else {
         xcm = buildERC20ToAssetHubFromParachain(
@@ -135,17 +134,17 @@ export async function getDeliveryFee(
             340282366920938463463374607431768211455n,
             340282366920938463463374607431768211455n,
             340282366920938463463374607431768211455n,
-            DOT_LOCATION
+            DOT_LOCATION,
         )
     }
 
     const deliveryFee = padFeeByPercentage(
         await source.calculateDeliveryFeeInDOT(destination.parachainId, xcm),
-        options?.padPercentage ?? 33n
+        options?.padPercentage ?? 33n,
     )
     const executionFee = padFeeByPercentage(
         await destination.calculateXcmFee(xcm, DOT_LOCATION),
-        options?.padPercentage ?? 33n
+        options?.padPercentage ?? 33n,
     )
 
     return {
@@ -163,7 +162,7 @@ export async function createTransfer(
     destinationParaId: number,
     tokenAddress: string,
     amount: bigint,
-    fee: DeliveryFee
+    fee: DeliveryFee,
 ): Promise<Transfer> {
     const { sourceParachain } =
         "sourceParaId" in connections
@@ -183,13 +182,14 @@ export async function createTransfer(
         sourceParachain: sourceParachainMeta,
         destParachain,
     } = resolveInputs(registry, tokenAddress, source.parachainId, destinationParaId)
-    let messageId = await buildMessageId(
-        sourceParachain,
+    const accountNonce = await source.accountNonce(sourceAccountHex)
+    let messageId = buildMessageId(
         source.parachainId,
         sourceAccountHex,
+        accountNonce,
         tokenAddress,
         beneficiaryAccount,
-        amount
+        amount,
     )
 
     const tx = createTx(
@@ -201,7 +201,7 @@ export async function createTransfer(
         messageId,
         amount,
         fee.totalFeeInDot,
-        source.parachainId === registry.assetHubParaId ? "LocalReserve" : "DestinationReserve"
+        source.parachainId === registry.assetHubParaId ? "LocalReserve" : "DestinationReserve",
     )
 
     return {
@@ -264,7 +264,7 @@ export async function validateTransfer(
     connections:
         | { context: Context; sourceParaId: number; destinationParaId: number }
         | { sourceParachain: ApiPromise; destParachain: ApiPromise },
-    transfer: Transfer
+    transfer: Transfer,
 ): Promise<ValidationResult> {
     const { sourceParachain, destParachain } =
         "sourceParaId" in connections
@@ -289,12 +289,12 @@ export async function validateTransfer(
     } = transfer.computed
     const { tx } = transfer
 
-    const nativeBalance = await source.getNativeBalance(sourceAccountHex)
+    const nativeBalance = await source.getNativeBalance(sourceAccountHex, true)
     const tokenBalance = await source.getTokenBalance(
         sourceAccountHex,
         registry.ethChainId,
         tokenAddress,
-        sourceAssetMetadata
+        sourceAssetMetadata,
     )
 
     const logs: ValidationLog[] = []
@@ -322,7 +322,6 @@ export async function validateTransfer(
         destinationParaId,
         transfer.tx,
         sourceAccountHex,
-        source.parachainId === registry.assetHubParaId
     )
     if (!dryRunSource.success) {
         logs.push({
@@ -336,7 +335,7 @@ export async function validateTransfer(
     const dryRunDestination = await dryRunXcm(
         destParachain,
         source.parachainId,
-        dryRunSource.forwardedXcm
+        dryRunSource.forwardedXcm,
     )
     if (!dryRunDestination.success) {
         logs.push({
@@ -347,12 +346,11 @@ export async function validateTransfer(
         dryRunError = dryRunDestination.errorMessage
 
         if (!destAssetMetadata.isSufficient) {
-            const { accountMaxConsumers, accountExists } = await validateAccount(
-                destination,
+            const { accountMaxConsumers, accountExists } = await destination.validateAccount(
                 beneficiaryAddressHex,
                 registry.ethChainId,
                 tokenAddress,
-                destAssetMetadata
+                destAssetMetadata,
             )
 
             if (accountMaxConsumers) {
@@ -415,7 +413,7 @@ export async function signAndSend(
     connections: { context: Context; sourceParaId: number } | { sourceParachain: ApiPromise },
     transfer: Transfer,
     account: AddressOrPair,
-    options: Partial<SignerOptions>
+    options: Partial<SignerOptions>,
 ): Promise<MessageReceipt> {
     const { sourceParachain } =
         "sourceParaId" in connections
@@ -473,30 +471,6 @@ export async function signAndSend(
     return result
 }
 
-async function validateAccount(
-    parachainImpl: ParachainBase,
-    beneficiaryAddress: string,
-    ethChainId: number,
-    tokenAddress: string,
-    assetMetadata?: Asset,
-    maxConsumers?: bigint
-) {
-    // Check if the account is created
-    const [beneficiaryAccount, beneficiaryTokenBalance] = await Promise.all([
-        parachainImpl.getNativeAccount(beneficiaryAddress),
-        parachainImpl.getTokenBalance(beneficiaryAddress, ethChainId, tokenAddress, assetMetadata),
-    ])
-    return {
-        accountExists: !(
-            beneficiaryAccount.consumers === 0n &&
-            beneficiaryAccount.providers === 0n &&
-            beneficiaryAccount.sufficients === 0n
-        ),
-        accountMaxConsumers:
-            beneficiaryAccount.consumers >= (maxConsumers ?? 63n) && beneficiaryTokenBalance === 0n,
-    }
-}
-
 function createTx(
     parachain: ApiPromise,
     ethChainId: number,
@@ -506,7 +480,7 @@ function createTx(
     messageId: string,
     amount: bigint,
     feeAmount: bigint,
-    reserveType: "LocalReserve" | "DestinationReserve"
+    reserveType: "LocalReserve" | "DestinationReserve",
 ): SubmittableExtrinsic<"promise", ISubmittableResult> {
     let assetLocation = erc20Location(ethChainId, tokenAddress)
     const assets = {
@@ -530,7 +504,7 @@ function createTx(
     const customXcm: any = buildDepositAllAssetsWithTopic(
         parachain.registry,
         beneficiaryAccount,
-        messageId
+        messageId,
     )
     return parachain.tx.polkadotXcm.transferAssetsUsingTypeAndThen(
         destination,
@@ -539,7 +513,7 @@ function createTx(
         feeAsset,
         reserveType,
         customXcm,
-        "Unlimited"
+        "Unlimited",
     )
 }
 
@@ -548,16 +522,15 @@ export async function dryRunTx(
     destParaId: number,
     tx: SubmittableExtrinsic<"promise", ISubmittableResult>,
     sourceAccount: string,
-    useNewVersion: boolean
 ) {
     const origin = { system: { signed: sourceAccount } }
     let result: Result<CallDryRunEffects, XcmDryRunApiError>
 
-    if (useNewVersion) {
+    try {
         result = await source.call.dryRunApi.dryRunCall<
             Result<CallDryRunEffects, XcmDryRunApiError>
         >(origin, tx, 4)
-    } else {
+    } catch {
         result = await source.call.dryRunApi.dryRunCall<
             Result<CallDryRunEffects, XcmDryRunApiError>
         >(origin, tx)
@@ -570,7 +543,7 @@ export async function dryRunTx(
             "Error during dry run on source parachain:",
             sourceAccount,
             tx.toHuman(),
-            result.toHuman(true)
+            result.toHuman(true),
         )
         let err =
             result.isOk && result.asOk.executionResult.isErr
@@ -585,7 +558,7 @@ export async function dryRunTx(
                     x[0].asV4.parents.toNumber() === 1 &&
                     x[0].asV4.interior.isX1 &&
                     x[0].asV4.interior.asX1[0].isParachain &&
-                    x[0].asV4.interior.asX1[0].asParachain.toNumber() === destParaId
+                    x[0].asV4.interior.asX1[0].asParachain.toNumber() === destParaId,
             )
             ?.toPrimitive() as any
     }

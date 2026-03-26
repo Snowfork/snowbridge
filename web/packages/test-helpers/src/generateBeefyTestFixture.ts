@@ -10,7 +10,7 @@ const generateValidatorProof = async (
     bitfieldFile: string,
     validatorProofFile: string,
     validatorSet: ValidatorSet,
-    commitHash: any
+    commitHash: any,
 ) => {
     const testFixture = JSON.parse(fs.readFileSync(bitfieldFile, "utf8"))
     const bitField = encoder.decode(["uint256[]"], testFixture.final.finalBitFieldRaw)[0]
@@ -19,16 +19,16 @@ const generateValidatorProof = async (
         finalBitfield.push(bitField[i])
     }
     const finalValidatorsProof: BeefyClient.ValidatorProofStruct[] = readSetBits(finalBitfield).map(
-        (i) => validatorSet.createSignatureProof(i, commitHash)
+        (i) => validatorSet.createSignatureProof(i, commitHash),
     )
     const finalValidatorsProofRaw = encoder.encode(
         ["tuple(uint8 v, bytes32 r, bytes32 s, uint256 index,address account,bytes32[] proof)[]"],
-        [finalValidatorsProof]
+        [finalValidatorsProof],
     )
     fs.writeFileSync(
         validatorProofFile,
         JSON.stringify({ finalValidatorsProof, finalValidatorsProofRaw }, null, 2),
-        "utf8"
+        "utf8",
     )
     console.log("Beefy fixture writing to dest file: " + validatorProofFile)
 }
@@ -36,7 +36,7 @@ const generateValidatorProof = async (
 const run = async () => {
     const basedir = process.env.contract_dir || "../../../contracts"
     const fixtureData = JSON.parse(
-        fs.readFileSync(path.join(basedir, "test/data/beefy-commitment.json"), "utf8")
+        fs.readFileSync(path.join(basedir, "test/data/beefy-commitment.json"), "utf8"),
     )
     const ValidatorSetFile = path.join(basedir, "test/data/beefy-validator-set.json")
     const BitFieldFile = path.join(basedir, "test/data/beefy-final-bitfield.json")
@@ -44,7 +44,7 @@ const run = async () => {
     const fiatShamirBitFieldFile = path.join(basedir, "test/data/beefy-fiat-shamir-bitfield.json")
     const fiatShamirValidatorProofFile = path.join(
         basedir,
-        "test/data/beefy-fiat-shamir-proof.json"
+        "test/data/beefy-fiat-shamir-proof.json",
     )
 
     const command = process.argv[2]
@@ -53,15 +53,15 @@ const run = async () => {
         process.env["FIX_SET_SIZE"] == "true"
             ? accounts.length
             : process.env["VALIDATOR_SET_SIZE"]
-            ? parseInt(process.env["VALIDATOR_SET_SIZE"])
-            : 600
+              ? parseInt(process.env["VALIDATOR_SET_SIZE"])
+              : 600
     const commitHash = fixtureData.commitmentHash
     let validatorSet: ValidatorSet
     if (process.env["FixedSet"] == "true") {
         validatorSet = new ValidatorSet(
             validatorSetID,
             validatorSetSize,
-            accounts.map((account) => account.privateKey)
+            accounts.map((account) => account.privateKey),
         )
     } else {
         validatorSet = new ValidatorSet(validatorSetID, validatorSetSize)
@@ -87,7 +87,7 @@ const run = async () => {
             fiatShamirBitFieldFile,
             fiatShamirValidatorProofFile,
             validatorSet,
-            commitHash
+            commitHash,
         )
     }
 }

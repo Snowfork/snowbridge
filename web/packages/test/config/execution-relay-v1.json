@@ -9,14 +9,14 @@
     "channel-id": null,
     "beacon": {
       "endpoint": "http://127.0.0.1:9596",
-      "stateEndpoint": "http://127.0.0.1:9596",
+      "stateServiceEndpoint": "http://127.0.0.1:8080",
       "spec": {
         "syncCommitteeSize": 512,
         "slotsInEpoch": 32,
         "epochsPerSyncCommitteePeriod": 256,
         "forkVersions": {
-          "deneb": 0,
-          "electra": 0
+          "electra": 0,
+          "fulu": 0
         }
       },
       "datastore": {
@@ -34,13 +34,9 @@
     "ss58Prefix": 1
   },
   "instantVerification": false,
-  "schedule": {
-    "id": null,
-    "totalRelayerCount": 1,
-    "sleepInterval": 20
-  },
   "ofac": {
     "enabled": false,
     "apiKey": ""
-  }
+  },
+  "fetch-interval": 5
 }

@@ -1,5 +1,4 @@
-import { PNAMap } from "../assets_v2"
-import { AssetMap } from "@snowbridge/base-types"
+import { AssetMap, PNAMap } from "@snowbridge/base-types"
 import { ParachainBase } from "./parachainBase"
 import { DOT_LOCATION, getTokenFromLocation, ROCOCO_GENESIS, WESTEND_GENESIS } from "../xcmBuilder"
 
@@ -23,7 +22,7 @@ export class AssetHubParachain extends ParachainBase {
     }
 
     getDotBalance(account: string): Promise<bigint> {
-        return this.getNativeBalance(account)
+        return this.getNativeBalance(account, true)
     }
 
     getAssets(ethChainId: number, pnas: PNAMap): Promise<AssetMap> {
@@ -34,17 +33,17 @@ export class AssetHubParachain extends ParachainBase {
         ethChainId: number,
         enaFilter: (address: string) => boolean,
         pnas: PNAMap,
-        pnaFilter: (location: any, assetHubParaId: number, env: string) => any
+        pnaFilter: (location: any, assetHubParaId: number, env: string) => any,
     ) {
         const assets: AssetMap = {}
         // ERC20
         {
             const entries = await this.provider.query.foreignAssets.asset.entries()
             for (const [key, value] of entries) {
-                const location: any = key.args.at(0)?.toJSON()
+                const location: any = key.args[0]?.toJSON()
                 if (!location) {
                     console.warn(
-                        `Could not convert ${key.toHuman()} to location for ${this.specName}.`
+                        `Could not convert ${key.toHuman()} to location for ${this.specName}.`,
                     )
                     continue
                 }
@@ -55,7 +54,7 @@ export class AssetHubParachain extends ParachainBase {
                 const isBridgeable = enaFilter(token)
                 if (!isBridgeable) {
                     console.warn(
-                        `Location ${JSON.stringify(token)} is filtered out on ${this.specName}`
+                        `Location ${JSON.stringify(token)} is filtered out on ${this.specName}`,
                     )
                     continue
                 }
@@ -78,18 +77,18 @@ export class AssetHubParachain extends ParachainBase {
         // PNA
         {
             for (const { token, foreignId, ethereumlocation } of Object.keys(pnas).map(
-                (p) => pnas[p]
+                (p) => pnas[p],
             )) {
                 const locationOnAH: any = pnaFilter(
                     ethereumlocation,
                     this.parachainId,
-                    this.specName
+                    this.specName,
                 )
                 if (!locationOnAH) {
                     console.warn(
                         `Location ${JSON.stringify(ethereumlocation)} is not bridgeable on ${
                             this.specName
-                        }`
+                        }`,
                     )
                     continue
                 }
@@ -139,7 +138,7 @@ export class AssetHubParachain extends ParachainBase {
                 } else {
                     let assetType = this.provider.registry.createType(
                         "StagingXcmV4Location",
-                        locationOnAH
+                        locationOnAH,
                     )
                     let [assetInfo, assetMeta] = (
                         await Promise.all([
@@ -151,7 +150,7 @@ export class AssetHubParachain extends ParachainBase {
                         // Query assets using XCM V5, if XCM V4 did not return anything
                         assetType = this.provider.registry.createType(
                             "StagingXcmV5Location",
-                            locationOnAH
+                            locationOnAH,
                         )
                         assetInfo = (
                             await this.provider.query.foreignAssets.asset(assetType)
@@ -163,8 +162,8 @@ export class AssetHubParachain extends ParachainBase {
                         if (!assetInfo) {
                             console.warn(
                                 `Asset '${JSON.stringify(
-                                    locationOnAH
-                                )}' is not a registered foreign asset on ${this.specName}.`
+                                    locationOnAH,
+                                )}' is not a registered foreign asset on ${this.specName}.`,
                             )
                             continue
                         }
@@ -186,6 +185,46 @@ export class AssetHubParachain extends ParachainBase {
             }
         }
         return assets
+    }
+
+    async swapAsset1ForAsset2(asset1: any, asset2: any, exactAsset1Balance: bigint) {
+        const result = await this.provider.call.assetConversionApi.quotePriceExactTokensForTokens(
+            asset1,
+            asset2,
+            exactAsset1Balance,
+            true,
+        )
+        const asset2Balance = result.toPrimitive() as any
+        if (asset2Balance == null) {
+            throw Error(
+                `No pool set up in asset conversion pallet for '${JSON.stringify(
+                    asset1,
+                )}' and '${JSON.stringify(asset2)}'.`,
+            )
+        }
+        return BigInt(asset2Balance)
+    }
+
+    async getAssetHubConversionPalletSwap(
+        asset1: any,
+        asset2: any,
+        exactAsset2Balance: bigint,
+    ): Promise<bigint> {
+        const result = await this.provider.call.assetConversionApi.quotePriceTokensForExactTokens(
+            asset1,
+            asset2,
+            exactAsset2Balance,
+            true,
+        )
+        const asset1Balance = result.toPrimitive() as any
+        if (asset1Balance == null) {
+            throw Error(
+                `No pool set up in asset conversion pallet for '${JSON.stringify(
+                    asset1,
+                )}' and '${JSON.stringify(asset2)}'.`,
+            )
+        }
+        return BigInt(asset1Balance)
     }
 }
 

@@ -12,41 +12,23 @@
     "contracts": {
       "BeefyClient": null,
       "Gateway": null
-    },
-    "beacon": {
-      "endpoint": "http://127.0.0.1:9596",
-      "stateEndpoint": "http://127.0.0.1:9596",
-      "spec": {
-        "syncCommitteeSize": 512,
-        "slotsInEpoch": 32,
-        "epochsPerSyncCommitteePeriod": 256,
-        "forkVersions": {
-          "deneb": 0,
-          "electra": 0
-        }
-      },
-      "datastore": {
-        "location": "/tmp/snowbridge-v2/beaconstore",
-        "maxEntries": 100
-      }
     }
   },
   "sink": {
     "ethereum": {
       "endpoint": "ws://127.0.0.1:8546",
-      "gas-limit": null,
-      "base-delivery-gas": 100000,
-      "base-unlock-gas": 60000,
-      "base-mint-gas": 60000
+      "gas-limit": null
     },
     "contracts": {
       "Gateway": null
+    },
+    "fees": {
+      "base-delivery-gas": 100000,
+      "base-unlock-gas": 200000,
+      "base-mint-gas": 100000,
+      "fee-ratio-numerator": 2,
+      "fee-ratio-denominator": 3
     }
-  },
-  "schedule": {
-    "id": 0,
-    "totalRelayerCount": 1,
-    "sleepInterval": 45
   },
   "reward-address": "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d",
   "ofac": {

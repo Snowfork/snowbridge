@@ -1,5 +1,4 @@
-import { PNAMap } from "../assets_v2"
-import { AssetMap } from "@snowbridge/base-types"
+import { AssetMap, PNAMap } from "@snowbridge/base-types"
 import { ParachainBase } from "./parachainBase"
 import { convertToXcmV3X1, getTokenFromLocation } from "../xcmBuilder"
 
@@ -42,7 +41,7 @@ export class AcalaParachain extends ParachainBase {
                 continue
             }
 
-            const assetId: any = value.args.at(0)?.toPrimitive()
+            const assetId: any = value.args[0]?.toPrimitive()
             const asset: any = (
                 await this.provider.query.assetRegistry.assetMetadatas({ foreignAssetId: assetId })
             ).toPrimitive()
@@ -59,18 +58,23 @@ export class AcalaParachain extends ParachainBase {
         return assets
     }
 
-    // Acala does not support xcm fee payment queries
-    async calculateXcmFee(_destinationXcm: any, asset: any): Promise<bigint> {
-        console.warn(
-            `${this.specName} does not support calculating fee with asset '${JSON.stringify(
-                asset
-            )}'. Using default.`
-        )
-
-        return 300_000_000n
+    async calculateDeliveryFeeInDOT(_destParachainId: number, _xcm: any): Promise<bigint> {
+        throw Error(`${this.specName} does not support.`)
     }
 
-    async calculateDeliveryFeeInDOT(_destParachainId: number, _xcm: any): Promise<bigint> {
+    async swapAsset1ForAsset2(
+        _asset1: any,
+        _asset2: any,
+        _exactAsset1Balance: bigint,
+    ): Promise<bigint> {
+        throw Error(`${this.specName} does not support.`)
+    }
+
+    getAssetHubConversionPalletSwap(
+        asset1: any,
+        asset2: any,
+        exactAsset2Balance: bigint,
+    ): Promise<bigint> {
         throw Error(`${this.specName} does not support.`)
     }
 }

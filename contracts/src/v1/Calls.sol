@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.28;
+pragma solidity 0.8.34;
 
 import {IERC20} from "../interfaces/IERC20.sol";
 import {SafeNativeTransfer, SafeTokenTransferFrom} from "../utils/SafeTransfer.sol";
@@ -11,24 +11,12 @@ import {PricingStorage} from "../storage/PricingStorage.sol";
 import {SubstrateTypes} from "../SubstrateTypes.sol";
 import {MultiAddress} from "./MultiAddress.sol";
 import {Address} from "../utils/Address.sol";
-import {AgentExecutor} from "../AgentExecutor.sol";
-import {Agent} from "../Agent.sol";
-import {Call} from "../utils/Call.sol";
 import {Token} from "../Token.sol";
 import {Functions} from "../Functions.sol";
-import {
-    TokenInfo,
-    OperatingMode,
-    ParaID,
-    Channel,
-    ChannelID,
-    AgentExecuteCommand,
-    Ticket,
-    Costs
-} from "./Types.sol";
+import {OperatingMode, ParaID, Channel, ChannelID, Ticket, Costs} from "./Types.sol";
 import {IGatewayBase} from "../interfaces/IGatewayBase.sol";
 import {IGatewayV1} from "./IGateway.sol";
-import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
+import {UD60x18, convert} from "prb/math/src/UD60x18.sol";
 
 /// @title Library for implementing Ethereum->Polkadot ERC20 transfers.
 library CallsV1 {
@@ -65,32 +53,6 @@ library CallsV1 {
     /*
     * External API
     */
-
-    /// @dev Registers a token (only native tokens at this time)
-    /// @param token The ERC20 token address.
-    function registerToken(address token) external {
-        AssetsStorage.Layout storage $ = AssetsStorage.layout();
-
-        // NOTE: Explicitly allow a token to be re-registered. This offers resiliency
-        // in case a previous registration attempt of the same token failed on the remote side.
-        // It means that registration can be retried.
-        Functions.registerNativeToken(token);
-
-        Ticket memory ticket = Ticket({
-            dest: $.assetHubParaID,
-            costs: _registerTokenCosts(),
-            payload: SubstrateTypes.RegisterToken(token, $.assetHubCreateAssetFee),
-            value: 0
-        });
-
-        emit IGatewayBase.TokenRegistrationSent(token);
-
-        _submitOutbound(ticket);
-    }
-
-    function quoteRegisterTokenFee() external view returns (uint256) {
-        return _calculateFee(_registerTokenCosts());
-    }
 
     function sendToken(
         address token,
@@ -246,10 +208,6 @@ library CallsV1 {
         );
     }
 
-    function isTokenRegistered(address token) external view returns (bool) {
-        return AssetsStorage.layout().tokenRegistry[token].isRegistered;
-    }
-
     function _sendTokenCosts(ParaID destinationChain, uint128 destinationChainFee)
         internal
         view
@@ -380,20 +338,5 @@ library CallsV1 {
         }
 
         emit IGatewayV1.TokenSent(token, sender, destinationChain, destinationAddress, amount);
-    }
-
-    function _registerTokenCosts() internal view returns (Costs memory costs) {
-        AssetsStorage.Layout storage $ = AssetsStorage.layout();
-
-        // Cost of registering this asset on AssetHub
-        costs.foreign = $.assetHubCreateAssetFee;
-
-        // Extra fee to prevent spamming
-        costs.native = $.registerTokenFee;
-    }
-
-    function _isTokenRegistered(address token) internal view returns (bool) {
-        AssetsStorage.Layout storage $ = AssetsStorage.layout();
-        return $.tokenRegistry[token].isRegistered;
     }
 }

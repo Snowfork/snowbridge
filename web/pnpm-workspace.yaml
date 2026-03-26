@@ -7,3 +7,4 @@ packages:
   - "packages/registry"
   - "packages/test-helpers"
   - "packages/operations"
+minimumReleaseAge: 259200

@@ -1,4 +1,4 @@
-import { AssetRegistry } from "@snowbridge/base-types"
+import { AssetRegistry, ContractCall } from "@snowbridge/base-types"
 import { DeliveryFee, Transfer, ValidationResult } from "../../toEthereum_v2"
 import { Context } from "../../index"
 
@@ -13,8 +13,9 @@ export interface TransferInterface {
             defaultFee?: bigint
             feeTokenLocation?: any
             claimerLocation?: any
+            contractCall?: ContractCall
             accelerated?: boolean
-        }
+        },
     ): Promise<DeliveryFee>
 
     createTransfer(
@@ -25,7 +26,10 @@ export interface TransferInterface {
         tokenAddress: string,
         amount: bigint,
         fee: DeliveryFee,
-        claimerLocation?: any
+        options?: {
+            claimerLocation?: any
+            contractCall?: ContractCall
+        },
     ): Promise<Transfer>
 
     validateTransfer(context: Context, transfer: Transfer): Promise<ValidationResult>

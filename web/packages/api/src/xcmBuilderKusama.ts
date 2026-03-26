@@ -23,7 +23,7 @@ export function buildTransferKusamaToPolkadotExportXCM(
     destAssetHubParaId: number,
     transferAmount: bigint,
     beneficiary: string,
-    topic: string
+    topic: string,
 ) {
     let withdrawAssetsOnSource: any[] = [
         {
@@ -152,7 +152,7 @@ export function buildPolkadotToKusamaDestAssetHubXCM(
     transferTokenLocation: any,
     transferAmount: bigint,
     beneficiary: string,
-    topic: string
+    topic: string,
 ) {
     let withdrawAssets: any[] = []
     let reserveAssetsDeposited = [
@@ -240,7 +240,7 @@ export function buildKusamaToPolkadotDestAssetHubXCM(
     transferTokenLocation: any,
     transferAmount: bigint,
     beneficiary: string,
-    topic: string
+    topic: string,
 ) {
     let withdrawAssets: any[] = []
     let reserveAssetsDeposited = [
@@ -332,7 +332,7 @@ export function buildTransferPolkadotToKusamaExportXCM(
     destAssetHubParaId: number,
     transferAmount: bigint,
     beneficiary: string,
-    topic: string
+    topic: string,
 ) {
     let withdrawAssetsOnSource: any[] = [
         {

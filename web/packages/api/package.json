@@ -1,6 +1,6 @@
 {
   "name": "@snowbridge/api",
-  "version": "0.2.0",
+  "version": "0.4.0",
   "description": "Snowbridge API client",
   "license": "Apache-2.0",
   "repository": {
@@ -16,26 +16,25 @@
     "format": "prettier src --write"
   },
   "devDependencies": {
-    "@types/node": "^18.19.31",
-    "@typescript-eslint/eslint-plugin": "^5.62.0",
-    "@typescript-eslint/parser": "^5.62.0",
-    "eslint": "^8.57.0",
-    "eslint-config-prettier": "^8.10.0",
-    "prettier": "^2.8.8",
-    "ts-node": "^10.9.2",
-    "tsconfig-paths": "^4.2.0",
-    "typescript": "^5.4.5"
+    "@typechain/ethers-v6": "0.5.1",
+    "@types/node": "24.6.2",
+    "@typescript-eslint/eslint-plugin": "8.45.0",
+    "@typescript-eslint/parser": "8.45.0",
+    "eslint": "9.37.0",
+    "eslint-config-prettier": "10.1.8",
+    "prettier": "3.6.2",
+    "ts-node": "10.9.2",
+    "tsconfig-paths": "4.2.0",
+    "typescript": "5.9.3"
   },
   "dependencies": {
-    "@polkadot/api": "^15.10.2",
-    "@polkadot/keyring": "^13.4.4",
-    "@polkadot/types": "^15.10.2",
-    "@polkadot/util": "^13.4.4",
-    "@polkadot/util-crypto": "^13.4.4",
+    "@polkadot/api": "16.5.4",
+    "@polkadot/keyring": "14.0.1",
+    "@polkadot/types": "16.5.4",
+    "@polkadot/util": "14.0.1",
+    "@polkadot/util-crypto": "14.0.1",
     "@snowbridge/base-types": "workspace:*",
     "@snowbridge/contract-types": "workspace:*",
-    "@typechain/ethers-v6": "^0.5.1",
-    "ethers": "^6.13.5",
-    "rxjs": "^7.8.1"
+    "ethers": "6.16.0"
   }
 }
