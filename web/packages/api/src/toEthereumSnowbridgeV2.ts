@@ -462,7 +462,6 @@ export const estimateFeesFromParachains = async (
         assetHubExecutionFeeDOT +
         bridgeHubDeliveryFeeDOT
 
-    const accelerated = options?.accelerated ?? false
     let ethereumExecutionFee = await estimateEthereumExecutionFee(
         context,
         registry,
