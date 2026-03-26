@@ -251,10 +251,10 @@ export const estimateEthereumExecutionFee = async (
     let feeData = await ethereum.getFeeData()
     let ethereumExecutionFee =
         (feeData.gasPrice ?? 2_000_000_000n) *
-            ((tokenErcMetadata.deliveryGas ?? 80_000n) +
-                (ethereumChain.baseDeliveryGas ?? 120_000n) +
-                (options?.contractCall?.gas ?? 0n) +
-                (options?.accelerated ? (ethereumChain.submitFiatShamirGas ?? 2_000_000n) : 0n))
+        ((tokenErcMetadata.deliveryGas ?? 100_000n) +
+            (ethereumChain.baseDeliveryGas ?? 120_000n) +
+            (options?.contractCall?.gas ?? 0n) +
+            (options?.accelerated ? (ethereumChain.submitFiatShamirGas ?? 2_200_000n) : 0n))
     return ethereumExecutionFee
 }
 
