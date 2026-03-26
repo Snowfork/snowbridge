@@ -151,21 +151,6 @@ func (wr *EthereumWriter) submit(ctx context.Context, task *Request) error {
 		return fmt.Errorf("Failed to wait for RandaoCommitDelay: %w", err)
 	}
 
-	state, err := wr.queryBeefyClientState(ctx)
-	if err != nil {
-		return fmt.Errorf("query beefy client state: %w", err)
-	}
-
-	// Ignore beefy block already synced
-	if uint64(task.SignedCommitment.Commitment.BlockNumber) <= state.LatestBeefyBlock {
-		log.WithFields(log.Fields{
-			"validatorSetID": state.CurrentValidatorSetID,
-			"beefyBlock":     state.LatestBeefyBlock,
-			"relayBlock":     task.SignedCommitment.Commitment.BlockNumber,
-		}).Info("Beefy block already synced, just ignore")
-		return nil
-	}
-
 	commitmentHash, err := task.CommitmentHash()
 	if err != nil {
 		return fmt.Errorf("generate commitment hash: %w", err)
@@ -189,6 +174,20 @@ func (wr *EthereumWriter) submit(ctx context.Context, task *Request) error {
 	}
 	// Commit PrevRandao which will be used as seed to randomly select subset of validators
 	// https://github.com/Snowfork/snowbridge/blob/75a475cbf8fc8e13577ad6b773ac452b2bf82fbb/contracts/contracts/BeefyClient.sol#L446-L447
+	state, err := wr.queryBeefyClientState(ctx)
+	if err != nil {
+		return fmt.Errorf("query beefy client state: %w", err)
+	}
+
+	// Ignore beefy block already synced
+	if uint64(task.SignedCommitment.Commitment.BlockNumber) <= state.LatestBeefyBlock {
+		log.WithFields(log.Fields{
+			"validatorSetID": state.CurrentValidatorSetID,
+			"beefyBlock":     state.LatestBeefyBlock,
+			"relayBlock":     task.SignedCommitment.Commitment.BlockNumber,
+		}).Info("Beefy block already synced, just ignore")
+		return nil
+	}
 	tx, err = wr.contract.CommitPrevRandao(
 		wr.conn.MakeTxOpts(ctx),
 		*commitmentHash,
@@ -225,6 +224,20 @@ func (wr *EthereumWriter) submit(ctx context.Context, task *Request) error {
 		return nil
 	}
 	// Final submission
+	state, err = wr.queryBeefyClientState(ctx)
+	if err != nil {
+		return fmt.Errorf("query beefy client state: %w", err)
+	}
+
+	// Ignore beefy block already synced
+	if uint64(task.SignedCommitment.Commitment.BlockNumber) <= state.LatestBeefyBlock {
+		log.WithFields(log.Fields{
+			"validatorSetID": state.CurrentValidatorSetID,
+			"beefyBlock":     state.LatestBeefyBlock,
+			"relayBlock":     task.SignedCommitment.Commitment.BlockNumber,
+		}).Info("Beefy block already synced, just ignore")
+		return nil
+	}
 	tx, err = wr.doSubmitFinal(ctx, *commitmentHash, initialBitfield, task)
 	if err != nil {
 		if isDuplicateBeefyError(err) {
