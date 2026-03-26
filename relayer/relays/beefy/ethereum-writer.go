@@ -151,21 +151,6 @@ func (wr *EthereumWriter) submit(ctx context.Context, task *Request) error {
 		return fmt.Errorf("Failed to wait for RandaoCommitDelay: %w", err)
 	}
 
-	state, err := wr.queryBeefyClientState(ctx)
-	if err != nil {
-		return fmt.Errorf("query beefy client state: %w", err)
-	}
-
-	// Ignore beefy block already synced
-	if uint64(task.SignedCommitment.Commitment.BlockNumber) <= state.LatestBeefyBlock {
-		log.WithFields(log.Fields{
-			"validatorSetID": state.CurrentValidatorSetID,
-			"beefyBlock":     state.LatestBeefyBlock,
-			"relayBlock":     task.SignedCommitment.Commitment.BlockNumber,
-		}).Info("Beefy block already synced, just ignore")
-		return nil
-	}
-
 	commitmentHash, err := task.CommitmentHash()
 	if err != nil {
 		return fmt.Errorf("generate commitment hash: %w", err)
