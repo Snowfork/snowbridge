@@ -11,6 +11,10 @@
         derive = "codec::CompactAs"
     ),
     derive_for_type(
+        path = "sp_arithmetic::per_things::PerU16",
+        derive = "codec::CompactAs"
+    ),
+    derive_for_type(
         path = "polkadot_parachain_primitives::primitives::Id",
         derive = "codec::CompactAs"
     )

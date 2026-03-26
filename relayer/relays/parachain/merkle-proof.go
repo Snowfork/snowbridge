@@ -1,4 +1,4 @@
-package parachain
+package parachainv1
 
 import (
 	"encoding/hex"
@@ -11,7 +11,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
 )
 
-// ByParaID implements sort.Interface based on the LeafIndex field.
+// ByLeafIndex implements sort.Interface based on the LeafIndex field.
 type ByParaID []relaychain.ParaHead
 
 func (b ByParaID) Len() int           { return len(b) }
@@ -70,7 +70,8 @@ func (d MerkleProofData) String() string {
 }
 
 func CreateParachainMerkleProof(heads []relaychain.ParaHead, paraID uint32) (MerkleProofData, error) {
-	// sort slice by para ID
+	// sort slice by para ID, sorting is still necessary to mirror the logic in https://github.com/polkadot-fellows/runtimes/pull/1073
+	// as they change para_heads to a BTreeMap which is inherently ascending order by key (para ID)
 	sort.Sort(ByParaID(heads))
 
 	// loop headers, convert to pre leaves and find header being proven

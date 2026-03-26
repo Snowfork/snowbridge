@@ -63,7 +63,8 @@ build_contracts() {
 build_relayer() {
     echo "Building relayer v2"
     mage -d "$relay_dir" build
-    cp $relay_bin "$output_bin_dir/snowbridge-relay-v2"
+    rm -rf $relayer
+    cp $relay_bin $relayer
 }
 
 set_slot_time() {
@@ -85,7 +86,7 @@ build_lodestar() {
         else
             set_slot_time 12000
         fi
-        yarn install && yarn run build
+        pnpm install && pnpm build
         popd
     fi
 }
@@ -97,19 +98,6 @@ build_web_packages() {
         pnpm build
         popd
     fi
-}
-
-build_v1() {
-    if [ ! -d $v1_root_dir ]; then
-        git clone -b snowbridge-v1 https://github.com/snowfork/snowbridge/ $v1_root_dir
-    fi
-    pushd $v1_contract_dir
-    forge build
-    popd
-    pushd $v1_relay_dir
-    mage build
-    cp $v1_relay_dir/build/snowbridge-relay "$output_bin_dir/snowbridge-relay-v1"
-    popd
 }
 
 build_gas_estimator() {
@@ -126,8 +114,12 @@ install_binary() {
     build_contracts
     build_relayer
     build_web_packages
-    build_v1
-    build_gas_estimator
+    # Ideally, the gas estimator build should be run once the setup is ready, make it optional
+    # and can run it manually if needed
+    if [ "$skip_build_gas_estimator" == "false" ]; then
+        echo "Building gas estimator"
+        build_gas_estimator
+    fi
 }
 
 if [ -z "${from_start_services:-}" ]; then

@@ -4,4 +4,4 @@ dist
 config
 .env.*
 !.env.example
-tsconfig.tsbuildinfo
+*.tsbuildinfo

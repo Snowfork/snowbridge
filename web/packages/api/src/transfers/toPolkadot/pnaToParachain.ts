@@ -17,20 +17,18 @@ import {
     ValidationKind,
     ValidationResult,
 } from "../../toPolkadotSnowbridgeV2"
-import { accountId32Location, DOT_LOCATION, erc20Location } from "../../xcmBuilder"
+import { accountId32Location, DOT_LOCATION, erc20Location, isDOT } from "../../xcmBuilder"
 import { paraImplementation } from "../../parachains"
-import {
-    erc20Balance,
-    ETHER_TOKEN_ADDRESS,
-    swapAsset1ForAsset2,
-    validateAccount,
-} from "../../assets_v2"
+import { erc20Balance, ETHER_TOKEN_ADDRESS } from "../../assets_v2"
 import { beneficiaryMultiAddress, padFeeByPercentage, paraIdToSovereignAccount } from "../../utils"
 import { FeeInfo, resolveInputs, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
 import {
     buildAssetHubPNAReceivedXcm,
+    buildAssetHubPNAReceivedXcmWithDOTFee,
     buildParachainPNAReceivedXcmOnDestination,
+    buildParachainPNAReceivedXcmOnDestinationWithDOTFee,
     sendMessageXCM,
+    sendMessageXCMWithDOTDestFee,
 } from "../../xcmbuilders/toPolkadot/pnaToParachain"
 import { AbstractProvider, Contract } from "ethers"
 import { getOperatingStatus } from "../../status"
@@ -93,10 +91,6 @@ export class PNAToParachain implements TransferInterface {
         const paddFeeByPercentage = options?.paddFeeByPercentage
         const feeAsset = options?.feeAsset || ether
 
-        if (feeAsset !== ether) {
-            throw new Error("only ether is supported as fee asset in this version of the API")
-        }
-
         // Delivery fee BridgeHub to AssetHub
         const deliveryFeeInDOT = await bridgeHubImpl.calculateDeliveryFeeInDOT(
             registry.assetHubParaId,
@@ -105,67 +99,102 @@ export class PNAToParachain implements TransferInterface {
         // AssetHub execution fee
         let assetHubExecutionFeeDOT = await assetHubImpl.calculateXcmFee(assetHubXcm, DOT_LOCATION)
         // Swap to ether
-        const deliveryFeeInEther = await swapAsset1ForAsset2(
-            assetHub,
+        const deliveryFeeInEther = await assetHubImpl.swapAsset1ForAsset2(
             DOT_LOCATION,
             ether,
             deliveryFeeInDOT,
         )
         let assetHubExecutionFeeEther = padFeeByPercentage(
-            await swapAsset1ForAsset2(assetHub, DOT_LOCATION, ether, assetHubExecutionFeeDOT),
+            await assetHubImpl.swapAsset1ForAsset2(DOT_LOCATION, ether, assetHubExecutionFeeDOT),
             paddFeeByPercentage ?? 33n,
         )
 
         // Destination fees
-        let destinationXcm = buildParachainPNAReceivedXcmOnDestination(
-            destination.registry,
-            registry.ethChainId,
-            destAssetMetadata.location,
-            340282366920938463463374607431768211455n,
-            340282366920938463463374607431768211455n,
-            destParachain.info.accountType === "AccountId32"
-                ? "0x0000000000000000000000000000000000000000000000000000000000000000"
-                : "0x0000000000000000000000000000000000000000",
-            "0x0000000000000000000000000000000000000000000000000000000000000000",
-            options?.customXcm,
-        )
+        let destinationXcm: any
+        if (isDOT(feeAsset)) {
+            destinationXcm = buildParachainPNAReceivedXcmOnDestinationWithDOTFee(
+                destination.registry,
+                registry.ethChainId,
+                destAssetMetadata.location,
+                340282366920938463463374607431768211455n,
+                340282366920938463463374607431768211455n,
+                destParachain.info.accountType === "AccountId32"
+                    ? "0x0000000000000000000000000000000000000000000000000000000000000000"
+                    : "0x0000000000000000000000000000000000000000",
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
+                options?.customXcm,
+            )
+        } else {
+            destinationXcm = buildParachainPNAReceivedXcmOnDestination(
+                destination.registry,
+                registry.ethChainId,
+                destAssetMetadata.location,
+                340282366920938463463374607431768211455n,
+                340282366920938463463374607431768211455n,
+                destParachain.info.accountType === "AccountId32"
+                    ? "0x0000000000000000000000000000000000000000000000000000000000000000"
+                    : "0x0000000000000000000000000000000000000000",
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
+                options?.customXcm,
+            )
+        }
         const destinationImpl = await paraImplementation(destination)
         // Delivery fee AssetHub to Destination
         let destinationDeliveryFeeDOT = await assetHubImpl.calculateDeliveryFeeInDOT(
             destinationParaId,
             destinationXcm,
         )
-        // Destination execution fee
-        let destinationExecutionFeeDOT = await destinationImpl.calculateXcmFee(
-            destinationXcm,
-            DOT_LOCATION,
-        )
-
         // Swap to ether
-        const destinationDeliveryFeeEther = await swapAsset1ForAsset2(
-            assetHub,
+        const destinationDeliveryFeeEther = await assetHubImpl.swapAsset1ForAsset2(
             DOT_LOCATION,
             ether,
             destinationDeliveryFeeDOT,
         )
-        let destinationExecutionFeeEther = padFeeByPercentage(
-            await swapAsset1ForAsset2(assetHub, DOT_LOCATION, ether, destinationExecutionFeeDOT),
-            paddFeeByPercentage ?? 33n,
-        )
+
+        let destinationExecutionFeeEther
+        let destinationExecutionFeeDOT
+        if (isDOT(feeAsset)) {
+            // Calculate ether fee on AssetHub, because that is where Ether will be swapped for DOT.
+            // Destination execution fee
+            destinationExecutionFeeDOT = await destinationImpl.calculateXcmFee(
+                destinationXcm,
+                DOT_LOCATION,
+            )
+            destinationExecutionFeeEther = padFeeByPercentage(
+                await assetHubImpl.swapAsset1ForAsset2(
+                    DOT_LOCATION,
+                    ether,
+                    destinationExecutionFeeDOT,
+                ),
+                paddFeeByPercentage ?? 33n,
+            )
+        } else if (feeAsset == ether) {
+            destinationExecutionFeeEther = padFeeByPercentage(
+                await destinationImpl.calculateXcmFee(destinationXcm, ether),
+                paddFeeByPercentage ?? 33n,
+            )
+        } else {
+            throw Error(`Unsupported fee asset`)
+        }
 
         const { relayerFee, extrinsicFeeDot, extrinsicFeeEther } = await calculateRelayerFee(
-            assetHub,
+            assetHubImpl,
             registry.ethChainId,
             options?.overrideRelayerFee,
             deliveryFeeInEther,
         )
 
-        const totalFeeInWei = assetHubExecutionFeeEther + relayerFee
+        const totalFeeInWei =
+            assetHubExecutionFeeEther +
+            destinationDeliveryFeeEther +
+            destinationExecutionFeeEther +
+            relayerFee
         return {
             assetHubDeliveryFeeEther: deliveryFeeInEther,
             assetHubExecutionFeeEther: assetHubExecutionFeeEther,
             destinationDeliveryFeeEther: destinationDeliveryFeeEther,
             destinationExecutionFeeEther: destinationExecutionFeeEther,
+            destinationExecutionFeeDOT: destinationExecutionFeeDOT,
             relayerFee: relayerFee,
             extrinsicFeeDot: extrinsicFeeDot,
             extrinsicFeeEther: extrinsicFeeEther,
@@ -230,19 +259,37 @@ export class PNAToParachain implements TransferInterface {
             accountNonce,
         )
 
-        const xcm = hexToU8a(
-            sendMessageXCM(
-                destination.registry,
-                registry.ethChainId,
-                destinationParaId,
-                destAssetMetadata.location,
-                beneficiaryAddressHex,
-                amount,
-                fee.destinationExecutionFeeEther,
-                topic,
-                customXcm,
-            ).toHex(),
-        )
+        let xcm
+        if (isDOT(fee.feeAsset)) {
+            xcm = hexToU8a(
+                sendMessageXCMWithDOTDestFee(
+                    destination.registry,
+                    registry.ethChainId,
+                    destinationParaId,
+                    destAssetMetadata.location,
+                    beneficiaryAddressHex,
+                    amount,
+                    fee.destinationExecutionFeeEther ?? 0n,
+                    fee.destinationExecutionFeeDOT ?? 0n,
+                    topic,
+                    customXcm,
+                ).toHex(),
+            )
+        } else {
+            xcm = hexToU8a(
+                sendMessageXCM(
+                    destination.registry,
+                    registry.ethChainId,
+                    destinationParaId,
+                    destAssetMetadata.location,
+                    beneficiaryAddressHex,
+                    amount,
+                    fee.destinationExecutionFeeEther ?? 0n,
+                    topic,
+                    customXcm,
+                ).toHex(),
+            )
+        }
         let assets = [encodeNativeAsset(tokenAddress, amount)]
         let claimer = claimerFromBeneficiary(assetHub, beneficiaryAddressHex)
 
@@ -252,7 +299,7 @@ export class PNAToParachain implements TransferInterface {
                 xcm,
                 assets,
                 claimerLocationToBytes(claimer),
-                fee.assetHubExecutionFeeEther,
+                fee.assetHubExecutionFeeEther + fee.destinationDeliveryFeeEther,
                 fee.relayerFee,
                 {
                     value,
@@ -283,6 +330,7 @@ export class PNAToParachain implements TransferInterface {
                 destParachain,
                 claimer,
                 topic,
+                totalInputAmount: amount,
             },
             tx,
         }
@@ -346,6 +394,14 @@ export class PNAToParachain implements TransferInterface {
             }
         }
 
+        if (tokenBalance.gatewayAllowance < amount) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.GatewaySpenderLimitReached,
+                message:
+                    "The Snowbridge gateway contract needs to approved as a spender for this token and amount.",
+            })
+        }
         if (tokenBalance.balance < amount) {
             logs.push({
                 kind: ValidationKind.Error,
@@ -395,7 +451,7 @@ export class PNAToParachain implements TransferInterface {
         }
 
         // Check if asset can be received on asset hub (dry run)
-        const ahParachain = registry.parachains[registry.assetHubParaId]
+        const ahParachain = registry.parachains[`polkadot_${registry.assetHubParaId}`]
         const assetHubImpl = await paraImplementation(assetHub)
         let dryRunAhSuccess, forwardedDestination, assetHubDryRunError
         if (!ahParachain.features.hasDryRunApi) {
@@ -407,23 +463,44 @@ export class PNAToParachain implements TransferInterface {
             })
         } else {
             const assetHubFee =
-                transfer.input.fee.assetHubDeliveryFeeEther +
-                transfer.input.fee.assetHubExecutionFeeEther
-            const xcm = buildAssetHubPNAReceivedXcm(
-                assetHub.registry,
-                registry.ethChainId,
-                destAssetMetadata.location,
-                transfer.computed.totalValue - assetHubFee,
-                assetHubFee,
-                transfer.input.fee.destinationExecutionFeeEther,
-                amount,
-                claimer,
-                transfer.input.sourceAccount,
-                transfer.computed.beneficiaryAddressHex,
-                destinationParaId,
-                "0x0000000000000000000000000000000000000000000000000000000000000000",
-                transfer.input.customXcm,
-            )
+                transfer.input.fee.assetHubExecutionFeeEther +
+                transfer.input.fee.destinationDeliveryFeeEther
+
+            let xcm
+            if (isDOT(transfer.input.fee.feeAsset)) {
+                xcm = buildAssetHubPNAReceivedXcmWithDOTFee(
+                    assetHub.registry,
+                    registry.ethChainId,
+                    destAssetMetadata.location,
+                    transfer.computed.totalValue - assetHubFee,
+                    assetHubFee,
+                    transfer.input.fee.destinationExecutionFeeEther ?? 0n,
+                    transfer.input.fee.destinationExecutionFeeDOT ?? 0n,
+                    amount,
+                    claimer,
+                    transfer.input.sourceAccount,
+                    transfer.computed.beneficiaryAddressHex,
+                    destinationParaId,
+                    "0x0000000000000000000000000000000000000000000000000000000000000000",
+                    transfer.input.customXcm,
+                )
+            } else {
+                xcm = buildAssetHubPNAReceivedXcm(
+                    assetHub.registry,
+                    registry.ethChainId,
+                    destAssetMetadata.location,
+                    transfer.computed.totalValue - assetHubFee,
+                    assetHubFee,
+                    transfer.input.fee.destinationExecutionFeeEther ?? 0n,
+                    amount,
+                    claimer,
+                    transfer.input.sourceAccount,
+                    transfer.computed.beneficiaryAddressHex,
+                    destinationParaId,
+                    "0x0000000000000000000000000000000000000000000000000000000000000000",
+                    transfer.input.customXcm,
+                )
+            }
             let result = await assetHubImpl.dryRunXcm(
                 registry.bridgeHubParaId,
                 xcm,
@@ -445,8 +522,7 @@ export class PNAToParachain implements TransferInterface {
         // Check if sovereign account balance for token is at 0 and that consumers is maxxed out.
         if (!ahAssetMetadata.isSufficient && !dryRunAhSuccess) {
             const sovereignAccountId = paraIdToSovereignAccount("sibl", destinationParaId)
-            const { accountMaxConsumers, accountExists } = await validateAccount(
-                assetHubImpl,
+            const { accountMaxConsumers, accountExists } = await assetHubImpl.validateAccount(
                 sovereignAccountId,
                 registry.ethChainId,
                 tokenAddress,
@@ -522,13 +598,13 @@ export class PNAToParachain implements TransferInterface {
             ) {
                 const destParachainImpl = await paraImplementation(destParachainApi)
                 // Check if the account is created
-                const { accountMaxConsumers, accountExists } = await validateAccount(
-                    destParachainImpl,
-                    beneficiaryAddressHex,
-                    registry.ethChainId,
-                    tokenAddress,
-                    destAssetMetadata,
-                )
+                const { accountMaxConsumers, accountExists } =
+                    await destParachainImpl.validateAccount(
+                        beneficiaryAddressHex,
+                        registry.ethChainId,
+                        tokenAddress,
+                        destAssetMetadata,
+                    )
                 if (accountMaxConsumers) {
                     logs.push({
                         kind: ValidationKind.Error,

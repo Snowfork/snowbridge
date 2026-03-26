@@ -1,22 +1,19 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.28;
+pragma solidity 0.8.34;
 
 import {Gateway} from "../../src/Gateway.sol";
-import {Functions} from "../../src/Gateway.sol";
 import {Token} from "../../src/Token.sol";
-import {ChannelID, ParaID, OperatingMode} from "../../src/Types.sol";
+import {ChannelID} from "../../src/Types.sol";
 
 import {CoreStorage} from "../../src/storage/CoreStorage.sol";
 import {Verification} from "../../src/Verification.sol";
-import {IInitializable} from "../../src/interfaces/IInitializable.sol";
-
-import {UD60x18} from "prb/math/src/UD60x18.sol";
 
 import {Command as CommandV2} from "../../src/v2/Types.sol";
+import {IGatewayV2} from "../../src/v2/IGateway.sol";
 import {Agent} from "../../src/Agent.sol";
-import {AgentExecutor} from "../../src/AgentExecutor.sol";
 import {Constants} from "../../src/Constants.sol";
 import {HandlersV2} from "../../src/v2/Handlers.sol";
+import {Functions} from "../../src/Functions.sol";
 
 contract MockGateway is Gateway {
     bool public commitmentsAreVerified;
@@ -93,7 +90,17 @@ contract MockGateway is Gateway {
     }
 
     function callDispatch(CommandV2 calldata command, bytes32 origin) external returns (bool) {
-        return super._dispatchCommand(command, origin);
+        // Mirror v2_dispatch per-command behavior: enforce gas budget and surface failure as false
+        uint256 requiredGas = command.gas + DISPATCH_OVERHEAD_GAS_V2;
+        if (gasleft() * 63 / 64 < requiredGas) {
+            revert IGatewayV2.InsufficientGasLimit();
+        }
+
+        try this.v2_dispatchCommand{gas: command.gas}(command, origin) {
+            return true;
+        } catch {
+            return false;
+        }
     }
 
     function deployAgent() external returns (address) {
@@ -112,14 +119,6 @@ contract MockGateway is Gateway {
     // Expose internal helper for testing
     function exposed_v1_transactionBaseGas() external pure returns (uint256) {
         return v1_transactionBaseGas();
-    }
-
-    // Wrapper to call an internal dispatch and return the boolean result
-    function exposed_dispatchCommand(CommandV2 calldata cmd, bytes32 origin)
-        external
-        returns (bool)
-    {
-        return _dispatchCommand(cmd, origin);
     }
 
     // Helper to call vulnerable-onlySelf handler from within the contract (so msg.sender == this)

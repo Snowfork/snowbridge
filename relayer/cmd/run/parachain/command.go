@@ -2,32 +2,29 @@ package parachain
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"os"
 	"os/signal"
+	"reflect"
+	"strings"
 	"syscall"
 
+	"github.com/mitchellh/mapstructure"
 	"github.com/sirupsen/logrus"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
-	para "github.com/snowfork/snowbridge/relayer/chain/parachain"
-	"github.com/snowfork/snowbridge/relayer/relays/beefy"
-	"github.com/snowfork/snowbridge/relayer/relays/parachain"
+	parachainrelay "github.com/snowfork/snowbridge/relayer/relays/parachain"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"golang.org/x/sync/errgroup"
 )
 
 var (
-	configFile              string
-	privateKey              string
-	privateKeyFile          string
-	privateKeyID            string
-	parachainPrivateKey     string
-	parachainPrivateKeyFile string
-	parachainPrivateKeyID   string
-	beefyConfigFile         string
-	onDemand                bool
+	configFile     string
+	privateKey     string
+	privateKeyFile string
+	privateKeyID   string
 )
 
 func Command() *cobra.Command {
@@ -41,18 +38,9 @@ func Command() *cobra.Command {
 	cmd.Flags().StringVar(&configFile, "config", "", "Path to configuration file")
 	cmd.MarkFlagRequired("config")
 
-	cmd.Flags().StringVar(&beefyConfigFile, "beefy.config", "", "Path to beefy configuration file")
-
 	cmd.Flags().StringVar(&privateKey, "ethereum.private-key", "", "Ethereum private key")
 	cmd.Flags().StringVar(&privateKeyFile, "ethereum.private-key-file", "", "The file from which to read the private key")
 	cmd.Flags().StringVar(&privateKeyID, "ethereum.private-key-id", "", "The secret id to lookup the private key in AWS Secrets Manager")
-
-	cmd.Flags().StringVar(&parachainPrivateKey, "substrate.private-key", "", "substrate private key")
-	cmd.Flags().StringVar(&parachainPrivateKeyFile, "substrate.private-key-file", "", "The file from which to read the private key")
-	cmd.Flags().StringVar(&parachainPrivateKeyID, "substrate.private-key-id", "", "The secret id to lookup the private key in AWS Secrets Manager")
-
-	cmd.Flags().StringVar(&beefyConfigFile, "beefy.config", "", "Path to beefy configuration file")
-	cmd.Flags().BoolVarP(&onDemand, "on-demand", "", false, "Synchronize beefy commitments on demand together with parachain messages")
 
 	return cmd
 }
@@ -61,13 +49,15 @@ func run(_ *cobra.Command, _ []string) error {
 	log.SetOutput(logrus.WithFields(logrus.Fields{"logger": "stdlib"}).WriterLevel(logrus.InfoLevel))
 	logrus.SetLevel(logrus.DebugLevel)
 
+	logrus.Info("Parachain relayer started up")
+
 	viper.SetConfigFile(configFile)
 	if err := viper.ReadInConfig(); err != nil {
 		return err
 	}
 
-	var config parachain.Config
-	err := viper.UnmarshalExact(&config)
+	var config parachainrelay.Config
+	err := viper.UnmarshalExact(&config, viper.DecodeHook(HexHookFunc()))
 	if err != nil {
 		return err
 	}
@@ -82,7 +72,7 @@ func run(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	keypair2, err := para.ResolvePrivateKey(parachainPrivateKey, parachainPrivateKeyFile, parachainPrivateKeyID)
+	relay, err := parachainrelay.NewRelay(&config, keypair)
 	if err != nil {
 		return err
 	}
@@ -106,38 +96,11 @@ func run(_ *cobra.Command, _ []string) error {
 		return nil
 	})
 
-	if !onDemand {
-		relay, err := parachain.NewRelay(&config, keypair, keypair2)
-		if err != nil {
-			return err
-		}
-		err = relay.Start(ctx, eg)
-		if err != nil {
-			logrus.WithError(err).Fatal("Unhandled error")
-			cancel()
-			return err
-		}
-	} else {
-		viper.SetConfigFile(beefyConfigFile)
-		if err := viper.ReadInConfig(); err != nil {
-			return err
-		}
-
-		var beefyConfig beefy.Config
-		err = viper.UnmarshalExact(&beefyConfig)
-		if err != nil {
-			return err
-		}
-		relay, err := parachain.NewOnDemandRelay(&config, &beefyConfig, keypair)
-		if err != nil {
-			return err
-		}
-		err = relay.Start(ctx, eg)
-		if err != nil {
-			logrus.WithError(err).Fatal("Unhandled error")
-			cancel()
-			return err
-		}
+	err = relay.Start(ctx, eg)
+	if err != nil {
+		logrus.WithError(err).Fatal("Unhandled error")
+		cancel()
+		return err
 	}
 
 	err = eg.Wait()
@@ -147,4 +110,50 @@ func run(_ *cobra.Command, _ []string) error {
 	}
 
 	return nil
+}
+
+func HexHookFunc() mapstructure.DecodeHookFuncType {
+	return func(
+		f reflect.Type,
+		t reflect.Type,
+		data interface{},
+	) (interface{}, error) {
+		// Check that the data is string
+		if f.Kind() != reflect.String {
+			return data, nil
+		}
+
+		// Check that the target type is our custom type
+		if t != reflect.TypeOf(parachainrelay.ChannelID{}) {
+			return data, nil
+		}
+
+		foo, err := HexDecodeString(data.(string))
+		if err != nil {
+			return nil, err
+		}
+
+		var out [32]byte
+		copy(out[:], foo)
+
+		// Return the parsed value
+		return parachainrelay.ChannelID(out), nil
+	}
+}
+
+// HexDecodeString decodes bytes from a hex string. Contrary to hex.DecodeString, this function does not error if "0x"
+// is prefixed, and adds an extra 0 if the hex string has an odd length.
+func HexDecodeString(s string) ([]byte, error) {
+	s = strings.TrimPrefix(s, "0x")
+
+	if len(s)%2 != 0 {
+		s = "0" + s
+	}
+
+	b, err := hex.DecodeString(s)
+	if err != nil {
+		return nil, err
+	}
+
+	return b, nil
 }

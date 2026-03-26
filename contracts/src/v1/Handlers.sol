@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.28;
+pragma solidity 0.8.34;
 
 import {IERC20} from "../interfaces/IERC20.sol";
 
@@ -10,7 +10,6 @@ import {AssetsStorage} from "../storage/AssetsStorage.sol";
 import {CoreStorage} from "../storage/CoreStorage.sol";
 import {PricingStorage} from "../storage/PricingStorage.sol";
 import {Address} from "../utils/Address.sol";
-import {AgentExecutor} from "../AgentExecutor.sol";
 import {Constants} from "../Constants.sol";
 import {Upgrade} from "../Upgrade.sol";
 import {Functions} from "../Functions.sol";
@@ -81,7 +80,6 @@ library HandlersV1 {
         SetTokenTransferFeesParams memory params = abi.decode(data, (SetTokenTransferFeesParams));
         $.assetHubCreateAssetFee = params.assetHubCreateAssetFee;
         $.assetHubReserveTransferFee = params.assetHubReserveTransferFee;
-        $.registerTokenFee = params.registerTokenFee;
         emit IGatewayV1.TokenTransferFeesChanged();
     }
 

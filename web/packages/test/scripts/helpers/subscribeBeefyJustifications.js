@@ -147,7 +147,7 @@ async function getLatestMMRInJustification(justification, api) {
   });
   console.log(`Justification is for block ${blockNumber}, getting MMR Leaf for that block...`);
   // Note: This just gets the MMR leaf for that block in the latest MMR.
-  // We actually want to be getting the MMR leaf in this particulat justification's MMR
+  // We actually want to be getting the MMR leaf in this particular justification's MMR
   // If there is a newer one, this may fail
   // TODO: Address this (may require adding to the generateProof RPC endpoint?)
   latestMMRLeaf = await getMMRLeafForBlock(blockNumber, api)

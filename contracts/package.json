@@ -1,0 +1,17 @@
+{
+  "name": "snowbridge-scripts",
+  "version": "1.0.0",
+  "description": "Snowbridge utility scripts",
+  "type": "module",
+  "bin": {
+    "beefy-checkpoint": "./scripts/beefy-checkpoint.js"
+  },
+  "scripts": {
+    "beefy-checkpoint": "bun scripts/beefy-checkpoint.js"
+  },
+  "dependencies": {
+    "@polkadot/api": "^14.0.1",
+    "@polkadot/types": "^14.0.1",
+    "@polkadot/util": "^13.0.1"
+  }
+}

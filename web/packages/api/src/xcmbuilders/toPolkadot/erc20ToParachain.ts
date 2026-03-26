@@ -151,6 +151,9 @@ export function buildAssetHubERC20ReceivedXcm(
                 },
             },
             {
+                refundSurplus: null,
+            },
+            {
                 depositAsset: {
                     assets: {
                         wild: {
@@ -365,7 +368,7 @@ export function sendMessageXCM(
                             ],
                         },
                     },
-                    preserveOrigin: true,
+                    preserveOrigin: false,
                     assets: [
                         {
                             reserveDeposit: {
@@ -503,7 +506,7 @@ export function buildParachainERC20ReceivedXcmOnDestWithDOTFee(
                             {
                                 id: ether,
                                 fun: {
-                                    Fungible: remoteDotFeeAmount,
+                                    Fungible: remoteEtherFeeAmount,
                                 },
                             },
                         ],
@@ -534,7 +537,7 @@ export function buildParachainERC20ReceivedXcmOnDestWithDOTFee(
                             ],
                         },
                     },
-                    preserveOrigin: true,
+                    preserveOrigin: false,
                     assets: [
                         {
                             reserveDeposit: {
@@ -646,7 +649,7 @@ export function sendMessageXCMWithDOTDestFee(
                             ],
                         },
                     },
-                    preserveOrigin: true,
+                    preserveOrigin: false,
                     assets: [
                         {
                             reserveDeposit: {

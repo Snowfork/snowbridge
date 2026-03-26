@@ -1,5 +1,4 @@
-import { PNAMap } from "../assets_v2"
-import { AssetMap } from "@snowbridge/base-types"
+import { AssetMap, PNAMap } from "@snowbridge/base-types"
 import { ParachainBase } from "./parachainBase"
 import { DOT_LOCATION, getTokenFromLocation, ROCOCO_GENESIS, WESTEND_GENESIS } from "../xcmBuilder"
 
@@ -23,7 +22,7 @@ export class AssetHubParachain extends ParachainBase {
     }
 
     getDotBalance(account: string): Promise<bigint> {
-        return this.getNativeBalance(account)
+        return this.getNativeBalance(account, true)
     }
 
     getAssets(ethChainId: number, pnas: PNAMap): Promise<AssetMap> {
@@ -186,6 +185,46 @@ export class AssetHubParachain extends ParachainBase {
             }
         }
         return assets
+    }
+
+    async swapAsset1ForAsset2(asset1: any, asset2: any, exactAsset1Balance: bigint) {
+        const result = await this.provider.call.assetConversionApi.quotePriceExactTokensForTokens(
+            asset1,
+            asset2,
+            exactAsset1Balance,
+            true,
+        )
+        const asset2Balance = result.toPrimitive() as any
+        if (asset2Balance == null) {
+            throw Error(
+                `No pool set up in asset conversion pallet for '${JSON.stringify(
+                    asset1,
+                )}' and '${JSON.stringify(asset2)}'.`,
+            )
+        }
+        return BigInt(asset2Balance)
+    }
+
+    async getAssetHubConversionPalletSwap(
+        asset1: any,
+        asset2: any,
+        exactAsset2Balance: bigint,
+    ): Promise<bigint> {
+        const result = await this.provider.call.assetConversionApi.quotePriceTokensForExactTokens(
+            asset1,
+            asset2,
+            exactAsset2Balance,
+            true,
+        )
+        const asset1Balance = result.toPrimitive() as any
+        if (asset1Balance == null) {
+            throw Error(
+                `No pool set up in asset conversion pallet for '${JSON.stringify(
+                    asset1,
+                )}' and '${JSON.stringify(asset2)}'.`,
+            )
+        }
+        return BigInt(asset1Balance)
     }
 }
 

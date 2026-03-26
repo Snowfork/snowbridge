@@ -56,6 +56,10 @@ func (m *Writer) GetLastFinalizedHeaderState() (state.FinalizedHeader, error) {
 	return m.LastFinalizedState, nil
 }
 
+func (m *Writer) GetLastFinalizedHeaderStateAtBestBlock() (state.FinalizedHeader, error) {
+	return m.LastFinalizedState, nil
+}
+
 func (m *Writer) GetFinalizedStateByStorageKey(key string) (scale.BeaconState, error) {
 	return scale.BeaconState{}, nil
 }
@@ -70,6 +74,10 @@ func (m *Writer) GetLastBasicChannelNonceByAddress(address common.Address) (uint
 }
 func (m *Writer) GetFinalizedHeaderStateByBlockRoot(blockRoot types.H256) (state.FinalizedHeader, error) {
 	return m.FinalizedHeaderStateByBlockRoot[blockRoot], nil
+}
+
+func (m *Writer) HasPendingExtrinsic(extrinsicName string) (bool, error) {
+	return false, nil
 }
 
 func (m *Writer) FindCheckPointBackward(slot uint64) (state.FinalizedHeader, error) {

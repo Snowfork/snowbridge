@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.28;
+pragma solidity 0.8.34;
 
 /**
  * @title A utility library for 16 bit counters packed in 256 bit array.
@@ -64,7 +64,8 @@ function get(Uint16Array storage self, uint256 index) view returns (uint16) {
     // into the array.
     uint256 element = index >> 4;
     // Mask out the first 4 bits of the logical index to give us the bit-index.
-    uint8 inside = uint8(index) & 0x0F;
+    // forge-lint: disable-next-line(unsafe-typecast)
+    uint8 inside = uint8(index & 0x0F);
     // find the element in the array, shift until its bit index and mask to only take the first 16 bits.
     return uint16((self.data[element] >> (16 * inside)) & 0xFFFF);
 }
@@ -83,7 +84,8 @@ function set(Uint16Array storage self, uint256 index, uint16 value) {
     // into the array.
     uint256 element = index >> 4;
     // Mask out the first 4 bytes of the logical index to give us the bit-index.
-    uint8 inside = uint8(index) & 0x0F;
+    // forge-lint: disable-next-line(unsafe-typecast)
+    uint8 inside = uint8(index & 0x0F);
     // Create a zero mask which will clear the existing value at the bit-index.
     uint256 zero = ~(uint256(0xFFFF) << (16 * inside));
     // Shift the value to the bit index.

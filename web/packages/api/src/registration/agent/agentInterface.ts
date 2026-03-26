@@ -2,7 +2,6 @@ import { AssetRegistry } from "@snowbridge/base-types"
 import { Context } from "../../index"
 import { IGatewayV2 as IGateway } from "@snowbridge/contract-types"
 import { AbstractProvider, ContractTransaction } from "ethers"
-import { OperationStatus } from "../../status"
 import { FeeInfo, ValidationLog } from "../../toPolkadot_v2"
 
 export interface AgentConnections {

@@ -18,9 +18,9 @@ type SourceConfig struct {
 }
 
 type SinkConfig struct {
-	Ethereum              config.EthereumConfig `mapstructure:"ethereum"`
-	DescendantsUntilFinal uint64                `mapstructure:"descendants-until-final"`
-	Contracts             ContractsConfig       `mapstructure:"contracts"`
+	Ethereum         config.EthereumConfig `mapstructure:"ethereum"`
+	Contracts        ContractsConfig       `mapstructure:"contracts"`
+	EnableFiatShamir bool                  `mapstructure:"enable-fiat-shamir"`
 }
 
 type ContractsConfig struct {
@@ -47,9 +47,6 @@ func (c Config) Validate() error {
 	err = c.Sink.Ethereum.Validate()
 	if err != nil {
 		return fmt.Errorf("sink ethereum config: %w", err)
-	}
-	if c.Sink.DescendantsUntilFinal == 0 {
-		return fmt.Errorf("sink ethereum setting [descendants-until-final] is not set")
 	}
 	if c.Sink.Contracts.BeefyClient == "" {
 		return fmt.Errorf("sink contracts setting [BeefyClient] is not set")

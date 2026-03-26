@@ -1,6 +1,5 @@
 import { DOT_LOCATION, erc20Location } from "../xcmBuilder"
-import { PNAMap } from "../assets_v2"
-import { AssetMap } from "@snowbridge/base-types"
+import { AssetMap, PNAMap } from "@snowbridge/base-types"
 import { ParachainBase } from "./parachainBase"
 
 export const MUSE_CHAIN_ID = 11155111 // Sepolia
@@ -18,13 +17,13 @@ export class MythosParachain extends ParachainBase {
             this.specName === "muse" &&
             JSON.stringify(location) == JSON.stringify(erc20Location(MUSE_CHAIN_ID, MUSE_TOKEN_ID))
         ) {
-            return await this.getNativeBalance(account)
+            return await this.getNativeBalance(account, true)
         } else if (
             this.specName === "mythos" &&
             JSON.stringify(location) ==
                 JSON.stringify(erc20Location(MYTHOS_CHAIN_ID, MYTHOS_TOKEN_ID))
         ) {
-            return await this.getNativeBalance(account)
+            return await this.getNativeBalance(account, true)
         } else {
             throw Error(
                 `Cannot get balance for spec ${this.specName}. Location = ${JSON.stringify(
@@ -78,5 +77,17 @@ export class MythosParachain extends ParachainBase {
             return 1_000_000_000n
         }
         return await this.calculateXcmFee(destinationXcm, asset)
+    }
+
+    swapAsset1ForAsset2(_asset1: any, _asset2: any, _exactAsset1Balance: bigint): Promise<bigint> {
+        throw Error(`${this.specName} does not support.`)
+    }
+
+    getAssetHubConversionPalletSwap(
+        asset1: any,
+        asset2: any,
+        exactAsset2Balance: bigint,
+    ): Promise<bigint> {
+        throw Error(`${this.specName} does not support.`)
     }
 }

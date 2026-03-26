@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.28;
+pragma solidity 0.8.34;
 
 import {IERC20} from "./interfaces/IERC20.sol";
 import {SafeNativeTransfer, SafeTokenTransferFrom} from "./utils/SafeTransfer.sol";
@@ -65,7 +65,13 @@ library Functions {
             revert InvalidAmount();
         }
 
+        uint256 balanceBefore = IERC20(token).balanceOf(agent);
         IERC20(token).safeTransferFrom(sender, agent, amount);
+
+        if (IERC20(token).balanceOf(agent) != balanceBefore + amount) {
+            // Tokens with Fee-On-Transfer behaviour are not supported
+            revert InvalidToken();
+        }
     }
 
     /// @dev Withdraw ether from an agent and transfer to a recipient
@@ -96,7 +102,7 @@ library Functions {
         if (!token.isContract()) {
             revert InvalidToken();
         }
-        
+
         // NOTE: Explicitly allow a native token to be re-registered. This offers resiliency
         // in case a previous registration attempt of the same token failed on the remote side.
         // It means that registration can be retried.

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.28;
+pragma solidity 0.8.34;
 
 import {WETH9} from "canonical-weth/WETH9.sol";
 import {Script} from "forge-std/Script.sol";
@@ -14,7 +14,7 @@ import {OperatingMode} from "../src/Types.sol";
 import {Initializer} from "../src/Initializer.sol";
 import {SafeNativeTransfer} from "../src/utils/SafeTransfer.sol";
 import {stdJson} from "forge-std/StdJson.sol";
-import {UD60x18, ud60x18} from "prb/math/src/UD60x18.sol";
+import {ud60x18} from "prb/math/src/UD60x18.sol";
 import {HelloWorld} from "../test/mocks/HelloWorld.sol";
 import {Token} from "../src/Token.sol";
 
@@ -70,7 +70,6 @@ contract DeployLocal is Script {
         Initializer.Config memory config = Initializer.Config({
             mode: OperatingMode.Normal,
             deliveryCost: uint128(vm.envUint("DELIVERY_COST")),
-            registerTokenFee: uint128(vm.envUint("REGISTER_TOKEN_FEE")),
             assetHubCreateAssetFee: uint128(vm.envUint("CREATE_ASSET_FEE")),
             assetHubReserveTransferFee: uint128(vm.envUint("RESERVE_TRANSFER_FEE")),
             exchangeRate: ud60x18(vm.envUint("EXCHANGE_RATE")),
@@ -89,12 +88,12 @@ contract DeployLocal is Script {
 
         // Transfer WETH to the user
         address user = 0x90A987B944Cb1dCcE5564e5FDeCD7a54D3de27Fe;
-        weth.transfer(user, 10 ether);
+        require(weth.transfer(user, 10 ether), "WETH transfer failed");
 
         // For testing call contract
         new HelloWorld();
 
-        // Deploy test token for registration testing  
+        // Deploy test token for registration testing
         new Token("Test Token", "TEST", 18);
 
         // Fund the gateway proxy contract. Used to reward relayers

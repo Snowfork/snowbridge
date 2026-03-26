@@ -1,63 +1,28 @@
-import { AssetRegistry } from "@snowbridge/base-types"
-import polkadot_mainnet from "./polkadot_mainnet.registry.json"
-import westend_sepolia from "./westend_sepolia.registry.json"
-import paseo_sepolia from "./paseo_sepolia.registry.json"
-import local_e2e from "./local_e2e.registry.json"
+export * from "./transfers"
 
-function transformBigInt(obj: any): any {
-    // Regex to match strings like "bigint:123"
-    const bigintPattern = /^bigint:(\d+)$/
+import polkadot_mainnet from "./polkadot_mainnet_bridge_info.g"
+import westend_sepolia from "./westend_sepolia_bridge_info.g"
+import paseo_sepolia from "./paseo_sepolia_bridge_info.g"
+import local_e2e from "./local_e2e_bridge_info.g"
 
-    // Handle null or non-object/non-array values
-    if (obj === null || typeof obj !== "object") {
-        if (typeof obj === "string") {
-            const match = obj.match(bigintPattern)
-            if (match) {
-                return Object.freeze(BigInt(match[1]))
-            }
-        }
-        return Object.freeze(obj)
-    }
+export { paseo_sepolia, westend_sepolia, polkadot_mainnet }
 
-    // Handle arrays
-    if (Array.isArray(obj)) {
-        return Object.freeze(obj.map((item) => transformBigInt(item)))
-    }
+import { BridgeInfo } from "@snowbridge/base-types"
 
-    // Handle objects
-    const result: { [key: string]: any } = {}
-    for (const key in obj) {
-        if (Object.prototype.hasOwnProperty.call(obj, key)) {
-            result[key] = transformBigInt(obj[key])
-        }
-    }
-    return Object.freeze(result)
-}
-
-const cache: { [env: string]: AssetRegistry } = {}
-export function assetRegistryFor(
-    env: "polkadot_mainnet" | "westend_sepolia" | "paseo_sepolia" | (string & {}),
-): AssetRegistry {
-    if (env in cache) {
-        return cache[env]
-    }
-    let json
+export function bridgeInfoFor(
+    env: "polkadot_mainnet" | "westend_sepolia" | "paseo_sepolia" | "local_e2e" | (string & {}),
+): Readonly<BridgeInfo> {
     switch (env) {
         case "polkadot_mainnet":
-            json = polkadot_mainnet
+            return polkadot_mainnet satisfies BridgeInfo
             break
         case "westend_sepolia":
-            json = westend_sepolia
-            break
+            return westend_sepolia satisfies BridgeInfo
         case "paseo_sepolia":
-            json = paseo_sepolia
-            break
+            return paseo_sepolia satisfies BridgeInfo
         case "local_e2e":
-            json = local_e2e
-            break
+            return local_e2e satisfies BridgeInfo
         default:
             throw Error(`Unknown env '${env}'`)
     }
-    cache[env] = transformBigInt(json)
-    return cache[env]
 }

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2025 Snowfork <hello@snowfork.com>
 
-pragma solidity 0.8.28;
+pragma solidity 0.8.34;
 
 import {IERC20} from "./interfaces/IERC20.sol";
 import {IERC20Metadata} from "./interfaces/IERC20Metadata.sol";
@@ -35,10 +35,14 @@ contract Token is IERC20, IERC20Metadata, IERC20Permit {
     }
 
     modifier onlyGateway() {
+        _onlyGateway();
+        _;
+    }
+
+    function _onlyGateway() internal view {
         if (msg.sender != gateway) {
             revert Unauthorized();
         }
-        _;
     }
 
     function mint(address account, uint256 amount) external onlyGateway {

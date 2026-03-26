@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.28;
+pragma solidity 0.8.34;
 
 import {IERC20} from "../interfaces/IERC20.sol";
 import {SafeTokenTransferFrom} from "../utils/SafeTransfer.sol";
@@ -10,7 +10,6 @@ import {AgentExecutor} from "../AgentExecutor.sol";
 import {Upgrade} from "../Upgrade.sol";
 import {Functions} from "../Functions.sol";
 import {Constants} from "../Constants.sol";
-import {IGatewayV2} from "./IGateway.sol";
 import {IGatewayBase} from "../interfaces/IGatewayBase.sol";
 
 import {

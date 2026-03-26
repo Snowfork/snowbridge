@@ -345,7 +345,9 @@ export function buildTransferXcmFromParachain(
     let tokenLocation = asset.location
 
     let localDOTFeeAmount: bigint =
-        fee.localExecutionFeeDOT! + fee.localDeliveryFeeDOT! + fee.returnToSenderExecutionFeeDOT
+        (fee.localExecutionFeeDOT ?? 0n) +
+        (fee.localDeliveryFeeDOT ?? 0n) +
+        fee.returnToSenderExecutionFeeDOT
     let totalDOTFeeAmount: bigint = fee.totalFeeInDot!
     let remoteEtherFeeAmount: bigint = fee.ethereumExecutionFee!
 

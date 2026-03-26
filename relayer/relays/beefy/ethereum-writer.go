@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/big"
 	"math/rand"
+	"strings"
 
 	"golang.org/x/sync/errgroup"
 
@@ -68,7 +69,11 @@ func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group, request
 				// the beefy light client
 				task.ValidatorsRoot = state.NextValidatorSetRoot
 
-				err = wr.submit(ctx, &task)
+				if wr.config.EnableFiatShamir {
+					err = wr.submitFiatShamir(ctx, &task)
+				} else {
+					err = wr.submit(ctx, &task)
+				}
 				if err != nil {
 					return fmt.Errorf("submit request: %w", err)
 				}
@@ -119,6 +124,12 @@ func (wr *EthereumWriter) submit(ctx context.Context, task *Request) error {
 	// Initial submission
 	tx, initialBitfield, err := wr.doSubmitInitial(ctx, task)
 	if err != nil {
+		if isDuplicateBeefyError(err) {
+			log.WithFields(logrus.Fields{
+				"beefyBlock": task.SignedCommitment.Commitment.BlockNumber,
+			}).Info("Commitment already submitted by another relayer during submitInitial, skipping")
+			return nil
+		}
 		return fmt.Errorf("Failed to call submitInitial: %w", err)
 	}
 	// Wait for receipt of submitInitial
@@ -166,6 +177,16 @@ func (wr *EthereumWriter) submit(ctx context.Context, task *Request) error {
 		}).Info("CommitPrevRandao is skipped, indicating that a newer update is already in progress.")
 		return nil
 	}
+	isTaskOutdated, err := wr.isTaskOutdated(ctx, task)
+	if err != nil {
+		return fmt.Errorf("check if task is outdated: %w", err)
+	}
+	if isTaskOutdated {
+		log.WithFields(logrus.Fields{
+			"beefyBlock": task.SignedCommitment.Commitment.BlockNumber,
+		}).Info("Commitment already synced")
+		return nil
+	}
 	// Commit PrevRandao which will be used as seed to randomly select subset of validators
 	// https://github.com/Snowfork/snowbridge/blob/75a475cbf8fc8e13577ad6b773ac452b2bf82fbb/contracts/contracts/BeefyClient.sol#L446-L447
 	tx, err = wr.contract.CommitPrevRandao(
@@ -173,6 +194,12 @@ func (wr *EthereumWriter) submit(ctx context.Context, task *Request) error {
 		*commitmentHash,
 	)
 	if err != nil {
+		if isDuplicateBeefyError(err) {
+			log.WithFields(logrus.Fields{
+				"beefyBlock": task.SignedCommitment.Commitment.BlockNumber,
+			}).Info("Commitment already submitted by another relayer during CommitPrevRandao, skipping")
+			return nil
+		}
 		return fmt.Errorf("Failed to call CommitPrevRandao: %w", err)
 	}
 
@@ -187,22 +214,25 @@ func (wr *EthereumWriter) submit(ctx context.Context, task *Request) error {
 		}).Info("SubmitFinal is skipped, indicating that a newer update is already in progress.")
 		return nil
 	}
-	state, err = wr.queryBeefyClientState(ctx)
+	isTaskOutdated, err = wr.isTaskOutdated(ctx, task)
 	if err != nil {
-		return fmt.Errorf("query beefy client state: %w", err)
+		return fmt.Errorf("check if task is outdated: %w", err)
 	}
-
-	if uint64(task.SignedCommitment.Commitment.BlockNumber) <= state.LatestBeefyBlock {
-		log.WithFields(log.Fields{
-			"validatorSetID": state.CurrentValidatorSetID,
-			"beefyBlock":     state.LatestBeefyBlock,
-			"relayBlock":     task.SignedCommitment.Commitment.BlockNumber,
-		}).Info("Beefy block already synced, just ignore")
+	if isTaskOutdated {
+		log.WithFields(logrus.Fields{
+			"beefyBlock": task.SignedCommitment.Commitment.BlockNumber,
+		}).Info("Commitment already synced")
 		return nil
 	}
 	// Final submission
 	tx, err = wr.doSubmitFinal(ctx, *commitmentHash, initialBitfield, task)
 	if err != nil {
+		if isDuplicateBeefyError(err) {
+			log.WithFields(logrus.Fields{
+				"beefyBlock": task.SignedCommitment.Commitment.BlockNumber,
+			}).Info("Commitment already submitted by another relayer during submitFinal, skipping")
+			return nil
+		}
 		return fmt.Errorf("Failed to call submitFinal: %w", err)
 	}
 
@@ -349,7 +379,7 @@ func (wr *EthereumWriter) initialize(ctx context.Context) error {
 	return nil
 }
 
-func (wr *EthereumWriter) submitFiatShamir(ctx context.Context, task Request) error {
+func (wr *EthereumWriter) submitFiatShamir(ctx context.Context, task *Request) error {
 	signedValidators := []*big.Int{}
 	for i, signature := range task.SignedCommitment.Signatures {
 		if signature.IsSome() {
@@ -401,9 +431,21 @@ func (wr *EthereumWriter) submitFiatShamir(ctx context.Context, task Request) er
 		return fmt.Errorf("make submit final params: %w", err)
 	}
 
-	logFields, err := wr.makeSubmitFinalLogFields(&task, params)
+	logFields, err := wr.makeSubmitFinalLogFields(task, params)
 	if err != nil {
 		return fmt.Errorf("logging params: %w", err)
+	}
+
+	// Check if task is outdated before final submission
+	isTaskOutdated, err := wr.isTaskOutdated(ctx, task)
+	if err != nil {
+		return fmt.Errorf("check if task is outdated: %w", err)
+	}
+	if isTaskOutdated {
+		log.WithFields(logrus.Fields{
+			"beefyBlock": task.SignedCommitment.Commitment.BlockNumber,
+		}).Info("Commitment already synced, skipping SubmitFiatShamir")
+		return nil
 	}
 
 	tx, err := wr.contract.SubmitFiatShamir(
@@ -416,6 +458,13 @@ func (wr *EthereumWriter) submitFiatShamir(ctx context.Context, task Request) er
 		params.LeafProofOrder,
 	)
 	if err != nil {
+		// Check if error is due to commitment already being submitted (duplicate)
+		if isDuplicateBeefyError(err) {
+			log.WithFields(logrus.Fields{
+				"beefyBlock": task.SignedCommitment.Commitment.BlockNumber,
+			}).Info("Commitment was already submitted by another relayer, skipping")
+			return nil
+		}
 		return fmt.Errorf("SubmitFiatShamir: %w", err)
 	}
 
@@ -434,4 +483,29 @@ func (wr *EthereumWriter) submitFiatShamir(ctx context.Context, task Request) er
 	}).Debug("Transaction submitFiatShamir succeeded")
 
 	return nil
+}
+
+func (wr *EthereumWriter) isTaskOutdated(ctx context.Context, task *Request) (bool, error) {
+	state, err := wr.queryBeefyClientState(ctx)
+	if err != nil {
+		return false, fmt.Errorf("query beefy client state: %w", err)
+	}
+
+	if task.SignedCommitment.Commitment.BlockNumber <= uint32(state.LatestBeefyBlock) {
+		return true, nil
+	}
+	return false, nil
+}
+
+// isDuplicateBeefyError checks if the error indicates the commitment was already submitted
+func isDuplicateBeefyError(err error) bool {
+	if err == nil {
+		return false
+	}
+	errStr := err.Error()
+	// Check for common duplicate/already processed error patterns from the BeefyClient contract
+	return strings.Contains(errStr, "StaleCommitment") ||
+		strings.Contains(errStr, "InvalidCommitment") ||
+		strings.Contains(errStr, "already") ||
+		strings.Contains(errStr, "Duplicate")
 }

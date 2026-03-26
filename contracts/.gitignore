@@ -19,3 +19,4 @@ tenderly.yaml
 docs/
 lib/
 report/
+.env

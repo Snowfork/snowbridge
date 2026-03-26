@@ -3,6 +3,7 @@ mod bridge_hub_runtime;
 mod commands;
 mod constants;
 mod helpers;
+#[allow(unused)]
 mod relay_runtime;
 mod treasury_commands;
 
@@ -68,8 +69,13 @@ pub enum Command {
     UpgradeV2,
     /// Replay failed XCM messages from September 2025
     ReplaySep2025,
+    /// Mint refund for failed Hydration→Ethereum transfer (Feb 2026)
+    MintFeb2026,
     /// Set BridgeHubEthereumBaseFeeV2 on Paseo
     SetPaseoFeeV2,
+    /// Upgrade to FiatShamir on Polkadot
+    #[command(alias = "upgrade-202603")]
+    Upgrade202603,
 }
 
 #[derive(Debug, Args)]
@@ -309,7 +315,7 @@ pub enum Format {
 
 struct Context {
     bridge_hub_api: Box<OnlineClient<PolkadotConfig>>,
-    asset_hub_api: Box<OnlineClient<PolkadotConfig>>,
+    _asset_hub_api: Box<OnlineClient<PolkadotConfig>>,
     _relay_api: Box<OnlineClient<PolkadotConfig>>,
 }
 
@@ -342,7 +348,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     let context = Context {
         bridge_hub_api: Box::new(bridge_hub_api),
-        asset_hub_api: Box::new(asset_hub_api),
+        _asset_hub_api: Box::new(asset_hub_api),
         _relay_api: Box::new(relay_api),
     };
 
@@ -534,6 +540,10 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             let asset_hub_call = commands::replay_sep_2025_xcm();
             send_xcm_asset_hub(&context, vec![asset_hub_call]).await?
         }
+        Command::MintFeb2026 => {
+            let bridge_hub_call = commands::mint_feb_2026_xcm();
+            send_xcm_bridge_hub(&context, vec![bridge_hub_call]).await?
+        }
         Command::SetPaseoFeeV2 => {
             #[cfg(not(feature = "paseo"))]
             panic!("SetPaseoFeeV2 only for paseo runtime.");
@@ -543,6 +553,24 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
                 // Set bound fee to 0.1 DOT (same as Polkadot V2) on AH
                 let outbound_fee_call = commands::set_assethub_fee_v2(1_000_000_000);
                 send_xcm_asset_hub(&context, vec![outbound_fee_call]).await?
+            }
+        }
+        Command::Upgrade202603 => {
+            #[cfg(not(feature = "polkadot"))]
+            panic!("Upgrade202603 only for polkadot runtime.");
+
+            #[cfg(feature = "polkadot")]
+            {
+                // Upgrade logic gateway
+                let upgrade_call = commands::upgrade(&UpgradeArgs {
+                    logic_address: address!("36e74FCAAcb07773b144Ca19Ef2e32Fc972aC50b"),
+                    logic_code_hash: FixedBytes::from_slice(&hex!(
+                        "e3cfcc0042ad4c819c627fb2a84ba0822d67747a8618a4e1c4eb0c5112b17903"
+                    )),
+                    initializer_params: Default::default(),
+                    initializer_gas: 100000,
+                });
+                send_xcm_bridge_hub(&context, vec![upgrade_call]).await?
             }
         }
     };

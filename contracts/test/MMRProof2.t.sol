@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.28;
+pragma solidity 0.8.34;
 
 import {Test} from "forge-std/Test.sol";
 // console and stdJson removed — fixtures are generated programmatically
@@ -112,7 +112,7 @@ contract MMRProofTest is Test {
         return f;
     }
 
-    function testVerifyLeafProof() public {
+    function testVerifyLeafProof() public view {
         Fixture memory fix = fixture();
 
         for (uint256 i = 0; i < fix.leaves.length; i++) {
@@ -126,7 +126,7 @@ contract MMRProofTest is Test {
 
     // Additional smoke test that reuses the shared MerkleLib helper to build a proof
     // for a target leaf and verify it via the wrapper.
-    function testVerifyLeafProofWithLib() public {
+    function testVerifyLeafProofWithLib() public view {
         // use the same deterministic construction as generateFixture
         bytes32[] memory leaves = new bytes32[](16);
         for (uint256 i = 0; i < 16; i++) {

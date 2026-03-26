@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.28;
+pragma solidity 0.8.34;
 
 import {Test} from "forge-std/Test.sol";
-import {console} from "forge-std/console.sol";
 import {BitfieldWrapper} from "./mocks/BitfieldWrapper.sol";
 import {Bitfield} from "../src/utils/Bitfield.sol";
 

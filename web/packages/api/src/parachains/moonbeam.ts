@@ -1,8 +1,7 @@
 import { ApiPromise } from "@polkadot/api"
 import { ethers } from "ethers"
 import { ParachainBase } from "./parachainBase"
-import { PNAMap } from "../assets_v2"
-import { AssetMap } from "@snowbridge/base-types"
+import { AssetMap, PNAMap } from "@snowbridge/base-types"
 import { DOT_LOCATION, getTokenFromLocation } from "../xcmBuilder"
 
 const MOONBEAM_ERC20_ABI = [
@@ -143,5 +142,17 @@ export class MoonbeamParachain extends ParachainBase {
             }
         }
         return assets
+    }
+
+    swapAsset1ForAsset2(_asset1: any, _asset2: any, _exactAsset1Balance: bigint): Promise<bigint> {
+        throw Error(`${this.specName} does not support.`)
+    }
+
+    getAssetHubConversionPalletSwap(
+        asset1: any,
+        asset2: any,
+        exactAsset2Balance: bigint,
+    ): Promise<bigint> {
+        throw Error(`${this.specName} does not support.`)
     }
 }

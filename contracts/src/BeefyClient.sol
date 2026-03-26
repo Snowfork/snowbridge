@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.28;
+pragma solidity 0.8.34;
 
 import {ECDSA} from "openzeppelin/utils/cryptography/ECDSA.sol";
 import {SubstrateMerkleProof} from "./utils/SubstrateMerkleProof.sol";
@@ -187,12 +187,13 @@ contract BeefyClient {
     /**
      * @dev Fiat-Shamir domain separator ID
      */
-    bytes public constant FIAT_SHAMIR_DOMAIN_ID = bytes("SNOWBRIDGE-FIAT-SHAMIR-v1");
+    bytes public constant FIAT_SHAMIR_DOMAIN_ID = bytes("SNOWBRIDGE-FIAT-SHAMIR-V1");
 
     /**
      * @dev Beefy payload id for MMR Root payload items:
      * https://github.com/paritytech/substrate/blob/fe1f8ba1c4f23931ae89c1ada35efb3d908b50f5/primitives/consensus/beefy/src/payload.rs#L33
      */
+    // forge-lint: disable-next-line(unsafe-typecast)
     bytes2 public constant MMR_ROOT_ID = bytes2("mh");
 
     /**
@@ -412,7 +413,9 @@ contract BeefyClient {
         bytes32 newMMRRoot = ensureProvidesMMRRoot(commitment);
 
         if (is_next_session) {
-            if (leaf.nextAuthoritySetID != nextValidatorSet.id + 1) {
+            // The id for candidate nextValidatorSet should be greater than the current
+            // nextValidatorSet id
+            if (leaf.nextAuthoritySetID <= nextValidatorSet.id) {
                 revert InvalidMMRLeaf();
             }
             bool leafIsValid = MMRProof.verifyLeafProof(
@@ -463,6 +466,14 @@ contract BeefyClient {
             revert InvalidBitfieldLength();
         }
         return Bitfield.createBitfield(bitsToSet, length);
+    }
+
+    /**
+     * @dev Compute the hash of a commitment
+     * @param commitment the commitment to hash
+     */
+    function computeCommitmentHash(Commitment calldata commitment) external pure returns (bytes32) {
+        return keccak256(encodeCommitment(commitment));
     }
 
     /**
@@ -558,7 +569,9 @@ contract BeefyClient {
         verifyFiatShamirCommitment(commitmentHash, bitfield, vset, proofs);
 
         if (is_next_session) {
-            if (leaf.nextAuthoritySetID != nextValidatorSet.id + 1) {
+            // The id for candidate nextValidatorSet should be greater than the current
+            // nextValidatorSet id
+            if (leaf.nextAuthoritySetID <= nextValidatorSet.id) {
                 revert InvalidMMRLeaf();
             }
             bool leafIsValid = MMRProof.verifyLeafProof(
@@ -766,14 +779,12 @@ contract BeefyClient {
         pure
         returns (bytes32)
     {
-        if (commitment.payload.length != 1) {
-            revert CommitmentNotRelevant();
+        for (uint256 i = 0; i < commitment.payload.length; i++) {
+            if (commitment.payload[i].payloadID == MMR_ROOT_ID) {
+                return bytes32(commitment.payload[i].data);
+            }
         }
-        PayloadItem memory payload = commitment.payload[0];
-        if (payload.payloadID != MMR_ROOT_ID || payload.data.length != 32) {
-            revert CommitmentNotRelevant();
-        }
-        return bytes32(payload.data);
+        revert CommitmentNotRelevant();
     }
 
     function encodeCommitment(Commitment calldata commitment)

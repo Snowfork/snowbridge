@@ -18,10 +18,10 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/contracts"
 	"github.com/snowfork/snowbridge/relayer/crypto/sr25519"
+	beaconstate "github.com/snowfork/snowbridge/relayer/relays/beacon-state"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/api"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/protocol"
-	"github.com/snowfork/snowbridge/relayer/relays/beacon/store"
 	"github.com/snowfork/snowbridge/relayer/relays/util"
 	"golang.org/x/sync/errgroup"
 )
@@ -90,29 +90,33 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 
 	p := protocol.New(r.config.Source.Beacon.Spec, r.config.Sink.Parachain.HeaderRedundancy)
 
-	store := store.New(r.config.Source.Beacon.DataStore.Location, r.config.Source.Beacon.DataStore.MaxEntries, *p)
-	store.Connect()
+	beaconAPI := api.NewBeaconClient(r.config.Source.Beacon.Endpoint)
 
-	beaconAPI := api.NewBeaconClient(r.config.Source.Beacon.Endpoint, r.config.Source.Beacon.StateEndpoint)
+	stateServiceClient := beaconstate.NewClient(r.config.Source.Beacon.StateServiceEndpoint)
+	log.WithField("endpoint", r.config.Source.Beacon.StateServiceEndpoint).Info("Using beacon state service for proof generation")
+
 	beaconHeader := header.New(
 		r.writer,
 		beaconAPI,
 		r.config.Source.Beacon.Spec,
-		&store,
 		p,
-		0, // setting is not used in the execution relay
+		0, // setting is not used in the reward relay
+		stateServiceClient,
 	)
 	r.beaconHeader = &beaconHeader
 
-	if err != nil {
-		return err
+	var fetchInterval time.Duration
+	if r.config.FetchInterval == 0 {
+		fetchInterval = 60 * time.Second
+	} else {
+		fetchInterval = time.Duration(r.config.FetchInterval) * time.Second
 	}
 
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
-		case <-time.After(60 * time.Second):
+		case <-time.After(fetchInterval):
 			orders, err := r.findOrderUndelivered(ctx)
 			if err != nil {
 				return fmt.Errorf("find undelivered order: %w", err)
@@ -324,7 +328,12 @@ func (relay *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayInboundMe
 		"Proof":    inboundMsg.Proof,
 	}).Debug("Generated message from Ethereum log")
 
-	err = relay.writer.WriteToParachainAndWatch(ctx, "EthereumOutboundQueueV2.submit_delivery_receipt", inboundMsg)
+	submitPayload, err := relay.paraconn.GenerateSubmitMessagePayload(inboundMsg)
+	if err != nil {
+		return fmt.Errorf("generate submit message payload: %w", err)
+	}
+
+	err = relay.writer.WriteToParachainAndWatch(ctx, "EthereumOutboundQueueV2.submit_delivery_receipt", submitPayload)
 	if err != nil {
 		return fmt.Errorf("submit message to outbound queue v2: %w", err)
 	}

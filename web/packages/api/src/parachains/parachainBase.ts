@@ -1,9 +1,10 @@
 import { ApiPromise } from "@polkadot/api"
-import { Asset, AssetMap, ChainProperties } from "@snowbridge/base-types"
-import { PNAMap, SubstrateAccount } from "../assets_v2"
+import { Asset, AssetMap, ChainProperties, PNAMap, SubstrateAccount } from "@snowbridge/base-types"
 import { Result } from "@polkadot/types"
 import { XcmDryRunApiError, XcmDryRunEffects } from "@polkadot/types/interfaces"
-import { erc20Location, HERE_LOCATION, parachainLocation } from "../xcmBuilder"
+import { Codec } from "@polkadot/types/types"
+import { BN } from "@polkadot/util"
+import { DOT_LOCATION, erc20Location, HERE_LOCATION, parachainLocation } from "../xcmBuilder"
 
 export abstract class ParachainBase {
     provider: ApiPromise
@@ -62,22 +63,45 @@ export abstract class ParachainBase {
 
     async getNativeAccount(account: string): Promise<SubstrateAccount> {
         const accountData = (await this.provider.query.system.account(account)).toPrimitive() as any
+        const free = BigInt(accountData.data.free)
+        const frozen = BigInt(accountData.data.frozen)
+        const reserved = BigInt(accountData.data.reserved)
+        const transferable = free - frozen
+        const total = free + reserved
         return {
             nonce: BigInt(accountData.nonce),
             consumers: BigInt(accountData.consumers),
             providers: BigInt(accountData.providers),
             sufficients: BigInt(accountData.sufficients),
             data: {
-                free: BigInt(accountData.data.free),
-                reserved: BigInt(accountData.data.reserved),
-                frozen: BigInt(accountData.data.frozen),
+                free,
+                reserved,
+                frozen,
+                transferable,
+                total,
             },
         }
     }
 
-    async getNativeBalance(account: string): Promise<bigint> {
+    async getNativeBalance(account: string, transferable?: boolean): Promise<bigint> {
         const acc = await this.getNativeAccount(account)
+        if (transferable === true) {
+            return acc.data.transferable
+        }
         return acc.data.free
+    }
+
+    async accountNonce(account: string): Promise<number> {
+        const accountNextId = await this.provider.rpc.system.accountNextIndex(account)
+        return accountNextId.toNumber()
+    }
+
+    async getDeliveryFeeFromStorage(feeKeyHex: string): Promise<bigint> {
+        const feeStorageItem = await this.provider.rpc.state.getStorage(feeKeyHex)
+        if (!feeStorageItem) return 0n
+
+        const leFee = new BN((feeStorageItem as Codec).toHex().replace("0x", ""), "hex", "le")
+        return leFee.eqn(0) ? 0n : BigInt(leFee.toString())
     }
 
     getNativeBalanceLocation(relativeTo: "here" | "sibling"): any {
@@ -131,12 +155,29 @@ export abstract class ParachainBase {
     }
 
     async calculateDeliveryFeeInDOT(destParachainId: number, xcm: any): Promise<bigint> {
-        const result = (
-            await this.provider.call.xcmPaymentApi.queryDeliveryFees(
-                { v4: { parents: 1, interior: { x1: [{ parachain: destParachainId }] } } },
-                xcm,
-            )
-        ).toPrimitive() as any
+        let result
+        try {
+            result = (
+                await this.provider.call.xcmPaymentApi.queryDeliveryFees(
+                    { v4: { parents: 1, interior: { x1: [{ parachain: destParachainId }] } } },
+                    xcm,
+                )
+            ).toPrimitive() as any
+        } catch (primaryError) {
+            try {
+                result = (
+                    await this.provider.call.xcmPaymentApi.queryDeliveryFees(
+                        { v4: { parents: 1, interior: { x1: [{ parachain: destParachainId }] } } },
+                        xcm,
+                        { v4: DOT_LOCATION },
+                    )
+                ).toPrimitive() as any
+            } catch (fallbackError) {
+                console.error("Primary queryDeliveryFees call failed:", primaryError)
+                console.error("Fallback queryDeliveryFees call also failed:", fallbackError)
+                throw fallbackError
+            }
+        }
         if (!result.ok) {
             console.error(result)
             throw Error(`Can not query XCM Weight.`)
@@ -233,8 +274,42 @@ export abstract class ParachainBase {
         }
     }
 
+    async validateAccount(
+        beneficiaryAddress: string,
+        ethChainId: number,
+        tokenAddress: string,
+        assetMetadata?: Asset,
+        maxConsumers?: bigint,
+    ) {
+        // Check if the account is created
+        const [beneficiaryAccount, beneficiaryTokenBalance] = await Promise.all([
+            this.getNativeAccount(beneficiaryAddress),
+            this.getTokenBalance(beneficiaryAddress, ethChainId, tokenAddress, assetMetadata),
+        ])
+        return {
+            accountExists: !(
+                beneficiaryAccount.consumers === 0n &&
+                beneficiaryAccount.providers === 0n &&
+                beneficiaryAccount.sufficients === 0n
+            ),
+            accountMaxConsumers:
+                beneficiaryAccount.consumers >= (maxConsumers ?? 63n) &&
+                beneficiaryTokenBalance === 0n,
+        }
+    }
+
     abstract getLocationBalance(location: any, account: string, pnaAssetId?: any): Promise<bigint>
     abstract getDotBalance(account: string): Promise<bigint>
     abstract getAssets(ethChainId: number, pnas: PNAMap): Promise<AssetMap>
     abstract getXC20DOT(): string | undefined
+    abstract swapAsset1ForAsset2(
+        asset1: any,
+        asset2: any,
+        exactAsset1Balance: bigint,
+    ): Promise<bigint>
+    abstract getAssetHubConversionPalletSwap(
+        asset1: any,
+        asset2: any,
+        exactAsset2Balance: bigint,
+    ): Promise<bigint>
 }

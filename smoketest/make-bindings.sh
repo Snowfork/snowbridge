@@ -6,14 +6,10 @@ rm -rf src/contracts
 mkdir -p src/contracts
 
 contracts_root="../contracts"
-if [ "$snowbridge_v1" = "true" ]; then
-        # Deploy legacy V1 contracts
-        contracts_root="../../snowbridge-v1/contracts"
-fi
 
 # Generate Rust bindings for contracts
 forge bind --module --overwrite \
-    --select 'IGateway|IUpgradable|WETH9|MockGatewayV2|Token|HelloWorld|Greeter|BeefyClient' \
+    --select 'IGateway|IUpgradable|WETH9|MockGatewayV2|Token|HelloWorld|Greeter|BeefyClient|SnowbridgeL1Adaptor|SnowbridgeL2Adaptor' \
     --bindings-path src/contracts \
     --root $contracts_root
 

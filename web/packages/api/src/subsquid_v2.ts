@@ -1,5 +1,11 @@
 import { queryByGraphQL } from "./subsquid"
 
+export {
+    fetchInterParachainMessageById,
+    fetchLatestBlockFromIndexer,
+    queryByGraphQL,
+} from "./subsquid"
+
 /**
  * Query the recent transfers from Ethereum to Polkadot
 
@@ -55,6 +61,7 @@ export const fetchToPolkadotTransfers = async (graphqlApiUrl: string, graphqlQue
             fee
             sourceNetwork
             destinationNetwork
+            l2ChainId
             sourceParaId
             toBridgeHubInboundQueue {
                 id
@@ -133,6 +140,9 @@ export const fetchToEthereumTransfers = async (graphqlApiUrl: string, graphqlQue
             nonce
             senderAddress
             sourceParaId
+            sourceNetwork
+            destinationNetwork
+            l2ChainId
             timestamp
             tokenAddress
             txHash
@@ -161,6 +171,11 @@ export const fetchToEthereumTransfers = async (graphqlApiUrl: string, graphqlQue
                 messageId
                 nonce
                 channelId
+            }
+            toEthereumL2 {
+                blockNumber
+                depositId
+                txHash
             }
         }
     }`
@@ -205,7 +220,8 @@ $graphqlApiUrl --no-progress-meter | jq "."
 ]
  **/
 export const fetchToPolkadotTransferById = async (graphqlApiUrl: string, id: string) => {
-    let nonceFilter = id.length > 0 && !id.startsWith("0x") && !isNaN(Number(id)) ? `{nonce_eq: ${id}}` : ""
+    let nonceFilter =
+        id.length > 0 && !id.startsWith("0x") && !isNaN(Number(id)) ? `{nonce_eq: ${id}}` : ""
     let query = `query { transferStatusToPolkadotV2s(limit: 1, where: { OR: [ {messageId_eq: "${id}"} {txHash_eq: "${id}"} ${nonceFilter} ] }) {
             id
             status
@@ -213,6 +229,10 @@ export const fetchToPolkadotTransferById = async (graphqlApiUrl: string, id: str
             channelId
             destinationAddress
             destinationParaId
+            sourceNetwork
+            sourceParaId
+            destinationNetwork
+            l2ChainId
             messageId
             nonce
             senderAddress
@@ -287,7 +307,8 @@ $graphqlApiUrl --no-progress-meter | jq "."
 ]
  **/
 export const fetchToEthereumTransferById = async (graphqlApiUrl: string, id: string) => {
-    let nonceFilter = id.length > 0 && !id.startsWith("0x") && !isNaN(Number(id)) ? `{nonce_eq: ${id}}` : ""
+    let nonceFilter =
+        id.length > 0 && !id.startsWith("0x") && !isNaN(Number(id)) ? `{nonce_eq: ${id}}` : ""
     let query = `query { transferStatusToEthereumV2s(limit: 1, where: { OR: [ {messageId_eq: "${id}"} {txHash_eq: "${id}"} ${nonceFilter} ] }) {
             id
             status
@@ -298,6 +319,9 @@ export const fetchToEthereumTransferById = async (graphqlApiUrl: string, id: str
             nonce
             senderAddress
             sourceParaId
+            sourceNetwork
+            destinationNetwork
+            l2ChainId
             timestamp
             tokenAddress
             txHash
@@ -326,6 +350,11 @@ export const fetchToEthereumTransferById = async (graphqlApiUrl: string, id: str
                 messageId
                 nonce
                 channelId
+            }
+            toEthereumL2 {
+                blockNumber
+                depositId
+                txHash
             }
         }
     }`
@@ -399,6 +428,7 @@ export const fetchToPolkadotPendingTransfers = async (
             fee
             sourceNetwork
             destinationNetwork
+            l2ChainId
             sourceParaId
             toBridgeHubInboundQueue {
                 id
@@ -443,6 +473,9 @@ export const fetchToEthereumPendingTransfers = async (
             nonce
             senderAddress
             sourceParaId
+            sourceNetwork
+            destinationNetwork
+            l2ChainId
             timestamp
             tokenAddress
             txHash
@@ -471,6 +504,11 @@ export const fetchToEthereumPendingTransfers = async (
                 messageId
                 nonce
                 channelId
+            }
+            toEthereumL2 {
+                blockNumber
+                depositId
+                txHash
             }
         }
     }`
@@ -502,6 +540,7 @@ export const fetchToPolkadotTransfersBySenders = async (
             fee
             sourceNetwork
             destinationNetwork
+            l2ChainId
             sourceParaId
             toBridgeHubInboundQueue {
                 id
@@ -548,6 +587,9 @@ export const fetchToEthereumTransfersBySenders = async (
             nonce
             senderAddress
             sourceParaId
+            sourceNetwork
+            destinationNetwork
+            l2ChainId
             timestamp
             tokenAddress
             txHash
@@ -577,8 +619,31 @@ export const fetchToEthereumTransfersBySenders = async (
                 nonce
                 channelId
             }
+            toEthereumL2 {
+                blockNumber
+                depositId
+                txHash
+            }
         }
     }`
     let result = await queryByGraphQL(graphqlApiUrl, query)
     return result?.transferStatusToEthereumV2s
+}
+
+export const fetchMaxDeliveredNonceToEthereum = async (graphqlApiUrl: string, latest: number) => {
+    let query = `query { toEthereumV2LastDelivered(latest: ${latest}) {
+                max
+            }
+        }`
+    let result = await queryByGraphQL(graphqlApiUrl, query)
+    return result?.toEthereumV2LastDelivered?.max
+}
+
+export const fetchMaxDeliveredNonceToPolkadot = async (graphqlApiUrl: string, latest: number) => {
+    let query = `query { toPolkadotV2LastDelivered(latest: ${latest}) {
+                max
+            }
+        }`
+    let result = await queryByGraphQL(graphqlApiUrl, query)
+    return result?.toPolkadotV2LastDelivered?.max
 }
