@@ -97,7 +97,7 @@ func (relay *InstantRelay) Start(ctx context.Context, eg *errgroup.Group) error 
 		return fmt.Errorf("unable to connect to ethereum: writer: %w", err)
 	}
 
-	err = relay.ethereumConnBeefy.ConnectWithHeartBeat(ctx, eg, time.Second*time.Duration(relay.config.Sink.Ethereum.HeartbeatSecs))
+	err = relay.ethereumConnBeefy.ConnectWithHeartBeat(ctx, eg, time.Second*time.Duration(relay.config.Source.Ethereum.HeartbeatSecs))
 	if err != nil {
 		return fmt.Errorf("unable to connect to ethereum: beefy: %w", err)
 	}

@@ -75,7 +75,7 @@ func (li *BeefyInstantSyncer) Start(ctx context.Context, eg *errgroup.Group) err
 }
 
 func (li *BeefyInstantSyncer) isRelayConsensusProfitable(ctx context.Context, tasks []*Task) (bool, error) {
-	var totalFee *big.Int
+	totalFee := new(big.Int)
 	for _, task := range tasks {
 		if task == nil || task.MessageProofs == nil || len(*task.MessageProofs) == 0 {
 			continue
@@ -90,7 +90,7 @@ func (li *BeefyInstantSyncer) isRelayConsensusProfitable(ctx context.Context, ta
 	}
 	var requireFee *big.Int
 	if li.beefyOnDemandRelay.GetConfig().Sink.EnableFiatShamir {
-		requireFee = new(big.Int).Mul(gasPrice, big.NewInt(int64(li.config.Sink.Fees.BaseBeefyFiatShamirGas)))
+		requireFee = new(big.Int).Mul(gasPrice, new(big.Int).SetUint64(li.config.Sink.Fees.BaseBeefyFiatShamirGas))
 	} else {
 		requireFee = new(big.Int).Mul(gasPrice, new(big.Int).SetUint64(li.config.Sink.Fees.BaseBeefyTwoPhaseCommitGas))
 	}

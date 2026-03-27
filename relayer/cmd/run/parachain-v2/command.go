@@ -111,11 +111,12 @@ func run(_ *cobra.Command, _ []string) error {
 		if err != nil {
 			return err
 		}
-		relay, err := parachain.NewInstantRelay(&config, &beefyConfig, keypair)
+		var instantRelay *parachain.InstantRelay
+		instantRelay, err = parachain.NewInstantRelay(&config, &beefyConfig, keypair)
 		if err != nil {
 			return err
 		}
-		err = relay.Start(ctx, eg)
+		err = instantRelay.Start(ctx, eg)
 	}
 	if err != nil {
 		logrus.WithError(err).Fatal("Unhandled error")
