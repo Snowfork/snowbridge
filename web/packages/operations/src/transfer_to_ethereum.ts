@@ -1,5 +1,6 @@
 import { Keyring } from "@polkadot/keyring"
-import { Context, toEthereumV2 } from "@snowbridge/api"
+import { createApi, toEthereumV2 } from "@snowbridge/api"
+import { EthersEthereumProvider } from "@snowbridge/provider-ethers"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { formatUnits, Wallet } from "ethers"
 import { bridgeInfoFor } from "@snowbridge/registry"
@@ -13,8 +14,10 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
 
     await cryptoWaitReady()
 
-    const { registry, environment } = bridgeInfoFor(env)
-    const context = new Context(environment)
+    const info = bridgeInfoFor(env)
+    const { registry } = info
+    const api = createApi({ info, ethereumProvider: new EthersEthereumProvider() })
+    const context = api.context
 
     const polkadot_keyring = new Keyring({ type: "sr25519" })
 
@@ -38,19 +41,15 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
 
     console.log("Asset Hub to Ethereum")
     {
-        // Step 1. Get the delivery fee for the transaction
-        const fee = await toEthereumV2.getDeliveryFee(
-            { assetHub: await context.assetHub(), source: await context.parachain(sourceParaId) },
-            sourceParaId,
-            registry,
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            TOKEN_CONTRACT!,
+        const transferImpl = api.sender(
+            { kind: "polkadot", id: sourceParaId },
+            { kind: "ethereum", id: registry.ethChainId },
         )
+        // Step 1. Get the delivery fee for the transaction
+        const fee = await transferImpl.fee(TOKEN_CONTRACT!)
 
         // Step 2. Create a transfer tx
-        const transfer = await toEthereumV2.createTransfer(
-            { sourceParaId, context },
-            registry,
+        const transfer = await transferImpl.tx(
             POLKADOT_ACCOUNT_PUBLIC,
             ETHEREUM_ACCOUNT_PUBLIC,
             TOKEN_CONTRACT!,
@@ -81,7 +80,7 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
         // )
 
         // Step 4. Validate the transaction.
-        const validation = await toEthereumV2.validateTransfer(context, transfer)
+        const validation = await transferImpl.validate(transfer)
         console.log("validation result", validation)
 
         // Step 5. Check validation logs for errors
@@ -90,7 +89,7 @@ export const transferToEthereum = async (sourceParaId: number, symbol: string, a
         }
         if (process.env["DRY_RUN"] != "true") {
             // Step 6. Submit transaction and get receipt for tracking
-            const response = await toEthereumV2.signAndSend(context, transfer, POLKADOT_ACCOUNT, {
+            const response = await transferImpl.signAndSend(transfer, POLKADOT_ACCOUNT, {
                 withSignedTransaction: true,
             })
             if (!response) {

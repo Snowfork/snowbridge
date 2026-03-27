@@ -1,60 +1,47 @@
-import { AssetRegistry } from "@snowbridge/base-types"
-import {
-    AgentConnections,
-    AgentCreationInterface,
-    AgentCreation,
-    AgentCreationValidationResult,
-} from "./agentInterface"
-import { IGatewayV2__factory as IGateway__factory } from "@snowbridge/contract-types"
-import { Context } from "../../index"
+import { AgentCreationInterface, AgentCreation, ValidatedCreateAgent } from "./agentInterface"
+import type { Context } from "../../index"
 import { ValidationKind } from "../../toPolkadotSnowbridgeV2"
 import { ValidationLog, ValidationReason } from "../../toPolkadot_v2"
-import { AbstractProvider, Contract } from "ethers"
+import { AssetRegistry, EthereumProviderTypes } from "@snowbridge/base-types"
+import { ensureValidationSuccess } from "../../utils"
 
-export class CreateAgent implements AgentCreationInterface {
-    async createAgentCreation(
-        context:
-            | Context
-            | {
-                  ethereum: AbstractProvider
-              },
-        registry: AssetRegistry,
+export class CreateAgent<T extends EthereumProviderTypes>
+    implements AgentCreationInterface<T["ContractTransaction"]>
+{
+    constructor(
+        readonly context: Context<T>,
+        private readonly registry: AssetRegistry,
+    ) {}
+
+    async tx(
         sourceAccount: string,
         agentId: string,
-    ): Promise<AgentCreation> {
-        const ifce = IGateway__factory.createInterface()
-        const con = new Contract(registry.gatewayAddress, ifce)
-
-        const tx = await con.getFunction("v2_createAgent").populateTransaction(agentId, {
-            from: sourceAccount,
-        })
+    ): Promise<AgentCreation<T["ContractTransaction"]>> {
+        const tx = await this.context.ethereumProvider.gatewayV2CreateAgent(
+            this.context.ethereum(),
+            this.context.environment.gatewayContract,
+            agentId,
+        )
 
         return {
             input: {
-                registry,
                 sourceAccount,
                 agentId,
             },
             computed: {
-                gatewayAddress: registry.gatewayAddress,
+                gatewayAddress: this.registry.gatewayAddress,
             },
             tx,
         }
     }
 
-    async validateAgentCreation(
-        context: Context | AgentConnections,
-        creation: AgentCreation,
-    ): Promise<AgentCreationValidationResult> {
+    async validate(
+        creation: AgentCreation<T["ContractTransaction"]>,
+    ): Promise<ValidatedCreateAgent<T["ContractTransaction"]>> {
         const { tx } = creation
         const { sourceAccount, agentId } = creation.input
-        const { ethereum, gateway } =
-            context instanceof Context
-                ? {
-                      ethereum: context.ethereum(),
-                      gateway: context.gatewayV2(),
-                  }
-                : context
+        const ethereum = this.context.ethereum()
+        const gateway = this.context.gatewayV2()
 
         const logs: ValidationLog[] = []
 
@@ -75,13 +62,13 @@ export class CreateAgent implements AgentCreationInterface {
             agentAlreadyExists = false
         }
 
-        const etherBalance = await ethereum.getBalance(sourceAccount)
+        const etherBalance = await this.context.ethereumProvider.getBalance(ethereum, sourceAccount)
 
         let feeInfo
         if (logs.length === 0 || !agentAlreadyExists) {
             const [estimatedGas, feeData] = await Promise.all([
-                ethereum.estimateGas(tx),
-                ethereum.getFeeData(),
+                this.context.ethereumProvider.estimateGas(ethereum, tx),
+                this.context.ethereumProvider.getFeeData(ethereum),
             ])
             const executionFee = (feeData.gasPrice ?? 0n) * estimatedGas
             if (executionFee === 0n) {
@@ -117,7 +104,15 @@ export class CreateAgent implements AgentCreationInterface {
                 agentAlreadyExists,
                 agentAddress: agentAlreadyExists ? existingAgent : undefined,
             },
-            creation,
+            ...creation,
         }
+    }
+
+    async build(
+        sourceAccount: string,
+        agentId: string,
+    ): Promise<ValidatedCreateAgent<T["ContractTransaction"]>> {
+        const creation = await this.tx(sourceAccount, agentId)
+        return ensureValidationSuccess(await this.validate(creation))
     }
 }

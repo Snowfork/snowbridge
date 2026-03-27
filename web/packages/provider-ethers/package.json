@@ -1,0 +1,33 @@
+{
+  "name": "@snowbridge/provider-ethers",
+  "version": "0.4.0",
+  "description": "Snowbridge ethers provider implementation",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Snowfork/snowbridge.git",
+    "directory": "web/packages/provider-ethers"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc --build --force",
+    "lint": "eslint .",
+    "format": "prettier src --write"
+  },
+  "devDependencies": {
+    "@types/node": "24.6.2",
+    "@typescript-eslint/eslint-plugin": "8.45.0",
+    "@typescript-eslint/parser": "8.45.0",
+    "eslint": "9.37.0",
+    "eslint-config-prettier": "10.1.8",
+    "prettier": "3.6.2",
+    "ts-node": "10.9.2",
+    "tsconfig-paths": "4.2.0",
+    "typescript": "5.9.3"
+  },
+  "dependencies": {
+    "@snowbridge/base-types": "workspace:*",
+    "ethers": "6.16.0"
+  }
+}

@@ -34,6 +34,7 @@
     "typescript": "5.9.3"
   },
   "dependencies": {
-    "@snowbridge/base-types": "workspace:*"
+    "@snowbridge/base-types": "workspace:*",
+    "@snowbridge/provider-ethers": "workspace:*"
   }
 }

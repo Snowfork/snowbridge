@@ -1,0 +1,33 @@
+import { Context } from "../.."
+import { AddressOrPair, SignerOptions } from "@polkadot/api/types"
+import { DeliveryFee, MessageReceipt, Transfer, ValidatedTransfer } from "../../forKusama"
+import { EthereumProviderTypes } from "@snowbridge/base-types"
+
+export interface TransferInterface<T extends EthereumProviderTypes> {
+    readonly context: Context<T>
+
+    fee(tokenAddress: string): Promise<DeliveryFee>
+
+    tx(
+        sourceAccount: string,
+        beneficiaryAccount: string,
+        tokenAddress: string,
+        amount: bigint,
+        fee: DeliveryFee,
+    ): Promise<Transfer>
+
+    validate(transfer: Transfer): Promise<ValidatedTransfer>
+
+    build(
+        sourceAccount: string,
+        beneficiaryAccount: string,
+        tokenAddress: string,
+        amount: bigint,
+    ): Promise<ValidatedTransfer>
+
+    signAndSend(
+        transfer: Transfer,
+        account: AddressOrPair,
+        options: Partial<SignerOptions>,
+    ): Promise<MessageReceipt>
+}

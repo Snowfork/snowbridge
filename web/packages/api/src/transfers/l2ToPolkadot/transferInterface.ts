@@ -1,15 +1,18 @@
-import { AssetRegistry } from "@snowbridge/base-types"
-import { Context } from "../../index"
-import { DeliveryFee, Transfer, ValidationResult } from "../../toPolkadotSnowbridgeV2"
+import { EthereumProviderTypes } from "@snowbridge/base-types"
+import { Context } from "../.."
+import {
+    DeliveryFee,
+    MessageReceipt,
+    Transfer,
+    ValidatedTransfer,
+} from "../../toPolkadotSnowbridgeV2"
 
-export interface TransferInterface {
-    getDeliveryFee(
-        context: Context,
-        registry: AssetRegistry,
-        l2ChainId: number,
+export interface TransferInterface<T extends EthereumProviderTypes> {
+    readonly context: Context<T>
+
+    fee(
         tokenAddress: string,
         amount: bigint,
-        destinationParaId: number,
         options?: {
             paddFeeByPercentage?: bigint
             feeAsset?: any
@@ -20,13 +23,9 @@ export interface TransferInterface {
         },
     ): Promise<DeliveryFee>
 
-    createTransfer(
-        context: Context,
-        registry: AssetRegistry,
-        l2ChainId: number,
+    tx(
         tokenAddress: string,
         amount: bigint,
-        destinationParaId: number,
         sourceAccount: string,
         beneficiaryAccount: string,
         fee: DeliveryFee,
@@ -34,7 +33,30 @@ export interface TransferInterface {
             customXcm?: any[] // Optional custom XCM instructions to append
             fillDeadlineBuffer?: bigint // Optional buffer added to the relay fill deadline for L2 calls.
         },
-    ): Promise<Transfer>
+    ): Promise<Transfer<T>>
 
-    validateTransfer(context: Context, transfer: Transfer): Promise<ValidationResult>
+    validate(transfer: Transfer<T>): Promise<ValidatedTransfer<T>>
+
+    build(
+        tokenAddress: string,
+        amount: bigint,
+        sourceAccount: string,
+        beneficiaryAccount: string,
+        options?: {
+            fee?: {
+                paddFeeByPercentage?: bigint
+                feeAsset?: any
+                customXcm?: any[]
+                overrideRelayerFee?: bigint
+                l2PadFeeByPercentage?: bigint
+                fillDeadlineBuffer?: bigint
+            }
+            tx?: {
+                customXcm?: any[]
+                fillDeadlineBuffer?: bigint
+            }
+        },
+    ): Promise<ValidatedTransfer<T>>
+
+    messageId(receipt: T["TransactionReceipt"]): Promise<MessageReceipt | null>
 }

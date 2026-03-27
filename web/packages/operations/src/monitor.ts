@@ -1,6 +1,7 @@
 import { u8aToHex } from "@polkadot/util"
 import { blake2AsU8a } from "@polkadot/util-crypto"
-import { Context, status, utils, subsquidV2 } from "@snowbridge/api"
+import { Context, createApi, status, subsquidV2, utils } from "@snowbridge/api"
+import { EthersEthereumProvider, EthersProviderTypes } from "@snowbridge/provider-ethers"
 import { sendMetrics } from "./alarm"
 import { Environment } from "../../base-types/dist"
 import { bridgeInfoFor } from "@snowbridge/registry"
@@ -249,14 +250,21 @@ export const monitor = async (): Promise<status.AllMetrics> => {
     if (process.env.NODE_ENV !== undefined) {
         env = process.env.NODE_ENV
     }
-    const { environment: snowbridgeEnv } = bridgeInfoFor(env)
+    const info = bridgeInfoFor(env)
+    const { environment: snowbridgeEnv } = info
     if (snowbridgeEnv === undefined) {
         throw Error(`Unknown environment '${env}'`)
     }
 
     const { name } = snowbridgeEnv
 
-    const context = new Context(contextConfigOverrides(snowbridgeEnv))
+    const context = createApi({
+        info: {
+            ...info,
+            environment: contextConfigOverrides(snowbridgeEnv),
+        },
+        ethereumProvider: new EthersEthereumProvider(),
+    }).context
 
     const bridgeStatus = await status.bridgeStatusInfo(context, {
         polkadotBlockTimeInSeconds: 6,
@@ -303,7 +311,7 @@ export const monitor = async (): Promise<status.AllMetrics> => {
     return allMetrics
 }
 
-const fetchChannelStatus = async (context: Context, env: Environment) => {
+const fetchChannelStatus = async (context: Context<EthersProviderTypes>, env: Environment) => {
     let assethubChannelStatus = await status.channelStatusInfo(
         context,
         utils.paraIdToChannelId(env.assetHubParaId),
@@ -325,7 +333,7 @@ const fetchChannelStatus = async (context: Context, env: Environment) => {
     return [assethubChannelStatus, primaryGov, secondaryGov]
 }
 
-const fetchBalances = async (context: Context, env: Environment) => {
+const fetchBalances = async (context: Context<EthersProviderTypes>, env: Environment) => {
     const [bridgeHub, ethereum] = await Promise.all([context.bridgeHub(), context.ethereum()])
 
     let relayers = []
@@ -392,7 +400,10 @@ const fetchBalances = async (context: Context, env: Environment) => {
     return { relayers, sovereigns }
 }
 
-export const fetchIndexerStatus = async (context: Context, env: Environment) => {
+export const fetchIndexerStatus = async (
+    context: Context<EthersProviderTypes>,
+    env: Environment,
+) => {
     let indexerInfos: status.IndexerServiceStatusInfo[] = []
     // Allow runtime override of monitored parachains without changing defaults.
     let monitorChains = monitorParams[env.name].TO_MONITOR_CHAINS
