@@ -10,6 +10,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
+	"github.com/snowfork/snowbridge/relayer/relays/beefy"
 	"github.com/snowfork/snowbridge/relayer/relays/parachain-v2"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -17,10 +18,12 @@ import (
 )
 
 var (
-	configFile     string
-	privateKey     string
-	privateKeyFile string
-	privateKeyID   string
+	configFile          string
+	privateKey          string
+	privateKeyFile      string
+	privateKeyID        string
+	beefyConfigFile     string
+	instantVerification bool
 )
 
 func Command() *cobra.Command {
@@ -37,6 +40,9 @@ func Command() *cobra.Command {
 	cmd.Flags().StringVar(&privateKey, "ethereum.private-key", "", "Ethereum private key")
 	cmd.Flags().StringVar(&privateKeyFile, "ethereum.private-key-file", "", "The file from which to read the private key")
 	cmd.Flags().StringVar(&privateKeyID, "ethereum.private-key-id", "", "The secret id to lookup the private key in AWS Secrets Manager")
+
+	cmd.Flags().StringVar(&beefyConfigFile, "beefy.config", "", "Path to beefy configuration file")
+	cmd.Flags().BoolVarP(&instantVerification, "instant-verification", "", false, "Enable instant verification of parachain messages")
 
 	return cmd
 }
@@ -92,7 +98,26 @@ func run(_ *cobra.Command, _ []string) error {
 		return nil
 	})
 
-	err = relay.Start(ctx, eg)
+	if !instantVerification {
+		err = relay.Start(ctx, eg)
+	} else {
+		viper.SetConfigFile(beefyConfigFile)
+		if err := viper.ReadInConfig(); err != nil {
+			return err
+		}
+
+		var beefyConfig beefy.Config
+		err = viper.UnmarshalExact(&beefyConfig)
+		if err != nil {
+			return err
+		}
+		var instantRelay *parachain.InstantRelay
+		instantRelay, err = parachain.NewInstantRelay(&config, &beefyConfig, keypair)
+		if err != nil {
+			return err
+		}
+		err = instantRelay.Start(ctx, eg)
+	}
 	if err != nil {
 		logrus.WithError(err).Fatal("Unhandled error")
 		cancel()

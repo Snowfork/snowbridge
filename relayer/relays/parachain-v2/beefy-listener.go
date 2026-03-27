@@ -360,3 +360,38 @@ func (li *BeefyListener) sendTask(ctx context.Context, task *Task) error {
 	}
 	return nil
 }
+
+func (li *BeefyListener) initialize(ctx context.Context) error {
+	// Set up light client bridge contract
+	address := common.HexToAddress(li.config.Contracts.BeefyClient)
+	beefyClientContract, err := contracts.NewBeefyClient(address, li.ethereumConn.Client())
+	if err != nil {
+		return err
+	}
+	li.beefyClientContract = beefyClientContract
+
+	// fetch ParaId
+	paraIDKey, err := types.CreateStorageKey(li.parachainConnection.Metadata(), "ParachainInfo", "ParachainId", nil, nil)
+	if err != nil {
+		return err
+	}
+	var paraID uint32
+	ok, err := li.parachainConnection.API().RPC.State.GetStorageLatest(paraIDKey, &paraID)
+	if err != nil {
+		return fmt.Errorf("fetch parachain id: %w", err)
+	}
+	if !ok {
+		return fmt.Errorf("parachain id missing")
+	}
+	li.paraID = paraID
+
+	li.scanner = &Scanner{
+		config:    li.config,
+		ethConn:   li.ethereumConn,
+		relayConn: li.relaychainConn,
+		paraConn:  li.parachainConnection,
+		paraID:    paraID,
+		ofac:      li.ofac,
+	}
+	return nil
+}

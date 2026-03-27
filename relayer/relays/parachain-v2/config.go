@@ -12,6 +12,7 @@ type Config struct {
 	Sink          SinkConfig        `mapstructure:"sink"`
 	RewardAddress string            `mapstructure:"reward-address"`
 	OFAC          config.OFACConfig `mapstructure:"ofac"`
+	FetchInterval uint32            `mapstructure:"fetch-interval"`
 }
 
 type SourceConfig struct {
@@ -37,6 +38,10 @@ type SinkContractsConfig struct {
 }
 
 type FeeConfig struct {
+	// The gas cost of two phase commit
+	BaseBeefyTwoPhaseCommitGas uint64 `mapstructure:"base-beefy-two-phase-commit-gas"`
+	// The gas cost of fiat shamir commit
+	BaseBeefyFiatShamirGas uint64 `mapstructure:"base-beefy-fiat-shamir-gas"`
 	// The gas cost of v2_submit excludes command execution, mainly covers the verification
 	BaseDeliveryGas uint64 `mapstructure:"base-delivery-gas"`
 	// The gas cost of unlock ERC20 token
