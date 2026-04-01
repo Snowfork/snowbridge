@@ -59,7 +59,7 @@ func (li *BeefyInstantSyncer) Start(ctx context.Context, eg *errgroup.Group) err
 	if err != nil {
 		return fmt.Errorf("initialize ethereum writer: %w", err)
 	}
-	err = li.beefyOnDemandRelay.InitializeForMulticall(ctx, eg)
+	err = li.beefyOnDemandRelay.InitializeOnDemandSync(ctx, eg)
 	if err != nil {
 		return fmt.Errorf("initialize on-demand relay: %w", err)
 	}

@@ -398,7 +398,7 @@ func (relay *OnDemandRelay) isV2NonceRelayed(ctx context.Context, nonce uint64) 
 
 func (relay *OnDemandRelay) OneShotStart(ctx context.Context, beefyBlockNumber uint64) error {
 	eg, ctx := errgroup.WithContext(ctx)
-	err := relay.InitializeForMulticall(ctx, eg)
+	err := relay.InitializeOnDemandSync(ctx, eg)
 	if err != nil {
 		return err
 	}
@@ -414,7 +414,7 @@ func (relay *OnDemandRelay) OneShotStart(ctx context.Context, beefyBlockNumber u
 	return nil
 }
 
-func (relay *OnDemandRelay) InitializeForMulticall(ctx context.Context, eg *errgroup.Group) error {
+func (relay *OnDemandRelay) InitializeOnDemandSync(ctx context.Context, eg *errgroup.Group) error {
 	err := relay.ethereumConn.ConnectWithHeartBeat(ctx, eg, time.Second*time.Duration(relay.config.Sink.Ethereum.HeartbeatSecs))
 	if err != nil {
 		return fmt.Errorf("connect to ethereum: %w", err)
