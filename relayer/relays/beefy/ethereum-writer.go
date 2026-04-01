@@ -10,6 +10,7 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -27,6 +28,7 @@ type EthereumWriter struct {
 	config          *SinkConfig
 	conn            *ethereum.Connection
 	contract        *contracts.BeefyClient
+	contractABI     abi.ABI
 	blockWaitPeriod uint64
 }
 
@@ -34,9 +36,14 @@ func NewEthereumWriter(
 	config *SinkConfig,
 	conn *ethereum.Connection,
 ) *EthereumWriter {
+	contractABI, err := abi.JSON(strings.NewReader(contracts.BeefyClientABI))
+	if err != nil {
+		panic(fmt.Sprintf("parse beefy client ABI: %v", err))
+	}
 	return &EthereumWriter{
-		config: config,
-		conn:   conn,
+		config:      config,
+		conn:        conn,
+		contractABI: contractABI,
 	}
 }
 
@@ -393,60 +400,9 @@ func (wr *EthereumWriter) initialize(ctx context.Context) error {
 }
 
 func (wr *EthereumWriter) submitFiatShamir(ctx context.Context, task *Request) error {
-	signedValidators := []*big.Int{}
-	for i, signature := range task.SignedCommitment.Signatures {
-		if signature.IsSome() {
-			signedValidators = append(signedValidators, big.NewInt(int64(i)))
-		}
-	}
-	validatorCount := big.NewInt(int64(len(task.SignedCommitment.Signatures)))
-
-	// Pick a random validator who signs beefy commitment
-	chosenValidator := signedValidators[rand.Intn(len(signedValidators))].Int64()
-
-	log.WithFields(logrus.Fields{
-		"validatorCount":       validatorCount,
-		"signedValidators":     signedValidators,
-		"signedValidatorCount": len(signedValidators),
-		"chosenValidator":      chosenValidator,
-	}).Info("Creating initial bitfield")
-
-	initialBitfield, err := wr.contract.CreateInitialBitfield(
-		&bind.CallOpts{
-			Pending: true,
-			From:    wr.conn.Keypair().CommonAddress(),
-		},
-		signedValidators, validatorCount,
-	)
+	params, logFields, err := wr.prepareFiatShamirParams(ctx, task)
 	if err != nil {
-		return fmt.Errorf("create initial bitfield: %w", err)
-	}
-
-	commitment := toBeefyClientCommitment(&task.SignedCommitment.Commitment)
-
-	finalBitfield, err := wr.contract.CreateFiatShamirFinalBitfield(
-		&bind.CallOpts{
-			Pending: true,
-			From:    wr.conn.Keypair().CommonAddress(),
-		},
-		*commitment,
-		initialBitfield,
-	)
-
-	if err != nil {
-		return fmt.Errorf("create validator final bitfield: %w", err)
-	}
-
-	validatorIndices := bitfield.New(finalBitfield).Members()
-
-	params, err := task.MakeSubmitFinalParams(validatorIndices, initialBitfield)
-	if err != nil {
-		return fmt.Errorf("make submit final params: %w", err)
-	}
-
-	logFields, err := wr.makeSubmitFinalLogFields(task, params)
-	if err != nil {
-		return fmt.Errorf("logging params: %w", err)
+		return err
 	}
 
 	// Check if task is outdated before final submission
@@ -496,6 +452,92 @@ func (wr *EthereumWriter) submitFiatShamir(ctx context.Context, task *Request) e
 	}).Debug("Transaction submitFiatShamir succeeded")
 
 	return nil
+}
+
+func (wr *EthereumWriter) BuildFiatShamirCalldata(ctx context.Context, task *Request) ([]byte, error) {
+	params, _, err := wr.prepareFiatShamirParams(ctx, task)
+	if err != nil {
+		return nil, err
+	}
+
+	calldata, err := wr.contractABI.Pack(
+		"submitFiatShamir",
+		params.Commitment,
+		params.Bitfield,
+		params.Proofs,
+		params.Leaf,
+		params.LeafProof,
+		params.LeafProofOrder,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("pack submitFiatShamir calldata: %w", err)
+	}
+
+	return calldata, nil
+}
+
+func (wr *EthereumWriter) ContractAddress() common.Address {
+	return common.HexToAddress(wr.config.Contracts.BeefyClient)
+}
+
+func (wr *EthereumWriter) prepareFiatShamirParams(ctx context.Context, task *Request) (*FinalRequestParams, logrus.Fields, error) {
+	signedValidators := []*big.Int{}
+	for i, signature := range task.SignedCommitment.Signatures {
+		if signature.IsSome() {
+			signedValidators = append(signedValidators, big.NewInt(int64(i)))
+		}
+	}
+	validatorCount := big.NewInt(int64(len(task.SignedCommitment.Signatures)))
+
+	// Pick a random validator who signs beefy commitment
+	chosenValidator := signedValidators[rand.Intn(len(signedValidators))].Int64()
+
+	log.WithFields(logrus.Fields{
+		"validatorCount":       validatorCount,
+		"signedValidators":     signedValidators,
+		"signedValidatorCount": len(signedValidators),
+		"chosenValidator":      chosenValidator,
+	}).Info("Creating initial bitfield")
+
+	initialBitfield, err := wr.contract.CreateInitialBitfield(
+		&bind.CallOpts{
+			Pending: true,
+			From:    wr.conn.Keypair().CommonAddress(),
+		},
+		signedValidators, validatorCount,
+	)
+	if err != nil {
+		return nil, nil, fmt.Errorf("create initial bitfield: %w", err)
+	}
+
+	commitment := toBeefyClientCommitment(&task.SignedCommitment.Commitment)
+
+	finalBitfield, err := wr.contract.CreateFiatShamirFinalBitfield(
+		&bind.CallOpts{
+			Pending: true,
+			From:    wr.conn.Keypair().CommonAddress(),
+		},
+		*commitment,
+		initialBitfield,
+	)
+
+	if err != nil {
+		return nil, nil, fmt.Errorf("create validator final bitfield: %w", err)
+	}
+
+	validatorIndices := bitfield.New(finalBitfield).Members()
+
+	params, err := task.MakeSubmitFinalParams(validatorIndices, initialBitfield)
+	if err != nil {
+		return nil, nil, fmt.Errorf("make submit final params: %w", err)
+	}
+
+	logFields, err := wr.makeSubmitFinalLogFields(task, params)
+	if err != nil {
+		return nil, nil, fmt.Errorf("logging params: %w", err)
+	}
+
+	return params, logFields, nil
 }
 
 func (wr *EthereumWriter) isTaskOutdated(ctx context.Context, task *Request) (bool, error) {

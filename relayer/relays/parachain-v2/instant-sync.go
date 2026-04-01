@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
+	"github.com/snowfork/snowbridge/relayer/contracts"
 	"github.com/snowfork/snowbridge/relayer/crypto/secp256k1"
 	"github.com/snowfork/snowbridge/relayer/relays/beefy"
 
@@ -27,6 +29,7 @@ type InstantRelay struct {
 	ethereumChannelWriter *EthereumWriter
 	beefyListener         *BeefyListener
 	beefyInstantSyncer    *BeefyInstantSyncer
+	multicall3            *contracts.Multicall3
 }
 
 func NewInstantRelay(config *Config, beefyConfig *beefy.Config, keypair *secp256k1.Keypair) (*InstantRelay, error) {
@@ -68,11 +71,24 @@ func NewInstantRelay(config *Config, beefyConfig *beefy.Config, keypair *secp256
 		return nil, err
 	}
 
-	beefyInstantSyncer := NewBeefyInstantSyncer(
+	multicall3, err := contracts.NewMulticall3(
+		common.HexToAddress(config.Sink.Contracts.Multicall3),
+		ethereumConnWriter.Client(),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("create multicall3 client: %w", err)
+	}
+
+	beefyInstantSyncer, err := NewBeefyInstantSyncer(
 		config,
 		beefyListener,
 		beefyOnDemandRelay,
+		ethereumChannelWriter,
+		multicall3,
 	)
+	if err != nil {
+		return nil, err
+	}
 
 	return &InstantRelay{
 		config:                config,
@@ -83,6 +99,7 @@ func NewInstantRelay(config *Config, beefyConfig *beefy.Config, keypair *secp256
 		ethereumChannelWriter: ethereumChannelWriter,
 		beefyListener:         beefyListener,
 		beefyInstantSyncer:    beefyInstantSyncer,
+		multicall3:            multicall3,
 	}, nil
 }
 
@@ -109,12 +126,6 @@ func (relay *InstantRelay) Start(ctx context.Context, eg *errgroup.Group) error 
 
 	log.Info("Starting beefy instant listener")
 	err = relay.beefyInstantSyncer.Start(ctx, eg)
-	if err != nil {
-		return err
-	}
-
-	log.Info("Starting ethereum writer")
-	err = relay.ethereumChannelWriter.Start(ctx, eg)
 	if err != nil {
 		return err
 	}

@@ -53,6 +53,26 @@ func NewEthereumWriter(
 }
 
 func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group) error {
+	err := wr.initialize()
+	if err != nil {
+		return err
+	}
+
+	eg.Go(func() error {
+		err := wr.writeMessagesLoop(ctx)
+		if err != nil {
+			if errors.Is(err, context.Canceled) {
+				return nil
+			}
+			return fmt.Errorf("write message loop: %w", err)
+		}
+		return nil
+	})
+
+	return nil
+}
+
+func (wr *EthereumWriter) initialize() error {
 	address := common.HexToAddress(wr.config.Contracts.Gateway)
 	gateway, err := contracts.NewGateway(address, wr.conn.Client())
 	if err != nil {
@@ -70,17 +90,6 @@ func (wr *EthereumWriter) Start(ctx context.Context, eg *errgroup.Group) error {
 		return err
 	}
 	wr.gatewayABI = gatewayABI
-
-	eg.Go(func() error {
-		err := wr.writeMessagesLoop(ctx)
-		if err != nil {
-			if errors.Is(err, context.Canceled) {
-				return nil
-			}
-			return fmt.Errorf("write message loop: %w", err)
-		}
-		return nil
-	})
 
 	return nil
 }
@@ -201,40 +210,14 @@ func (wr *EthereumWriter) WriteChannel(
 		return nil
 	}
 
-	message := commitmentProof.Message.OriginalMessage.IntoInboundMessage()
-
-	convertedHeader, err := convertHeader(proof.Header)
-	if err != nil {
-		return fmt.Errorf("convert header: %w", err)
-	}
-
-	var merkleProofItems [][32]byte
-	for _, proofItem := range proof.MMRProof.MerkleProofItems {
-		merkleProofItems = append(merkleProofItems, proofItem)
-	}
-
-	verificationProof := contracts.VerificationProof{
-		Header: *convertedHeader,
-		HeadProof: contracts.VerificationHeadProof{
-			Pos:   big.NewInt(proof.MerkleProofData.ProvenLeafIndex),
-			Width: big.NewInt(int64(proof.MerkleProofData.NumberOfLeaves)),
-			Proof: proof.MerkleProofData.Proof,
-		},
-		LeafPartial: contracts.VerificationMMRLeafPartial{
-			Version:              uint8(proof.MMRProof.Leaf.Version),
-			ParentNumber:         uint32(proof.MMRProof.Leaf.ParentNumberAndHash.ParentNumber),
-			ParentHash:           proof.MMRProof.Leaf.ParentNumberAndHash.Hash,
-			NextAuthoritySetID:   uint64(proof.MMRProof.Leaf.BeefyNextAuthoritySet.ID),
-			NextAuthoritySetLen:  uint32(proof.MMRProof.Leaf.BeefyNextAuthoritySet.Len),
-			NextAuthoritySetRoot: proof.MMRProof.Leaf.BeefyNextAuthoritySet.Root,
-		},
-		LeafProof:      merkleProofItems,
-		LeafProofOrder: new(big.Int).SetUint64(proof.MMRProof.MerkleProofOrder),
-	}
-
 	rewardAddress, err := util.HexStringTo32Bytes(wr.relayConfig.RewardAddress)
 	if err != nil {
 		return fmt.Errorf("convert to reward address: %w", err)
+	}
+
+	message, verificationProof, err := wr.buildV2SubmitParams(commitmentProof, proof)
+	if err != nil {
+		return err
 	}
 
 	tx, err := wr.gateway.V2Submit(
@@ -289,6 +272,72 @@ func (wr *EthereumWriter) WriteChannel(
 	}
 
 	return nil
+}
+
+func (wr *EthereumWriter) BuildV2SubmitCalldata(
+	commitmentProof *MessageProof,
+	proof *ProofOutput,
+	rewardAddress [32]byte,
+) ([]byte, error) {
+	message, verificationProof, err := wr.buildV2SubmitParams(commitmentProof, proof)
+	if err != nil {
+		return nil, err
+	}
+
+	calldata, err := wr.gatewayABI.Pack(
+		"v2_submit",
+		message,
+		commitmentProof.Proof.InnerHashes,
+		verificationProof,
+		rewardAddress,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("pack v2_submit calldata: %w", err)
+	}
+
+	return calldata, nil
+}
+
+func (wr *EthereumWriter) GatewayAddress() common.Address {
+	return common.HexToAddress(wr.config.Contracts.Gateway)
+}
+
+func (wr *EthereumWriter) buildV2SubmitParams(
+	commitmentProof *MessageProof,
+	proof *ProofOutput,
+) (contracts.InboundMessage, contracts.VerificationProof, error) {
+	message := commitmentProof.Message.OriginalMessage.IntoInboundMessage()
+
+	convertedHeader, err := convertHeader(proof.Header)
+	if err != nil {
+		return contracts.InboundMessage{}, contracts.VerificationProof{}, fmt.Errorf("convert header: %w", err)
+	}
+
+	var merkleProofItems [][32]byte
+	for _, proofItem := range proof.MMRProof.MerkleProofItems {
+		merkleProofItems = append(merkleProofItems, proofItem)
+	}
+
+	verificationProof := contracts.VerificationProof{
+		Header: *convertedHeader,
+		HeadProof: contracts.VerificationHeadProof{
+			Pos:   big.NewInt(proof.MerkleProofData.ProvenLeafIndex),
+			Width: big.NewInt(int64(proof.MerkleProofData.NumberOfLeaves)),
+			Proof: proof.MerkleProofData.Proof,
+		},
+		LeafPartial: contracts.VerificationMMRLeafPartial{
+			Version:              uint8(proof.MMRProof.Leaf.Version),
+			ParentNumber:         uint32(proof.MMRProof.Leaf.ParentNumberAndHash.ParentNumber),
+			ParentHash:           proof.MMRProof.Leaf.ParentNumberAndHash.Hash,
+			NextAuthoritySetID:   uint64(proof.MMRProof.Leaf.BeefyNextAuthoritySet.ID),
+			NextAuthoritySetLen:  uint32(proof.MMRProof.Leaf.BeefyNextAuthoritySet.Len),
+			NextAuthoritySetRoot: proof.MMRProof.Leaf.BeefyNextAuthoritySet.Root,
+		},
+		LeafProof:      merkleProofItems,
+		LeafProofOrder: new(big.Int).SetUint64(proof.MMRProof.MerkleProofOrder),
+	}
+
+	return message, verificationProof, nil
 }
 
 func convertHeader(header gsrpcTypes.Header) (*contracts.VerificationParachainHeader, error) {

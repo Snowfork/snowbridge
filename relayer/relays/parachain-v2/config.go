@@ -34,7 +34,8 @@ type SinkConfig struct {
 }
 
 type SinkContractsConfig struct {
-	Gateway string `mapstructure:"Gateway"`
+	Gateway    string `mapstructure:"Gateway"`
+	Multicall3 string `mapstructure:"Multicall3"`
 }
 
 type FeeConfig struct {
@@ -90,6 +91,9 @@ func (c Config) Validate() error {
 	}
 	if c.Sink.Contracts.Gateway == "" {
 		return fmt.Errorf("sink contracts setting [Gateway] is not set")
+	}
+	if c.Sink.Contracts.Multicall3 == "" {
+		return fmt.Errorf("sink contracts setting [Multicall3] is not set")
 	}
 	err = c.Sink.Fees.Validate()
 	if err != nil {

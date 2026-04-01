@@ -398,6 +398,23 @@ func (relay *OnDemandRelay) isV2NonceRelayed(ctx context.Context, nonce uint64) 
 
 func (relay *OnDemandRelay) OneShotStart(ctx context.Context, beefyBlockNumber uint64) error {
 	eg, ctx := errgroup.WithContext(ctx)
+	err := relay.InitializeForMulticall(ctx, eg)
+	if err != nil {
+		return err
+	}
+
+	log.Info("Performing sync")
+
+	err = relay.sync(ctx, beefyBlockNumber)
+	if err != nil {
+		return fmt.Errorf("Sync failed: %w", err)
+	}
+
+	log.Info("Sync completed")
+	return nil
+}
+
+func (relay *OnDemandRelay) InitializeForMulticall(ctx context.Context, eg *errgroup.Group) error {
 	err := relay.ethereumConn.ConnectWithHeartBeat(ctx, eg, time.Second*time.Duration(relay.config.Sink.Ethereum.HeartbeatSecs))
 	if err != nil {
 		return fmt.Errorf("connect to ethereum: %w", err)
@@ -421,16 +438,44 @@ func (relay *OnDemandRelay) OneShotStart(ctx context.Context, beefyBlockNumber u
 		return fmt.Errorf("create gateway client: %w", err)
 	}
 	relay.gatewayContractV1 = gatewayContract
+	return nil
+}
 
-	log.Info("Performing sync")
-
-	err = relay.sync(ctx, beefyBlockNumber)
+func (relay *OnDemandRelay) BuildFiatShamirCalldata(ctx context.Context, blockNumber uint64) ([]byte, common.Address, error) {
+	task, err := relay.polkadotListener.generateBeefyUpdate(blockNumber)
 	if err != nil {
-		return fmt.Errorf("Sync failed: %w", err)
+		return nil, common.Address{}, fmt.Errorf("fail to generate next beefy request: %w", err)
 	}
 
-	log.Info("Sync completed")
-	return nil
+	state, err := relay.ethereumWriter.queryBeefyClientState(ctx)
+	if err != nil {
+		return nil, common.Address{}, fmt.Errorf("query beefy client state: %w", err)
+	}
+
+	if uint64(task.SignedCommitment.Commitment.BlockNumber) <= state.LatestBeefyBlock {
+		return nil, common.Address{}, nil
+	}
+
+	if task.SignedCommitment.Commitment.ValidatorSetID > state.NextValidatorSetID {
+		return nil, common.Address{}, nil
+	}
+
+	if task.SignedCommitment.Commitment.ValidatorSetID == state.CurrentValidatorSetID {
+		task.ValidatorsRoot = state.CurrentValidatorSetRoot
+	} else {
+		task.ValidatorsRoot = state.NextValidatorSetRoot
+	}
+
+	calldata, err := relay.ethereumWriter.BuildFiatShamirCalldata(ctx, &task)
+	if err != nil {
+		return nil, common.Address{}, fmt.Errorf("build submitFiatShamir calldata: %w", err)
+	}
+
+	return calldata, relay.ethereumWriter.ContractAddress(), nil
+}
+
+func (relay *OnDemandRelay) BeefyClientAddress() common.Address {
+	return relay.ethereumWriter.ContractAddress()
 }
 
 // Enqueue a parachain task into the queue
