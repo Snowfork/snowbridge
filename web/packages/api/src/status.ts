@@ -219,21 +219,24 @@ export const channelStatusInfo = async (
         await bridgeHub.query.ethereumOutboundQueue.nonce(channelId)
     ).toPrimitive() as number
 
-    // V2 nonces
-    const v2_outbound_nonce_eth = Number(await gatewayV2.v2_outboundNonce())
-    const v2_outbound_nonce_sub = (
-        await bridgeHub.query.ethereumOutboundQueueV2.nonce()
-    ).toPrimitive() as number
-
     let estimatedDeliveryTime: any,
         toEthereumUndeliveredTimeout: number | undefined,
         toPolkadotUndeliveredTimeout: number | undefined = undefined,
         toEthereumPendings: ToEthereumTransferResult[] = [],
         toPolkadotPendings: ToPolkadotTransferResult[] = [],
         v2_max_delivered_nonce_to_polkadot: number | undefined = undefined,
-        v2_max_delivered_nonce_to_ethereum: number | undefined = undefined
+        v2_max_delivered_nonce_to_ethereum: number | undefined = undefined,
+        v2_outbound_nonce_eth: number | undefined = undefined,
+        v2_outbound_nonce_sub: number | undefined = undefined
 
-    if (context.environment.name == "polkadot_mainnet") {
+    if (
+        context.environment.name == "polkadot_mainnet" &&
+        channelId.toLowerCase() == ASSET_HUB_CHANNEL_ID.toLowerCase()
+    ) {
+        v2_outbound_nonce_eth = Number(await gatewayV2.v2_outboundNonce())
+        v2_outbound_nonce_sub = (
+            await bridgeHub.query.ethereumOutboundQueueV2.nonce()
+        ).toPrimitive() as number
         v2_max_delivered_nonce_to_polkadot = await subsquidV2.fetchMaxDeliveredNonceToPolkadot(
             context.graphqlApiUrl(),
             v2_outbound_nonce_eth,
@@ -242,24 +245,20 @@ export const channelStatusInfo = async (
             context.graphqlApiUrl(),
             v2_outbound_nonce_sub,
         )
+        estimatedDeliveryTime = await subsquidV2.fetchEstimatedDeliveryTime(context.graphqlApiUrl())
 
-        if (channelId.toLowerCase() == ASSET_HUB_CHANNEL_ID.toLowerCase()) {
-            estimatedDeliveryTime = await subsquidV2.fetchEstimatedDeliveryTime(
-                context.graphqlApiUrl(),
-            )
-
-            let latency = await subsquidV2.fetchToEthereumUndeliveredLatency(
-                context.graphqlApiUrl(),
-            )
-            if (latency && latency.elapse) {
-                toEthereumUndeliveredTimeout = latency.elapse
-            }
-            latency = await subsquidV2.fetchToPolkadotUndeliveredLatency(context.graphqlApiUrl())
-            if (latency && latency.elapse) {
-                toPolkadotUndeliveredTimeout = latency.elapse
-            }
-            // Pending transfers
+        let toEthereumUndelivered = await subsquidV2.fetchToEthereumUndeliveredLatency(
+            context.graphqlApiUrl(),
+        )
+        if (toEthereumUndelivered && toEthereumUndelivered.elapse) {
+            toEthereumUndeliveredTimeout = toEthereumUndelivered.elapse
             toEthereumPendings = await toEthereumPendingTransfers(context.graphqlApiUrl(), 10)
+        }
+        let toPolkadotUndelivered = await subsquidV2.fetchToPolkadotUndeliveredLatency(
+            context.graphqlApiUrl(),
+        )
+        if (toPolkadotUndelivered && toPolkadotUndelivered.elapse) {
+            toPolkadotUndeliveredTimeout = toPolkadotUndelivered.elapse
             toPolkadotPendings = await toPolkadotPendingTransfers(context.graphqlApiUrl(), 10)
         }
     }

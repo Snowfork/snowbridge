@@ -356,37 +356,12 @@ const fetchBalances = async (context: Context, env: Environment) => {
         ).data.free,
     )
 
-    let assetHubAgentBalance = await context
-        .ethereum()
-        .getBalance(
-            await context
-                .gateway()
-                .agentOf(utils.paraIdToAgentId(bridgeHub.registry, env.assetHubParaId)),
-        )
-
-    const bridgeHubAgentId = u8aToHex(blake2AsU8a("0x00", 256))
-    let bridgeHubAgentBalance = await context
-        .ethereum()
-        .getBalance(await context.gateway().agentOf(bridgeHubAgentId))
-
     let sovereigns: status.Sovereign[] = [
         {
             name: "AssetHub",
             account: utils.paraIdToSovereignAccount("sibl", env.assetHubParaId),
             balance: assetHubSovereignBalance,
             type: "substrate",
-        },
-        {
-            name: "AssetHubAgent",
-            account: utils.paraIdToAgentId(bridgeHub.registry, env.assetHubParaId),
-            balance: assetHubAgentBalance,
-            type: "ethereum",
-        },
-        {
-            name: "BridgeHubAgent",
-            account: u8aToHex(blake2AsU8a("0x00", 256)),
-            balance: bridgeHubAgentBalance,
-            type: "ethereum",
         },
     ]
     return { relayers, sovereigns }
