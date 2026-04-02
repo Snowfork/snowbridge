@@ -225,39 +225,42 @@ export const channelStatusInfo = async (
         await bridgeHub.query.ethereumOutboundQueueV2.nonce()
     ).toPrimitive() as number
 
-    const v2_max_delivered_nonce_to_polkadot = await subsquidV2.fetchMaxDeliveredNonceToPolkadot(
-        context.graphqlApiUrl(),
-        v2_outbound_nonce_eth,
-    )
-    const v2_max_delivered_nonce_to_ethereum = await subsquidV2.fetchMaxDeliveredNonceToEthereum(
-        context.graphqlApiUrl(),
-        v2_outbound_nonce_sub,
-    )
-
     let estimatedDeliveryTime: any,
         toEthereumUndeliveredTimeout: number | undefined,
         toPolkadotUndeliveredTimeout: number | undefined = undefined,
         toEthereumPendings: ToEthereumTransferResult[] = [],
-        toPolkadotPendings: ToPolkadotTransferResult[] = []
+        toPolkadotPendings: ToPolkadotTransferResult[] = [],
+        v2_max_delivered_nonce_to_polkadot: number | undefined = undefined,
+        v2_max_delivered_nonce_to_ethereum: number | undefined = undefined
 
-    if (channelId.toLowerCase() == ASSET_HUB_CHANNEL_ID.toLowerCase()) {
-        estimatedDeliveryTime = await subsquidV2.fetchEstimatedDeliveryTime(context.graphqlApiUrl())
+    if (context.environment.name == "polkadot_mainnet") {
+        v2_max_delivered_nonce_to_polkadot = await subsquidV2.fetchMaxDeliveredNonceToPolkadot(
+            context.graphqlApiUrl(),
+            v2_outbound_nonce_eth,
+        )
+        v2_max_delivered_nonce_to_ethereum = await subsquidV2.fetchMaxDeliveredNonceToEthereum(
+            context.graphqlApiUrl(),
+            v2_outbound_nonce_sub,
+        )
 
-        let latency = await subsquidV2.fetchToEthereumUndeliveredLatency(context.graphqlApiUrl())
-        if (latency && latency.elapse) {
-            toEthereumUndeliveredTimeout = latency.elapse
-        }
-        latency = await subsquidV2.fetchToPolkadotUndeliveredLatency(context.graphqlApiUrl())
-        if (latency && latency.elapse) {
-            toPolkadotUndeliveredTimeout = latency.elapse
-        }
+        if (channelId.toLowerCase() == ASSET_HUB_CHANNEL_ID.toLowerCase()) {
+            estimatedDeliveryTime = await subsquidV2.fetchEstimatedDeliveryTime(
+                context.graphqlApiUrl(),
+            )
 
-        try {
+            let latency = await subsquidV2.fetchToEthereumUndeliveredLatency(
+                context.graphqlApiUrl(),
+            )
+            if (latency && latency.elapse) {
+                toEthereumUndeliveredTimeout = latency.elapse
+            }
+            latency = await subsquidV2.fetchToPolkadotUndeliveredLatency(context.graphqlApiUrl())
+            if (latency && latency.elapse) {
+                toPolkadotUndeliveredTimeout = latency.elapse
+            }
             // Pending transfers
             toEthereumPendings = await toEthereumPendingTransfers(context.graphqlApiUrl(), 10)
             toPolkadotPendings = await toPolkadotPendingTransfers(context.graphqlApiUrl(), 10)
-        } catch (error) {
-            console.error("Error fetching pending transfers:", error)
         }
     }
 
