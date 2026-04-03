@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	log "github.com/sirupsen/logrus"
@@ -16,6 +17,39 @@ import (
 	"github.com/snowfork/snowbridge/relayer/relays/util"
 	"golang.org/x/sync/errgroup"
 )
+
+// gatewayDispatchOverheadGasV2 matches Gateway.DISPATCH_OVERHEAD_GAS_V2 on Ethereum.
+const (
+	gatewayDispatchOverheadGasV2      uint64 = 24_000
+	v2SubmitVerifyAndHandlerSlack     uint64 = 350_000
+	multicall3AggregateOverheadBuffer uint64 = 80_000
+)
+
+func minGasForV2SubmitProof(proof *MessageProof) uint64 {
+	gas := v2SubmitVerifyAndHandlerSlack
+	for _, cmd := range proof.Message.OriginalMessage.Commands {
+		gas += uint64(cmd.MaxDispatchGas) + gatewayDispatchOverheadGasV2
+	}
+	return gas
+}
+
+// applyMulticallGasFloor ensures aggregate3 has enough gas for submitFiatShamir plus nested v2_submit.
+// eth_estimateGas often undershoots here because failing v2_submit (e.g. InsufficientGasLimit) is swallowed
+// when AllowFailure is true, so the tx appears cheaper than a fully successful delivery.
+func (li *BeefyInstantSyncer) applyMulticallGasFloor(opts *bind.TransactOpts, minV2SubmitGasSum uint64) {
+	minTotal := li.config.Sink.Fees.BaseBeefyFiatShamirGas + multicall3AggregateOverheadBuffer + minV2SubmitGasSum
+	if opts.GasLimit == 0 || opts.GasLimit < minTotal {
+		if opts.GasLimit > 0 {
+			log.WithFields(log.Fields{
+				"configuredGasLimit": opts.GasLimit,
+				"minimumGasLimit":    minTotal,
+			}).Info("Raising Multicall3 tx gas limit so nested v2_submit can forward command gas")
+		} else {
+			log.WithField("minimumGasLimit", minTotal).Info("Setting Multicall3 tx gas limit from computed minimum (sink gas-limit was unset)")
+		}
+		opts.GasLimit = minTotal
+	}
+}
 
 type BeefyInstantSyncer struct {
 	config             *Config
@@ -31,7 +65,6 @@ func NewBeefyInstantSyncer(
 	beefyListener *BeefyListener,
 	beefyOnDemandRelay *beefy.OnDemandRelay,
 	ethereumWriter *EthereumWriter,
-	multicall3 *contracts.Multicall3,
 ) (*BeefyInstantSyncer, error) {
 	beefyClientABI, err := abi.JSON(strings.NewReader(contracts.BeefyClientABI))
 	if err != nil {
@@ -43,12 +76,10 @@ func NewBeefyInstantSyncer(
 		beefyListener:      beefyListener,
 		beefyOnDemandRelay: beefyOnDemandRelay,
 		ethereumWriter:     ethereumWriter,
-		multicall3:         multicall3,
 		beefyClientABI:     beefyClientABI,
 	}, nil
 }
 
-// Todo: consider using subscription to listen for new finalized beefy headers
 func (li *BeefyInstantSyncer) Start(ctx context.Context, eg *errgroup.Group) error {
 	// Initialize the beefy listener to setup the scanner
 	err := li.beefyListener.initialize(ctx)
@@ -58,6 +89,16 @@ func (li *BeefyInstantSyncer) Start(ctx context.Context, eg *errgroup.Group) err
 	err = li.ethereumWriter.initialize()
 	if err != nil {
 		return fmt.Errorf("initialize ethereum writer: %w", err)
+	}
+	// Multicall3 must be bound after Ethereum ConnectWithHeartBeat (see InstantRelay.Start),
+	// otherwise BoundContract holds a nil ethclient and Transact panics.
+	client := li.ethereumWriter.conn.Client()
+	if client == nil {
+		return fmt.Errorf("ethereum writer client is nil; connect sink ethereum before starting instant syncer")
+	}
+	li.multicall3, err = contracts.NewMulticall3(common.HexToAddress(li.config.Sink.Contracts.Multicall3), client)
+	if err != nil {
+		return fmt.Errorf("create multicall3: %w", err)
 	}
 	err = li.beefyOnDemandRelay.InitializeOnDemandSync(ctx, eg)
 	if err != nil {
@@ -101,7 +142,7 @@ func (li *BeefyInstantSyncer) Start(ctx context.Context, eg *errgroup.Group) err
 	return nil
 }
 
-func (li *BeefyInstantSyncer) isRelayConsensusProfitable(ctx context.Context, tasks []*Task) (bool, error) {
+func (li *BeefyInstantSyncer) isRelayProfitable(ctx context.Context, tasks []*Task) (bool, error) {
 	totalFee := new(big.Int)
 	for _, task := range tasks {
 		if task == nil || task.MessageProofs == nil || len(*task.MessageProofs) == 0 {
@@ -111,15 +152,23 @@ func (li *BeefyInstantSyncer) isRelayConsensusProfitable(ctx context.Context, ta
 			totalFee.Add(totalFee, &messageProof.Message.Fee)
 		}
 	}
-	gasPrice, err := li.beefyListener.ethereumConn.Client().SuggestGasPrice(ctx)
+	gasPrice, err := li.ethereumWriter.SuggestRelayGasPrice(ctx)
 	if err != nil {
 		return false, fmt.Errorf("suggest gas price: %w", err)
 	}
-	var requireFee *big.Int
-	if li.beefyOnDemandRelay.GetConfig().Sink.EnableFiatShamir {
-		requireFee = new(big.Int).Mul(gasPrice, new(big.Int).SetUint64(li.config.Sink.Fees.BaseBeefyFiatShamirGas))
-	} else {
-		requireFee = new(big.Int).Mul(gasPrice, new(big.Int).SetUint64(li.config.Sink.Fees.BaseBeefyTwoPhaseCommitGas))
+	fees := li.config.Sink.Fees
+	requireFee := new(big.Int).Mul(gasPrice, new(big.Int).SetUint64(fees.BaseBeefyFiatShamirGas))
+	numerator := new(big.Int).SetUint64(fees.FeeRatioNumerator)
+	denominator := new(big.Int).SetUint64(fees.FeeRatioDenominator)
+	requireFee.Mul(requireFee, numerator)
+	requireFee.Div(requireFee, denominator)
+	for _, task := range tasks {
+		if task == nil || task.MessageProofs == nil || len(*task.MessageProofs) == 0 {
+			continue
+		}
+		for _, messageProof := range *task.MessageProofs {
+			requireFee.Add(requireFee, li.ethereumWriter.MessageMinFeeWei(gasPrice, &messageProof))
+		}
 	}
 	isProfitable := totalFee.Cmp(requireFee) >= 0
 	log.WithFields(log.Fields{
@@ -145,7 +194,7 @@ func (li *BeefyInstantSyncer) doScanAndUpdate(ctx context.Context, beefyBlockNum
 		return nil
 	}
 	// Check if the relay consensus is profitable
-	isProfitable, err := li.isRelayConsensusProfitable(ctx, tasks)
+	isProfitable, err := li.isRelayProfitable(ctx, tasks)
 	if err != nil {
 		return fmt.Errorf("check is relay consensus profitable: %w", err)
 	}
@@ -155,13 +204,19 @@ func (li *BeefyInstantSyncer) doScanAndUpdate(ctx context.Context, beefyBlockNum
 	}
 
 	log.Infof("Building Multicall3 batch for BEEFY block number %d", beefyBlockNumber)
-	beefyCalldata, beefyTarget, err := li.beefyOnDemandRelay.BuildFiatShamirCalldata(ctx, beefyBlockNumber)
+	beefyCalldata, beefyTarget, mmrAnchorRelayBlock, err := li.beefyOnDemandRelay.BuildFiatShamirCalldata(ctx, beefyBlockNumber)
 	if err != nil {
 		return fmt.Errorf("build beefy consensus calldata: %w", err)
 	}
 	if len(beefyCalldata) == 0 {
 		log.Info("Consensus update already synced or not ready, skipping")
 		return nil
+	}
+	if mmrAnchorRelayBlock != beefyBlockNumber {
+		log.WithFields(log.Fields{
+			"finalizedBeefyHeadBlock": beefyBlockNumber,
+			"commitmentRelayBlock":    mmrAnchorRelayBlock,
+		}).Info("MMR proofs will anchor at commitment relay block (may differ from finalized head)")
 	}
 
 	rewardAddress, err := util.HexStringTo32Bytes(li.config.RewardAddress)
@@ -176,6 +231,7 @@ func (li *BeefyInstantSyncer) doScanAndUpdate(ctx context.Context, beefyBlockNum
 	}}
 
 	expectedMessageCalls := 0
+	var minV2ProofGasSum uint64
 	for _, task := range tasks {
 		if task == nil || task.MessageProofs == nil || len(*task.MessageProofs) == 0 {
 			continue
@@ -192,7 +248,7 @@ func (li *BeefyInstantSyncer) doScanAndUpdate(ctx context.Context, beefyBlockNum
 		}
 
 		log.Infof("generating proof for nonce %d", paraNonce)
-		task.ProofOutput, err = li.beefyListener.generateProof(ctx, task.ProofInput, task.Header)
+		task.ProofOutput, err = li.beefyListener.generateProof(ctx, task.ProofInput, task.Header, &mmrAnchorRelayBlock)
 		if err != nil {
 			return fmt.Errorf("generate proof for nonce %d: %w", paraNonce, err)
 		}
@@ -226,6 +282,7 @@ func (li *BeefyInstantSyncer) doScanAndUpdate(ctx context.Context, beefyBlockNum
 				CallData:     calldata,
 			})
 			expectedMessageCalls++
+			minV2ProofGasSum += minGasForV2SubmitProof(&proof)
 		}
 	}
 
@@ -234,7 +291,9 @@ func (li *BeefyInstantSyncer) doScanAndUpdate(ctx context.Context, beefyBlockNum
 		return nil
 	}
 
-	tx, err := li.multicall3.Aggregate3(li.ethereumWriter.conn.MakeTxOpts(ctx), calls)
+	txOpts := li.ethereumWriter.conn.MakeTxOpts(ctx)
+	li.applyMulticallGasFloor(txOpts, minV2ProofGasSum)
+	tx, err := li.multicall3.Aggregate3(txOpts, calls)
 	if err != nil {
 		return fmt.Errorf("submit multicall3 aggregate3 transaction: %w", err)
 	}

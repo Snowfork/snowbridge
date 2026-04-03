@@ -433,31 +433,42 @@ func (relay *OnDemandRelay) InitializeOnDemandSync(ctx context.Context, eg *errg
 	}
 
 	gatewayAddress := common.HexToAddress(relay.config.Sink.Contracts.Gateway)
-	gatewayContract, err := contractV1.NewGateway(gatewayAddress, relay.ethereumConn.Client())
+	gatewayContractV2, err := contracts.NewGateway(gatewayAddress, relay.ethereumConn.Client())
 	if err != nil {
 		return fmt.Errorf("create gateway client: %w", err)
 	}
-	relay.gatewayContractV1 = gatewayContract
+	relay.gatewayContractV2 = gatewayContractV2
+
+	gatewayContractV1, err := contractV1.NewGateway(gatewayAddress, relay.ethereumConn.Client())
+	if err != nil {
+		return fmt.Errorf("create gateway client: %w", err)
+	}
+	relay.gatewayContractV1 = gatewayContractV1
 	return nil
 }
 
-func (relay *OnDemandRelay) BuildFiatShamirCalldata(ctx context.Context, blockNumber uint64) ([]byte, common.Address, error) {
+// BuildFiatShamirCalldata returns calldata for submitFiatShamir, the BeefyClient address, and mmrAnchorRelayBlock.
+// mmrAnchorRelayBlock is SignedCommitment.Commitment.BlockNumber: the relay block whose MMR root the submission
+// updates on Ethereum. Parachain v2_submit proofs must use this relay block (not the caller's hint block), because
+// generateBeefyUpdate may wait for a newer finalized head than blockNumber while the commitment still references
+// an earlier relay block.
+func (relay *OnDemandRelay) BuildFiatShamirCalldata(ctx context.Context, blockNumber uint64) ([]byte, common.Address, uint64, error) {
 	task, err := relay.polkadotListener.generateBeefyUpdate(blockNumber)
 	if err != nil {
-		return nil, common.Address{}, fmt.Errorf("fail to generate next beefy request: %w", err)
+		return nil, common.Address{}, 0, fmt.Errorf("fail to generate next beefy request: %w", err)
 	}
 
 	state, err := relay.ethereumWriter.queryBeefyClientState(ctx)
 	if err != nil {
-		return nil, common.Address{}, fmt.Errorf("query beefy client state: %w", err)
+		return nil, common.Address{}, 0, fmt.Errorf("query beefy client state: %w", err)
 	}
 
 	if uint64(task.SignedCommitment.Commitment.BlockNumber) <= state.LatestBeefyBlock {
-		return nil, common.Address{}, nil
+		return nil, common.Address{}, 0, nil
 	}
 
 	if task.SignedCommitment.Commitment.ValidatorSetID > state.NextValidatorSetID {
-		return nil, common.Address{}, nil
+		return nil, common.Address{}, 0, nil
 	}
 
 	if task.SignedCommitment.Commitment.ValidatorSetID == state.CurrentValidatorSetID {
@@ -468,10 +479,11 @@ func (relay *OnDemandRelay) BuildFiatShamirCalldata(ctx context.Context, blockNu
 
 	calldata, err := relay.ethereumWriter.BuildFiatShamirCalldata(ctx, &task)
 	if err != nil {
-		return nil, common.Address{}, fmt.Errorf("build submitFiatShamir calldata: %w", err)
+		return nil, common.Address{}, 0, fmt.Errorf("build submitFiatShamir calldata: %w", err)
 	}
 
-	return calldata, relay.ethereumWriter.ContractAddress(), nil
+	commitmentBlock := uint64(task.SignedCommitment.Commitment.BlockNumber)
+	return calldata, relay.ethereumWriter.ContractAddress(), commitmentBlock, nil
 }
 
 func (relay *OnDemandRelay) BeefyClientAddress() common.Address {

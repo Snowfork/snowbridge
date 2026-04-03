@@ -223,10 +223,25 @@ const MaxParaHeads = 1024
 
 // Generates a proof for an MMR leaf, and then generates a merkle proof for our parachain header, which should be verifiable against the
 // parachains root in the mmr leaf.
-func (li *BeefyListener) generateProof(ctx context.Context, input *ProofInput, header *types.Header) (*ProofOutput, error) {
-	latestBeefyBlockNumber, latestBeefyBlockHash, err := li.fetchLatestBeefyBlock(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("fetch latest beefy block: %w", err)
+//
+// beefyRelayBlockOverride, when non-nil, uses that relay-chain block number (and its hash) as the BEEFY / MMR anchor instead of reading
+// LatestBeefyBlock from Ethereum. Use this when batching submitFiatShamir with v2_submit in one transaction: on-chain light client is
+// still stale until the batch runs, but proofs must match the MMR root that submitFiatShamir will write.
+func (li *BeefyListener) generateProof(ctx context.Context, input *ProofInput, header *types.Header, beefyRelayBlockOverride *uint64) (*ProofOutput, error) {
+	var latestBeefyBlockNumber uint64
+	var latestBeefyBlockHash types.Hash
+	var err error
+	if beefyRelayBlockOverride != nil {
+		latestBeefyBlockNumber = *beefyRelayBlockOverride
+		latestBeefyBlockHash, err = li.relaychainConn.API().RPC.Chain.GetBlockHash(latestBeefyBlockNumber)
+		if err != nil {
+			return nil, fmt.Errorf("fetch relay block hash at beefy anchor %d: %w", latestBeefyBlockNumber, err)
+		}
+	} else {
+		latestBeefyBlockNumber, latestBeefyBlockHash, err = li.fetchLatestBeefyBlock(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("fetch latest beefy block: %w", err)
+		}
 	}
 
 	log.WithFields(log.Fields{
@@ -335,7 +350,7 @@ func (li *BeefyListener) sendTask(ctx context.Context, task *Task) error {
 
 	// Step 3: Construct proofs
 	log.Info(fmt.Sprintf("generating proof for nonce %d", paraNonce))
-	task.ProofOutput, err = li.generateProof(ctx, task.ProofInput, task.Header)
+	task.ProofOutput, err = li.generateProof(ctx, task.ProofInput, task.Header, nil)
 	if err != nil {
 		return err
 	}

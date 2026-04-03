@@ -157,28 +157,35 @@ func (wr *EthereumWriter) commandGas(command *CommandWrapper) uint64 {
 	return gas
 }
 
-func (wr *EthereumWriter) isRelayMessageProfitable(ctx context.Context, proof *MessageProof) (bool, error) {
-	var result bool
-	gasPrice, err := wr.readConn.Client().SuggestGasPrice(ctx)
-	if err != nil {
-		return result, err
-	}
+// MessageMinFeeWei is the minimum message fee in wei at gasPrice, matching isRelayMessageProfitable:
+// (gasPrice * (sum(command gas) + BaseDeliveryGas) * FeeRatioNumerator) / FeeRatioDenominator.
+// SuggestRelayGasPrice returns the gas price from the writer read client (same source as per-message profitability).
+func (wr *EthereumWriter) SuggestRelayGasPrice(ctx context.Context) (*big.Int, error) {
+	return wr.readConn.Client().SuggestGasPrice(ctx)
+}
+
+func (wr *EthereumWriter) MessageMinFeeWei(gasPrice *big.Int, proof *MessageProof) *big.Int {
 	var totalDispatchGas uint64
-	commands := proof.Message.OriginalMessage.Commands
-	for _, command := range commands {
+	for _, command := range proof.Message.OriginalMessage.Commands {
 		totalDispatchGas += wr.commandGas(&command)
 	}
 	totalDispatchGas += wr.config.Fees.BaseDeliveryGas
 
-	// gasFee = gasPrice * totalDispatchGas * (numerator / denominator)
 	gasFee := new(big.Int).Mul(gasPrice, new(big.Int).SetUint64(totalDispatchGas))
-
 	numerator := new(big.Int).SetUint64(wr.config.Fees.FeeRatioNumerator)
 	denominator := new(big.Int).SetUint64(wr.config.Fees.FeeRatioDenominator)
-
-	// Apply ratio safely: (gasPrice * gas * num) / denom
 	gasFee.Mul(gasFee, numerator)
 	gasFee.Div(gasFee, denominator)
+	return gasFee
+}
+
+func (wr *EthereumWriter) isRelayMessageProfitable(ctx context.Context, proof *MessageProof) (bool, error) {
+	var result bool
+	gasPrice, err := wr.SuggestRelayGasPrice(ctx)
+	if err != nil {
+		return result, err
+	}
+	gasFee := wr.MessageMinFeeWei(gasPrice, proof)
 	if proof.Message.Fee.Cmp(gasFee) >= 0 {
 		return true, nil
 	}
