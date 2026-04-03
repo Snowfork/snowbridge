@@ -17,6 +17,7 @@ import {stdJson} from "forge-std/StdJson.sol";
 import {ud60x18} from "prb/math/src/UD60x18.sol";
 import {HelloWorld} from "../test/mocks/HelloWorld.sol";
 import {Token} from "../src/Token.sol";
+import {Multicall3} from "../src/helper/MultiCall3.sol";
 
 contract DeployLocal is Script {
     using SafeNativeTransfer for address payable;
@@ -102,6 +103,9 @@ contract DeployLocal is Script {
 
         // Deploy MockGatewayV2 for testing
         new MockGatewayV2();
+
+        // Deploy Multicall3 for testing
+        new Multicall3();
 
         vm.stopBroadcast();
     }
