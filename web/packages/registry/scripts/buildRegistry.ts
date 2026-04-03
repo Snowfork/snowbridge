@@ -114,8 +114,7 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
         assetHubParaId: 1000,
         bridgeHubParaId: 1002,
         v2_parachains: [1000],
-        indexerGraphQlUrl:
-            "https://subsquid.snowbridge.network/graphql",
+        indexerGraphQlUrl: "https://subsquid.snowbridge.network/graphql",
         kusama: {
             assetHubParaId: 1000,
             bridgeHubParaId: 1002,
@@ -972,8 +971,8 @@ async function indexEthChain(
                             ? foreignId
                             : undefined,
                     // LDO gas from https://etherscan.io/tx/0x4e984250beacf693e7407c6cfdcb51229f6a549aa857d601db868b572ee2364b
-                    // Other ERC20 token transfer on Ethereum typically ranges from 45,000 to 65,000 gas units; use 80_000 to leave a margin
-                    deliveryGas: asset.symbol == "LDO" ? 150_000n : 80_000n,
+                    // Other ERC20 token transfer on Ethereum typically ranges from 45,000 to 65,000 gas units; use 120_000 to leave a margin
+                    deliveryGas: asset.symbol == "LDO" ? 200_000n : 120_000n,
                 }
             }
             if (token in metadataOverrides) {
@@ -1002,6 +1001,8 @@ async function indexEthChain(
             assets,
             key: `ethereum_${networkChainId}`,
             baseDeliveryGas: 120_000n,
+            twoPhaseSubmitGas: 1_000_000n,
+            submitFiatShamirGas: 2_200_000n,
         }
     } else if (networkChainId in l2Chains) {
         const assets: ERC20MetadataMap = {}
@@ -1175,7 +1176,7 @@ async function getRegisteredPnas(
 }
 
 ;(async () => {
-    let env = "local_e2e"
+    let env = "polkadot_mainnet"
     if (process.env.NODE_ENV !== undefined) {
         env = process.env.NODE_ENV
     }

@@ -41,6 +41,10 @@ export type EthereumChain = ChainId & {
   xcTokenMap?: XC20TokenMap;
   // The gas cost of v2_submit excludes command execution, mainly covers the verification.
   baseDeliveryGas?: bigint;
+  // The gas cost of the two phase submit (submitInitial + commitPrevRandao + submitFinal)
+  twoPhaseSubmitGas?: bigint;
+  // The gas cost of submitFiatShamir
+  submitFiatShamirGas?: bigint;
 };
 
 export type ChainProperties = {

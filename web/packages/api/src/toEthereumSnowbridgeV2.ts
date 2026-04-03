@@ -240,19 +240,29 @@ export const estimateEthereumExecutionFee = async (
     options?: {
         contractCall?: ContractCall
         fillDeadlineBuffer?: bigint
+        accelerated?: boolean
     },
 ): Promise<bigint> => {
     const ethereum = await context.ethereum()
     const { tokenErcMetadata } = resolveInputs(registry, tokenAddress, sourceParaId)
 
-    // Calculate execution cost on ethereum
-    let ethereumChain = registry.ethereumChains[`ethereum_${registry.ethChainId}`]
-    let feeData = await ethereum.getFeeData()
-    let ethereumExecutionFee =
-        (feeData.gasPrice ?? 2_000_000_000n) *
-        ((tokenErcMetadata.deliveryGas ?? 80_000n) +
-            (ethereumChain.baseDeliveryGas ?? 120_000n) +
-            (options?.contractCall?.gas ?? 0n))
+    // Calculate execution cost on ethereum including:
+    // 1. the consensus update, which is the fiat-shamir submit (if accelerated) or two phase submit if not.
+    // 2. message verification, token delivery and the optional contract call.
+    const ethereumChain = registry.ethereumChains[`ethereum_${registry.ethChainId}`]
+    const feeData = await ethereum.getFeeData()
+    const gasPrice = feeData.gasPrice ?? 2_000_000_000n
+    const twoPhaseSubmitGas = ethereumChain.twoPhaseSubmitGas ?? 1_000_000n
+    const submitFiatShamirGas = options?.accelerated
+        ? (ethereumChain.submitFiatShamirGas ?? 2_200_000n)
+        : 0n
+    const consensusUpdateGas = options?.accelerated ? submitFiatShamirGas : twoPhaseSubmitGas
+    const messageVerificationGas = ethereumChain.baseDeliveryGas ?? 120_000n
+    const tokenDeliveryGas = tokenErcMetadata.deliveryGas ?? 200_000n
+    const contractCallGas = options?.contractCall?.gas ?? 0n
+    const totalGas =
+        consensusUpdateGas + messageVerificationGas + tokenDeliveryGas + contractCallGas
+    const ethereumExecutionFee = gasPrice * totalGas
     return ethereumExecutionFee
 }
 
@@ -270,6 +280,7 @@ export const estimateFeesFromAssetHub = async (
         l2PadFeeByPercentage?: bigint
         l2TransferGasLimit?: bigint
         fillDeadlineBuffer?: bigint
+        accelerated?: boolean
     },
     l2ChainId?: number,
     tokenAmount?: bigint,
@@ -391,6 +402,7 @@ export const estimateFeesFromParachains = async (
         defaultFee?: bigint
         feeTokenLocation?: any
         contractCall?: ContractCall
+        accelerated?: boolean
     },
 ): Promise<DeliveryFee> => {
     const sourceParachain = registry.parachains[`polkadot_${sourceParaId}`]
