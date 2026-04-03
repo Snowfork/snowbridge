@@ -56,7 +56,7 @@ type BeefyInstantSyncer struct {
 	beefyListener      *BeefyListener
 	beefyOnDemandRelay *beefy.OnDemandRelay
 	ethereumWriter     *EthereumWriter
-	multicall3         *contracts.Multicall3
+	multicall3         *contracts.MultiCall3
 	beefyClientABI     abi.ABI
 }
 
@@ -96,7 +96,7 @@ func (li *BeefyInstantSyncer) Start(ctx context.Context, eg *errgroup.Group) err
 	if client == nil {
 		return fmt.Errorf("ethereum writer client is nil; connect sink ethereum before starting instant syncer")
 	}
-	li.multicall3, err = contracts.NewMulticall3(common.HexToAddress(li.config.Sink.Contracts.Multicall3), client)
+	li.multicall3, err = contracts.NewMultiCall3(common.HexToAddress(li.config.Sink.Contracts.Multicall3), client)
 	if err != nil {
 		return fmt.Errorf("create multicall3: %w", err)
 	}
@@ -303,7 +303,7 @@ func (li *BeefyInstantSyncer) doScanAndUpdate(ctx context.Context, beefyBlockNum
 		"beefyBlockNumber":   beefyBlockNumber,
 		"batchedCallCount":   len(calls),
 		"messageCallCount":   expectedMessageCalls,
-		"multicall3Contract": li.multicall3.Address().Hex(),
+		"multicall3Contract": common.HexToAddress(li.config.Sink.Contracts.Multicall3).Hex(),
 	}).Info("Submitted Multicall3 aggregate3 transaction")
 
 	receipt, err := li.ethereumWriter.conn.WatchTransaction(ctx, tx, 1)
