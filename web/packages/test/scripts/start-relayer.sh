@@ -95,6 +95,37 @@ config_relayer() {
     ' \
         config/parachain-relay.json >$output_dir/parachain-relay.json
 
+    # Configure fiat-shamir beefy relay
+    jq \
+        --arg k1 "$(address_for BeefyClient)" \
+        --arg k2 "$(address_for GatewayProxy)" \
+        --arg eth_endpoint_ws $eth_endpoint_ws \
+        --arg eth_gas_limit $eth_gas_limit \
+        '
+      .sink.contracts.BeefyClient = $k1
+    | .sink.contracts.Gateway = $k2
+    | .sink.ethereum.endpoint = $eth_endpoint_ws
+    ' \
+        config/fiat-shamir-beefy-relay.json >$output_dir/fiat-shamir-beefy-relay.json
+
+    # Configure instant parachain relay v2
+    jq \
+        --arg k1 "$(address_for GatewayProxy)" \
+        --arg k2 "$(address_for BeefyClient)" \
+        --arg k3 "$(address_for Multicall3)" \
+        --arg eth_endpoint_ws $eth_endpoint_ws \
+        --arg eth_writer_endpoint $eth_writer_endpoint \
+        '
+      .source.contracts.Gateway = $k1
+    | .source.contracts.BeefyClient = $k2
+    | .sink.contracts.Gateway = $k1
+    | .sink.contracts.Multicall3 = $k3
+    | .source.ethereum.endpoint = $eth_endpoint_ws
+    | .sink.ethereum.endpoint = $eth_writer_endpoint
+    ' \
+        config/instant-parachain-relay.json >$output_dir/instant-parachain-relay.json
+
+
     # Configure fisherman relay
     jq \
         --arg k2 "$(address_for BeefyClient)" \
@@ -211,6 +242,21 @@ start_relayer() {
                 --config "$output_dir/parachain-relay.json" \
                 --ethereum.private-key $parachain_relay_assethub_eth_key \
                 >>"$output_dir"/parachain-relay-v2.log 2>&1 || true
+            sleep 20
+        done
+    ) &
+
+    # Launch instant parachain relay v2
+    (
+        : >"$output_dir"/instant-parachain-relay-v2.log
+        while :; do
+            echo "Starting instant parachain relay v2 at $(date)"
+            "${relayer}" run parachain-v2 \
+                --config "$output_dir/instant-parachain-relay.json" \
+                --beefy.config "$output_dir/fiat-shamir-beefy-relay.json" \
+                --instant-verification \
+                --ethereum.private-key $parachain_relay_assethub_eth_key \
+                >>"$output_dir"/instant-parachain-relay-v2.log 2>&1 || true
             sleep 20
         done
     ) &

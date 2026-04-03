@@ -1,0 +1,26 @@
+{
+  "source": {
+    "polkadot": {
+      "endpoint": "ws://127.0.0.1:9944"
+    },
+    "bridge-hub": {
+      "endpoint": "ws://127.0.0.1:11144"
+    }
+  },
+  "sink": {
+    "ethereum": {
+      "endpoint": "ws://127.0.0.1:8546/"
+    },
+    "contracts": {
+      "BeefyClient": null,
+      "Gateway": null
+    },
+    "enable-fiat-shamir": true
+  },
+  "on-demand-sync": {
+    "asset-hub-channel-id": "0xc173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539",
+    "max-tasks": 3,
+    "merge-period": 900,
+    "expired-period": 3600
+  }
+}

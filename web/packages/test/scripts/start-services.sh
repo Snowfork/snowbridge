@@ -26,28 +26,26 @@ if [ "$eth_network" == "localhost" ]; then
   deploy_ethereum
 fi
 
-# 3. start polkadot
-echo "Starting polkadot nodes"
-source scripts/deploy-polkadot.sh
-deploy_polkadot
-
-# 4. generate beefy checkpoint
-echo "Generate beefy checkpoint"
-source scripts/generate-beefy-checkpoint.sh
-generate_beefy_checkpoint
-
-# 5. deploy contracts
-echo "Deploying ethereum contracts"
-source scripts/deploy-contracts.sh
-deploy_contracts
-
-# 6. start beacon state service
+# 3. start beacon state service
 # The beacon state service is actually required for beacon checkpoint initialization, so it should be moved before that step.
 echo "Starting beacon state service"
 source scripts/deploy-beacon-state.sh
 deploy_beacon_state_service
-# Wait for beacon state service to be ready
-sleep 5
+
+# 4. start polkadot
+echo "Starting polkadot nodes"
+source scripts/deploy-polkadot.sh
+deploy_polkadot
+
+# 5. generate beefy checkpoint
+echo "Generate beefy checkpoint"
+source scripts/generate-beefy-checkpoint.sh
+generate_beefy_checkpoint
+
+# 6. deploy contracts
+echo "Deploying ethereum contracts"
+source scripts/deploy-contracts.sh
+deploy_contracts
 
 # 7. config substrate
 # For beacon checkpoint initialization and other required setup for all tests.
