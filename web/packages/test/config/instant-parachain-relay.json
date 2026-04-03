@@ -29,8 +29,8 @@
       "base-mint-gas": 60000,
       "base-beefy-two-phase-commit-gas": 900000,
       "base-beefy-fiat-shamir-gas": 2000000,
-      "fee-ratio-numerator": 1,
-      "fee-ratio-denominator": 8
+      "fee-ratio-numerator": 3,
+      "fee-ratio-denominator": 4
     }
   },
   "reward-address": "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d",
