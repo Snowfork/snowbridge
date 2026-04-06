@@ -454,32 +454,6 @@ func (wr *EthereumWriter) submitFiatShamir(ctx context.Context, task *Request) e
 	return nil
 }
 
-func (wr *EthereumWriter) BuildFiatShamirCalldata(ctx context.Context, task *Request) ([]byte, error) {
-	params, _, err := wr.prepareFiatShamirParams(ctx, task)
-	if err != nil {
-		return nil, err
-	}
-
-	calldata, err := wr.contractABI.Pack(
-		"submitFiatShamir",
-		params.Commitment,
-		params.Bitfield,
-		params.Proofs,
-		params.Leaf,
-		params.LeafProof,
-		params.LeafProofOrder,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("pack submitFiatShamir calldata: %w", err)
-	}
-
-	return calldata, nil
-}
-
-func (wr *EthereumWriter) ContractAddress() common.Address {
-	return common.HexToAddress(wr.config.Contracts.BeefyClient)
-}
-
 func (wr *EthereumWriter) prepareFiatShamirParams(ctx context.Context, task *Request) (*FinalRequestParams, logrus.Fields, error) {
 	signedValidators := []*big.Int{}
 	for i, signature := range task.SignedCommitment.Signatures {
@@ -563,4 +537,30 @@ func isDuplicateBeefyError(err error) bool {
 		strings.Contains(errStr, "InvalidCommitment") ||
 		strings.Contains(errStr, "already") ||
 		strings.Contains(errStr, "Duplicate")
+}
+
+func (wr *EthereumWriter) ContractAddress() common.Address {
+	return common.HexToAddress(wr.config.Contracts.BeefyClient)
+}
+
+func (wr *EthereumWriter) BuildFiatShamirCalldata(ctx context.Context, task *Request) ([]byte, error) {
+	params, _, err := wr.prepareFiatShamirParams(ctx, task)
+	if err != nil {
+		return nil, err
+	}
+
+	calldata, err := wr.contractABI.Pack(
+		"submitFiatShamir",
+		params.Commitment,
+		params.Bitfield,
+		params.Proofs,
+		params.Leaf,
+		params.LeafProof,
+		params.LeafProofOrder,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("pack submitFiatShamir calldata: %w", err)
+	}
+
+	return calldata, nil
 }
