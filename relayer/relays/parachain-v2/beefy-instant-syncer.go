@@ -49,7 +49,7 @@ type BeefyInstantSyncer struct {
 	beefyListener      *BeefyListener
 	beefyOnDemandRelay *beefy.OnDemandRelay
 	ethereumWriter     *EthereumWriter
-	multicall3         *contracts.MultiCall3
+	multicall3         *contracts.Multicall3
 	beefyClientABI     abi.ABI
 }
 
@@ -89,7 +89,7 @@ func (li *BeefyInstantSyncer) Start(ctx context.Context, eg *errgroup.Group) err
 	if client == nil {
 		return fmt.Errorf("ethereum writer client is nil; connect sink ethereum before starting instant syncer")
 	}
-	li.multicall3, err = contracts.NewMultiCall3(common.HexToAddress(li.config.Sink.Contracts.Multicall3), client)
+	li.multicall3, err = contracts.NewMulticall3(common.HexToAddress(li.config.Sink.Contracts.Multicall3), client)
 	if err != nil {
 		return fmt.Errorf("create multicall3: %w", err)
 	}
