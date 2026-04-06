@@ -92,9 +92,6 @@ func (c Config) Validate() error {
 	if c.Sink.Contracts.Gateway == "" {
 		return fmt.Errorf("sink contracts setting [Gateway] is not set")
 	}
-	if c.Sink.Contracts.Multicall3 == "" {
-		return fmt.Errorf("sink contracts setting [Multicall3] is not set")
-	}
 	err = c.Sink.Fees.Validate()
 	if err != nil {
 		return fmt.Errorf("sink fees config: %w", err)
@@ -109,5 +106,14 @@ func (c Config) Validate() error {
 		return fmt.Errorf("reward address is not set")
 	}
 
+	return nil
+}
+
+// ValidateForInstantRelay checks fields required when running the parachain relayer with instant verification
+// (batched Fiat-Shamir + v2_submit via Multicall3).
+func (c Config) ValidateForInstantRelay() error {
+	if c.Sink.Contracts.Multicall3 == "" {
+		return fmt.Errorf("sink contracts setting [Multicall3] is not set (required for instant verification)")
+	}
 	return nil
 }

@@ -69,6 +69,15 @@ func run(_ *cobra.Command, _ []string) error {
 		return fmt.Errorf("config file validation failed: %w", err)
 	}
 
+	if instantVerification {
+		if beefyConfigFile == "" {
+			return fmt.Errorf("--beefy.config is required when --instant-verification is set")
+		}
+		if err := config.ValidateForInstantRelay(); err != nil {
+			return fmt.Errorf("instant verification config: %w", err)
+		}
+	}
+
 	keypair, err := ethereum.ResolvePrivateKey(privateKey, privateKeyFile, privateKeyID)
 	if err != nil {
 		return err

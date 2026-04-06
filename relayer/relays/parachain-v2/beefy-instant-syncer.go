@@ -18,15 +18,17 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// gatewayDispatchOverheadGasV2 matches Gateway.DISPATCH_OVERHEAD_GAS_V2 on Ethereum.
+// Gas heuristics for Multicall3 tx limit (nested v2_submit must satisfy Gateway v2_dispatch checks).
+// gatewayDispatchOverheadGasV2 must stay in sync with DISPATCH_OVERHEAD_GAS_V2 in contracts/src/Gateway.sol.
+// v2SubmitVerificationOverheadBuffer is extra headroom for MMR/header verification and handler execution beyond forwarded command gas.
 const (
-	gatewayDispatchOverheadGasV2      uint64 = 24_000
-	v2SubmitVerifyAndHandlerSlack     uint64 = 350_000
-	multicall3AggregateOverheadBuffer uint64 = 80_000
+	gatewayDispatchOverheadGasV2       uint64 = 24_000 // contracts/src/Gateway.sol — paired with command MaxDispatchGas in v2_dispatch
+	v2SubmitVerificationOverheadBuffer uint64 = 300_000
+	multicall3AggregateOverheadBuffer  uint64 = 80_000
 )
 
 func minGasForV2SubmitProof(proof *MessageProof) uint64 {
-	gas := v2SubmitVerifyAndHandlerSlack
+	gas := v2SubmitVerificationOverheadBuffer
 	for _, cmd := range proof.Message.OriginalMessage.Commands {
 		gas += uint64(cmd.MaxDispatchGas) + gatewayDispatchOverheadGasV2
 	}

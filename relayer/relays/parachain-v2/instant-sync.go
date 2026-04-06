@@ -30,6 +30,10 @@ type InstantRelay struct {
 }
 
 func NewInstantRelay(config *Config, beefyConfig *beefy.Config, keypair *secp256k1.Keypair) (*InstantRelay, error) {
+	if err := config.ValidateForInstantRelay(); err != nil {
+		return nil, err
+	}
+
 	log.Info("Creating worker")
 
 	parachainConn := parachain.NewConnection(config.Source.Parachain.Endpoint, nil)
