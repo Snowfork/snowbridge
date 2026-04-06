@@ -39,16 +39,6 @@ type SinkContractsConfig struct {
 }
 
 type FeeConfig struct {
-	// The gas cost of two phase commit
-	BaseBeefyTwoPhaseCommitGas uint64 `mapstructure:"base-beefy-two-phase-commit-gas"`
-	// The gas cost of fiat shamir commit
-	BaseBeefyFiatShamirGas uint64 `mapstructure:"base-beefy-fiat-shamir-gas"`
-	// The gas cost of v2_submit excludes command execution, mainly covers the verification
-	BaseDeliveryGas uint64 `mapstructure:"base-delivery-gas"`
-	// The gas cost of unlock ERC20 token
-	BaseUnlockGas uint64 `mapstructure:"base-unlock-gas"`
-	// The gas cost of mint Polkadot native asset
-	BaseMintGas         uint64 `mapstructure:"base-mint-gas"`
 	FeeRatioNumerator   uint64 `mapstructure:"fee-ratio-numerator"`
 	FeeRatioDenominator uint64 `mapstructure:"fee-ratio-denominator"`
 }

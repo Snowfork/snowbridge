@@ -24,11 +24,6 @@
       "Multicall3": null
     },
     "fees": {
-      "base-delivery-gas": 80000,
-      "base-unlock-gas": 60000,
-      "base-mint-gas": 60000,
-      "base-beefy-two-phase-commit-gas": 900000,
-      "base-beefy-fiat-shamir-gas": 2000000,
       "fee-ratio-numerator": 3,
       "fee-ratio-denominator": 4
     }

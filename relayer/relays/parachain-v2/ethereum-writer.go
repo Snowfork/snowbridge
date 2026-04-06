@@ -147,10 +147,10 @@ func (wr *EthereumWriter) commandGas(command *CommandWrapper) uint64 {
 	// ERC20 transfer
 	case 2:
 		// BaseUnlockGas should cover most of the ERC20 token. Specific gas costs can be set per token if needed
-		gas = wr.config.Fees.BaseUnlockGas
+		gas = BaseUnlockGas
 	// PNA transfer
 	case 4:
-		gas = wr.config.Fees.BaseMintGas
+		gas = BaseMintGas
 	default:
 		gas = uint64(command.MaxDispatchGas)
 	}
@@ -158,7 +158,7 @@ func (wr *EthereumWriter) commandGas(command *CommandWrapper) uint64 {
 }
 
 // MessageMinFeeWei is the minimum message fee in wei at gasPrice, matching isRelayMessageProfitable:
-// (gasPrice * (sum(command gas) + BaseDeliveryGas) * FeeRatioNumerator) / FeeRatioDenominator.
+// (gasPrice * (sum(command gas) + BaseMessageVerificationGas) * FeeRatioNumerator) / FeeRatioDenominator.
 // SuggestRelayGasPrice returns the gas price from the writer read client (same source as per-message profitability).
 func (wr *EthereumWriter) SuggestRelayGasPrice(ctx context.Context) (*big.Int, error) {
 	return wr.readConn.Client().SuggestGasPrice(ctx)
@@ -169,7 +169,7 @@ func (wr *EthereumWriter) MessageMinFeeWei(gasPrice *big.Int, proof *MessageProo
 	for _, command := range proof.Message.OriginalMessage.Commands {
 		totalDispatchGas += wr.commandGas(&command)
 	}
-	totalDispatchGas += wr.config.Fees.BaseDeliveryGas
+	totalDispatchGas += BaseMessageVerificationGas
 
 	gasFee := new(big.Int).Mul(gasPrice, new(big.Int).SetUint64(totalDispatchGas))
 	numerator := new(big.Int).SetUint64(wr.config.Fees.FeeRatioNumerator)

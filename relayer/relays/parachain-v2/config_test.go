@@ -13,9 +13,6 @@ func TestFeeConfigValidate(t *testing.T) {
 		{
 			name: "valid config with 1:1 ratio",
 			config: FeeConfig{
-				BaseDeliveryGas:     100000,
-				BaseUnlockGas:       60000,
-				BaseMintGas:         60000,
 				FeeRatioNumerator:   1,
 				FeeRatioDenominator: 1,
 			},
@@ -24,9 +21,6 @@ func TestFeeConfigValidate(t *testing.T) {
 		{
 			name: "valid config with 5:4 ratio",
 			config: FeeConfig{
-				BaseDeliveryGas:     100000,
-				BaseUnlockGas:       60000,
-				BaseMintGas:         60000,
 				FeeRatioNumerator:   5,
 				FeeRatioDenominator: 4,
 			},
@@ -35,9 +29,6 @@ func TestFeeConfigValidate(t *testing.T) {
 		{
 			name: "invalid config with zero denominator",
 			config: FeeConfig{
-				BaseDeliveryGas:     100000,
-				BaseUnlockGas:       60000,
-				BaseMintGas:         60000,
 				FeeRatioNumerator:   1,
 				FeeRatioDenominator: 0,
 			},
@@ -46,9 +37,6 @@ func TestFeeConfigValidate(t *testing.T) {
 		{
 			name: "invalid config with zero numerator",
 			config: FeeConfig{
-				BaseDeliveryGas:     100000,
-				BaseUnlockGas:       60000,
-				BaseMintGas:         60000,
 				FeeRatioNumerator:   0,
 				FeeRatioDenominator: 1,
 			},
@@ -57,9 +45,6 @@ func TestFeeConfigValidate(t *testing.T) {
 		{
 			name: "invalid config with both zero",
 			config: FeeConfig{
-				BaseDeliveryGas:     100000,
-				BaseUnlockGas:       60000,
-				BaseMintGas:         60000,
 				FeeRatioNumerator:   0,
 				FeeRatioDenominator: 0,
 			},

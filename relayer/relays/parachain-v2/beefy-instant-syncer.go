@@ -18,19 +18,10 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// Gas heuristics for Multicall3 tx limit (nested v2_submit must satisfy Gateway v2_dispatch checks).
-// gatewayDispatchOverheadGasV2 must stay in sync with DISPATCH_OVERHEAD_GAS_V2 in contracts/src/Gateway.sol.
-// v2SubmitVerificationOverheadBuffer is extra headroom for MMR/header verification and handler execution beyond forwarded command gas.
-const (
-	gatewayDispatchOverheadGasV2       uint64 = 24_000 // contracts/src/Gateway.sol — paired with command MaxDispatchGas in v2_dispatch
-	v2SubmitVerificationOverheadBuffer uint64 = 300_000
-	multicall3AggregateOverheadBuffer  uint64 = 80_000
-)
-
 func minGasForV2SubmitProof(proof *MessageProof) uint64 {
-	gas := v2SubmitVerificationOverheadBuffer
+	gas := BaseMessageVerificationGas
 	for _, cmd := range proof.Message.OriginalMessage.Commands {
-		gas += uint64(cmd.MaxDispatchGas) + gatewayDispatchOverheadGasV2
+		gas += uint64(cmd.MaxDispatchGas) + gatewayDispatchOverheadBuffer
 	}
 	return gas
 }
@@ -39,7 +30,7 @@ func minGasForV2SubmitProof(proof *MessageProof) uint64 {
 // eth_estimateGas often undershoots here because failing v2_submit (e.g. InsufficientGasLimit) is swallowed
 // when AllowFailure is true, so the tx appears cheaper than a fully successful delivery.
 func (li *BeefyInstantSyncer) applyMulticallGasFloor(opts *bind.TransactOpts, minV2SubmitGasSum uint64) {
-	minTotal := li.config.Sink.Fees.BaseBeefyFiatShamirGas + multicall3AggregateOverheadBuffer + minV2SubmitGasSum
+	minTotal := BaseBeefyFiatShamirGas + multicall3AggregateOverheadBuffer + minV2SubmitGasSum
 	if opts.GasLimit == 0 || opts.GasLimit < minTotal {
 		if opts.GasLimit > 0 {
 			log.WithFields(log.Fields{
@@ -159,7 +150,7 @@ func (li *BeefyInstantSyncer) isRelayProfitable(ctx context.Context, tasks []*Ta
 		return false, fmt.Errorf("suggest gas price: %w", err)
 	}
 	fees := li.config.Sink.Fees
-	requireFee := new(big.Int).Mul(gasPrice, new(big.Int).SetUint64(fees.BaseBeefyFiatShamirGas))
+	requireFee := new(big.Int).Mul(gasPrice, new(big.Int).SetUint64(BaseBeefyFiatShamirGas))
 	numerator := new(big.Int).SetUint64(fees.FeeRatioNumerator)
 	denominator := new(big.Int).SetUint64(fees.FeeRatioDenominator)
 	requireFee.Mul(requireFee, numerator)

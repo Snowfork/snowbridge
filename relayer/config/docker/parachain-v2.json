@@ -26,9 +26,6 @@
       "Gateway": "${GATEWAY_CONTRACT}"
     },
     "fees": {
-      "base-delivery-gas": 80000,
-      "base-unlock-gas": 60000,
-      "base-mint-gas": 60000,
       "fee-ratio-numerator": 2,
       "fee-ratio-denominator": 3
     }
