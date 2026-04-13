@@ -114,8 +114,7 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
         assetHubParaId: 1000,
         bridgeHubParaId: 1002,
         v2_parachains: [1000],
-        indexerGraphQlUrl:
-            "https://subsquid.snowbridge.network/graphql",
+        indexerGraphQlUrl: "https://subsquid.snowbridge.network/graphql",
         kusama: {
             assetHubParaId: 1000,
             bridgeHubParaId: 1002,

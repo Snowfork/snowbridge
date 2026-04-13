@@ -125,13 +125,15 @@ export class ERC20ToAH implements TransferInterface {
             deliveryFeeInEther,
         )
 
+        let volumeTip: bigint | undefined
         let finalRelayerFee = relayerFee
         if (options?.volumeFee) {
-            finalRelayerFee += calculateVolumeTipInWei(
+            volumeTip = calculateVolumeTipInWei(
                 options.volumeFee.txValueUsd,
                 options.volumeFee.ethToUsdNumerator,
                 options.volumeFee.ethToUsdDenominator,
             )
+            finalRelayerFee += volumeTip
         }
 
         // Calculate fee with Across SDK
@@ -200,6 +202,7 @@ export class ERC20ToAH implements TransferInterface {
             extrinsicFeeDot: extrinsicFeeDot,
             extrinsicFeeEther: extrinsicFeeEther,
             totalFeeInWei: totalFeeInWei,
+            volumeTip,
             feeAsset: feeAsset,
             swapFeeInL1Token,
             bridgeFeeInL2Token,

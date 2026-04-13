@@ -340,12 +340,14 @@ export const estimateFeesFromAssetHub = async (
         feePadPercentage,
     )
 
+    let volumeTip: bigint | undefined
     if (options?.volumeFee) {
-        ethereumExecutionFee += calculateVolumeTipInWei(
+        volumeTip = calculateVolumeTipInWei(
             options.volumeFee.txValueUsd,
             options.volumeFee.ethToUsdNumerator,
             options.volumeFee.ethToUsdDenominator,
         )
+        ethereumExecutionFee += volumeTip
     }
 
     // calculate the cost of swapping in native asset
@@ -379,6 +381,7 @@ export const estimateFeesFromAssetHub = async (
         returnToSenderExecutionFeeDOT,
         totalFeeInDot,
         ethereumExecutionFee,
+        volumeTip,
         feeLocation,
         assetHubExecutionFeeNative,
         returnToSenderExecutionFeeNative,
@@ -477,12 +480,14 @@ export const estimateFeesFromParachains = async (
         options,
     )
 
+    let volumeTip: bigint | undefined
     if (options?.volumeFee) {
-        ethereumExecutionFee += calculateVolumeTipInWei(
+        volumeTip = calculateVolumeTipInWei(
             options.volumeFee.txValueUsd,
             options.volumeFee.ethToUsdNumerator,
             options.volumeFee.ethToUsdDenominator,
         )
+        ethereumExecutionFee += volumeTip
     }
 
     // calculate the cost of swapping in native asset
@@ -541,6 +546,7 @@ export const estimateFeesFromParachains = async (
         returnToSenderExecutionFeeDOT: 0n,
         totalFeeInDot,
         ethereumExecutionFee,
+        volumeTip,
         feeLocation,
         assetHubExecutionFeeNative,
         returnToSenderExecutionFeeNative: 0n,

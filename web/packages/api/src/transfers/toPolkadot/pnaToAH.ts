@@ -119,13 +119,15 @@ export class PNAToAH implements TransferInterface {
             deliveryFeeInEther,
         )
 
+        let volumeTip: bigint | undefined
         let finalRelayerFee = relayerFee
         if (options?.volumeFee) {
-            finalRelayerFee += calculateVolumeTipInWei(
+            volumeTip = calculateVolumeTipInWei(
                 options.volumeFee.txValueUsd,
                 options.volumeFee.ethToUsdNumerator,
                 options.volumeFee.ethToUsdDenominator,
             )
+            finalRelayerFee += volumeTip
         }
 
         const totalFeeInWei = assetHubExecutionFeeEther + finalRelayerFee
@@ -138,6 +140,7 @@ export class PNAToAH implements TransferInterface {
             extrinsicFeeDot: extrinsicFeeDot,
             extrinsicFeeEther: extrinsicFeeEther,
             totalFeeInWei: totalFeeInWei,
+            volumeTip,
             feeAsset: feeAsset,
         }
     }

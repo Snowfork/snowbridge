@@ -74,6 +74,7 @@ export type DeliveryFee = {
     localExecutionFeeDOT?: bigint
     localDeliveryFeeDOT?: bigint
     ethereumExecutionFee?: bigint
+    volumeTip?: bigint // Volume-based tip included in ethereumExecutionFee (wei), if volumeFee option was set
     feeLocation?: any
     totalFeeInNative?: bigint
     assetHubExecutionFeeNative?: bigint

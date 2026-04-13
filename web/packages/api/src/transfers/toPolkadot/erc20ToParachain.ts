@@ -191,13 +191,15 @@ export class ERC20ToParachain implements TransferInterface {
             deliveryFeeInEther,
         )
 
+        let volumeTip: bigint | undefined
         let finalRelayerFee = relayerFee
         if (options?.volumeFee) {
-            finalRelayerFee += calculateVolumeTipInWei(
+            volumeTip = calculateVolumeTipInWei(
                 options.volumeFee.txValueUsd,
                 options.volumeFee.ethToUsdNumerator,
                 options.volumeFee.ethToUsdDenominator,
             )
+            finalRelayerFee += volumeTip
         }
 
         const totalFeeInWei =
@@ -215,6 +217,7 @@ export class ERC20ToParachain implements TransferInterface {
             extrinsicFeeDot: extrinsicFeeDot,
             extrinsicFeeEther: extrinsicFeeEther,
             totalFeeInWei: totalFeeInWei,
+            volumeTip,
             feeAsset: feeAsset,
         }
     }

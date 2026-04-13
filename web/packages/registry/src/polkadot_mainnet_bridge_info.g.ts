@@ -26,8 +26,7 @@ const registry = {
         assetHubParaId: 1000,
         bridgeHubParaId: 1002,
         v2_parachains: [1000],
-        indexerGraphQlUrl:
-            "https://subsquid.snowbridge.network/graphql",
+        indexerGraphQlUrl: "https://subsquid.snowbridge.network/graphql",
         kusama: {
             assetHubParaId: 1000,
             bridgeHubParaId: 1002,
@@ -560,7 +559,7 @@ const registry = {
         },
     ],
     registry: {
-        timestamp: "2026-03-27T09:55:18.302Z",
+        timestamp: "2026-04-13T21:42:53.708Z",
         environment: "polkadot_mainnet",
         ethChainId: 1,
         gatewayAddress: "0x27ca963c279c93801941e1eb8799c23f407d68e7",
@@ -1728,7 +1727,7 @@ const registry = {
                     evmChainId: 1284,
                     name: "Moonbeam",
                     specName: "moonbeam",
-                    specVersion: 4103,
+                    specVersion: 4202,
                 },
                 xcDOT: "0xffffffff1fcacbd218edc0eba20fc2308c778080",
                 assets: {
@@ -1796,7 +1795,7 @@ const registry = {
                         xc20: "0xffffffff7bc304425217b49e9598415c514ae81b",
                     },
                 },
-                estimatedExecutionFeeDOT: 105696134n,
+                estimatedExecutionFeeDOT: 49217139n,
                 estimatedDeliveryFeeDOT: 306500000n,
             },
             polkadot_2030: {
@@ -1824,7 +1823,7 @@ const registry = {
                     evmChainId: 996,
                     name: "Bifrost Polkadot",
                     specName: "bifrost_polkadot",
-                    specVersion: 23003,
+                    specVersion: 24000,
                 },
                 assets: {
                     "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2": {
@@ -1844,7 +1843,7 @@ const registry = {
                         isSufficient: false,
                     },
                 },
-                estimatedExecutionFeeDOT: 54689726n,
+                estimatedExecutionFeeDOT: 62776112n,
                 estimatedDeliveryFeeDOT: 307100000n,
             },
             polkadot_2034: {
@@ -1872,7 +1871,7 @@ const registry = {
                     evmChainId: 222222,
                     name: "Hydration",
                     specName: "hydradx",
-                    specVersion: 398,
+                    specVersion: 405,
                 },
                 assets: {
                     "0x45804880de22913dafe09f4980848ece6ecbaf78": {
@@ -2028,7 +2027,7 @@ const registry = {
                         isSufficient: true,
                     },
                 },
-                estimatedExecutionFeeDOT: 1169428n,
+                estimatedExecutionFeeDOT: 1312292n,
                 estimatedDeliveryFeeDOT: 307100000n,
             },
             polkadot_2043: {
