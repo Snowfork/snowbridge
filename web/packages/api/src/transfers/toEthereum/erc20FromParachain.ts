@@ -12,6 +12,7 @@ import {
 import { buildTransferXcmFromParachainWithDOTAsFee } from "../../xcmbuilders/toEthereum/erc20FromParachainWithDotAsFee"
 import { buildTransferXcmFromParachainWithNativeAssetFee } from "../../xcmbuilders/toEthereum/erc20FromParachainWithNativeAsFee"
 import { Asset, AssetRegistry, ContractCall } from "@snowbridge/base-types"
+import { VolumeFeeParams } from "../../feeSchedule"
 import { paraImplementation } from "../../parachains"
 import {
     buildMessageId,
@@ -42,6 +43,7 @@ export class ERC20FromParachain implements TransferInterface {
             feeTokenLocation?: any
             claimerLocation?: any
             contractCall?: ContractCall
+            volumeFee?: VolumeFeeParams
         },
     ): Promise<DeliveryFee> {
         const { assetHub, parachain } =

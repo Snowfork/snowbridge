@@ -1,6 +1,7 @@
 import { AssetRegistry } from "@snowbridge/base-types"
 import { TransferInterface } from "./transferInterface"
 import { Context } from "../../index"
+import { calculateVolumeTipInWei, VolumeFeeParams } from "../../feeSchedule"
 import {
     buildSwapCallData,
     calculateRelayerFee,
@@ -44,6 +45,7 @@ export class ERC20ToAH implements TransferInterface {
             feeAsset?: any
             customXcm?: any[]
             overrideRelayerFee?: bigint
+            volumeFee?: VolumeFeeParams
             l2PadFeeByPercentage?: bigint
             fillDeadlineBuffer?: bigint
         },
@@ -112,6 +114,10 @@ export class ERC20ToAH implements TransferInterface {
             paddFeeByPercentage ?? 33n,
         )
 
+        if (options?.volumeFee && options?.overrideRelayerFee !== undefined) {
+            throw new Error("Cannot specify both volumeFee and overrideRelayerFee")
+        }
+
         const { relayerFee, extrinsicFeeDot, extrinsicFeeEther } = await calculateRelayerFee(
             assetHubImpl,
             registry.ethChainId,
@@ -119,10 +125,19 @@ export class ERC20ToAH implements TransferInterface {
             deliveryFeeInEther,
         )
 
+        let finalRelayerFee = relayerFee
+        if (options?.volumeFee) {
+            finalRelayerFee += calculateVolumeTipInWei(
+                options.volumeFee.txValueUsd,
+                options.volumeFee.ethToUsdNumerator,
+                options.volumeFee.ethToUsdDenominator,
+            )
+        }
+
         // Calculate fee with Across SDK
         let bridgeFeeInL2Token = 0n,
             swapFeeInL1Token = 0n
-        let totalFeeInWei = assetHubExecutionFeeEther + relayerFee
+        let totalFeeInWei = assetHubExecutionFeeEther + finalRelayerFee
         let l2FeeTokenAddress = context.l2FeeTokenAddress(l2ChainId)
         if (l2TokenAddress == ETHER_TOKEN_ADDRESS || l2TokenAddress == l2FeeTokenAddress) {
             const l1FeeTokenAddress =
@@ -137,7 +152,7 @@ export class ERC20ToAH implements TransferInterface {
                 l1FeeTokenAddress,
                 l2ChainId,
                 registry.ethChainId,
-                assetHubExecutionFeeEther + relayerFee + amount,
+                assetHubExecutionFeeEther + finalRelayerFee + amount,
             )
             bridgeFeeInL2Token = padFeeByPercentage(
                 bridgeFeeInL2Token,
@@ -152,7 +167,7 @@ export class ERC20ToAH implements TransferInterface {
             let params: ISwapQuoter.QuoteExactOutputSingleParamsStruct = {
                 tokenIn: tokenAddress,
                 tokenOut: context.l1FeeTokenAddress(),
-                amount: assetHubExecutionFeeEther + relayerFee,
+                amount: assetHubExecutionFeeEther + finalRelayerFee,
                 fee: swapFee ?? 500, // 0.05% pool fee
                 sqrtPriceLimitX96: 0, // no price limit
             }
@@ -181,7 +196,7 @@ export class ERC20ToAH implements TransferInterface {
             assetHubExecutionFeeEther: assetHubExecutionFeeEther,
             destinationDeliveryFeeEther: 0n,
             destinationExecutionFeeEther: 0n,
-            relayerFee: relayerFee,
+            relayerFee: finalRelayerFee,
             extrinsicFeeDot: extrinsicFeeDot,
             extrinsicFeeEther: extrinsicFeeEther,
             totalFeeInWei: totalFeeInWei,

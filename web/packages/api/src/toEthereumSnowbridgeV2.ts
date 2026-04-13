@@ -31,6 +31,7 @@ import {
 import { xxhashAsHex } from "@polkadot/util-crypto"
 import { BN } from "@polkadot/util"
 import { padFeeByPercentage } from "./utils"
+import { calculateVolumeTipInWei, VolumeFeeParams } from "./feeSchedule"
 import { paraImplementation } from "./parachains"
 import { Context } from "./index"
 import { ETHER_TOKEN_ADDRESS, findL2TokenAddress } from "./assets_v2"
@@ -270,6 +271,7 @@ export const estimateFeesFromAssetHub = async (
         l2PadFeeByPercentage?: bigint
         l2TransferGasLimit?: bigint
         fillDeadlineBuffer?: bigint
+        volumeFee?: VolumeFeeParams
     },
     l2ChainId?: number,
     tokenAmount?: bigint,
@@ -338,6 +340,14 @@ export const estimateFeesFromAssetHub = async (
         feePadPercentage,
     )
 
+    if (options?.volumeFee) {
+        ethereumExecutionFee += calculateVolumeTipInWei(
+            options.volumeFee.txValueUsd,
+            options.volumeFee.ethToUsdNumerator,
+            options.volumeFee.ethToUsdDenominator,
+        )
+    }
+
     // calculate the cost of swapping in native asset
     let totalFeeInNative: bigint | undefined = undefined
     let assetHubExecutionFeeNative: bigint | undefined = undefined
@@ -391,6 +401,7 @@ export const estimateFeesFromParachains = async (
         defaultFee?: bigint
         feeTokenLocation?: any
         contractCall?: ContractCall
+        volumeFee?: VolumeFeeParams
     },
 ): Promise<DeliveryFee> => {
     const sourceParachain = registry.parachains[`polkadot_${sourceParaId}`]
@@ -465,6 +476,14 @@ export const estimateFeesFromParachains = async (
         tokenAddress,
         options,
     )
+
+    if (options?.volumeFee) {
+        ethereumExecutionFee += calculateVolumeTipInWei(
+            options.volumeFee.txValueUsd,
+            options.volumeFee.ethToUsdNumerator,
+            options.volumeFee.ethToUsdDenominator,
+        )
+    }
 
     // calculate the cost of swapping in native asset
     let totalFeeInNative: bigint | undefined = undefined

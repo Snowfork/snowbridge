@@ -1,6 +1,7 @@
 import { ApiPromise } from "@polkadot/api"
 import { AssetRegistry } from "@snowbridge/base-types"
 import { Connections, TransferInterface } from "./transferInterface"
+import { calculateVolumeTipInWei, VolumeFeeParams } from "../../feeSchedule"
 import {
     IGatewayV2__factory as IGateway__factory,
     IGatewayV2 as IGateway,
@@ -45,6 +46,7 @@ export class PNAToAH implements TransferInterface {
             feeAsset?: any
             customXcm?: any[]
             overrideRelayerFee?: bigint
+            volumeFee?: VolumeFeeParams
         },
     ): Promise<DeliveryFee> {
         const { assetHub, bridgeHub } =
@@ -106,6 +108,10 @@ export class PNAToAH implements TransferInterface {
             paddFeeByPercentage ?? 33n,
         )
 
+        if (options?.volumeFee && options?.overrideRelayerFee !== undefined) {
+            throw new Error("Cannot specify both volumeFee and overrideRelayerFee")
+        }
+
         const { relayerFee, extrinsicFeeDot, extrinsicFeeEther } = await calculateRelayerFee(
             assetHubImpl,
             registry.ethChainId,
@@ -113,13 +119,22 @@ export class PNAToAH implements TransferInterface {
             deliveryFeeInEther,
         )
 
-        const totalFeeInWei = assetHubExecutionFeeEther + relayerFee
+        let finalRelayerFee = relayerFee
+        if (options?.volumeFee) {
+            finalRelayerFee += calculateVolumeTipInWei(
+                options.volumeFee.txValueUsd,
+                options.volumeFee.ethToUsdNumerator,
+                options.volumeFee.ethToUsdDenominator,
+            )
+        }
+
+        const totalFeeInWei = assetHubExecutionFeeEther + finalRelayerFee
         return {
             assetHubDeliveryFeeEther: deliveryFeeInEther,
             assetHubExecutionFeeEther: assetHubExecutionFeeEther,
             destinationDeliveryFeeEther: 0n,
             destinationExecutionFeeEther: 0n,
-            relayerFee: relayerFee,
+            relayerFee: finalRelayerFee,
             extrinsicFeeDot: extrinsicFeeDot,
             extrinsicFeeEther: extrinsicFeeEther,
             totalFeeInWei: totalFeeInWei,
