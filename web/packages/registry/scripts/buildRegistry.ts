@@ -303,6 +303,11 @@ export function defaultPathFilter(envName: string): (_: Path) => boolean {
             }
         case "polkadot_mainnet":
             return (path: Path) => {
+                // Disallow Robonomic
+                if (path.asset === "0x7de91b204c1c737bcee6f000aaa6569cf7061cb7") {
+                    return false
+                }
+
                 // Disallow MYTH to any location but 3369
                 if (
                     path.asset === "0xba41ddf06b7ffd89d1267b5a93bfef2424eb2003" &&
