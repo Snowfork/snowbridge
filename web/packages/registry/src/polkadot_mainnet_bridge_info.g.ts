@@ -133,7 +133,6 @@ const registry = {
                 "0x582d872a1b094fc48f5de31d3b73f2d9be47def1",
                 "0x6b175474e89094c44da98b954eedeac495271d0f",
                 "0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce",
-                "0x7de91b204c1c737bcee6f000aaa6569cf7061cb7",
                 "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
                 "0x8daebade922df735c38c80c7ebd708af50815faa",
                 "0x0000000000000000000000000000000000000000",
@@ -147,6 +146,7 @@ const registry = {
                 "0x5fdcd48f09fb67de3d202cd854b372aec1100ed5",
                 "0xa37b046782518a80e2e69056009fbd0431d36e50",
                 "0x769916a66fdac0e3d57363129caac59386ea622b",
+                "0x1f752250f518e419f2f03804e25728c5c6dff73f",
                 "0x92262680a8d6636bba9bffdf484c274ca2de6400",
             ],
         },
@@ -180,7 +180,6 @@ const registry = {
                 "0x582d872a1b094fc48f5de31d3b73f2d9be47def1",
                 "0x6b175474e89094c44da98b954eedeac495271d0f",
                 "0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce",
-                "0x7de91b204c1c737bcee6f000aaa6569cf7061cb7",
                 "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
                 "0x8daebade922df735c38c80c7ebd708af50815faa",
                 "0x0000000000000000000000000000000000000000",
@@ -194,6 +193,7 @@ const registry = {
                 "0x5fdcd48f09fb67de3d202cd854b372aec1100ed5",
                 "0xa37b046782518a80e2e69056009fbd0431d36e50",
                 "0x769916a66fdac0e3d57363129caac59386ea622b",
+                "0x1f752250f518e419f2f03804e25728c5c6dff73f",
                 "0x92262680a8d6636bba9bffdf484c274ca2de6400",
             ],
         },
@@ -559,7 +559,7 @@ const registry = {
         },
     ],
     registry: {
-        timestamp: "2026-03-27T09:55:18.302Z",
+        timestamp: "2026-04-16T22:04:17.732Z",
         environment: "polkadot_mainnet",
         ethChainId: 1,
         gatewayAddress: "0x27ca963c279c93801941e1eb8799c23f407d68e7",
@@ -852,6 +852,15 @@ const registry = {
                         decimals: 12,
                         foreignId:
                             "0x3b7f577715347bdcde4739a1bf1a7f1dec71e8ff4dbe23a6a49348ebf920c658",
+                        deliveryGas: 80000n,
+                    },
+                    "0x1f752250f518e419f2f03804e25728c5c6dff73f": {
+                        token: "0x1f752250f518e419f2f03804e25728c5c6dff73f",
+                        name: "Robonomics",
+                        symbol: "XRT",
+                        decimals: 9,
+                        foreignId:
+                            "0x3572e2b3281d738a7579848b023666ec5cb13a63a5372a6de7e74f16acfab7b8",
                         deliveryGas: 80000n,
                     },
                     "0x92262680a8d6636bba9bffdf484c274ca2de6400": {
@@ -1601,6 +1610,51 @@ const registry = {
                         minimumBalance: 1000000000n,
                         isSufficient: false,
                     },
+                    "0x1f752250f518e419f2f03804e25728c5c6dff73f": {
+                        token: "0x1f752250f518e419f2f03804e25728c5c6dff73f",
+                        name: "Robonomics",
+                        symbol: "XRT",
+                        decimals: 9,
+                        locationOnEthereum: {
+                            parents: 1,
+                            interior: {
+                                x2: [
+                                    {
+                                        globalConsensus: {
+                                            polkadot: null,
+                                        },
+                                    },
+                                    {
+                                        parachain: 3388,
+                                    },
+                                ],
+                            },
+                        },
+                        location: {
+                            parents: 1,
+                            interior: {
+                                x1: [
+                                    {
+                                        parachain: 3388,
+                                    },
+                                ],
+                            },
+                        },
+                        locationOnAH: {
+                            parents: 1,
+                            interior: {
+                                x1: [
+                                    {
+                                        parachain: 3388,
+                                    },
+                                ],
+                            },
+                        },
+                        foreignId:
+                            "0x3572e2b3281d738a7579848b023666ec5cb13a63a5372a6de7e74f16acfab7b8",
+                        minimumBalance: 1000n,
+                        isSufficient: false,
+                    },
                     "0x92262680a8d6636bba9bffdf484c274ca2de6400": {
                         token: "0x92262680a8d6636bba9bffdf484c274ca2de6400",
                         name: "DED",
@@ -1727,7 +1781,7 @@ const registry = {
                     evmChainId: 1284,
                     name: "Moonbeam",
                     specName: "moonbeam",
-                    specVersion: 4103,
+                    specVersion: 4202,
                 },
                 xcDOT: "0xffffffff1fcacbd218edc0eba20fc2308c778080",
                 assets: {
@@ -1795,7 +1849,7 @@ const registry = {
                         xc20: "0xffffffff7bc304425217b49e9598415c514ae81b",
                     },
                 },
-                estimatedExecutionFeeDOT: 105696134n,
+                estimatedExecutionFeeDOT: 49217139n,
                 estimatedDeliveryFeeDOT: 306500000n,
             },
             polkadot_2030: {
@@ -1823,7 +1877,7 @@ const registry = {
                     evmChainId: 996,
                     name: "Bifrost Polkadot",
                     specName: "bifrost_polkadot",
-                    specVersion: 23003,
+                    specVersion: 24001,
                 },
                 assets: {
                     "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2": {
@@ -1843,7 +1897,7 @@ const registry = {
                         isSufficient: false,
                     },
                 },
-                estimatedExecutionFeeDOT: 54689726n,
+                estimatedExecutionFeeDOT: 57320930n,
                 estimatedDeliveryFeeDOT: 307100000n,
             },
             polkadot_2034: {
@@ -1871,7 +1925,7 @@ const registry = {
                     evmChainId: 222222,
                     name: "Hydration",
                     specName: "hydradx",
-                    specVersion: 398,
+                    specVersion: 405,
                 },
                 assets: {
                     "0x45804880de22913dafe09f4980848ece6ecbaf78": {
@@ -2027,7 +2081,7 @@ const registry = {
                         isSufficient: true,
                     },
                 },
-                estimatedExecutionFeeDOT: 1169428n,
+                estimatedExecutionFeeDOT: 1353931n,
                 estimatedDeliveryFeeDOT: 307100000n,
             },
             polkadot_2043: {

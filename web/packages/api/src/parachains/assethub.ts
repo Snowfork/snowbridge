@@ -292,6 +292,21 @@ function bridgeablePNAsOnAH(location: any, assetHubParaId: number, env: string):
                 ],
             },
         }
+    } else if (
+        location.interior.x2 &&
+        location.interior.x2[0]?.globalConsensus?.polkadot !== undefined &&
+        location.interior.x2[1]?.parachain == 3388
+    ) {
+        return {
+            parents: 1,
+            interior: {
+                x1: [
+                    {
+                        parachain: 3388,
+                    },
+                ],
+            },
+        }
     }
     // Add assets for Westend
     if (env == "westmint") {
