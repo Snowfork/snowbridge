@@ -1,4 +1,4 @@
-use crate::TreasuryProposal2024Args;
+use crate::{TreasuryProposal2024Args, TreasuryProposal2026Args};
 
 use crate::asset_hub_runtime::runtime_types::{
     pallet_treasury,
@@ -174,7 +174,7 @@ const SPENDS: [Spend; 23] = [
 
 pub const LAUNCH_BLOCK: u32 = 21292000;
 
-pub fn treasury_proposal(params: &TreasuryProposal2024Args) -> AssetHubRuntimeCall {
+pub fn treasury_proposal_2024(params: &TreasuryProposal2024Args) -> AssetHubRuntimeCall {
     let mut calls: Vec<AssetHubRuntimeCall> = vec![];
 
     for spend in SPENDS.iter() {
@@ -184,6 +184,40 @@ pub fn treasury_proposal(params: &TreasuryProposal2024Args) -> AssetHubRuntimeCa
             asset_location,
             asset_amount,
             spend.delay.map(|delay| LAUNCH_BLOCK + delay),
+        );
+        calls.push(call);
+        println!("Spend: {}, {}({})", spend.name, asset_id, asset_amount);
+    }
+
+    utility_force_batch(calls)
+}
+
+const SPENDS_2026: [Spend; 2] = [
+    Spend {
+        name: "Payment 1",
+        asset: TreasuryAsset::DOT(182100),
+        delay: None,
+    },
+    Spend {
+        name: "Payment 2",
+        asset: TreasuryAsset::DOT(182100),
+        delay: Some(180 * DAYS),
+    },
+];
+
+// Approximate Asset Hub block at proposal submission time (April 2026)
+pub const PROPOSAL_2026_BASE_BLOCK: u32 = 14636636;
+
+pub fn treasury_proposal_2026(params: &TreasuryProposal2026Args) -> AssetHubRuntimeCall {
+    let mut calls: Vec<AssetHubRuntimeCall> = vec![];
+
+    for spend in SPENDS_2026.iter() {
+        let (asset_id, asset_location, asset_amount) = spend.asset.into();
+        let call = make_treasury_spend(
+            params.beneficiary.into(),
+            asset_location,
+            asset_amount,
+            spend.delay.map(|delay| PROPOSAL_2026_BASE_BLOCK + delay),
         );
         calls.push(call);
         println!("Spend: {}, {}({})", spend.name, asset_id, asset_amount);
