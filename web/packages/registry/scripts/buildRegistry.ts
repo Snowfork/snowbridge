@@ -110,12 +110,11 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
             //"3397": "wss://rpc.jamton.network",
         },
         gatewayContract: "0x27ca963c279c93801941e1eb8799c23f407d68e7",
-        beefyContract: "0x1817874feab3ce053d0f40abc23870db35c2affc",
+        beefyContract: "0x7cfc5c8b341991993080af67d940b6ad19a010e1",
         assetHubParaId: 1000,
         bridgeHubParaId: 1002,
         v2_parachains: [1000],
-        indexerGraphQlUrl:
-            "https://subsquid.snowbridge.network/graphql",
+        indexerGraphQlUrl: "https://subsquid.snowbridge.network/graphql",
         kusama: {
             assetHubParaId: 1000,
             bridgeHubParaId: 1002,
