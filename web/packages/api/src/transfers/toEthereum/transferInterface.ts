@@ -1,6 +1,7 @@
 import { AssetRegistry, ContractCall } from "@snowbridge/base-types"
 import { DeliveryFee, Transfer, ValidationResult } from "../../toEthereum_v2"
 import { Context } from "../../index"
+import { VolumeFeeParams } from "../../feeSchedule"
 
 export interface TransferInterface {
     getDeliveryFee(
@@ -14,6 +15,7 @@ export interface TransferInterface {
             feeTokenLocation?: any
             claimerLocation?: any
             contractCall?: ContractCall
+            volumeFee?: VolumeFeeParams
         },
     ): Promise<DeliveryFee>
 

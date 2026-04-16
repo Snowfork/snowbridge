@@ -1,6 +1,7 @@
 import { AssetRegistry } from "@snowbridge/base-types"
 import { DeliveryFee } from "../../toPolkadotSnowbridgeV2"
 import { Context } from "../../index"
+import { VolumeFeeParams } from "../../feeSchedule"
 import { IGatewayV2 as IGateway } from "@snowbridge/contract-types"
 import { ApiPromise } from "@polkadot/api"
 import { Transfer } from "../../toPolkadotSnowbridgeV2"
@@ -26,6 +27,7 @@ export interface TransferInterface {
             feeAsset?: any
             customXcm?: any[] // Optional custom XCM instructions to append
             overrideRelayerFee?: bigint
+            volumeFee?: VolumeFeeParams
         },
     ): Promise<DeliveryFee>
 

@@ -1,6 +1,7 @@
 import { AssetRegistry } from "@snowbridge/base-types"
 import { Context } from "../../index"
 import { DeliveryFee, Transfer, ValidationResult } from "../../toPolkadotSnowbridgeV2"
+import { VolumeFeeParams } from "../../feeSchedule"
 
 export interface TransferInterface {
     getDeliveryFee(
@@ -15,6 +16,7 @@ export interface TransferInterface {
             feeAsset?: any
             customXcm?: any[] // Optional custom XCM instructions to append
             overrideRelayerFee?: bigint
+            volumeFee?: VolumeFeeParams
             l2PadFeeByPercentage?: bigint
             fillDeadlineBuffer?: bigint // Optional buffer added to the relay fill deadline for L2 calls.
         },

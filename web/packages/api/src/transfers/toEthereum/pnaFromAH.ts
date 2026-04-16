@@ -10,6 +10,7 @@ import {
 } from "../../xcmbuilders/toEthereum/pnaFromAH"
 import { buildTransferXcmFromAssetHubWithDOTAsFee } from "../../xcmbuilders/toEthereum/pnaFromAHWithDotAsFee"
 import { Asset, AssetRegistry, ContractCall } from "@snowbridge/base-types"
+import { VolumeFeeParams } from "../../feeSchedule"
 import { paraImplementation } from "../../parachains"
 import {
     buildMessageId,
@@ -39,6 +40,7 @@ export class PNAFromAH implements TransferInterface {
             defaultFee?: bigint
             feeTokenLocation?: any
             contractCall?: ContractCall
+            volumeFee?: VolumeFeeParams
         },
     ): Promise<DeliveryFee> {
         const { assetHub, parachain } =

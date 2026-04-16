@@ -38,6 +38,7 @@ export * as toEthereumSnowbridgeV2 from "./toEthereumSnowbridgeV2"
 export * as neuroWeb from "./parachains/neuroweb"
 export * as toPolkadotSnowbridgeV2 from "./toPolkadotSnowbridgeV2"
 export * as addTip from "./addTip"
+export * as feeSchedule from "./feeSchedule"
 
 interface Parachains {
     [paraId: string]: Promise<ApiPromise>

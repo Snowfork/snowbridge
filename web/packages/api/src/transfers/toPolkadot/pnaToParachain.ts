@@ -1,6 +1,7 @@
 import { ApiPromise } from "@polkadot/api"
 import { AssetRegistry } from "@snowbridge/base-types"
 import { Connections, TransferInterface } from "./transferInterface"
+import { calculateVolumeTipInWei, VolumeFeeParams } from "../../feeSchedule"
 import {
     IGatewayV2__factory as IGateway__factory,
     IGatewayV2 as IGateway,
@@ -52,6 +53,7 @@ export class PNAToParachain implements TransferInterface {
             feeAsset?: any
             customXcm?: any[]
             overrideRelayerFee?: bigint
+            volumeFee?: VolumeFeeParams
         },
     ): Promise<DeliveryFee> {
         const { assetHub, bridgeHub, destination } =
@@ -177,6 +179,10 @@ export class PNAToParachain implements TransferInterface {
             throw Error(`Unsupported fee asset`)
         }
 
+        if (options?.volumeFee && options?.overrideRelayerFee !== undefined) {
+            throw new Error("Cannot specify both volumeFee and overrideRelayerFee")
+        }
+
         const { relayerFee, extrinsicFeeDot, extrinsicFeeEther } = await calculateRelayerFee(
             assetHubImpl,
             registry.ethChainId,
@@ -184,21 +190,33 @@ export class PNAToParachain implements TransferInterface {
             deliveryFeeInEther,
         )
 
+        let volumeTip: bigint | undefined
+        let finalRelayerFee = relayerFee
+        if (options?.volumeFee) {
+            volumeTip = calculateVolumeTipInWei(
+                options.volumeFee.txValueUsd,
+                options.volumeFee.ethToUsdNumerator,
+                options.volumeFee.ethToUsdDenominator,
+            )
+            finalRelayerFee += volumeTip
+        }
+
         const totalFeeInWei =
             assetHubExecutionFeeEther +
             destinationDeliveryFeeEther +
             destinationExecutionFeeEther +
-            relayerFee
+            finalRelayerFee
         return {
             assetHubDeliveryFeeEther: deliveryFeeInEther,
             assetHubExecutionFeeEther: assetHubExecutionFeeEther,
             destinationDeliveryFeeEther: destinationDeliveryFeeEther,
             destinationExecutionFeeEther: destinationExecutionFeeEther,
             destinationExecutionFeeDOT: destinationExecutionFeeDOT,
-            relayerFee: relayerFee,
+            relayerFee: finalRelayerFee,
             extrinsicFeeDot: extrinsicFeeDot,
             extrinsicFeeEther: extrinsicFeeEther,
             totalFeeInWei: totalFeeInWei,
+            volumeTip,
             feeAsset: feeAsset,
         }
     }
