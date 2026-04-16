@@ -136,5 +136,22 @@ const registry = {
             },
         },
     },
+    chains: {
+        sepolia: {
+            key: "ethereum_11155111",
+            kind: "ethereum",
+            id: 11155111,
+        },
+        assetHub: {
+            key: "polkadot_1000",
+            kind: "polkadot",
+            id: 1000,
+        },
+        penpalParachain: {
+            key: "polkadot_2000",
+            kind: "polkadot",
+            id: 2000,
+        },
+    },
 } as const
 export default registry
