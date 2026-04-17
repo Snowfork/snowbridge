@@ -4,9 +4,8 @@ import {
     erc20Location,
     ethereumNetwork,
     parachainLocation,
-    DOT_LOCATION,
 } from "../../xcmBuilder"
-import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
+import { DOT_LOCATION, ETHER_TOKEN_ADDRESS } from "../../assets_v2"
 
 export function buildAssetHubERC20ReceivedXcm(
     registry: Registry,

@@ -283,57 +283,35 @@ All fees are padded by **33%** to account for weight estimation variance. Exchan
 
 ```typescript
 import {
-    Context,
-    toPolkadotSnowbridgeV2,
+    createApi,
     xcmBuilder,
 } from "@snowbridge/api"
-import { bridgeInfoFor } from "@snowbridge/registry"
+import { EthersEthereumProvider } from "@snowbridge/provider-ethers"
+import { polkadot_mainnet } from "@snowbridge/registry"
 
-const { registry, environment } = bridgeInfoFor("polkadot_mainnet")
-const context = new Context(environment)
+const {
+    chains: { ethereum, assetHub },
+} = polkadot_mainnet
+const api = createApi({ info: polkadot_mainnet, ethereumProvider: new EthersEthereumProvider() })
 
-// 1. Create transfer implementation (automatically selects ERC20 vs PNA)
-const transferImpl = toPolkadotSnowbridgeV2.createTransferImplementation(
-    destParaId,
-    registry,
+// 1. Create sender
+const sender = api.sender(ethereum, assetHub)
+
+// 2. Build the validated transfer
+const transfer = await sender.build(
+    ETHEREUM_SENDER,
+    POLKADOT_BENEFICIARY,
     TOKEN_ADDRESS,
-)
-
-// 2. Get delivery fee (optional: specify DOT as fee asset)
-const fee = await transferImpl.getDeliveryFee(
-    context, registry, TOKEN_ADDRESS, destParaId,
-    { feeAsset: xcmBuilder.DOT_LOCATION }  // omit for Ether fees
-)
-
-// 3. Build the transfer transaction
-const transfer = await transferImpl.createTransfer(
+    amount,
     {
-        ethereum: context.ethereum(),
-        assetHub: await context.assetHub(),
-        destination: await context.parachain(destParaId),
+        fee: {
+            feeAsset: { parents: 1, interior: "Here" }, // DOT location, omit for Ether fees
+        },
     },
-    registry, destParaId,
-    ETHEREUM_SENDER, POLKADOT_BENEFICIARY,
-    TOKEN_ADDRESS, amount, fee,
 )
-
-// 4. Validate (dry run on AH and BridgeHub)
-const validation = await transferImpl.validateTransfer(
-    {
-        ethereum: context.ethereum(),
-        gateway: context.gatewayV2(),
-        bridgeHub: await context.bridgeHub(),
-        assetHub: await context.assetHub(),
-        destination: await context.parachain(destParaId),
-    },
-    transfer,
-)
-
-// 5. Send
-const response = await wallet.sendTransaction(transfer.tx)
-const receipt = await response.wait(1)
-const message = await toPolkadotSnowbridgeV2.getMessageReceipt(receipt)
 ```
+
+The returned `transfer.tx` can then be submitted to the wallet by your application.
 
 ***
 
@@ -593,59 +571,35 @@ All fees are padded by **33%**. Exchange rate swaps are padded by an additional 
 
 ```typescript
 import {
-    Context,
-    toEthereumSnowbridgeV2,
-    toEthereumV2,
+    createApi,
     xcmBuilder,
 } from "@snowbridge/api"
-import { bridgeInfoFor } from "@snowbridge/registry"
+import { EthersEthereumProvider } from "@snowbridge/provider-ethers"
+import { polkadot_mainnet } from "@snowbridge/registry"
 
-const { registry, environment } = bridgeInfoFor("polkadot_mainnet")
-const context = new Context(environment)
+const {
+    chains: { assetHub, ethereum },
+} = polkadot_mainnet
+const api = createApi({ info: polkadot_mainnet, ethereumProvider: new EthersEthereumProvider() })
 
-// 1. Create transfer implementation (auto-selects ERC20/PNA)
-const transferImpl = await toEthereumSnowbridgeV2.createTransferImplementation(
-    sourceParaId,
-    registry,
+// 1. Create sender
+const sender = api.sender(assetHub, ethereum)
+
+// 2. Build the validated transfer
+const transfer = await sender.build(
+    POLKADOT_SENDER,
+    ETHEREUM_BENEFICIARY,
     TOKEN_ADDRESS,
-)
-
-// 2. Get delivery fee
-// Option A: Pay Ethereum execution fee in DOT (swapped on AH)
-const fee = await transferImpl.getDeliveryFee(
-    { sourceParaId, context },
-    registry, TOKEN_ADDRESS,
-    { feeTokenLocation: xcmBuilder.DOT_LOCATION },
-)
-// Option B: Pay in parachain native token
-const fee = await transferImpl.getDeliveryFee(
-    { sourceParaId, context },
-    registry, TOKEN_ADDRESS,
-    { feeTokenLocation: xcmBuilder.parachainLocation(sourceParaId) },
-)
-// Option C: Pay Ethereum fee in Ether (requires Ether balance on source)
-const fee = await transferImpl.getDeliveryFee(
-    { sourceParaId, context },
-    registry, TOKEN_ADDRESS,
-)
-
-// 3. Build transfer
-const transfer = await transferImpl.createTransfer(
-    { sourceParaId, context },
-    registry,
-    POLKADOT_SENDER, ETHEREUM_BENEFICIARY,
-    TOKEN_ADDRESS, amount, fee,
-)
-
-// 4. Validate (dry runs on source, AH, BridgeHub)
-const validation = await transferImpl.validateTransfer(context, transfer)
-
-// 5. Sign and send
-const response = await toEthereumSnowbridgeV2.signAndSend(
-    context, transfer, polkadotAccount,
-    { withSignedTransaction: true },
+    amount,
+    {
+        fee: {
+            feeTokenLocation: { parents: 1, interior: "Here" }, // DOT location
+        },
+    },
 )
 ```
+
+The returned `transfer.tx` can then be submitted to the wallet by your application.
 
 ***
 
@@ -670,4 +624,3 @@ const response = await toEthereumSnowbridgeV2.signAndSend(
 * **E2P transfer implementations**: [https://github.com/Snowfork/snowbridge/tree/main/web/packages/api/src/transfers/toPolkadot](https://github.com/Snowfork/snowbridge/tree/main/web/packages/api/src/transfers/toPolkadot)
 * **P2E transfer implementations**: [https://github.com/Snowfork/snowbridge/tree/main/web/packages/api/src/transfers/toEthereum](https://github.com/Snowfork/snowbridge/tree/main/web/packages/api/src/transfers/toEthereum)
 * **Gateway V2 Solidity interface**: [https://github.com/Snowfork/snowbridge/blob/main/contracts/src/v2/IGateway.sol](../../contracts/src/v2/IGateway.sol)
-

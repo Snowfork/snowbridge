@@ -4,7 +4,8 @@ import { Result } from "@polkadot/types"
 import { XcmDryRunApiError, XcmDryRunEffects } from "@polkadot/types/interfaces"
 import { Codec } from "@polkadot/types/types"
 import { BN } from "@polkadot/util"
-import { DOT_LOCATION, erc20Location, HERE_LOCATION, parachainLocation } from "../xcmBuilder"
+import { erc20Location, HERE_LOCATION, parachainLocation } from "../xcmBuilder"
+import { DOT_LOCATION } from "../assets_v2"
 
 export abstract class ParachainBase {
     provider: ApiPromise

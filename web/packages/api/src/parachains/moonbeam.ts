@@ -1,8 +1,8 @@
 import { ApiPromise } from "@polkadot/api"
-import { ethers } from "ethers"
 import { ParachainBase } from "./parachainBase"
-import { AssetMap, PNAMap } from "@snowbridge/base-types"
-import { DOT_LOCATION, getTokenFromLocation } from "../xcmBuilder"
+import { AssetMap, EthereumProvider, EthereumProviderTypes, PNAMap } from "@snowbridge/base-types"
+import { getTokenFromLocation } from "../xcmBuilder"
+import { DOT_LOCATION } from "../assets_v2"
 
 const MOONBEAM_ERC20_ABI = [
     "function name() view returns (string)",
@@ -10,20 +10,20 @@ const MOONBEAM_ERC20_ABI = [
     "function decimals() view returns (uint8)",
     "function balanceOf(address) view returns (uint256)",
 ]
-const MOONBEAM_ERC20 = new ethers.Interface(MOONBEAM_ERC20_ABI)
 
-export function toMoonbeamXC20(assetId: bigint) {
+function toMoonbeamXC20(assetId: bigint) {
     const xc20 = assetId.toString(16).toLowerCase()
     return "0xffffffff" + xc20
 }
 
-export async function getMoonbeamEvmForeignAssetBalance(
+async function getMoonbeamEvmForeignAssetBalanceWithProvider(
+    ethereumProvider: EthereumProvider<EthereumProviderTypes>,
     api: ApiPromise,
     token: string,
     account: string,
 ) {
     const method = "balanceOf"
-    const data = MOONBEAM_ERC20.encodeFunctionData(method, [account])
+    const data = ethereumProvider.encodeFunctionData(MOONBEAM_ERC20_ABI, method, [account])
     const result = await api.call.ethereumRuntimeRPCApi.call(
         "0x0000000000000000000000000000000000000000",
         token,
@@ -44,12 +44,21 @@ export async function getMoonbeamEvmForeignAssetBalance(
             `Could not fetch balance for ${token}: ${JSON.stringify(resultJson?.ok?.exitReason)}`,
         )
     }
-    const retVal = MOONBEAM_ERC20.decodeFunctionResult(method, resultJson?.ok?.value)
-    return BigInt(retVal[0])
+    const retVal = ethereumProvider.decodeFunctionResult<bigint | readonly [bigint]>(
+        MOONBEAM_ERC20_ABI,
+        method,
+        resultJson?.ok?.value,
+    )
+    return BigInt(Array.isArray(retVal) ? retVal[0] : retVal)
 }
 
-export async function getMoonbeamEvmAssetMetadata(api: ApiPromise, method: string, token: string) {
-    const data = MOONBEAM_ERC20.encodeFunctionData(method, [])
+async function getMoonbeamEvmAssetMetadataWithProvider(
+    ethereumProvider: EthereumProvider<EthereumProviderTypes>,
+    api: ApiPromise,
+    method: string,
+    token: string,
+) {
+    const data = ethereumProvider.encodeFunctionData(MOONBEAM_ERC20_ABI, method, [])
     const result = await api.call.ethereumRuntimeRPCApi.call(
         "0x0000000000000000000000000000000000000000",
         token,
@@ -70,12 +79,26 @@ export async function getMoonbeamEvmAssetMetadata(api: ApiPromise, method: strin
             `Could not fetch metadata for ${token}: ${JSON.stringify(resultJson?.ok?.exitReason)}`,
         )
     }
-    const retVal = MOONBEAM_ERC20.decodeFunctionResult(method, resultJson?.ok?.value)
-    return retVal[0]
+    const retVal = ethereumProvider.decodeFunctionResult<
+        string | bigint | readonly [string | bigint]
+    >(MOONBEAM_ERC20_ABI, method, resultJson?.ok?.value)
+    return Array.isArray(retVal) ? retVal[0] : retVal
 }
 
 export class MoonbeamParachain extends ParachainBase {
     #xcDOT?: string
+    #ethereumProvider: EthereumProvider<EthereumProviderTypes>
+
+    constructor(
+        provider: ApiPromise,
+        parachainId: number,
+        specName: string,
+        specVersion: number,
+        ethereumProvider: EthereumProvider<EthereumProviderTypes>,
+    ) {
+        super(provider, parachainId, specName, specVersion)
+        this.#ethereumProvider = ethereumProvider
+    }
 
     getXC20DOT() {
         return this.#xcDOT
@@ -99,7 +122,12 @@ export class MoonbeamParachain extends ParachainBase {
         }
 
         const xc20 = toMoonbeamXC20(BigInt(paraAssetId))
-        return await getMoonbeamEvmForeignAssetBalance(this.provider, xc20, account)
+        return await getMoonbeamEvmForeignAssetBalanceWithProvider(
+            this.#ethereumProvider,
+            this.provider,
+            xc20,
+            account,
+        )
     }
 
     getDotBalance(account: string): Promise<bigint> {
@@ -128,9 +156,24 @@ export class MoonbeamParachain extends ParachainBase {
                 continue
             }
 
-            const symbol = await getMoonbeamEvmAssetMetadata(this.provider, "symbol", xc20)
-            const name = await getMoonbeamEvmAssetMetadata(this.provider, "name", xc20)
-            const decimals = await getMoonbeamEvmAssetMetadata(this.provider, "decimals", xc20)
+            const symbol = await getMoonbeamEvmAssetMetadataWithProvider(
+                this.#ethereumProvider,
+                this.provider,
+                "symbol",
+                xc20,
+            )
+            const name = await getMoonbeamEvmAssetMetadataWithProvider(
+                this.#ethereumProvider,
+                this.provider,
+                "name",
+                xc20,
+            )
+            const decimals = await getMoonbeamEvmAssetMetadataWithProvider(
+                this.#ethereumProvider,
+                this.provider,
+                "decimals",
+                xc20,
+            )
             assets[token] = {
                 token,
                 name: String(name),
