@@ -127,14 +127,14 @@ jobs:
           pnpm publish --no-git-checks --access public --tag latest
 
       - name: Publish Ethers Provider
-        working-directory: web/packages/providers-ethers
+        working-directory: web/packages/provider-ethers
         env:
           NODE_AUTH_TOKEN: ""
         run: |
           pnpm publish --no-git-checks --access public --tag latest
 
       - name: Publish Viem Provider
-        working-directory: web/packages/providers-viem
+        working-directory: web/packages/provider-viem
         env:
           NODE_AUTH_TOKEN: ""
         run: |
