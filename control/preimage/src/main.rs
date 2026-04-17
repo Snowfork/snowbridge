@@ -76,6 +76,10 @@ pub enum Command {
     /// Upgrade to FiatShamir on Polkadot
     #[command(alias = "upgrade-202603")]
     Upgrade202603,
+    /// Treasury proposal 2026
+    TreasuryProposal2026(TreasuryProposal2026Args),
+    /// Bug bounty proposal 2026
+    BugBountyProposal2026(BugBountyProposal2026Args),
 }
 
 #[derive(Debug, Args)]
@@ -228,6 +232,20 @@ pub struct HaltBridgeArgs {
 
 #[derive(Debug, Args)]
 pub struct TreasuryProposal2024Args {
+    /// Beneficiary address
+    #[arg(long, value_name = "ADDRESS", value_parser=parse_hex_bytes32)]
+    beneficiary: FixedBytes<32>,
+}
+
+#[derive(Debug, Args)]
+pub struct TreasuryProposal2026Args {
+    /// Beneficiary address
+    #[arg(long, value_name = "ADDRESS", value_parser=parse_hex_bytes32)]
+    beneficiary: FixedBytes<32>,
+}
+
+#[derive(Debug, Args)]
+pub struct BugBountyProposal2026Args {
     /// Beneficiary address
     #[arg(long, value_name = "ADDRESS", value_parser=parse_hex_bytes32)]
     beneficiary: FixedBytes<32>,
@@ -462,7 +480,9 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             let (register_ether_call, set_ether_metadata_call) = commands::register_ether(&params);
             send_xcm_asset_hub(&context, vec![register_ether_call, set_ether_metadata_call]).await?
         }
-        Command::TreasuryProposal2024(params) => treasury_commands::treasury_proposal(&params),
+        Command::TreasuryProposal2024(params) => treasury_commands::treasury_proposal_2024(&params),
+        Command::TreasuryProposal2026(params) => treasury_commands::treasury_proposal_2026(&params),
+        Command::BugBountyProposal2026(params) => treasury_commands::bug_bounty_proposal_2026(&params),
         Command::GovUpdate202501(GovUpdate202501Args {
             pricing_parameters,
             register_ether,
