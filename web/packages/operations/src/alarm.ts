@@ -5,6 +5,7 @@ import {
     PutMetricAlarmCommand,
 } from "@aws-sdk/client-cloudwatch"
 import { bridgeInfoFor } from "@snowbridge/registry"
+import { monitorParams } from "./monitorConfig"
 
 const CLOUD_WATCH_NAME_SPACE = "SnowbridgeMetrics"
 const BRIDGE_STALE_SNS_TOPIC = process.env["BRIDGE_STALE_SNS_TOPIC"] || ""
@@ -31,14 +32,14 @@ export enum AlarmReason {
 }
 
 export const InsufficientBalanceThreshold = {
-    // Minimum as 100 DOT
+    // Minimum as 20 DOT
     Substrate: process.env["SubstrateBalanceThreshold"]
         ? parseInt(process.env["SubstrateBalanceThreshold"])
-        : 1_000_000_000_000,
-    // Minimum as 0.3 Ether
+        : 20_000_000_000_000,
+    // Minimum as 0.05 Ether
     Ethereum: process.env["EthereumBalanceThreshold"]
         ? parseInt(process.env["EthereumBalanceThreshold"])
-        : 300_000_000_000_000_000,
+        : 50_000_000_000_000_000,
 }
 
 // This configuration is for setting up a CloudWatch alarm.
@@ -48,15 +49,15 @@ export const InsufficientBalanceThreshold = {
 export const AlarmEvaluationConfiguration = {
     EvaluationPeriods: process.env["EvaluationPeriods"]
         ? parseInt(process.env["EvaluationPeriods"])
-        : 4,
+        : 1,
     DatapointsToAlarm: process.env["DatapointsToAlarm"]
         ? parseInt(process.env["DatapointsToAlarm"])
-        : 3,
+        : 1,
 }
 
 export const IndexerLatencyThreshold = process.env["IndexerLatencyThreshold"]
     ? parseInt(process.env["IndexerLatencyThreshold"])
-    : 150
+    : 600
 
 export const ScanInterval = process.env["SCAN_INTERVAL"]
     ? parseInt(process.env["SCAN_INTERVAL"])
@@ -330,26 +331,31 @@ export const initializeAlarms = async () => {
     )
 
     // Insufficient balance in the relay account
-    for (const relayName of ["beacon", "execution-assethub"]) {
+    for (const relayer of monitorParams[name]?.RELAYERS || []) {
+        const threshold =
+            relayer.type === "ethereum"
+                ? InsufficientBalanceThreshold.Ethereum
+                : InsufficientBalanceThreshold.Substrate
+
         let relayAccountBalanceAlarm = new PutMetricAlarmCommand({
             AlarmName:
                 AlarmReason.RelayAccountBalanceInsufficient.toString() +
                 "-" +
                 name +
                 "-" +
-                relayName,
+                relayer.name,
             MetricName: "BalanceOfRelayer",
             Dimensions: [
                 {
                     Name: "RelayerName",
-                    Value: relayName,
+                    Value: relayer.name,
                 },
             ],
             AlarmDescription: BalanceDashboard,
             AlarmActions: [ACCOUNT_BALANCE_SNS_TOPIC],
             ...alarmCommandSharedInput,
             ComparisonOperator: "LessThanThreshold",
-            Threshold: InsufficientBalanceThreshold.Substrate,
+            Threshold: threshold,
         })
         cloudWatchAlarms.push(relayAccountBalanceAlarm)
     }
