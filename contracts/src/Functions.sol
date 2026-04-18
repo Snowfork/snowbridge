@@ -85,7 +85,7 @@ library Functions {
         invokeOnAgent(agent, executor, call);
     }
 
-    // @dev Withdraw Ethereum-native tokens from an agent and transfer to a recipient
+    /// @dev Withdraw Ethereum-native tokens from an agent and transfer to a recipient
     function withdrawNativeToken(
         address executor,
         address agent,
@@ -150,7 +150,7 @@ library Functions {
         return 21_000 * tx.gasprice;
     }
 
-    // @dev Get token address by tokenID
+    /// @dev Get token address by tokenID
     function _ensureTokenAddressOf(bytes32 tokenID) internal view returns (address) {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
         if ($.tokenAddressOf[tokenID] == address(0)) {

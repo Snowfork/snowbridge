@@ -628,7 +628,7 @@ contract BeefyClient {
         numRequiredSignatures += Math.log2(validatorSetLen, Math.Rounding.Ceil);
         // Add signatures based on the signature usage count.
         numRequiredSignatures += 1 + (2 * Math.log2(signatureUsageCount, Math.Rounding.Ceil));
-        // Never require more signatures than a 1/3 + 1 which is sufficient to ensure at least one honest validator.
+        // Never require more signatures than 1/3 + 1, which is sufficient to ensure at least one honest validator.
         return Math.min(numRequiredSignatures, computeMaxRequiredSignatures(validatorSetLen));
     }
 
