@@ -122,6 +122,7 @@ export class TransferToPolkadot<T extends EthereumProviderTypes> implements Tran
             feeAsset?: any
             customXcm?: any[]
             overrideRelayerFee?: bigint
+            volumeFee?: import("./feeSchedule").VolumeFeeParams
         },
     ): Promise<DeliveryFee> {
         return this.#resolveByTokenAddress(tokenAddress).fee(tokenAddress, options)
@@ -156,6 +157,7 @@ export class TransferToPolkadot<T extends EthereumProviderTypes> implements Tran
                 feeAsset?: any
                 customXcm?: any[]
                 overrideRelayerFee?: bigint
+                volumeFee?: import("./feeSchedule").VolumeFeeParams
             }
             customXcm?: any[]
         },

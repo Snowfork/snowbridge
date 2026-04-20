@@ -38,6 +38,7 @@ import {
 } from "../../xcmbuilders/toPolkadot/pnaToParachain"
 import { getOperatingStatus } from "../../status"
 import { hexToU8a } from "@polkadot/util"
+import { VolumeFeeParams, calculateVolumeTipInWei } from "../../feeSchedule"
 
 export class PNAToParachain<T extends EthereumProviderTypes> implements TransferInterface<T> {
     constructor(
@@ -63,8 +64,12 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
             feeAsset?: any
             customXcm?: any[]
             overrideRelayerFee?: bigint
+            volumeFee?: VolumeFeeParams
         },
     ): Promise<DeliveryFee> {
+        if (options?.volumeFee && options?.overrideRelayerFee !== undefined) {
+            throw new Error("Cannot specify both volumeFee and overrideRelayerFee")
+        }
         const context = this.context
         const registry = this.registry
         const assetHub = await context.assetHub()
@@ -203,11 +208,16 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
             deliveryFeeInEther,
         )
 
+        let finalRelayerFee = relayerFee
+        if (options?.volumeFee) {
+            finalRelayerFee += calculateVolumeTipInWei(options.volumeFee)
+        }
+
         const totalFeeInWei =
             assetHubExecutionFeeEther +
             destinationDeliveryFeeEther +
             destinationExecutionFeeEther +
-            relayerFee
+            finalRelayerFee
         return {
             kind: "ethereum->polkadot",
             assetHubDeliveryFeeEther: deliveryFeeInEther,
@@ -215,7 +225,7 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
             destinationDeliveryFeeEther: destinationDeliveryFeeEther,
             destinationExecutionFeeEther: destinationExecutionFeeEther,
             destinationExecutionFeeDOT: destinationExecutionFeeDOT,
-            relayerFee: relayerFee,
+            relayerFee: finalRelayerFee,
             extrinsicFeeDot: extrinsicFeeDot,
             extrinsicFeeEther: extrinsicFeeEther,
             totalFeeInWei: totalFeeInWei,
@@ -376,6 +386,7 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
                 feeAsset?: any
                 customXcm?: any[]
                 overrideRelayerFee?: bigint
+                volumeFee?: VolumeFeeParams
             }
             customXcm?: any[]
         },

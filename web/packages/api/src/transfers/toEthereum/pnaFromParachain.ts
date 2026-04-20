@@ -67,6 +67,7 @@ export class PNAFromParachain<T extends EthereumProviderTypes> implements Transf
             feeTokenLocation?: any
             claimerLocation?: any
             contractCall?: ContractCall
+            volumeFee?: import("../../feeSchedule").VolumeFeeParams
         },
     ): Promise<DeliveryFee> {
         const assetHub = await this.context.assetHub()
@@ -298,6 +299,7 @@ export class PNAFromParachain<T extends EthereumProviderTypes> implements Transf
                 feeTokenLocation?: any
                 claimerLocation?: any
                 contractCall?: ContractCall
+                volumeFee?: import("../../feeSchedule").VolumeFeeParams
             }
             tx?: {
                 claimerLocation?: any

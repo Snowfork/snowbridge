@@ -30,6 +30,7 @@ import { ensureValidationSuccess, padFeeByPercentage } from "./utils"
 import { Context } from "./index"
 import { DOT_LOCATION, ETHER_TOKEN_ADDRESS, findL2TokenAddress } from "./assets_v2"
 import { getOperatingStatus } from "./status"
+import { calculateVolumeTipInWei } from "./feeSchedule"
 import { estimateFees } from "./across/api"
 import type { MessageReceipt, Transfer, ValidatedTransfer, ValidationLog } from "./types/toEthereum"
 import { ValidationKind, ValidationReason } from "./types/toEthereum"
@@ -114,6 +115,7 @@ export class TransferToEthereum<T extends EthereumProviderTypes> implements Tran
             feeTokenLocation?: any
             claimerLocation?: any
             contractCall?: ContractCall
+            volumeFee?: import("./feeSchedule").VolumeFeeParams
         },
     ): Promise<DeliveryFee> {
         return this.#resolveByTokenAddress(tokenAddress).fee(tokenAddress, options)
@@ -153,6 +155,7 @@ export class TransferToEthereum<T extends EthereumProviderTypes> implements Tran
                 feeTokenLocation?: any
                 claimerLocation?: any
                 contractCall?: ContractCall
+                volumeFee?: import("./feeSchedule").VolumeFeeParams
             }
             tx?: {
                 claimerLocation?: any
@@ -386,6 +389,7 @@ export const estimateFeesFromAssetHub = async <T extends EthereumProviderTypes>(
         l2PadFeeByPercentage?: bigint
         l2TransferGasLimit?: bigint
         fillDeadlineBuffer?: bigint
+        volumeFee?: import("./feeSchedule").VolumeFeeParams
     },
     l2ChainId?: number,
     tokenAmount?: bigint,
@@ -454,6 +458,10 @@ export const estimateFeesFromAssetHub = async <T extends EthereumProviderTypes>(
         feePadPercentage,
     )
 
+    if (options?.volumeFee) {
+        ethereumExecutionFee += calculateVolumeTipInWei(options.volumeFee)
+    }
+
     // calculate the cost of swapping in native asset
     let totalFeeInNative: bigint | undefined = undefined
     let assetHubExecutionFeeNative: bigint | undefined = undefined
@@ -508,6 +516,7 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
         defaultFee?: bigint
         feeTokenLocation?: any
         contractCall?: ContractCall
+        volumeFee?: import("./feeSchedule").VolumeFeeParams
     },
 ): Promise<DeliveryFee> => {
     const sourceParachain = registry.parachains[`polkadot_${sourceParaId}`]
@@ -584,6 +593,10 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
         tokenAddress,
         options,
     )
+
+    if (options?.volumeFee) {
+        ethereumExecutionFee += calculateVolumeTipInWei(options.volumeFee)
+    }
 
     // calculate the cost of swapping in native asset
     let totalFeeInNative: bigint | undefined = undefined

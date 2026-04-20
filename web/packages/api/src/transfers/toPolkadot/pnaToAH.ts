@@ -31,6 +31,7 @@ import { FeeInfo, ValidationLog, ValidationReason } from "../../types/toPolkadot
 import { buildAssetHubPNAReceivedXcm, sendMessageXCM } from "../../xcmbuilders/toPolkadot/pnaToAH"
 import { getOperatingStatus } from "../../status"
 import { hexToU8a } from "@polkadot/util"
+import { VolumeFeeParams, calculateVolumeTipInWei } from "../../feeSchedule"
 
 export class PNAToAH<T extends EthereumProviderTypes> implements TransferInterface<T> {
     constructor(
@@ -56,8 +57,12 @@ export class PNAToAH<T extends EthereumProviderTypes> implements TransferInterfa
             feeAsset?: any
             customXcm?: any[]
             overrideRelayerFee?: bigint
+            volumeFee?: VolumeFeeParams
         },
     ): Promise<DeliveryFee> {
+        if (options?.volumeFee && options?.overrideRelayerFee !== undefined) {
+            throw new Error("Cannot specify both volumeFee and overrideRelayerFee")
+        }
         const context = this.context
         const registry = this.registry
         const assetHub = await context.assetHub()
@@ -130,14 +135,19 @@ export class PNAToAH<T extends EthereumProviderTypes> implements TransferInterfa
             deliveryFeeInEther,
         )
 
-        const totalFeeInWei = assetHubExecutionFeeEther + relayerFee
+        let finalRelayerFee = relayerFee
+        if (options?.volumeFee) {
+            finalRelayerFee += calculateVolumeTipInWei(options.volumeFee)
+        }
+
+        const totalFeeInWei = assetHubExecutionFeeEther + finalRelayerFee
         return {
             kind: "ethereum->polkadot",
             assetHubDeliveryFeeEther: deliveryFeeInEther,
             assetHubExecutionFeeEther: assetHubExecutionFeeEther,
             destinationDeliveryFeeEther: 0n,
             destinationExecutionFeeEther: 0n,
-            relayerFee: relayerFee,
+            relayerFee: finalRelayerFee,
             extrinsicFeeDot: extrinsicFeeDot,
             extrinsicFeeEther: extrinsicFeeEther,
             totalFeeInWei: totalFeeInWei,
@@ -273,6 +283,7 @@ export class PNAToAH<T extends EthereumProviderTypes> implements TransferInterfa
                 feeAsset?: any
                 customXcm?: any[]
                 overrideRelayerFee?: bigint
+                volumeFee?: VolumeFeeParams
             }
             customXcm?: any[]
         },
