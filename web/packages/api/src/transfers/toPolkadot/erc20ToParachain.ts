@@ -210,9 +210,11 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
             deliveryFeeInEther,
         )
 
+        let volumeTip: bigint | undefined
         let finalRelayerFee = relayerFee
         if (options?.volumeFee) {
-            finalRelayerFee += calculateVolumeTipInWei(options.volumeFee)
+            volumeTip = calculateVolumeTipInWei(options.volumeFee)
+            finalRelayerFee += volumeTip
         }
 
         const totalFeeInWei =
@@ -232,6 +234,7 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
             extrinsicFeeEther: extrinsicFeeEther,
             totalFeeInWei: totalFeeInWei,
             feeAsset: feeAsset,
+            volumeTip,
         }
     }
 

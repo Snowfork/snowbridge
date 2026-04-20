@@ -208,9 +208,11 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
             deliveryFeeInEther,
         )
 
+        let volumeTip: bigint | undefined
         let finalRelayerFee = relayerFee
         if (options?.volumeFee) {
-            finalRelayerFee += calculateVolumeTipInWei(options.volumeFee)
+            volumeTip = calculateVolumeTipInWei(options.volumeFee)
+            finalRelayerFee += volumeTip
         }
 
         const totalFeeInWei =
@@ -230,6 +232,7 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
             extrinsicFeeEther: extrinsicFeeEther,
             totalFeeInWei: totalFeeInWei,
             feeAsset: feeAsset,
+            volumeTip,
         }
     }
 
