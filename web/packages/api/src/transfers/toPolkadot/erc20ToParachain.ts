@@ -36,6 +36,7 @@ import {
 } from "../../xcmbuilders/toPolkadot/erc20ToParachain"
 import { getOperatingStatus } from "../../status"
 import { hexToU8a } from "@polkadot/util"
+import { VolumeFeeParams, calculateVolumeTipInWei } from "../../feeSchedule"
 
 export class ERC20ToParachain<T extends EthereumProviderTypes> implements TransferInterface<T> {
     constructor(
@@ -61,8 +62,12 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
             feeAsset?: any
             customXcm?: any[]
             overrideRelayerFee?: bigint
+            volumeFee?: VolumeFeeParams
         },
     ): Promise<DeliveryFee> {
+        if (options?.volumeFee && options?.overrideRelayerFee !== undefined) {
+            throw new Error("Cannot specify both volumeFee and overrideRelayerFee")
+        }
         const context = this.context
         const registry = this.registry
         const assetHub = await context.assetHub()
@@ -194,11 +199,16 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
             deliveryFeeInEther,
         )
 
+        let finalRelayerFee = relayerFee
+        if (options?.volumeFee) {
+            finalRelayerFee += calculateVolumeTipInWei(options.volumeFee)
+        }
+
         const totalFeeInWei =
             assetHubExecutionFeeEther +
             destinationDeliveryFeeEther +
             destinationExecutionFeeEther +
-            relayerFee
+            finalRelayerFee
         return {
             kind: "ethereum->polkadot",
             assetHubDeliveryFeeEther: deliveryFeeInEther,
@@ -206,7 +216,7 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
             destinationDeliveryFeeEther: destinationDeliveryFeeEther,
             destinationExecutionFeeEther: destinationExecutionFeeEther,
             destinationExecutionFeeDOT: destinationExecutionFeeDOT,
-            relayerFee: relayerFee,
+            relayerFee: finalRelayerFee,
             extrinsicFeeDot: extrinsicFeeDot,
             extrinsicFeeEther: extrinsicFeeEther,
             totalFeeInWei: totalFeeInWei,
@@ -369,6 +379,7 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
                 feeAsset?: any
                 customXcm?: any[]
                 overrideRelayerFee?: bigint
+                volumeFee?: VolumeFeeParams
             }
             customXcm?: any[]
         },

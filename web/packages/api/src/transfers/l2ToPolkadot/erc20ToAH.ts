@@ -35,6 +35,7 @@ import { buildMessageId, Transfer, ValidatedTransfer } from "../../toPolkadotSno
 import { getOperatingStatus } from "../../status"
 import { hexToU8a } from "@polkadot/util"
 import { estimateFees } from "../../across/api"
+import { VolumeFeeParams, calculateVolumeTipInWei } from "../../feeSchedule"
 
 export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInterface<T> {
     constructor(
@@ -63,8 +64,12 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             overrideRelayerFee?: bigint
             l2PadFeeByPercentage?: bigint
             fillDeadlineBuffer?: bigint
+            volumeFee?: VolumeFeeParams
         },
     ): Promise<DeliveryFee> {
+        if (options?.volumeFee && options?.overrideRelayerFee !== undefined) {
+            throw new Error("Cannot specify both volumeFee and overrideRelayerFee")
+        }
         const context = this.context
         const registry = this.registry
         const { assetHub, bridgeHub } = {
@@ -138,10 +143,15 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             deliveryFeeInEther,
         )
 
+        let finalRelayerFee = relayerFee
+        if (options?.volumeFee) {
+            finalRelayerFee += calculateVolumeTipInWei(options.volumeFee)
+        }
+
         // Calculate fee with Across SDK
         let bridgeFeeInL2Token = 0n,
             swapFeeInL1Token = 0n
-        let totalFeeInWei = assetHubExecutionFeeEther + relayerFee
+        let totalFeeInWei = assetHubExecutionFeeEther + finalRelayerFee
         const acrossApiUrl = context.environment.l2Bridge?.acrossAPIUrl
         const l2FeeTokenAddress =
             context.environment.l2Bridge?.l2Chains[this.from.id]?.feeTokenAddress
@@ -161,7 +171,7 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
                 l1FeeTokenAddress,
                 this.from.id,
                 registry.ethChainId,
-                assetHubExecutionFeeEther + relayerFee + amount,
+                assetHubExecutionFeeEther + finalRelayerFee + amount,
             )
             bridgeFeeInL2Token = padFeeByPercentage(
                 bridgeFeeInL2Token,
@@ -180,7 +190,7 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             let params: QuoteExactOutputSingleParamsStruct = {
                 tokenIn: tokenAddress,
                 tokenOut: l1FeeTokenAddress,
-                amount: assetHubExecutionFeeEther + relayerFee,
+                amount: assetHubExecutionFeeEther + finalRelayerFee,
                 fee: swapFee ?? 500, // 0.05% pool fee
                 sqrtPriceLimitX96: 0, // no price limit
             }
@@ -210,7 +220,7 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             assetHubExecutionFeeEther: assetHubExecutionFeeEther,
             destinationDeliveryFeeEther: 0n,
             destinationExecutionFeeEther: 0n,
-            relayerFee: relayerFee,
+            relayerFee: finalRelayerFee,
             extrinsicFeeDot: extrinsicFeeDot,
             extrinsicFeeEther: extrinsicFeeEther,
             totalFeeInWei: totalFeeInWei,
@@ -426,6 +436,7 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
                 overrideRelayerFee?: bigint
                 l2PadFeeByPercentage?: bigint
                 fillDeadlineBuffer?: bigint
+                volumeFee?: VolumeFeeParams
             }
             tx?: {
                 customXcm?: any[]

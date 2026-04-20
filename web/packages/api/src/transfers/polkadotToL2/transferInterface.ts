@@ -7,6 +7,7 @@ import type {
     Transfer,
     ValidatedTransfer,
 } from "../../types/toEthereum"
+import type { VolumeFeeParams } from "../../feeSchedule"
 
 export interface TransferInterface<T extends EthereumProviderTypes> {
     readonly context: Context<T>
@@ -23,6 +24,7 @@ export interface TransferInterface<T extends EthereumProviderTypes> {
             contractCall?: ContractCall
             l2PadFeeByPercentage?: bigint
             fillDeadlineBuffer?: bigint // Optional buffer added to the relay fill deadline for L2 calls.
+            volumeFee?: VolumeFeeParams
         },
     ): Promise<DeliveryFee>
 
@@ -56,6 +58,7 @@ export interface TransferInterface<T extends EthereumProviderTypes> {
                 contractCall?: ContractCall
                 l2PadFeeByPercentage?: bigint
                 fillDeadlineBuffer?: bigint
+                volumeFee?: VolumeFeeParams
             }
             tx?: {
                 claimerLocation?: any

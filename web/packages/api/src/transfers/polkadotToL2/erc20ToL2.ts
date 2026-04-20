@@ -67,6 +67,7 @@ export class ERC20FromAH<T extends EthereumProviderTypes> implements TransferInt
             contractCall?: ContractCall
             l2PadFeeByPercentage?: bigint
             fillDeadlineBuffer?: bigint
+            volumeFee?: import("../../feeSchedule").VolumeFeeParams
         },
     ): Promise<DeliveryFee> {
         const context = this.context
@@ -267,6 +268,7 @@ export class ERC20FromAH<T extends EthereumProviderTypes> implements TransferInt
                 contractCall?: ContractCall
                 l2PadFeeByPercentage?: bigint
                 fillDeadlineBuffer?: bigint
+                volumeFee?: import("../../feeSchedule").VolumeFeeParams
             }
             tx?: {
                 claimerLocation?: any

@@ -63,6 +63,7 @@ export class PNAFromAH<T extends EthereumProviderTypes> implements TransferInter
             defaultFee?: bigint
             feeTokenLocation?: any
             contractCall?: ContractCall
+            volumeFee?: import("../../feeSchedule").VolumeFeeParams
         },
     ): Promise<DeliveryFee> {
         const assetHub = await this.context.assetHub()
@@ -239,6 +240,7 @@ export class PNAFromAH<T extends EthereumProviderTypes> implements TransferInter
                 feeTokenLocation?: any
                 claimerLocation?: any
                 contractCall?: ContractCall
+                volumeFee?: import("../../feeSchedule").VolumeFeeParams
             }
             tx?: {
                 claimerLocation?: any
