@@ -5,6 +5,8 @@ import {
     PutMetricAlarmCommand,
 } from "@aws-sdk/client-cloudwatch"
 import { bridgeInfoFor } from "@snowbridge/registry"
+
+import { AllMetrics } from "./metrics"
 import { monitorParams } from "./monitorConfig"
 
 const CLOUD_WATCH_NAME_SPACE = "SnowbridgeMetrics"
@@ -25,6 +27,7 @@ export enum AlarmReason {
     ToPolkadotChannelStale = "ToPolkadotChannelStale",
     RelayAccountBalanceInsufficient = "RelayAccountBalanceInsufficient",
     SovereignAccountBalanceInsufficient = "SovereignAccountBalanceInsufficient",
+    EthDotPoolEthLiquidityInsufficient = "EthDotPoolEthLiquidityInsufficient",
     IndexServiceStale = "IndexServiceStale",
     HeartbeatLost = "HeartbeatLost",
     FutureBlockVoting = "FutureBlockVoting",
@@ -63,7 +66,7 @@ export const ScanInterval = process.env["SCAN_INTERVAL"]
     ? parseInt(process.env["SCAN_INTERVAL"])
     : 900
 
-export const sendMetrics = async (metrics: status.AllMetrics) => {
+export const sendMetrics = async (metrics: AllMetrics) => {
     let client = new CloudWatchClient({})
     let metricData = []
     // Heartbeat metrics
@@ -220,6 +223,44 @@ export const sendMetrics = async (metrics: status.AllMetrics) => {
                 },
             ],
             Value: Number(status.latency),
+        })
+    }
+    for (const pool of metrics.liquidityPools) {
+        metricData.push({
+            MetricName: "PoolLiquidity",
+            Dimensions: [
+                {
+                    Name: "ChainName",
+                    Value: pool.chain,
+                },
+                {
+                    Name: "PoolName",
+                    Value: pool.name,
+                },
+                {
+                    Name: "AssetName",
+                    Value: "DOT",
+                },
+            ],
+            Value: Number(pool.dotBalance),
+        })
+        metricData.push({
+            MetricName: "PoolLiquidity",
+            Dimensions: [
+                {
+                    Name: "ChainName",
+                    Value: pool.chain,
+                },
+                {
+                    Name: "PoolName",
+                    Value: pool.name,
+                },
+                {
+                    Name: "AssetName",
+                    Value: "ETH",
+                },
+            ],
+            Value: Number(pool.etherBalance),
         })
     }
     const command = new PutMetricDataCommand({
@@ -445,6 +486,33 @@ export const initializeAlarms = async () => {
             EvaluationPeriods: 1,
             DatapointsToAlarm: 1,
             Threshold: 0,
+        }),
+    )
+
+    // Asset Hub ETH-DOT pool ETH liquidity low
+    cloudWatchAlarms.push(
+        new PutMetricAlarmCommand({
+            AlarmName: AlarmReason.EthDotPoolEthLiquidityInsufficient.toString() + "-" + name,
+            MetricName: "PoolLiquidity",
+            Dimensions: [
+                {
+                    Name: "ChainName",
+                    Value: "AssetHub",
+                },
+                {
+                    Name: "PoolName",
+                    Value: "EthDot",
+                },
+                {
+                    Name: "AssetName",
+                    Value: "ETH",
+                },
+            ],
+            AlarmDescription: BalanceDashboard,
+            AlarmActions: [ACCOUNT_BALANCE_SNS_TOPIC],
+            ComparisonOperator: "LessThanThreshold",
+            ...absoluteValueBreachingAlarmConfig,
+            Threshold: 100_000_000_000_000_000, // 0.1 ETH
         }),
     )
 

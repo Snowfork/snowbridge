@@ -4,8 +4,11 @@ import { Context, createApi } from "@snowbridge/api"
 import * as status from "@snowbridge/api/dist/status"
 import * as subsquidV2 from "@snowbridge/api/dist/subsquid_v2"
 import * as utils from "@snowbridge/api/dist/crypto"
+import * as xcmBuilder from "@snowbridge/api/dist/xcmBuilder"
+import * as assetsV2 from "@snowbridge/api/dist/assets_v2"
 import { EthersEthereumProvider, EthersProviderTypes } from "@snowbridge/provider-ethers"
 import { sendMetrics } from "./alarm"
+import { AllMetrics, LiquidityPoolMetrics } from "./metrics"
 import { monitorParams } from "./monitorConfig"
 import { Environment } from "../../base-types/dist"
 import { bridgeInfoFor } from "@snowbridge/registry"
@@ -52,7 +55,7 @@ function contextConfigOverrides(input: Environment): Environment {
     return config
 }
 
-export const monitor = async (): Promise<status.AllMetrics> => {
+export const monitor = async (): Promise<AllMetrics> => {
     let env = "local_e2e"
     if (process.env.NODE_ENV !== undefined) {
         env = process.env.NODE_ENV
@@ -82,6 +85,8 @@ export const monitor = async (): Promise<status.AllMetrics> => {
 
     const { relayers, sovereigns } = await fetchBalances(context, snowbridgeEnv)
 
+    const liquidityPools = await fetchLiquidityPools(context, snowbridgeEnv)
+
     let indexerStatus: status.IndexerServiceStatusInfo[] = []
     try {
         indexerStatus = await fetchIndexerStatus(context, snowbridgeEnv)
@@ -89,13 +94,14 @@ export const monitor = async (): Promise<status.AllMetrics> => {
         console.error("Failed to fetch indexer status, continuing without it:", e)
     }
 
-    const allMetrics: status.AllMetrics = {
+    const allMetrics: AllMetrics = {
         name,
         bridgeStatus,
         channels,
         relayers,
         sovereigns,
         indexerStatus,
+        liquidityPools,
     }
     console.log(
         "All metrics:",
@@ -224,4 +230,76 @@ export const fetchIndexerStatus = async (
         }
     }
     return indexerInfos
+}
+
+const fetchLiquidityPools = async (
+    context: Context<EthersProviderTypes>,
+    env: Environment,
+): Promise<LiquidityPoolMetrics[]> => {
+    const assetHub = await context.assetHub()
+    const assetConversion = (assetHub.query as any).assetConversion
+    const poolQuery = assetConversion?.pools
+    if (typeof poolQuery !== "function") {
+        return []
+    }
+
+    const etherLocation = xcmBuilder.erc20Location(env.ethChainId, assetsV2.ETHER_TOKEN_ADDRESS)
+    const dotEthPoolKey = [assetsV2.DOT_LOCATION, etherLocation]
+    const ethDotPoolKey = [etherLocation, assetsV2.DOT_LOCATION]
+    let selectedPoolKey = dotEthPoolKey
+
+    let poolInfo: any
+    try {
+        poolInfo = await poolQuery(dotEthPoolKey)
+    } catch {
+        try {
+            poolInfo = await poolQuery(ethDotPoolKey)
+            selectedPoolKey = ethDotPoolKey
+        } catch (error) {
+            console.error("Failed to query Asset Hub ETH-DOT pool:", error)
+            return []
+        }
+    }
+
+    const poolAccount = deriveAssetConversionPoolAccount(assetHub, selectedPoolKey)
+
+    const dotAccount = (await assetHub.query.system.account(poolAccount)).toPrimitive() as any
+    const etherAssetAccount = (
+        await (assetHub.query as any).foreignAssets.account(etherLocation, poolAccount)
+    ).toPrimitive() as any
+
+    const dotBalance = BigInt(dotAccount?.data?.free ?? 0)
+    const etherBalance = BigInt(etherAssetAccount?.balance ?? 0)
+
+    return [
+        {
+            name: "EthDot",
+            chain: "AssetHub",
+            dotBalance,
+            etherBalance,
+        },
+    ]
+}
+
+const deriveAssetConversionPoolAccount = (
+    assetHub: Awaited<ReturnType<Context<EthersProviderTypes>["assetHub"]>>,
+    poolKey: any[],
+): string | undefined => {
+    try {
+        const poolId = assetHub.registry.createType(
+            "(StagingXcmV5Location,StagingXcmV5Location)",
+            poolKey,
+        )
+        const encodedSeed = assetHub.registry
+            .createType("(PalletId,(StagingXcmV5Location,StagingXcmV5Location))", [
+                assetHub.consts.assetConversion.palletId,
+                poolId,
+            ])
+            .toU8a()
+
+        return assetHub.registry.createType("AccountId32", blake2AsU8a(encodedSeed, 256)).toString()
+    } catch (error) {
+        console.error("Failed to derive Asset Hub pool account:", error)
+        return undefined
+    }
 }
