@@ -54,6 +54,7 @@ export type DeliveryFee = {
     localDeliveryFeeInNative?: bigint
     ethereumExecutionFeeInNative?: bigint
     l2BridgeFeeInL1Token?: bigint
+    volumeTip?: bigint
 }
 
 export type FeeInfo = {

@@ -115,9 +115,11 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             deliveryFeeInEther,
         )
 
+        let volumeTip: bigint | undefined
         let finalRelayerFee = relayerFee
         if (options?.volumeFee) {
-            finalRelayerFee += calculateVolumeTipInWei(options.volumeFee)
+            volumeTip = calculateVolumeTipInWei(options.volumeFee)
+            finalRelayerFee += volumeTip
         }
 
         const totalFeeInWei = assetHubExecutionFeeEther + finalRelayerFee
@@ -132,6 +134,7 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             extrinsicFeeEther: extrinsicFeeEther,
             totalFeeInWei: totalFeeInWei,
             feeAsset: feeAsset,
+            volumeTip,
         }
     }
 

@@ -23,6 +23,7 @@ export type DeliveryFee = {
     totalFeeInWei: bigint
     bridgeFeeInL2Token?: bigint
     swapFeeInL1Token?: bigint
+    volumeTip?: bigint
 }
 
 export type Transfer<T extends EthereumProviderTypes> = {
