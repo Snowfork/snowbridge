@@ -1,6 +1,12 @@
 import { u8aToHex } from "@polkadot/util"
 import { blake2AsU8a } from "@polkadot/util-crypto"
-import { Context, status, utils, subsquidV2, xcmBuilder, assetsV2 } from "@snowbridge/api"
+import { Context, createApi } from "@snowbridge/api"
+import * as status from "@snowbridge/api/dist/status"
+import * as subsquidV2 from "@snowbridge/api/dist/subsquid_v2"
+import * as utils from "@snowbridge/api/dist/crypto"
+import * as xcmBuilder from "@snowbridge/api/dist/xcmBuilder"
+import * as assetsV2 from "@snowbridge/api/dist/assets_v2"
+import { EthersEthereumProvider, EthersProviderTypes } from "@snowbridge/provider-ethers"
 import { sendMetrics } from "./alarm"
 import { AllMetrics, LiquidityPoolMetrics } from "./metrics"
 import { monitorParams } from "./monitorConfig"
@@ -54,14 +60,21 @@ export const monitor = async (): Promise<AllMetrics> => {
     if (process.env.NODE_ENV !== undefined) {
         env = process.env.NODE_ENV
     }
-    const { environment: snowbridgeEnv } = bridgeInfoFor(env)
+    const info = bridgeInfoFor(env)
+    const { environment: snowbridgeEnv } = info
     if (snowbridgeEnv === undefined) {
         throw Error(`Unknown environment '${env}'`)
     }
 
     const { name } = snowbridgeEnv
 
-    const context = new Context(contextConfigOverrides(snowbridgeEnv))
+    const context = createApi({
+        info: {
+            ...info,
+            environment: contextConfigOverrides(snowbridgeEnv),
+        },
+        ethereumProvider: new EthersEthereumProvider(),
+    }).context
 
     const bridgeStatus = await status.bridgeStatusInfo(context, {
         polkadotBlockTimeInSeconds: 6,
@@ -111,79 +124,7 @@ export const monitor = async (): Promise<AllMetrics> => {
     return allMetrics
 }
 
-const fetchLiquidityPools = async (
-    context: Context,
-    env: Environment,
-): Promise<LiquidityPoolMetrics[]> => {
-    const assetHub = await context.assetHub()
-    const assetConversion = (assetHub.query as any).assetConversion
-    const poolQuery = assetConversion?.pools
-    if (typeof poolQuery !== "function") {
-        return []
-    }
-
-    const etherLocation = xcmBuilder.erc20Location(env.ethChainId, assetsV2.ETHER_TOKEN_ADDRESS)
-    const dotEthPoolKey = [xcmBuilder.DOT_LOCATION, etherLocation]
-    const ethDotPoolKey = [etherLocation, xcmBuilder.DOT_LOCATION]
-    let selectedPoolKey = dotEthPoolKey
-
-    let poolInfo: any
-    try {
-        poolInfo = await poolQuery(dotEthPoolKey)
-    } catch {
-        try {
-            poolInfo = await poolQuery(ethDotPoolKey)
-            selectedPoolKey = ethDotPoolKey
-        } catch (error) {
-            console.error("Failed to query Asset Hub ETH-DOT pool:", error)
-            return []
-        }
-    }
-
-    const poolAccount = deriveAssetConversionPoolAccount(assetHub, selectedPoolKey)
-
-    const dotAccount = (await assetHub.query.system.account(poolAccount)).toPrimitive() as any
-    const etherAssetAccount = (
-        await (assetHub.query as any).foreignAssets.account(etherLocation, poolAccount)
-    ).toPrimitive() as any
-
-    const dotBalance = BigInt(dotAccount?.data?.free ?? 0)
-    const etherBalance = BigInt(etherAssetAccount?.balance ?? 0)
-
-    return [
-        {
-            name: "EthDot",
-            chain: "AssetHub",
-            dotBalance,
-            etherBalance,
-        },
-    ]
-}
-
-const deriveAssetConversionPoolAccount = (
-    assetHub: Awaited<ReturnType<Context["assetHub"]>>,
-    poolKey: any[],
-): string | undefined => {
-    try {
-        const poolId = assetHub.registry.createType(
-            "(StagingXcmV5Location,StagingXcmV5Location)",
-            poolKey,
-        )
-        const encodedSeed = assetHub.registry
-            .createType("(PalletId,(StagingXcmV5Location,StagingXcmV5Location))", [
-                assetHub.consts.assetConversion.palletId,
-                poolId,
-            ])
-            .toU8a()
-
-        return assetHub.registry.createType("AccountId32", blake2AsU8a(encodedSeed, 256)).toString()
-    } catch (error) {
-        console.error("Failed to derive Asset Hub pool account:", error)
-        return undefined
-    }
-}
-
-const fetchChannelStatus = async (context: Context, env: Environment) => {
+const fetchChannelStatus = async (context: Context<EthersProviderTypes>, env: Environment) => {
     let assethubChannelStatus = await status.channelStatusInfo(
         context,
         utils.paraIdToChannelId(env.assetHubParaId),
@@ -205,7 +146,7 @@ const fetchChannelStatus = async (context: Context, env: Environment) => {
     return [assethubChannelStatus, primaryGov, secondaryGov]
 }
 
-const fetchBalances = async (context: Context, env: Environment) => {
+const fetchBalances = async (context: Context<EthersProviderTypes>, env: Environment) => {
     const [bridgeHub, ethereum] = await Promise.all([context.bridgeHub(), context.ethereum()])
 
     let relayers = []
@@ -247,7 +188,10 @@ const fetchBalances = async (context: Context, env: Environment) => {
     return { relayers, sovereigns }
 }
 
-export const fetchIndexerStatus = async (context: Context, env: Environment) => {
+export const fetchIndexerStatus = async (
+    context: Context<EthersProviderTypes>,
+    env: Environment,
+) => {
     let indexerInfos: status.IndexerServiceStatusInfo[] = []
     // Allow runtime override of monitored parachains without changing defaults.
     let monitorChains = monitorParams[env.name].TO_MONITOR_CHAINS
@@ -286,4 +230,76 @@ export const fetchIndexerStatus = async (context: Context, env: Environment) => 
         }
     }
     return indexerInfos
+}
+
+const fetchLiquidityPools = async (
+    context: Context<EthersProviderTypes>,
+    env: Environment,
+): Promise<LiquidityPoolMetrics[]> => {
+    const assetHub = await context.assetHub()
+    const assetConversion = (assetHub.query as any).assetConversion
+    const poolQuery = assetConversion?.pools
+    if (typeof poolQuery !== "function") {
+        return []
+    }
+
+    const etherLocation = xcmBuilder.erc20Location(env.ethChainId, assetsV2.ETHER_TOKEN_ADDRESS)
+    const dotEthPoolKey = [assetsV2.DOT_LOCATION, etherLocation]
+    const ethDotPoolKey = [etherLocation, assetsV2.DOT_LOCATION]
+    let selectedPoolKey = dotEthPoolKey
+
+    let poolInfo: any
+    try {
+        poolInfo = await poolQuery(dotEthPoolKey)
+    } catch {
+        try {
+            poolInfo = await poolQuery(ethDotPoolKey)
+            selectedPoolKey = ethDotPoolKey
+        } catch (error) {
+            console.error("Failed to query Asset Hub ETH-DOT pool:", error)
+            return []
+        }
+    }
+
+    const poolAccount = deriveAssetConversionPoolAccount(assetHub, selectedPoolKey)
+
+    const dotAccount = (await assetHub.query.system.account(poolAccount)).toPrimitive() as any
+    const etherAssetAccount = (
+        await (assetHub.query as any).foreignAssets.account(etherLocation, poolAccount)
+    ).toPrimitive() as any
+
+    const dotBalance = BigInt(dotAccount?.data?.free ?? 0)
+    const etherBalance = BigInt(etherAssetAccount?.balance ?? 0)
+
+    return [
+        {
+            name: "EthDot",
+            chain: "AssetHub",
+            dotBalance,
+            etherBalance,
+        },
+    ]
+}
+
+const deriveAssetConversionPoolAccount = (
+    assetHub: Awaited<ReturnType<Context<EthersProviderTypes>["assetHub"]>>,
+    poolKey: any[],
+): string | undefined => {
+    try {
+        const poolId = assetHub.registry.createType(
+            "(StagingXcmV5Location,StagingXcmV5Location)",
+            poolKey,
+        )
+        const encodedSeed = assetHub.registry
+            .createType("(PalletId,(StagingXcmV5Location,StagingXcmV5Location))", [
+                assetHub.consts.assetConversion.palletId,
+                poolId,
+            ])
+            .toU8a()
+
+        return assetHub.registry.createType("AccountId32", blake2AsU8a(encodedSeed, 256)).toString()
+    } catch (error) {
+        console.error("Failed to derive Asset Hub pool account:", error)
+        return undefined
+    }
 }

@@ -1,16 +1,21 @@
-import { AssetRegistry, ContractCall } from "@snowbridge/base-types"
-import { DeliveryFee, Transfer, ValidationResult } from "../../toEthereum_v2"
-import { Context } from "../../index"
+import { Context } from "../.."
+import { AddressOrPair, SignerOptions } from "@polkadot/api/types"
+import { ContractCall, EthereumProviderTypes } from "@snowbridge/base-types"
+import type {
+    DeliveryFee,
+    MessageReceipt,
+    Transfer,
+    ValidatedTransfer,
+} from "../../types/toEthereum"
 
-export interface TransferInterface {
-    getDeliveryFee(
-        context: Context,
-        registry: AssetRegistry,
-        l2ChainId: number,
+export interface TransferInterface<T extends EthereumProviderTypes> {
+    readonly context: Context<T>
+
+    fee(
         tokenAddress: string,
         amount: bigint,
         options?: {
-            padPercentage?: bigint
+            padFeeByPercentage?: bigint
             slippagePadPercentage?: bigint
             defaultFee?: bigint
             feeTokenLocation?: any
@@ -21,14 +26,11 @@ export interface TransferInterface {
         },
     ): Promise<DeliveryFee>
 
-    createTransfer(
-        context: Context,
-        registry: AssetRegistry,
-        l2ChainId: number,
-        tokenAddress: string,
-        amount: bigint,
+    tx(
         sourceAccount: string,
         beneficiaryAccount: string,
+        tokenAddress: string,
+        amount: bigint,
         fee: DeliveryFee,
         options?: {
             claimerLocation?: any
@@ -37,5 +39,35 @@ export interface TransferInterface {
         },
     ): Promise<Transfer>
 
-    validateTransfer(context: Context, transfer: Transfer): Promise<ValidationResult>
+    validate(transfer: Transfer): Promise<ValidatedTransfer>
+
+    build(
+        sourceAccount: string,
+        beneficiaryAccount: string,
+        tokenAddress: string,
+        amount: bigint,
+        options?: {
+            fee?: {
+                padFeeByPercentage?: bigint
+                slippagePadPercentage?: bigint
+                defaultFee?: bigint
+                feeTokenLocation?: any
+                claimerLocation?: any
+                contractCall?: ContractCall
+                l2PadFeeByPercentage?: bigint
+                fillDeadlineBuffer?: bigint
+            }
+            tx?: {
+                claimerLocation?: any
+                contractCall?: ContractCall
+                fillDeadlineBuffer?: bigint
+            }
+        },
+    ): Promise<ValidatedTransfer>
+
+    signAndSend(
+        transfer: Transfer,
+        account: AddressOrPair,
+        options: Partial<SignerOptions>,
+    ): Promise<MessageReceipt>
 }
