@@ -39,15 +39,15 @@ export function buildTransferXcmFromAssetHubWithDOTAsFee(
         })
     } else {
         assets.push({
-            id: tokenLocation,
-            fun: {
-                Fungible: tokenAmount,
-            },
-        })
-        assets.push({
             id: DOT_LOCATION,
             fun: {
                 Fungible: totalDOTFeeAmount,
+            },
+        })
+        assets.push({
+            id: tokenLocation,
+            fun: {
+                Fungible: tokenAmount,
             },
         })
     }
