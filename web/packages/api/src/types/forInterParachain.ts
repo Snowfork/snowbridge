@@ -2,6 +2,7 @@ import type { SubmittableExtrinsic } from "@polkadot/api/types"
 import type { ISubmittableResult } from "@polkadot/types/types"
 import type { Asset, AssetRegistry, Parachain } from "@snowbridge/base-types"
 import type { EventRecord } from "@polkadot/types/interfaces"
+import type { FeeAsset, FeeItem, InterParachainFeeKey } from "./fee"
 
 export type Transfer = {
     kind: "polkadot->polkadot"
@@ -32,6 +33,9 @@ export type DeliveryFee = {
     deliveryFee: bigint
     executionFee: bigint
     totalFeeInDot: bigint
+    breakdown: { [P in InterParachainFeeKey]?: FeeAsset[] }
+    summary: FeeItem[]
+    totals: FeeAsset[]
 }
 
 export enum ValidationKind {

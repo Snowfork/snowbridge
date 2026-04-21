@@ -2,6 +2,7 @@ import type { SubmittableExtrinsic } from "@polkadot/api/types"
 import type { ISubmittableResult } from "@polkadot/types/types"
 import type { Asset, AssetRegistry, Parachain } from "@snowbridge/base-types"
 import type { EventRecord } from "@polkadot/types/interfaces"
+import type { FeeAsset, FeeItem, KusamaFeeKey } from "./fee"
 
 export type Transfer = {
     kind: "kusama->polkadot" | "polkadot->kusama"
@@ -31,6 +32,9 @@ export type DeliveryFee = {
     bridgeHubDeliveryFee: bigint
     destinationFee: bigint
     totalFeeInNative: bigint
+    breakdown: { [P in KusamaFeeKey]?: FeeAsset[] }
+    summary: FeeItem[]
+    totals: FeeAsset[]
 }
 
 export enum ValidationKind {
