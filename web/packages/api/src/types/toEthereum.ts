@@ -10,6 +10,7 @@ import type {
 } from "@snowbridge/base-types"
 import type { EventRecord } from "@polkadot/types/interfaces"
 import type { OperationStatus } from "../status"
+import type { FeeAsset, FeeItem, ToEthereumFeeKey } from "./fee"
 
 export type Transfer = {
     kind: "polkadot->ethereum" | "polkadot->ethereum_l2"
@@ -55,6 +56,9 @@ export type DeliveryFee = {
     ethereumExecutionFeeInNative?: bigint
     l2BridgeFeeInL1Token?: bigint
     volumeTip?: bigint
+    breakdown: { [P in ToEthereumFeeKey]?: FeeAsset[] }
+    summary: FeeItem[]
+    totals: FeeAsset[]
 }
 
 export type FeeInfo = {

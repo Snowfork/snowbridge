@@ -33,6 +33,7 @@ import {
 import { CallDryRunEffects, XcmDryRunApiError, XcmDryRunEffects } from "@polkadot/types/interfaces"
 import { Result } from "@polkadot/types"
 import { ensureValidationSuccess, padFeeByPercentage, u32ToLeBytes } from "./utils"
+import { addBreakdown, computeTotals } from "./fees"
 import { Context } from "./index"
 import { ParachainBase } from "./parachains/parachainBase"
 import { TransferInterface as ToEthereumTransferInterface } from "./transfers/toEthereum/transferInterface"
@@ -822,6 +823,26 @@ export async function getDeliveryFeeV1(
         returnToSenderExecutionFeeNative = returnToSenderExecutionFeeNativeRes
     }
 
+    const breakdown: DeliveryFee["breakdown"] = {}
+    addBreakdown(breakdown, "snowbridgeDelivery", {
+        amount: snowbridgeDeliveryFeeDOT,
+        symbol: "DOT",
+    })
+    addBreakdown(breakdown, "assetHubExecution", { amount: assetHubExecutionFeeDOT, symbol: "DOT" })
+    addBreakdown(breakdown, "bridgeHubDelivery", { amount: bridgeHubDeliveryFeeDOT, symbol: "DOT" })
+    addBreakdown(breakdown, "returnToSenderDelivery", {
+        amount: returnToSenderDeliveryFeeDOT,
+        symbol: "DOT",
+    })
+    addBreakdown(breakdown, "returnToSenderExecution", {
+        amount: returnToSenderExecutionFeeDOT,
+        symbol: "DOT",
+    })
+
+    const summary: DeliveryFee["summary"] = totalFeeInNative !== undefined
+        ? [{ description: "Bridge fee", amount: totalFeeInNative, symbol: "NATIVE" }]
+        : [{ description: "Bridge fee", amount: totalFeeInDot, symbol: "DOT" }]
+
     return {
         kind: options?.kind ?? "polkadot->ethereum",
         snowbridgeDeliveryFeeDOT,
@@ -833,6 +854,9 @@ export async function getDeliveryFeeV1(
         totalFeeInNative,
         assetHubExecutionFeeNative,
         returnToSenderExecutionFeeNative,
+        breakdown,
+        summary,
+        totals: computeTotals(summary),
     }
 }
 

@@ -28,6 +28,7 @@ import { buildAssetHubPNAReceivedXcm, sendMessageXCM } from "../../xcmbuilders/t
 import { getOperatingStatus } from "../../status"
 import { hexToU8a } from "@polkadot/util"
 import { VolumeFeeParams, calculateVolumeTipInWei } from "../../feeSchedule"
+import { addBreakdown, computeTotals } from "../../fees"
 
 export class PNAToAH<T extends EthereumProviderTypes> implements TransferInterface<T> {
     constructor(
@@ -130,6 +131,24 @@ export class PNAToAH<T extends EthereumProviderTypes> implements TransferInterfa
         }
 
         const totalFeeInWei = assetHubExecutionFeeEther + finalRelayerFee
+
+        const breakdown: DeliveryFee["breakdown"] = {}
+        addBreakdown(breakdown, "assetHubDelivery", { amount: deliveryFeeInEther, symbol: "ETH" })
+        addBreakdown(breakdown, "assetHubExecution", {
+            amount: assetHubExecutionFeeEther,
+            symbol: "ETH",
+        })
+        addBreakdown(breakdown, "relayer", { amount: finalRelayerFee, symbol: "ETH" })
+        addBreakdown(breakdown, "extrinsic", { amount: extrinsicFeeDot, symbol: "DOT" })
+        addBreakdown(breakdown, "extrinsic", { amount: extrinsicFeeEther, symbol: "ETH" })
+        if (volumeTip !== undefined) {
+            addBreakdown(breakdown, "volumeTip", { amount: volumeTip, symbol: "ETH" })
+        }
+
+        const summary = [
+            { description: "Bridge fee", amount: totalFeeInWei, symbol: "ETH" },
+        ]
+
         return {
             kind: "ethereum->polkadot",
             assetHubDeliveryFeeEther: deliveryFeeInEther,
@@ -142,6 +161,9 @@ export class PNAToAH<T extends EthereumProviderTypes> implements TransferInterfa
             totalFeeInWei: totalFeeInWei,
             feeAsset: feeAsset,
             volumeTip,
+            breakdown,
+            summary,
+            totals: computeTotals(summary),
         }
     }
 

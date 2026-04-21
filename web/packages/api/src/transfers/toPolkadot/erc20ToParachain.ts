@@ -37,6 +37,7 @@ import {
 import { getOperatingStatus } from "../../status"
 import { hexToU8a } from "@polkadot/util"
 import { VolumeFeeParams, calculateVolumeTipInWei } from "../../feeSchedule"
+import { addBreakdown, computeTotals } from "../../fees"
 
 export class ERC20ToParachain<T extends EthereumProviderTypes> implements TransferInterface<T> {
     constructor(
@@ -211,6 +212,38 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
             destinationDeliveryFeeEther +
             destinationExecutionFeeEther +
             finalRelayerFee
+
+        const breakdown: DeliveryFee["breakdown"] = {}
+        addBreakdown(breakdown, "assetHubDelivery", { amount: deliveryFeeInEther, symbol: "ETH" })
+        addBreakdown(breakdown, "assetHubExecution", {
+            amount: assetHubExecutionFeeEther,
+            symbol: "ETH",
+        })
+        addBreakdown(breakdown, "destinationDelivery", {
+            amount: destinationDeliveryFeeEther,
+            symbol: "ETH",
+        })
+        addBreakdown(breakdown, "destinationExecution", {
+            amount: destinationExecutionFeeEther,
+            symbol: "ETH",
+        })
+        if (destinationExecutionFeeDOT !== undefined) {
+            addBreakdown(breakdown, "destinationExecution", {
+                amount: destinationExecutionFeeDOT,
+                symbol: "DOT",
+            })
+        }
+        addBreakdown(breakdown, "relayer", { amount: finalRelayerFee, symbol: "ETH" })
+        addBreakdown(breakdown, "extrinsic", { amount: extrinsicFeeDot, symbol: "DOT" })
+        addBreakdown(breakdown, "extrinsic", { amount: extrinsicFeeEther, symbol: "ETH" })
+        if (volumeTip !== undefined) {
+            addBreakdown(breakdown, "volumeTip", { amount: volumeTip, symbol: "ETH" })
+        }
+
+        const summary = [
+            { description: "Bridge fee", amount: totalFeeInWei, symbol: "ETH" },
+        ]
+
         return {
             kind: "ethereum->polkadot",
             assetHubDeliveryFeeEther: deliveryFeeInEther,
@@ -224,6 +257,9 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
             totalFeeInWei: totalFeeInWei,
             feeAsset: feeAsset,
             volumeTip,
+            breakdown,
+            summary,
+            totals: computeTotals(summary),
         }
     }
 

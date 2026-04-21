@@ -35,6 +35,7 @@ import {
 import { CallDryRunEffects, XcmDryRunApiError, XcmDryRunEffects } from "@polkadot/types/interfaces"
 import { Result } from "@polkadot/types"
 import { ensureValidationSuccess, padFeeByPercentage, u32ToLeBytes } from "./utils"
+import { addBreakdown, computeTotals } from "./fees"
 import { resolveBeneficiary } from "./crypto"
 import { TransferInterface as KusamaTransferInterface } from "./transfers/forKusama/transferInterface"
 import { Context } from "."
@@ -264,6 +265,20 @@ export class KusamaTransfer<T extends EthereumProviderTypes> implements KusamaTr
         totalXcmBridgeFee = padFeeByPercentage(totalXcmBridgeFee, 33n)
 
         let totalFee = totalXcmBridgeFee + bridgeHubDeliveryFee + destinationFee
+        const sourceSymbol = this.#direction() === Direction.ToPolkadot ? "KSM" : "DOT"
+
+        const breakdown: DeliveryFee["breakdown"] = {}
+        addBreakdown(breakdown, "xcmBridge", { amount: totalXcmBridgeFee, symbol: sourceSymbol })
+        addBreakdown(breakdown, "bridgeHubDelivery", {
+            amount: bridgeHubDeliveryFee,
+            symbol: sourceSymbol,
+        })
+        addBreakdown(breakdown, "destinationExecution", {
+            amount: destinationFee,
+            symbol: sourceSymbol,
+        })
+
+        const summary = [{ description: "Bridge fee", amount: totalFee, symbol: sourceSymbol }]
 
         return {
             kind: this.from.kind === "kusama" ? "kusama->polkadot" : "polkadot->kusama",
@@ -271,6 +286,9 @@ export class KusamaTransfer<T extends EthereumProviderTypes> implements KusamaTr
             destinationFee,
             bridgeHubDeliveryFee,
             totalFeeInNative: totalFee,
+            breakdown,
+            summary,
+            totals: computeTotals(summary),
         }
     }
 

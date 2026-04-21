@@ -36,6 +36,7 @@ import { getOperatingStatus } from "../../status"
 import { hexToU8a } from "@polkadot/util"
 import { estimateFees } from "../../across/api"
 import { VolumeFeeParams, calculateVolumeTipInWei } from "../../feeSchedule"
+import { addBreakdown, computeTotals } from "../../fees"
 
 export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInterface<T> {
     constructor(
@@ -216,6 +217,49 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             )
         }
 
+        const l2TokenMeta =
+            registry.ethereumChains?.[`ethereum_l2_${this.from.id}`]?.assets[l2TokenAddress]
+        const l2FeeTokenMeta = l2FeeTokenAddress
+            ? registry.ethereumChains?.[`ethereum_l2_${this.from.id}`]?.assets[l2FeeTokenAddress]
+            : undefined
+        const l2FeeSymbol = l2FeeTokenMeta?.symbol ?? l2FeeTokenAddress ?? "L2_FEE"
+        const l1TokenMeta = l2TokenMeta?.swapTokenAddress
+            ? registry.ethereumChains?.[`ethereum_${registry.ethChainId}`]?.assets[
+                  l2TokenMeta.swapTokenAddress.toLowerCase()
+              ]
+            : undefined
+        const l1TokenSymbol = l1TokenMeta?.symbol ?? "L1_TOKEN"
+
+        const breakdown: DeliveryFee["breakdown"] = {}
+        addBreakdown(breakdown, "assetHubDelivery", { amount: deliveryFeeInEther, symbol: "ETH" })
+        addBreakdown(breakdown, "assetHubExecution", {
+            amount: assetHubExecutionFeeEther,
+            symbol: "ETH",
+        })
+        addBreakdown(breakdown, "relayer", { amount: finalRelayerFee, symbol: "ETH" })
+        addBreakdown(breakdown, "extrinsic", { amount: extrinsicFeeDot, symbol: "DOT" })
+        addBreakdown(breakdown, "extrinsic", { amount: extrinsicFeeEther, symbol: "ETH" })
+        if (volumeTip !== undefined) {
+            addBreakdown(breakdown, "volumeTip", { amount: volumeTip, symbol: "ETH" })
+        }
+        if (bridgeFeeInL2Token > 0n) {
+            addBreakdown(breakdown, "l2Bridge", { amount: bridgeFeeInL2Token, symbol: l2FeeSymbol })
+        }
+        if (swapFeeInL1Token > 0n) {
+            addBreakdown(breakdown, "l1Swap", { amount: swapFeeInL1Token, symbol: l1TokenSymbol })
+        }
+
+        const ethBridgeFee = assetHubExecutionFeeEther + finalRelayerFee
+        const summary: DeliveryFee["summary"] = [
+            { description: "Bridge fee", amount: ethBridgeFee, symbol: "ETH" },
+        ]
+        if (bridgeFeeInL2Token > 0n) {
+            summary.push({ description: "L2 bridge fee", amount: bridgeFeeInL2Token, symbol: l2FeeSymbol })
+        }
+        if (swapFeeInL1Token > 0n) {
+            summary.push({ description: "L1 swap fee", amount: swapFeeInL1Token, symbol: l1TokenSymbol })
+        }
+
         return {
             kind: "ethereum_l2->polkadot",
             assetHubDeliveryFeeEther: deliveryFeeInEther,
@@ -230,6 +274,9 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             swapFeeInL1Token,
             bridgeFeeInL2Token,
             volumeTip,
+            breakdown,
+            summary,
+            totals: computeTotals(summary),
         }
     }
 
