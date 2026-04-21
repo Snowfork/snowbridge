@@ -7,6 +7,26 @@ import {WETH9} from "canonical-weth/WETH9.sol";
 import {ISpokePool} from "./interfaces/ISpokePool.sol";
 import {DepositParams} from "./Types.sol";
 
+/// @title L1 Across Adaptor for Snowbridge V2 outbound flows
+///
+/// @dev This contract is invoked as the `target` of a V2 `CallContract` command inside
+///      the same `Gateway.v2_submit` transaction that issues the preceding
+///      `UnlockNativeToken(recipient = L1Adaptor, amount = X)` command. The paired
+///      unlock funds this contract; the paired CallContract consumes the funds and
+///      sweeps any residual back to the BEEFY-signed `recipient`. Both commands execute
+///      atomically in the same EVM transaction inside `v2_submit`'s `commands[]` loop —
+///      the adaptor is never prefunded across transaction boundaries in production.
+///
+///      `depositToken`, `depositNativeEther`, and `receive()` are deliberately public
+///      and unauthenticated. An EOA that calls them directly when the adaptor has a
+///      zero balance simply loses their own funds to the SpokePool — there is no
+///      residual balance outside the atomic flow for any caller to steal.
+///
+///      Bug bounty note: reports claiming that "any EOA can call these functions and
+///      drain the contract" rely on a prefunding-across-transactions assumption that
+///      does not occur in the production flow and are out of scope. This class is also
+///      captured by the program's "vulnerabilities exploitable through front-run
+///      attacks only" exclusion.
 contract SnowbridgeL1Adaptor {
     using SafeERC20 for IERC20;
     ISpokePool public immutable SPOKE_POOL;
