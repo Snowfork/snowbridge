@@ -88,15 +88,6 @@ export type IndexerServiceStatusInfo = {
 
 type Relayer = { name: string; account: string; type: SourceType; balance?: bigint }
 
-export type AllMetrics = {
-    name: string
-    bridgeStatus: BridgeStatusInfo
-    channels: ChannelStatusInfo[]
-    sovereigns: Sovereign[]
-    relayers: Relayer[]
-    indexerStatus: IndexerServiceStatusInfo[]
-}
-
 export type OperationStatus = {
     toEthereum: {
         outbound: OperatingMode
