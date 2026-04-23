@@ -30,7 +30,7 @@ import { ensureValidationSuccess, padFeeByPercentage } from "./utils"
 import { Context } from "./index"
 import { DOT_LOCATION, ETHER_TOKEN_ADDRESS, findL2TokenAddress } from "./assets_v2"
 import { getOperatingStatus } from "./status"
-import { calculateVolumeTipInWei } from "./feeSchedule"
+import { calculateVolumeTipInWei, VolumeFeeParams } from "./feeSchedule"
 import { addBreakdown, computeTotals } from "./fees"
 import { estimateFees } from "./across/api"
 import type { MessageReceipt, Transfer, ValidatedTransfer, ValidationLog } from "./types/toEthereum"
@@ -116,7 +116,7 @@ export class TransferToEthereum<T extends EthereumProviderTypes> implements Tran
             feeTokenLocation?: any
             claimerLocation?: any
             contractCall?: ContractCall
-            volumeFee?: import("./feeSchedule").VolumeFeeParams
+            volumeFee?: VolumeFeeParams
         },
     ): Promise<DeliveryFee> {
         return this.#resolveByTokenAddress(tokenAddress).fee(tokenAddress, options)
@@ -156,7 +156,7 @@ export class TransferToEthereum<T extends EthereumProviderTypes> implements Tran
                 feeTokenLocation?: any
                 claimerLocation?: any
                 contractCall?: ContractCall
-                volumeFee?: import("./feeSchedule").VolumeFeeParams
+                volumeFee?: VolumeFeeParams
             }
             tx?: {
                 claimerLocation?: any
@@ -216,7 +216,6 @@ export async function dryRunOnSourceParachain(
     let assetHubForwarded
     let bridgeHubForwarded
     const success = result.isOk && result.asOk.executionResult.isOk
-    console.log('HEREEEREREREEE')
     if (!success) {
         console.error(
             "Error during dry run on source parachain:",
@@ -391,7 +390,7 @@ export const estimateFeesFromAssetHub = async <T extends EthereumProviderTypes>(
         l2PadFeeByPercentage?: bigint
         l2TransferGasLimit?: bigint
         fillDeadlineBuffer?: bigint
-        volumeFee?: import("./feeSchedule").VolumeFeeParams
+        volumeFee?: VolumeFeeParams
     },
     l2ChainId?: number,
     tokenAmount?: bigint,
@@ -561,7 +560,7 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
         defaultFee?: bigint
         feeTokenLocation?: any
         contractCall?: ContractCall
-        volumeFee?: import("./feeSchedule").VolumeFeeParams
+        volumeFee?: VolumeFeeParams
     },
 ): Promise<DeliveryFee> => {
     const sourceParachain = registry.parachains[`polkadot_${sourceParaId}`]

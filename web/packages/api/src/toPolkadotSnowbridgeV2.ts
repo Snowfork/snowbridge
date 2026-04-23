@@ -1,4 +1,5 @@
 import { TransferInterface } from "./transfers/toPolkadot/transferInterface"
+import { VolumeFeeParams } from "./feeSchedule"
 import { TransferInterface as L2TransferInterface } from "./transfers/l2ToPolkadot/transferInterface"
 import { ERC20ToAH } from "./transfers/toPolkadot/erc20ToAH"
 import { ERC20ToAH as ERC20FromL2ToAH } from "./transfers/l2ToPolkadot/erc20ToAH"
@@ -122,7 +123,7 @@ export class TransferToPolkadot<T extends EthereumProviderTypes> implements Tran
             feeAsset?: any
             customXcm?: any[]
             overrideRelayerFee?: bigint
-            volumeFee?: import("./feeSchedule").VolumeFeeParams
+            volumeFee?: VolumeFeeParams
         },
     ): Promise<DeliveryFee> {
         return this.#resolveByTokenAddress(tokenAddress).fee(tokenAddress, options)
@@ -157,7 +158,7 @@ export class TransferToPolkadot<T extends EthereumProviderTypes> implements Tran
                 feeAsset?: any
                 customXcm?: any[]
                 overrideRelayerFee?: bigint
-                volumeFee?: import("./feeSchedule").VolumeFeeParams
+                volumeFee?: VolumeFeeParams
             }
             customXcm?: any[]
         },
