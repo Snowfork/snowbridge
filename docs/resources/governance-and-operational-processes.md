@@ -59,14 +59,28 @@ Preimage Size: 129
 
 The halt-bridge command has the following flags:
 
-* `--all` Halt all the bridge components at once.
-* `--ethereum-client` Halt the Ethereum client, blocking consensus updates.
-* `--inbound-queue` Halt the Inbound Queue, blocking messages from BridgeHub to AssetHub.
-* `--outbound-queue` Halt the Outbound Queue, blocking messages from AssetHub to BridgeHub.
-* `--gateway` Halt messages from Ethereum to AssetHub.
-* `--assethub-max-fee` Set the AssetHub to Ethereum to the maximum fee, so that users effectively cannot send messages from AssetHub to Ethereum.
+* `--all` Halt all the bridge components at once. This is the default when no other flag is given.
+* `--ethereum-client` Halt the Ethereum beacon light client. Blocks new beacon-header ingestion via `EthereumBeaconClient::submit` **and** short-circuits `Verifier::verify` for every downstream consumer on BridgeHub. Concretely this stops:
+  * inbound V1 `submit` and inbound V2 `submit` (Ethereum → Polkadot messages), and
+  * `outbound-queue-v2::submit_delivery_receipt` (relayer-reward payouts against `PendingOrders`).
 
-Based on the nature of the emergency, the bridge might need to be halted in its entirety, or partially.
+  This is the single lever to pull during a suspected beacon-light-client or sync-committee compromise. `force_checkpoint` remains available (root-only) for recovery.
+* `--inbound-queue` Halt both V1 and V2 inbound-queue pallets on BridgeHub, blocking processing of Ethereum → Polkadot messages. For surgical halts of a single version, use the two flags below.
+* `--inbound-queue-v1` Halt only the V1 inbound-queue pallet on BridgeHub.
+* `--inbound-queue-v2` Halt only the V2 inbound-queue pallet on BridgeHub.
+* `--outbound-queue` Halt AssetHub → Ethereum traffic. Halts the V1 outbound-queue pallet on BridgeHub **and** the system-frontend pallet on AssetHub; the latter short-circuits the AssetHub → Ethereum `PausableExporter` for both V1 and V2 at the XcmRouter layer. (V2's `outbound-queue-v2` has no local halt, so the system-frontend halt is the primary V2 outbound lever.)
+* `--gateway` Halt the Ethereum Gateway contract (both V1 and V2 paths). Sends `Command::SetOperatingMode(Halted)` via both V1 and V2 system pallets so the halt is delivered via whichever outbound queue is live. Delivery is relayer-dependent, so schedule this **before** any local outbound halt takes effect.
+* `--assethub-max-fee` Set the AssetHub → Ethereum outbound fee to `u128::MAX` for both V1 (`BridgeHubEthereumBaseFee`) and V2 (`BridgeHubEthereumBaseFeeV2`), effectively deterring user sends via fee pricing. Complementary to the system-frontend halt; does not block at the router layer.
+
+Based on the nature of the emergency, the bridge might need to be halted in its entirety, or partially. Pick the narrowest lever that covers the suspected failure mode:
+
+| Suspected failure mode | Minimum-scope command |
+| --- | --- |
+| Beacon light client / sync committee compromise | `halt-bridge --ethereum-client` |
+| Ethereum Gateway contract compromise | `halt-bridge --gateway --assethub-max-fee` |
+| Inbound-queue bug (one version) | `halt-bridge --inbound-queue-v1` or `--inbound-queue-v2` |
+| Outbound-queue / system-frontend bug | `halt-bridge --outbound-queue` |
+| Uncertain / any component suspect | `halt-bridge --all` |
 
 In case of emergency where there is uncertainty of the cause of a problem, it is best to block the bridge in its entirety using `halt-bridge --all`. To block both transfer directions at the earliest point possible, use `halt-bridge --gateway --assethub-max-fee`.
 
