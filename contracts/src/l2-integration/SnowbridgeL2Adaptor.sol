@@ -23,6 +23,15 @@ import {DepositParams, Instructions, Call, SendParams, SwapParams} from "./Types
 ///      The public, unauthenticated entry points are therefore safe — the caller can
 ///      only spend their own funds; pre-existing balances cannot be swept.
 ///
+///      Recipient requirements: `recipient` is the fallback address used in two places.
+///      If the paired L1 `CallContract` fails on mainnet, any trapped funds are swept
+///      back to `recipient` on Ethereum. If the Across fees are not profitable and no
+///      relayer fills the deposit, the SpokePool refunds the assets to `recipient` on
+///      the originating L2. It is typically an EOA. If it is a contract, it MUST be
+///      able to receive the relevant assets (native ETH and/or the input ERC20) on
+///      BOTH the L2 and Ethereum mainnet, since the same address is used on both
+///      chains. Integrating UIs should surface this requirement to users.
+///
 ///      Bug bounty note: reports claiming that "any EOA can call these functions and
 ///      steal funds" are out of scope. The contract holds no balance on behalf of other
 ///      users; each call transacts exclusively with `msg.sender`'s assets.
