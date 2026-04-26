@@ -510,9 +510,14 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
                     "Asset Hub does not support dry running of XCM. Transaction success cannot be confirmed.",
             })
         } else {
+            // Mirror what BridgeHub actually injects on AH (executionFee for
+            // PayFees + payload_value as separate ReserveAssetDeposited).
+            // `relayerFee` is paid on Ethereum and never lands on AH.
             const assetHubFee =
                 transfer.input.fee.assetHubExecutionFeeEther +
                 transfer.input.fee.destinationDeliveryFeeEther
+            const payloadValue =
+                transfer.computed.totalValue - assetHubFee - transfer.input.fee.relayerFee
 
             let xcm
             if (isDOT(transfer.input.fee.feeAsset)) {
@@ -520,7 +525,7 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
                     assetHub.registry,
                     registry.ethChainId,
                     destAssetMetadata.location,
-                    transfer.computed.totalValue - assetHubFee,
+                    payloadValue,
                     assetHubFee,
                     transfer.input.fee.destinationExecutionFeeEther ?? 0n,
                     transfer.input.fee.destinationExecutionFeeDOT ?? 0n,
@@ -537,7 +542,7 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
                     assetHub.registry,
                     registry.ethChainId,
                     destAssetMetadata.location,
-                    transfer.computed.totalValue - assetHubFee,
+                    payloadValue,
                     assetHubFee,
                     transfer.input.fee.destinationExecutionFeeEther ?? 0n,
                     amount,

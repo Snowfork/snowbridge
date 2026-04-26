@@ -513,10 +513,15 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
                     "Asset Hub does not support dry running of XCM. Transaction success cannot be confirmed.",
             })
         } else {
-            // build asset hub packet and dryRun
+            // Mirror what BridgeHub actually injects on AH (executionFee for
+            // PayFees + payload_value as separate ReserveAssetDeposited).
+            // `relayerFee` is paid on Ethereum and never lands on AH; previous
+            // code mis-added it to AH holding and hid dust traps.
             const assetHubFee =
                 transfer.input.fee.assetHubExecutionFeeEther +
                 transfer.input.fee.destinationDeliveryFeeEther
+            const payloadValue =
+                transfer.computed.totalValue - assetHubFee - transfer.input.fee.relayerFee
 
             let xcm
             if (isDOT(transfer.input.fee.feeAsset)) {
@@ -524,7 +529,7 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
                     assetHub.registry,
                     registry.ethChainId,
                     tokenAddress,
-                    transfer.computed.totalValue - assetHubFee,
+                    payloadValue,
                     assetHubFee,
                     amount,
                     claimer,
@@ -541,7 +546,7 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
                     assetHub.registry,
                     registry.ethChainId,
                     tokenAddress,
-                    transfer.computed.totalValue - assetHubFee,
+                    payloadValue,
                     assetHubFee,
                     amount,
                     claimer,
