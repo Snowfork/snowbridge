@@ -20,7 +20,11 @@ import {
     ValidatedTransfer,
 } from "../../toPolkadotSnowbridgeV2"
 import { accountId32Location, erc20Location } from "../../xcmBuilder"
-import { DOT_LOCATION, ETHER_TOKEN_ADDRESS } from "../../assets_v2"
+import {
+    DOT_LOCATION,
+    ETHER_TOKEN_ADDRESS,
+    getAssetHubEtherMinBalance,
+} from "../../assets_v2"
 import { ensureValidationSuccess, padFeeByPercentage } from "../../utils"
 import { resolveBeneficiary } from "../../crypto"
 import { FeeInfo, ValidationLog, ValidationReason } from "../../types/toPolkadot"
@@ -105,10 +109,19 @@ export class PNAToAH<T extends EthereumProviderTypes> implements TransferInterfa
         // AssetHub Execution fee
         let assetHubExecutionFeeDOT = await assetHubImpl.calculateXcmFee(assetHubXcm, DOT_LOCATION)
 
-        let assetHubExecutionFeeEther = padFeeByPercentage(
-            await assetHubImpl.swapAsset1ForAsset2(DOT_LOCATION, ether, assetHubExecutionFeeDOT),
-            feePadPercentage ?? 33n,
-        )
+        let assetHubExecutionFeeEther =
+            padFeeByPercentage(
+                await assetHubImpl.swapAsset1ForAsset2(
+                    DOT_LOCATION,
+                    ether,
+                    assetHubExecutionFeeDOT,
+                ),
+                feePadPercentage ?? 33n,
+            ) +
+            // PNAs never carry ether themselves, so the post-PayFees surplus
+            // must alone cover the recipient's bridged-ether min_balance —
+            // otherwise the dust below min_balance traps the entire DepositAsset.
+            getAssetHubEtherMinBalance(registry)
 
         const { relayerFee, extrinsicFeeDot, extrinsicFeeEther } = await calculateRelayerFee(
             assetHubImpl,
@@ -196,10 +209,16 @@ export class PNAToAH<T extends EthereumProviderTypes> implements TransferInterfa
         )
 
         const xcm = hexToU8a(
-            sendMessageXCM(assetHub.registry, beneficiaryAddressHex, topic, customXcm).toHex(),
+            sendMessageXCM(
+                assetHub.registry,
+                beneficiaryAddressHex,
+                topic,
+                customXcm,
+                ahAssetMetadata.location,
+            ).toHex(),
         )
         let assets = [context.ethereumProvider.encodeNativeAsset(tokenAddress, amount)]
-        let claimer = claimerFromBeneficiary(assetHub, beneficiaryAddressHex)
+        let claimer = claimerFromBeneficiary(assetHub, beneficiaryAddressHex, registry.environment)
 
         const tx = await context.ethereumProvider.gatewayV2SendMessage(
             context.ethereum(),

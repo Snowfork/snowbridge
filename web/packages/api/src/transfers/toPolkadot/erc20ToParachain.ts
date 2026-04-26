@@ -20,7 +20,11 @@ import {
     ValidatedTransfer,
 } from "../../toPolkadotSnowbridgeV2"
 import { accountId32Location, erc20Location, isDOT } from "../../xcmBuilder"
-import { DOT_LOCATION, ETHER_TOKEN_ADDRESS } from "../../assets_v2"
+import {
+    DOT_LOCATION,
+    ETHER_TOKEN_ADDRESS,
+    getAssetHubEtherMinBalance,
+} from "../../assets_v2"
 import { ensureValidationSuccess, padFeeByPercentage } from "../../utils"
 import { paraIdToSovereignAccount, resolveBeneficiary } from "../../crypto"
 import { FeeInfo, ValidationLog, ValidationReason } from "../../types/toPolkadot"
@@ -116,6 +120,13 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
             await assetHubImpl.swapAsset1ForAsset2(DOT_LOCATION, ether, assetHubExecutionFeeDOT),
             feePadPercentage ?? 33n,
         )
+        // For non-ether transfers, oversize executionFee by AH bridged-ether
+        // min_balance: the post-PayFees surplus then naturally lands at the
+        // recipient via RefundSurplus → DepositAsset, satisfying
+        // `Token::BelowMinimum` on a fresh asset account.
+        if (tokenAddress !== ETHER_TOKEN_ADDRESS) {
+            assetHubExecutionFeeEther += getAssetHubEtherMinBalance(registry)
+        }
 
         let destinationXcm: any
         // Destination fees
@@ -314,7 +325,7 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
                 ).toHex(),
             )
         }
-        let claimer = claimerFromBeneficiary(assetHub, beneficiaryAddressHex)
+        let claimer = claimerFromBeneficiary(assetHub, beneficiaryAddressHex, registry.environment)
 
         const tx = await context.ethereumProvider.gatewayV2SendMessage(
             context.ethereum(),

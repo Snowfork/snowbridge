@@ -1,6 +1,7 @@
 import { Registry } from "@polkadot/types/types"
 import {
     accountToLocation,
+    buildSplitDepositAsset,
     erc20Location,
     ethereumNetwork,
     parachainLocation,
@@ -130,19 +131,11 @@ export function buildAssetHubERC20ReceivedXcm(
                         {
                             refundSurplus: null,
                         },
-                        {
-                            depositAsset: {
-                                assets: {
-                                    wild: {
-                                        allCounted: 3,
-                                    },
-                                },
-                                beneficiary: {
-                                    parents: 0,
-                                    interior: { x1: [beneficiaryLocation] },
-                                },
-                            },
-                        },
+                        ...buildSplitDepositAsset(
+                            beneficiaryLocation,
+                            erc20Location(ethChainId, tokenAddress),
+                            3,
+                        ),
                         {
                             setTopic: topic,
                         },
@@ -222,19 +215,13 @@ export function buildParachainERC20ReceivedXcmOnDestination(
             },
             { clearOrigin: null },
             ...(customXcm || []), // Insert custom XCM instructions if provided
-            {
-                depositAsset: {
-                    assets: {
-                        wild: {
-                            allCounted: 3,
-                        },
-                    },
-                    beneficiary: {
-                        parents: 0,
-                        interior: { x1: [beneficiaryLocation] },
-                    },
-                },
-            },
+            ...buildSplitDepositAsset(
+                beneficiaryLocation,
+                tokenAddress === ETHER_TOKEN_ADDRESS
+                    ? undefined
+                    : erc20Location(ethChainId, tokenAddress),
+                3,
+            ),
             {
                 setTopic: topic,
             },
@@ -293,19 +280,13 @@ export function buildParachainERC20ReceivedXcmOnDestinationWithDOTFee(
             { clearOrigin: null },
             { refundSurplus: null },
             ...(customXcm || []), // Insert custom XCM instructions if provided
-            {
-                depositAsset: {
-                    assets: {
-                        wild: {
-                            allCounted: 3,
-                        },
-                    },
-                    beneficiary: {
-                        parents: 0,
-                        interior: { x1: [beneficiaryLocation] },
-                    },
-                },
-            },
+            ...buildSplitDepositAsset(
+                beneficiaryLocation,
+                tokenAddress === ETHER_TOKEN_ADDRESS
+                    ? undefined
+                    : erc20Location(ethChainId, tokenAddress),
+                3,
+            ),
             {
                 setTopic: topic,
             },
@@ -332,19 +313,7 @@ export function sendMessageXCM(
             refundSurplus: null,
         },
         ...(customXcm || []), // Insert custom XCM here if provided
-        {
-            depositAsset: {
-                assets: {
-                    wild: {
-                        allCounted: 3,
-                    },
-                },
-                beneficiary: {
-                    parents: 0,
-                    interior: { x1: [beneficiaryLocation] },
-                },
-            },
-        },
+        ...buildSplitDepositAsset(beneficiaryLocation, erc20Location(ethChainId, tokenAddress), 3),
         {
             setTopic: topic,
         },
@@ -556,19 +525,13 @@ export function buildParachainERC20ReceivedXcmOnDestWithDOTFee(
                         {
                             refundSurplus: null,
                         },
-                        {
-                            depositAsset: {
-                                assets: {
-                                    wild: {
-                                        allCounted: 3,
-                                    },
-                                },
-                                beneficiary: {
-                                    parents: 0,
-                                    interior: { x1: [beneficiaryLocation] },
-                                },
-                            },
-                        },
+                        ...buildSplitDepositAsset(
+                            beneficiaryLocation,
+                            tokenAddress === ETHER_TOKEN_ADDRESS
+                                ? undefined
+                                : erc20Location(ethChainId, tokenAddress),
+                            3,
+                        ),
                         {
                             setTopic: topic,
                         },
@@ -667,19 +630,11 @@ export function sendMessageXCMWithDOTDestFee(
                         {
                             refundSurplus: null,
                         },
-                        {
-                            depositAsset: {
-                                assets: {
-                                    wild: {
-                                        allCounted: 3,
-                                    },
-                                },
-                                beneficiary: {
-                                    parents: 0,
-                                    interior: { x1: [beneficiaryLocation] },
-                                },
-                            },
-                        },
+                        ...buildSplitDepositAsset(
+                            beneficiaryLocation,
+                            erc20Location(ethChainId, tokenAddress),
+                            3,
+                        ),
                         {
                             setTopic: topic,
                         },

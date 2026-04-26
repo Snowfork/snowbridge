@@ -301,7 +301,7 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
                 options?.customXcm,
             ).toHex(),
         )
-        let claimer = claimerFromBeneficiary(assetHub, beneficiaryAddressHex)
+        let claimer = claimerFromBeneficiary(assetHub, beneficiaryAddressHex, registry.environment)
 
         let depositParams: DepositParamsStruct, tx: T["ContractTransaction"]
 

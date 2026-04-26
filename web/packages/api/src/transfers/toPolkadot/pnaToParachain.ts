@@ -20,7 +20,11 @@ import {
     ValidatedTransfer,
 } from "../../toPolkadotSnowbridgeV2"
 import { accountId32Location, erc20Location, isDOT } from "../../xcmBuilder"
-import { DOT_LOCATION, ETHER_TOKEN_ADDRESS } from "../../assets_v2"
+import {
+    DOT_LOCATION,
+    ETHER_TOKEN_ADDRESS,
+    getAssetHubEtherMinBalance,
+} from "../../assets_v2"
 import { ensureValidationSuccess, padFeeByPercentage } from "../../utils"
 import { paraIdToSovereignAccount, resolveBeneficiary } from "../../crypto"
 import { FeeInfo, ValidationLog, ValidationReason } from "../../types/toPolkadot"
@@ -110,10 +114,19 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
             ether,
             deliveryFeeInDOT,
         )
-        let assetHubExecutionFeeEther = padFeeByPercentage(
-            await assetHubImpl.swapAsset1ForAsset2(DOT_LOCATION, ether, assetHubExecutionFeeDOT),
-            feePadPercentage ?? 33n,
-        )
+        let assetHubExecutionFeeEther =
+            padFeeByPercentage(
+                await assetHubImpl.swapAsset1ForAsset2(
+                    DOT_LOCATION,
+                    ether,
+                    assetHubExecutionFeeDOT,
+                ),
+                feePadPercentage ?? 33n,
+            ) +
+            // PNAs never carry ether themselves, so the post-PayFees surplus
+            // must alone cover the recipient's bridged-ether min_balance —
+            // otherwise the dust below min_balance traps the entire DepositAsset.
+            getAssetHubEtherMinBalance(registry)
 
         // Destination fees
         let destinationXcm: any
@@ -308,7 +321,7 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
             )
         }
         let assets = [context.ethereumProvider.encodeNativeAsset(tokenAddress, amount)]
-        let claimer = claimerFromBeneficiary(assetHub, beneficiaryAddressHex)
+        let claimer = claimerFromBeneficiary(assetHub, beneficiaryAddressHex, registry.environment)
 
         const tx = await context.ethereumProvider.gatewayV2SendMessage(
             context.ethereum(),

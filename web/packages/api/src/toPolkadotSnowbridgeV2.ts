@@ -18,7 +18,7 @@ import { PNAToParachain } from "./transfers/toPolkadot/pnaToParachain"
 import { hexToU8a, stringToU8a } from "@polkadot/util"
 import { blake2AsHex } from "@polkadot/util-crypto"
 import { ApiPromise } from "@polkadot/api"
-import { accountToLocation, erc20Location } from "./xcmBuilder"
+import { accountToLocationWithNetwork, erc20Location } from "./xcmBuilder"
 import { Codec } from "@polkadot/types/types"
 import { DOT_LOCATION, ETHER_TOKEN_ADDRESS } from "./assets_v2"
 import { ensureValidationSuccess, padFeeByPercentage } from "./utils"
@@ -211,10 +211,17 @@ export async function messageId<T extends EthereumProviderTypes>(
     return messageAccepted
 }
 
-export function claimerFromBeneficiary(assetHub: ApiPromise, beneficiaryAddressHex: string) {
-    let accountLocation = {
+export function claimerFromBeneficiary(
+    assetHub: ApiPromise,
+    beneficiaryAddressHex: string,
+    envName: string,
+) {
+    // The `network` field MUST match what AH's signed-origin converter produces
+    // (e.g. `Some(Polkadot)` on polkadot_mainnet) so a trapped-funds claim from
+    // the beneficiary's signed origin hashes to the same key as the trap entry.
+    const accountLocation = {
         parents: 0,
-        interior: { x1: [accountToLocation(beneficiaryAddressHex)] },
+        interior: { x1: [accountToLocationWithNetwork(beneficiaryAddressHex, envName)] },
     }
     return assetHub.registry.createType("StagingXcmV5Location", accountLocation)
 }
