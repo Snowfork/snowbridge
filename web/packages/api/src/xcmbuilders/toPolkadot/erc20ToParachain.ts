@@ -214,6 +214,10 @@ export function buildParachainERC20ReceivedXcmOnDestination(
                 ],
             },
             { clearOrigin: null },
+            // Mirror the user-side `sendMessageXCM` remoteXcm tail: RefundSurplus
+            // returns unused PayFees ether to holding so the dry-run sees the
+            // same dust deposit attempt that would happen in production.
+            { refundSurplus: null },
             ...(customXcm || []), // Insert custom XCM instructions if provided
             ...buildSplitDepositAsset(
                 beneficiaryLocation,
@@ -538,6 +542,8 @@ export function buildParachainERC20ReceivedXcmOnDestWithDOTFee(
                     ],
                 },
             },
+            // Mirror the user-side `sendMessageXCMWithDOTDestFee` AH-side tail.
+            { refundSurplus: null },
             {
                 depositAsset: {
                     assets: {

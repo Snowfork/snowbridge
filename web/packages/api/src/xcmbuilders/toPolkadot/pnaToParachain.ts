@@ -488,6 +488,8 @@ export function buildAssetHubPNAReceivedXcmWithDOTFee(
                     ],
                 },
             },
+            // Mirror the user-side `sendMessageXCMWithDOTDestFee` AH-side tail.
+            { refundSurplus: null },
             {
                 depositAsset: {
                     assets: {

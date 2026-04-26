@@ -94,6 +94,11 @@ export function buildAssetHubERC20ReceivedXcm(
                     ],
                 },
             },
+            // Mirror the user-side `sendMessageXCM` tail exactly: RefundSurplus
+            // returns unused PayFees ether to holding so the subsequent
+            // DepositAsset attempts to settle ether dust + tokens together.
+            // Without this, the dry-run misses ether-dust BelowMinimum traps.
+            { refundSurplus: null },
             ...(customXcm || []), // Insert custom XCM instructions if provided
             ...buildSplitDepositAsset(
                 beneficiaryLocation,
