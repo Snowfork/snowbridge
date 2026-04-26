@@ -201,6 +201,10 @@ export function buildParachainPNAReceivedXcmOnDestination(
                 ],
             },
             { clearOrigin: null },
+            // Mirror the user-side `sendMessageXCM` remoteXcm tail: RefundSurplus
+            // returns unused BuyExecution surplus to holding so the dry-run sees
+            // the same dust deposit attempt that production performs.
+            { refundSurplus: null },
             ...(customXcm || []), // Insert custom XCM instructions if provided
             ...buildSplitDepositAsset(beneficiaryLocation, assetLocation, 2),
             { setTopic: topic },

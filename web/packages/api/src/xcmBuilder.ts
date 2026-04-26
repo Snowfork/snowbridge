@@ -1476,6 +1476,8 @@ export const accountToLocationWithNetwork = (account: string, envName: string) =
                     }
                     break
                 }
+                default:
+                    throw Error(`Unsupported envName: ${envName}`)
             }
             break
         case 2:
@@ -1499,6 +1501,14 @@ export const accountToLocationWithNetwork = (account: string, envName: string) =
                     }
                     break
                 }
+                case "local_e2e": {
+                    beneficiaryLocation = {
+                        accountKey20: { key: hexAddress, network: { Polkadot: { network: null } } },
+                    }
+                    break
+                }
+                default:
+                    throw Error(`Unsupported envName: ${envName}`)
             }
             break
         default:
