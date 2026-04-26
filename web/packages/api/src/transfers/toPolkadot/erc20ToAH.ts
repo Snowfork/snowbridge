@@ -399,13 +399,7 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
                     "Asset Hub does not support dry running of XCM. Transaction success cannot be confirmed.",
             })
         } else {
-            // Mirror what BridgeHub actually injects on AH so the dry-run is a
-            // faithful simulation of the live execution:
-            //   ReserveAssetDeposited(executionFee) + PayFees(executionFee)
-            //   + (if payload_value > 0) ReserveAssetDeposited(payload_value)
-            //   + ReserveAssetDeposited(user_token)
-            // `relayerFee` is paid to the relayer on Ethereum and never lands on
-            // AH; previous code mis-added it to AH holding and hid dust traps.
+            // build asset hub packet and dryRun
             const executionFee = transfer.input.fee.assetHubExecutionFeeEther
             const payloadValue =
                 transfer.computed.totalValue - executionFee - transfer.input.fee.relayerFee

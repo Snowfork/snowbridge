@@ -399,9 +399,6 @@ export class PNAToAH<T extends EthereumProviderTypes> implements TransferInterfa
                     "Asset Hub does not support dry running of XCM. Transaction success cannot be confirmed.",
             })
         } else {
-            // Mirror what BridgeHub actually injects on AH (executionFee for
-            // PayFees + payload_value as separate ReserveAssetDeposited).
-            // `relayerFee` is paid on Ethereum and never lands on AH.
             const executionFee = transfer.input.fee.assetHubExecutionFeeEther
             const payloadValue =
                 transfer.computed.totalValue - executionFee - transfer.input.fee.relayerFee

@@ -513,10 +513,7 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
                     "Asset Hub does not support dry running of XCM. Transaction success cannot be confirmed.",
             })
         } else {
-            // Mirror what BridgeHub actually injects on AH (executionFee for
-            // PayFees + payload_value as separate ReserveAssetDeposited).
-            // `relayerFee` is paid on Ethereum and never lands on AH; previous
-            // code mis-added it to AH holding and hid dust traps.
+            // build asset hub packet and dryRun
             const assetHubFee =
                 transfer.input.fee.assetHubExecutionFeeEther +
                 transfer.input.fee.destinationDeliveryFeeEther

@@ -74,7 +74,7 @@
     "transferEtherToPenpalV2": "npx ts-node src/transfer_from_e2p_v2.ts 2000 Eth 100000000000000",
     "transferWndToPenpalV2": "npx ts-node src/transfer_from_e2p_v2.ts 2000 WND 1000000000",
     "transferUSDCToAHV2": "npx ts-node src/transfer_from_e2p_v2.ts 1000 USDC 100000",
-    "transferUSDTToAHV2": "SUBSTRATE_BENEFICIARY=16PL8D6JXsi18EQZKuap9eLbsehMRMgcqdCf735qBmA5NSFc npx ts-node src/transfer_from_e2p_v2.ts 1000 USDT 15000000",
+    "transferUSDTToAHV2": "npx ts-node src/transfer_from_e2p_v2.ts 1000 USDT 15000000",
     "transferUSDCFromBaseToAH-sepolia": "npx ts-node src/transfer_from_l2_to_polkadot_wrapper.ts 84532 1000 USDC 1000000",
     "transferUSDCFromAHToBase-sepolia": "npx ts-node src/transfer_from_polkadot_to_l2_wrapper.ts 1000 84532 USDC 1000000",
     "transferEtherFromBaseToAH-sepolia": "npx ts-node src/transfer_from_l2_to_polkadot_wrapper.ts 84532 1000 Eth 1000000000000000",
