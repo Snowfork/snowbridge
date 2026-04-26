@@ -50,6 +50,7 @@ export class RegisterToken<T extends EthereumProviderTypes> implements Registrat
             100_000_000_000n, // dummy execution fee
             assetDepositDOT,
             getBridgeOwnerAccount(registry.ethChainId),
+            registry.environment,
         )
 
         // Delivery fee BridgeHub to AssetHub
@@ -223,6 +224,7 @@ export class RegisterToken<T extends EthereumProviderTypes> implements Registrat
                     registration.input.fee.assetHubDeliveryFeeEther,
                     registration.input.fee.assetDepositDOT,
                     getBridgeOwnerAccount(registry.ethChainId),
+                    registry.environment,
                 )
 
                 const assetHubImpl = await context.paraImplementation(assetHub)

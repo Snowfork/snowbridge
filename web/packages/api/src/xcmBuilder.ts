@@ -1402,6 +1402,45 @@ export const accountToLocation = (account: string) => {
     return beneficiaryLocation
 }
 
+// Splits the user-asset deposit from the ether-dust sweep so a failed dust leg
+// (e.g. `Token::BelowMinimum` on a fresh asset account) doesn't trap the user's
+// asset too. Falls back to a single AllCounted deposit when there's no separate
+// user asset (e.g. user is sending ether).
+export const buildSplitDepositAsset = (
+    beneficiaryLocation: any,
+    userAssetLocation: any | undefined,
+    fallbackCount: number,
+) => {
+    const beneficiaryDest = {
+        parents: 0,
+        interior: { x1: [beneficiaryLocation] },
+    }
+    if (!userAssetLocation) {
+        return [
+            {
+                depositAsset: {
+                    assets: { wild: { allCounted: fallbackCount } },
+                    beneficiary: beneficiaryDest,
+                },
+            },
+        ]
+    }
+    return [
+        {
+            depositAsset: {
+                assets: { wild: { allOf: { id: userAssetLocation, fun: "Fungible" } } },
+                beneficiary: beneficiaryDest,
+            },
+        },
+        {
+            depositAsset: {
+                assets: { wild: { allCounted: 1 } },
+                beneficiary: beneficiaryDest,
+            },
+        },
+    ]
+}
+
 export const WESTEND_GENESIS = "0xe143f23803ac50e8f6f8e62695d1ce9e4e1d68aa36c1cd2cfd15340213f3423e"
 export const ROCOCO_GENESIS = "0x6408de7737c59c238890533af25896a2c20608d8b380bb01029acb392781063e"
 export const PASEO_GENESIS = "0x77afd6190f1554ad45fd0d31aee62aacc33c6db0ea801129acb813f913e0764f"

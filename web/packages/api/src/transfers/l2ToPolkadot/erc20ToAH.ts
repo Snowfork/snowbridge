@@ -301,7 +301,7 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
                 options?.customXcm,
             ).toHex(),
         )
-        let claimer = claimerFromBeneficiary(assetHub, beneficiaryAddressHex)
+        let claimer = claimerFromBeneficiary(assetHub, beneficiaryAddressHex, registry.environment)
 
         let depositParams: DepositParamsStruct, tx: T["ContractTransaction"]
 
@@ -578,15 +578,15 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             })
         } else {
             // build asset hub packet and dryRun
-            const assetHubFee =
-                transfer.input.fee.assetHubDeliveryFeeEther +
-                transfer.input.fee.assetHubExecutionFeeEther
+            const executionFee = transfer.input.fee.assetHubExecutionFeeEther
+            const payloadValue =
+                transfer.computed.totalValue - executionFee - transfer.input.fee.relayerFee
             const xcm = buildAssetHubERC20ReceivedXcm(
                 assetHub.registry,
                 registry.ethChainId,
                 tokenAddress,
-                transfer.computed.totalValue - assetHubFee,
-                assetHubFee,
+                payloadValue,
+                executionFee,
                 amount,
                 claimer,
                 transfer.input.sourceAccount,

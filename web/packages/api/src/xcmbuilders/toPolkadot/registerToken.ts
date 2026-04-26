@@ -45,6 +45,7 @@ export function buildAssetHubRegisterTokenXcm(
     executionFee: bigint,
     assetDepositDOT: bigint,
     bridgeOwner: string,
+    envName: string,
 ) {
     const registry = assetHub.registry
     const ether = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
@@ -89,7 +90,7 @@ export function buildAssetHubRegisterTokenXcm(
         {
             SetHints: {
                 hints: [
-                    { AssetClaimer: { location: claimerFromBeneficiary(assetHub, bridgeOwner) } },
+                    { AssetClaimer: { location: claimerFromBeneficiary(assetHub, bridgeOwner, envName) } },
                 ],
             },
         },

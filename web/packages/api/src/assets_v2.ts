@@ -20,6 +20,19 @@ export function findL2TokenAddress(
     return undefined
 }
 
+// Returns the bridged-ether `min_balance` registered in the AH foreign-assets
+// pallet. Callers add this to `executionFee` for non-ETH transfers so the
+// post-PayFees ether surplus deposited to a fresh recipient meets
+// `Token::BelowMinimum` — otherwise the dust traps the entire DepositAsset.
+export function getAssetHubEtherMinBalance(registry: AssetRegistry): bigint {
+    const metadata =
+        registry.parachains[`polkadot_${registry.assetHubParaId}`].assets[ETHER_TOKEN_ADDRESS]
+    if (!metadata) {
+        throw Error("Bridged ether not registered on asset hub.")
+    }
+    return metadata.minimumBalance
+}
+
 export function supportsEthereumToPolkadotV2(parachain: Parachain): boolean {
     return (
         parachain.features.hasXcmPaymentApi &&

@@ -36,7 +36,10 @@ export const transferToPolkadot = async (
     )
     const ETHEREUM_ACCOUNT_PUBLIC = await ETHEREUM_ACCOUNT.getAddress()
     const POLKADOT_ACCOUNT = polkadot_keyring.addFromUri(process.env.SUBSTRATE_KEY ?? "//Ferdie")
-    const POLKADOT_ACCOUNT_PUBLIC = POLKADOT_ACCOUNT.address
+    // Optional override: send to a specific beneficiary instead of the signer's
+    // own account. Used to reproduce a known trap scenario by targeting the
+    // exact AH account that failed in production.
+    const POLKADOT_ACCOUNT_PUBLIC = process.env.SUBSTRATE_BENEFICIARY ?? POLKADOT_ACCOUNT.address
 
     console.log("eth", ETHEREUM_ACCOUNT_PUBLIC, "sub", POLKADOT_ACCOUNT_PUBLIC)
 
