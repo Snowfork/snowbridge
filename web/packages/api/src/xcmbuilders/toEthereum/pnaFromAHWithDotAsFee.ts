@@ -1,11 +1,11 @@
 import { Registry } from "@polkadot/types/types"
 import {
     bridgeLocation,
-    DOT_LOCATION,
     accountToLocation,
     isRelaychainLocation,
     buildEthereumInstructions,
 } from "../../xcmBuilder"
+import { DOT_LOCATION } from "../../assets_v2"
 import { Asset } from "@snowbridge/base-types"
 import { DeliveryFee } from "../../toEthereum_v2"
 
@@ -39,18 +39,23 @@ export function buildTransferXcmFromAssetHubWithDOTAsFee(
         })
     } else {
         assets.push({
-            id: tokenLocation,
-            fun: {
-                Fungible: tokenAmount,
-            },
-        })
-        assets.push({
             id: DOT_LOCATION,
             fun: {
                 Fungible: totalDOTFeeAmount,
             },
         })
+        assets.push({
+            id: tokenLocation,
+            fun: {
+                Fungible: tokenAmount,
+            },
+        })
     }
+
+    // Sort assets by parents because XCM requires it for binary search.
+    assets.sort((a, b) => {
+        return a.id.parents - b.id.parents
+    })
 
     let remoteXcm = buildEthereumInstructions(beneficiaryLocation, topic, callHex)
 

@@ -1,10 +1,13 @@
-import { status } from "@snowbridge/api"
+import * as status from "@snowbridge/api/dist/status"
 import {
     CloudWatchClient,
     PutMetricDataCommand,
     PutMetricAlarmCommand,
 } from "@aws-sdk/client-cloudwatch"
 import { bridgeInfoFor } from "@snowbridge/registry"
+
+import { AllMetrics } from "./metrics"
+import { monitorParams } from "./monitorConfig"
 
 const CLOUD_WATCH_NAME_SPACE = "SnowbridgeMetrics"
 const BRIDGE_STALE_SNS_TOPIC = process.env["BRIDGE_STALE_SNS_TOPIC"] || ""
@@ -24,6 +27,7 @@ export enum AlarmReason {
     ToPolkadotChannelStale = "ToPolkadotChannelStale",
     RelayAccountBalanceInsufficient = "RelayAccountBalanceInsufficient",
     SovereignAccountBalanceInsufficient = "SovereignAccountBalanceInsufficient",
+    EthDotPoolEthLiquidityInsufficient = "EthDotPoolEthLiquidityInsufficient",
     IndexServiceStale = "IndexServiceStale",
     HeartbeatLost = "HeartbeatLost",
     FutureBlockVoting = "FutureBlockVoting",
@@ -31,14 +35,14 @@ export enum AlarmReason {
 }
 
 export const InsufficientBalanceThreshold = {
-    // Minimum as 100 DOT
+    // Minimum as 20 DOT
     Substrate: process.env["SubstrateBalanceThreshold"]
         ? parseInt(process.env["SubstrateBalanceThreshold"])
-        : 1_000_000_000_000,
-    // Minimum as 0.3 Ether
+        : 20_000_000_000_000,
+    // Minimum as 0.05 Ether
     Ethereum: process.env["EthereumBalanceThreshold"]
         ? parseInt(process.env["EthereumBalanceThreshold"])
-        : 300_000_000_000_000_000,
+        : 50_000_000_000_000_000,
 }
 
 // This configuration is for setting up a CloudWatch alarm.
@@ -48,21 +52,21 @@ export const InsufficientBalanceThreshold = {
 export const AlarmEvaluationConfiguration = {
     EvaluationPeriods: process.env["EvaluationPeriods"]
         ? parseInt(process.env["EvaluationPeriods"])
-        : 4,
+        : 1,
     DatapointsToAlarm: process.env["DatapointsToAlarm"]
         ? parseInt(process.env["DatapointsToAlarm"])
-        : 3,
+        : 1,
 }
 
 export const IndexerLatencyThreshold = process.env["IndexerLatencyThreshold"]
     ? parseInt(process.env["IndexerLatencyThreshold"])
-    : 150
+    : 600
 
 export const ScanInterval = process.env["SCAN_INTERVAL"]
     ? parseInt(process.env["SCAN_INTERVAL"])
     : 900
 
-export const sendMetrics = async (metrics: status.AllMetrics) => {
+export const sendMetrics = async (metrics: AllMetrics) => {
     let client = new CloudWatchClient({})
     let metricData = []
     // Heartbeat metrics
@@ -221,6 +225,44 @@ export const sendMetrics = async (metrics: status.AllMetrics) => {
             Value: Number(status.latency),
         })
     }
+    for (const pool of metrics.liquidityPools) {
+        metricData.push({
+            MetricName: "PoolLiquidity",
+            Dimensions: [
+                {
+                    Name: "ChainName",
+                    Value: pool.chain,
+                },
+                {
+                    Name: "PoolName",
+                    Value: pool.name,
+                },
+                {
+                    Name: "AssetName",
+                    Value: "DOT",
+                },
+            ],
+            Value: Number(pool.dotBalance),
+        })
+        metricData.push({
+            MetricName: "PoolLiquidity",
+            Dimensions: [
+                {
+                    Name: "ChainName",
+                    Value: pool.chain,
+                },
+                {
+                    Name: "PoolName",
+                    Value: pool.name,
+                },
+                {
+                    Name: "AssetName",
+                    Value: "ETH",
+                },
+            ],
+            Value: Number(pool.etherBalance),
+        })
+    }
     const command = new PutMetricDataCommand({
         MetricData: metricData,
         Namespace: CLOUD_WATCH_NAME_SPACE + "-" + metrics.name,
@@ -330,26 +372,31 @@ export const initializeAlarms = async () => {
     )
 
     // Insufficient balance in the relay account
-    for (const relayName of ["beacon", "execution-assethub"]) {
+    for (const relayer of monitorParams[name]?.RELAYERS || []) {
+        const threshold =
+            relayer.type === "ethereum"
+                ? InsufficientBalanceThreshold.Ethereum
+                : InsufficientBalanceThreshold.Substrate
+
         let relayAccountBalanceAlarm = new PutMetricAlarmCommand({
             AlarmName:
                 AlarmReason.RelayAccountBalanceInsufficient.toString() +
                 "-" +
                 name +
                 "-" +
-                relayName,
+                relayer.name,
             MetricName: "BalanceOfRelayer",
             Dimensions: [
                 {
                     Name: "RelayerName",
-                    Value: relayName,
+                    Value: relayer.name,
                 },
             ],
             AlarmDescription: BalanceDashboard,
             AlarmActions: [ACCOUNT_BALANCE_SNS_TOPIC],
             ...alarmCommandSharedInput,
             ComparisonOperator: "LessThanThreshold",
-            Threshold: InsufficientBalanceThreshold.Substrate,
+            Threshold: threshold,
         })
         cloudWatchAlarms.push(relayAccountBalanceAlarm)
     }
@@ -439,6 +486,33 @@ export const initializeAlarms = async () => {
             EvaluationPeriods: 1,
             DatapointsToAlarm: 1,
             Threshold: 0,
+        }),
+    )
+
+    // Asset Hub ETH-DOT pool ETH liquidity low
+    cloudWatchAlarms.push(
+        new PutMetricAlarmCommand({
+            AlarmName: AlarmReason.EthDotPoolEthLiquidityInsufficient.toString() + "-" + name,
+            MetricName: "PoolLiquidity",
+            Dimensions: [
+                {
+                    Name: "ChainName",
+                    Value: "AssetHub",
+                },
+                {
+                    Name: "PoolName",
+                    Value: "EthDot",
+                },
+                {
+                    Name: "AssetName",
+                    Value: "ETH",
+                },
+            ],
+            AlarmDescription: BalanceDashboard,
+            AlarmActions: [ACCOUNT_BALANCE_SNS_TOPIC],
+            ComparisonOperator: "LessThanThreshold",
+            ...absoluteValueBreachingAlarmConfig,
+            Threshold: 100_000_000_000_000_000, // 0.1 ETH
         }),
     )
 

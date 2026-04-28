@@ -1,9 +1,10 @@
 import { ApiPromise } from "@polkadot/api"
-import { SubmittableExtrinsic } from "@polkadot/api/types"
+import { AddressOrPair, SignerOptions, SubmittableExtrinsic } from "@polkadot/api/types"
 import { ISubmittableResult } from "@polkadot/types/types"
 import { isHex, u8aToHex } from "@polkadot/util"
 import { decodeAddress } from "@polkadot/util-crypto"
-import { DOT_LOCATION, isRelaychainLocation, isParachainNative } from "../../xcmBuilder"
+import { isRelaychainLocation, isParachainNative } from "../../xcmBuilder"
+import { DOT_LOCATION } from "../../assets_v2"
 import { buildExportXcm } from "../../xcmbuilders/toEthereum/erc20FromAH"
 import {
     buildResultXcmAssetHubERC20TransferFromParachain,
@@ -11,32 +12,56 @@ import {
 } from "../../xcmbuilders/toEthereum/erc20FromParachain"
 import { buildTransferXcmFromParachainWithDOTAsFee } from "../../xcmbuilders/toEthereum/erc20FromParachainWithDotAsFee"
 import { buildTransferXcmFromParachainWithNativeAssetFee } from "../../xcmbuilders/toEthereum/erc20FromParachainWithNativeAsFee"
-import { Asset, AssetRegistry, ContractCall } from "@snowbridge/base-types"
-import { paraImplementation } from "../../parachains"
+import {
+    Asset,
+    AssetRegistry,
+    ChainId,
+    ContractCall,
+    EthereumChain,
+    EthereumProviderTypes,
+    Parachain,
+    TransferRoute,
+} from "@snowbridge/base-types"
 import {
     buildMessageId,
     DeliveryFee,
-    resolveInputs,
+    MessageReceipt,
     Transfer,
-    ValidationResult,
+    ValidatedTransfer,
 } from "../../toEthereum_v2"
 import { Context } from "../.."
 import { TransferInterface } from "./transferInterface"
+import { ensureValidationSuccess } from "../../utils"
 import {
     buildContractCallHex,
     estimateFeesFromParachains,
     MaxWeight,
     mockDeliveryFee,
+    signAndSendTransfer,
     validateTransferFromParachain,
 } from "../../toEthereumSnowbridgeV2"
 
-export class ERC20FromParachain implements TransferInterface {
-    async getDeliveryFee(
-        source: { sourceParaId: number; context: Context },
-        registry: AssetRegistry,
+export class ERC20FromParachain<T extends EthereumProviderTypes> implements TransferInterface<T> {
+    constructor(
+        public readonly context: Context<T>,
+        public readonly registry: AssetRegistry,
+        public readonly route: TransferRoute,
+        public readonly source: Parachain,
+        public readonly destination: EthereumChain,
+    ) {}
+
+    get from(): ChainId {
+        return this.route.from
+    }
+
+    get to(): ChainId {
+        return this.route.to
+    }
+
+    async fee(
         tokenAddress: string,
         options?: {
-            padPercentage?: bigint
+            padFeeByPercentage?: bigint
             slippagePadPercentage?: bigint
             defaultFee?: bigint
             feeTokenLocation?: any
@@ -45,22 +70,22 @@ export class ERC20FromParachain implements TransferInterface {
             accelerated?: boolean
         },
     ): Promise<DeliveryFee> {
-        const { assetHub, parachain } =
-            "sourceParaId" in source
-                ? {
-                      assetHub: await source.context.assetHub(),
-                      parachain: await source.context.parachain(source.sourceParaId),
-                  }
-                : source
+        const assetHub = await this.context.assetHub()
+        const parachain = await this.context.parachain(this.from.id)
 
-        const sourceParachainImpl = await paraImplementation(parachain)
-        const { sourceAssetMetadata } = resolveInputs(registry, tokenAddress, source.sourceParaId)
+        const sourceParachainImpl = await this.context.paraImplementation(parachain)
+        const sourceAssetMetadata = this.source.assets[tokenAddress.toLowerCase()]
+        if (!sourceAssetMetadata) {
+            throw Error(
+                `Token ${tokenAddress} not registered on source parachain ${this.source.id}.`,
+            )
+        }
 
         let forwardXcmToAH: any, forwardedXcmToBH: any, localXcm: any
 
         forwardXcmToAH = buildResultXcmAssetHubERC20TransferFromParachain(
             assetHub.registry,
-            registry.ethChainId,
+            this.registry.ethChainId,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000",
@@ -76,9 +101,9 @@ export class ERC20FromParachain implements TransferInterface {
 
         localXcm = buildTransferXcmFromParachain(
             parachain.registry,
-            registry.environment,
-            registry.ethChainId,
-            registry.assetHubParaId,
+            this.registry.environment,
+            this.registry.ethChainId,
+            this.registry.assetHubParaId,
             sourceParachainImpl.parachainId,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000",
@@ -90,7 +115,7 @@ export class ERC20FromParachain implements TransferInterface {
 
         forwardedXcmToBH = buildExportXcm(
             assetHub.registry,
-            registry.ethChainId,
+            this.registry.ethChainId,
             sourceAssetMetadata,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000",
@@ -100,9 +125,9 @@ export class ERC20FromParachain implements TransferInterface {
         )
 
         const fees = await estimateFeesFromParachains(
-            source.context,
-            source.sourceParaId,
-            registry,
+            this.context,
+            this.from.id,
+            this.registry,
             tokenAddress,
             {
                 localXcm,
@@ -114,9 +139,7 @@ export class ERC20FromParachain implements TransferInterface {
         return fees
     }
 
-    async createTransfer(
-        source: { sourceParaId: number; context: Context },
-        registry: AssetRegistry,
+    async tx(
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
@@ -127,20 +150,39 @@ export class ERC20FromParachain implements TransferInterface {
             contractCall?: ContractCall
         },
     ): Promise<Transfer> {
+        const registry = this.registry
         const { ethChainId, assetHubParaId, environment } = registry
 
         let sourceAccountHex = sourceAccount
         if (!isHex(sourceAccountHex)) {
             sourceAccountHex = u8aToHex(decodeAddress(sourceAccount))
         }
-        const { parachain } =
-            "sourceParaId" in source
-                ? { parachain: await source.context.parachain(source.sourceParaId) }
-                : source
+        const parachain = await this.context.parachain(this.from.id)
 
-        const sourceParachainImpl = await paraImplementation(parachain)
-        const { tokenErcMetadata, sourceParachain, ahAssetMetadata, sourceAssetMetadata } =
-            resolveInputs(registry, tokenAddress, sourceParachainImpl.parachainId)
+        const sourceParachainImpl = await this.context.paraImplementation(parachain)
+        const tokenErcMetadata =
+            registry.ethereumChains[`ethereum_${registry.ethChainId}`].assets[
+                tokenAddress.toLowerCase()
+            ]
+        if (!tokenErcMetadata) {
+            throw Error(
+                `No token ${tokenAddress} registered on ethereum chain ${registry.ethChainId}.`,
+            )
+        }
+        const ahAssetMetadata =
+            registry.parachains[`polkadot_${registry.assetHubParaId}`].assets[
+                tokenAddress.toLowerCase()
+            ]
+        if (!ahAssetMetadata) {
+            throw Error(`Token ${tokenAddress} not registered on asset hub.`)
+        }
+        const sourceParachain = this.source
+        const sourceAssetMetadata = sourceParachain.assets[tokenAddress.toLowerCase()]
+        if (!sourceAssetMetadata) {
+            throw Error(
+                `Token ${tokenAddress} not registered on source parachain ${sourceParachain.id}.`,
+            )
+        }
 
         const accountNonce = await sourceParachainImpl.accountNonce(sourceAccountHex)
         let messageId: string | undefined = buildMessageId(
@@ -151,23 +193,68 @@ export class ERC20FromParachain implements TransferInterface {
             beneficiaryAccount,
             amount,
         )
-        let tx: SubmittableExtrinsic<"promise", ISubmittableResult> = await this.createTx(
-            source.context,
-            parachain,
-            environment,
-            ethChainId,
-            assetHubParaId,
-            sourceParachainImpl.parachainId,
-            sourceAccountHex,
-            beneficiaryAccount,
-            sourceAssetMetadata,
-            amount,
-            messageId,
-            fee,
-            options,
-        )
+        let claimerLocation = options?.claimerLocation
+        let callHex: string | undefined
+        if (options?.contractCall) {
+            callHex = await buildContractCallHex(this.context, options.contractCall)
+        }
+        let xcm: any
+        if (!fee.feeLocation) {
+            xcm = buildTransferXcmFromParachain(
+                parachain.registry,
+                environment,
+                ethChainId,
+                assetHubParaId,
+                sourceParachainImpl.parachainId,
+                sourceAccountHex,
+                beneficiaryAccount,
+                messageId,
+                sourceAssetMetadata,
+                amount,
+                fee,
+                claimerLocation,
+                callHex,
+            )
+        } else if (isRelaychainLocation(fee.feeLocation)) {
+            xcm = buildTransferXcmFromParachainWithDOTAsFee(
+                parachain.registry,
+                environment,
+                ethChainId,
+                assetHubParaId,
+                sourceParachainImpl.parachainId,
+                sourceAccountHex,
+                beneficiaryAccount,
+                messageId,
+                sourceAssetMetadata,
+                amount,
+                fee,
+                claimerLocation,
+                callHex,
+            )
+        } else if (isParachainNative(fee.feeLocation, sourceParachainImpl.parachainId)) {
+            xcm = buildTransferXcmFromParachainWithNativeAssetFee(
+                parachain.registry,
+                environment,
+                ethChainId,
+                assetHubParaId,
+                sourceParachainImpl.parachainId,
+                sourceAccountHex,
+                beneficiaryAccount,
+                messageId,
+                sourceAssetMetadata,
+                amount,
+                fee,
+                claimerLocation,
+                callHex,
+            )
+        } else {
+            throw new Error(`Fee token as ${fee.feeLocation} is not supported yet.`)
+        }
+        let tx: SubmittableExtrinsic<"promise", ISubmittableResult> =
+            parachain.tx.polkadotXcm.execute(xcm, MaxWeight)
 
         return {
+            kind: "polkadot->ethereum",
             input: {
                 registry,
                 sourceAccount,
@@ -190,90 +277,48 @@ export class ERC20FromParachain implements TransferInterface {
         }
     }
 
-    async validateTransfer(context: Context, transfer: Transfer): Promise<ValidationResult> {
-        return validateTransferFromParachain(context, transfer)
-    }
-
-    async createTx(
-        context: Context,
-        parachain: ApiPromise,
-        envName: string,
-        ethChainId: number,
-        assetHubParaId: number,
-        sourceParachainId: number,
+    async build(
         sourceAccount: string,
         beneficiaryAccount: string,
-        asset: Asset,
+        tokenAddress: string,
         amount: bigint,
-        messageId: string,
-        fee: DeliveryFee,
         options?: {
-            claimerLocation?: any
-            contractCall?: ContractCall
+            fee?: {
+                padFeeByPercentage?: bigint
+                slippagePadPercentage?: bigint
+                defaultFee?: bigint
+                feeTokenLocation?: any
+                claimerLocation?: any
+                contractCall?: ContractCall
+            }
+            tx?: {
+                claimerLocation?: any
+                contractCall?: ContractCall
+            }
         },
-    ): Promise<SubmittableExtrinsic<"promise", ISubmittableResult>> {
-        let claimerLocation = options?.claimerLocation
-        let callHex: string | undefined
-        if (options?.contractCall) {
-            callHex = await buildContractCallHex(context, options.contractCall)
-        }
-        let xcm: any
-        // No swap
-        if (!fee.feeLocation) {
-            xcm = buildTransferXcmFromParachain(
-                parachain.registry,
-                envName,
-                ethChainId,
-                assetHubParaId,
-                sourceParachainId,
-                sourceAccount,
-                beneficiaryAccount,
-                messageId,
-                asset,
-                amount,
-                fee,
-                claimerLocation,
-                callHex,
-            )
-        } // One swap from DOT to Ether on Asset Hub.
-        else if (isRelaychainLocation(fee.feeLocation)) {
-            xcm = buildTransferXcmFromParachainWithDOTAsFee(
-                parachain.registry,
-                envName,
-                ethChainId,
-                assetHubParaId,
-                sourceParachainId,
-                sourceAccount,
-                beneficiaryAccount,
-                messageId,
-                asset,
-                amount,
-                fee,
-                claimerLocation,
-                callHex,
-            )
-        }
-        // If the fee asset is in native asset, we need to swap it to DOT first, then a second swap from DOT to Ether
-        else if (isParachainNative(fee.feeLocation, sourceParachainId)) {
-            xcm = buildTransferXcmFromParachainWithNativeAssetFee(
-                parachain.registry,
-                envName,
-                ethChainId,
-                assetHubParaId,
-                sourceParachainId,
-                sourceAccount,
-                beneficiaryAccount,
-                messageId,
-                asset,
-                amount,
-                fee,
-                claimerLocation,
-                callHex,
-            )
-        } else {
-            throw new Error(`Fee token as ${fee.feeLocation} is not supported yet.`)
-        }
-        console.log("xcm on source chain:", xcm.toHuman())
-        return parachain.tx.polkadotXcm.execute(xcm, MaxWeight)
+    ): Promise<ValidatedTransfer> {
+        const fee = await this.fee(tokenAddress, options?.fee)
+        const transfer = await this.tx(
+            sourceAccount,
+            beneficiaryAccount,
+            tokenAddress,
+            amount,
+            fee,
+            options?.tx,
+        )
+        return ensureValidationSuccess(await this.validate(transfer))
+    }
+
+    async validate(transfer: Transfer): Promise<ValidatedTransfer> {
+        return validateTransferFromParachain(this.context, transfer)
+    }
+
+    async signAndSend(
+        transfer: Transfer,
+        account: AddressOrPair,
+        options: Partial<SignerOptions>,
+    ): Promise<MessageReceipt> {
+        const sourceParachain = await this.context.parachain(transfer.computed.sourceParaId)
+        return signAndSendTransfer(sourceParachain, transfer, account, options)
     }
 }

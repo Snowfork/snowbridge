@@ -1,6 +1,7 @@
 import "dotenv/config"
 import { Keyring } from "@polkadot/keyring"
-import { Context, forKusama } from "@snowbridge/api"
+import { createApi } from "@snowbridge/api"
+import { EthersEthereumProvider } from "@snowbridge/provider-ethers"
 import { Direction } from "@snowbridge/api/dist/forKusama"
 import { bridgeInfoFor } from "@snowbridge/registry"
 
@@ -14,21 +15,14 @@ export const transferForKusama = async (
     if (process.env.NODE_ENV !== undefined) {
         env = process.env.NODE_ENV
     }
-    const { registry, environment: snowbridgeEnv } = bridgeInfoFor(env)
+    const info = bridgeInfoFor(env)
+    const { registry, environment: snowbridgeEnv } = info
     if (snowbridgeEnv === undefined) {
         throw Error(`Unknown environment '${env}'`)
     }
 
-    const context = new Context(snowbridgeEnv)
-
-    const [polkadotAssetHub, kusamaAssetHub] = await Promise.all([
-        context.assetHub(),
-        context.kusamaAssetHub(),
-    ])
-
-    if (!kusamaAssetHub) {
-        throw Error(`Kusama asset hub could not connect`)
-    }
+    const api = createApi({ info, ethereumProvider: new EthersEthereumProvider() })
+    const context = api.context
 
     const polkadot_keyring = new Keyring({ type: "sr25519" })
 
@@ -41,16 +35,6 @@ export const transferForKusama = async (
 
     const SOURCE_ACCOUNT_PUBLIC = SOURCE_ACCOUNT.address
     const DEST_ACCOUNT_PUBLIC = DEST_ACCOUNT.address
-
-    let sourceAssetHub
-    let destAssetHub
-    if (direction == Direction.ToPolkadot) {
-        sourceAssetHub = kusamaAssetHub
-        destAssetHub = polkadotAssetHub
-    } else {
-        sourceAssetHub = polkadotAssetHub
-        destAssetHub = kusamaAssetHub
-    }
 
     let tokenAddress
     if (tokenName == "ETH") {
@@ -81,20 +65,22 @@ export const transferForKusama = async (
 
     console.log(transferName)
     {
+        const transferImpl =
+            direction == Direction.ToPolkadot
+                ? api.sender(
+                      { kind: "kusama", id: registry.kusama!.assetHubParaId },
+                      { kind: "polkadot", id: registry.assetHubParaId },
+                  )
+                : api.sender(
+                      { kind: "polkadot", id: registry.assetHubParaId },
+                      { kind: "kusama", id: registry.kusama!.assetHubParaId },
+                  )
+
         // Step 1. Get the delivery fee for the transaction
-        const fee = await forKusama.getDeliveryFee(
-            sourceAssetHub,
-            destAssetHub,
-            direction,
-            registry,
-            tokenAddress,
-        )
+        const fee = await transferImpl.fee(tokenAddress)
 
         // Step 2. Create a transfer tx
-        const transfer = await forKusama.createTransfer(
-            sourceAssetHub,
-            direction,
-            registry,
+        const transfer = await transferImpl.tx(
             SOURCE_ACCOUNT_PUBLIC,
             DEST_ACCOUNT_PUBLIC,
             tokenAddress,
@@ -103,20 +89,16 @@ export const transferForKusama = async (
         )
 
         // Step 3. Validate
-        const validation = await forKusama.validateTransfer(
-            { sourceAssetHub, destAssetHub },
-            direction,
-            transfer,
-        )
+        const validation = await transferImpl.validate(transfer)
 
         // Step 4. Check validation logs for errors
-        if (validation.logs.find((l) => l.kind == forKusama.ValidationKind.Error)) {
+        if (!validation.success) {
             console.error("validation errors", validation.logs)
             throw Error(`validation has one of more errors.`)
         }
 
         // Step 5. Submit transaction and get receipt for tracking
-        const response = await forKusama.signAndSend(sourceAssetHub, transfer, SOURCE_ACCOUNT, {
+        const response = await transferImpl.signAndSend(transfer, SOURCE_ACCOUNT, {
             withSignedTransaction: true,
         })
         if (!response) {

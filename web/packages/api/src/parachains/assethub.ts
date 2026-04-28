@@ -1,6 +1,7 @@
 import { AssetMap, PNAMap } from "@snowbridge/base-types"
 import { ParachainBase } from "./parachainBase"
-import { DOT_LOCATION, getTokenFromLocation, ROCOCO_GENESIS, WESTEND_GENESIS } from "../xcmBuilder"
+import { getTokenFromLocation, ROCOCO_GENESIS, WESTEND_GENESIS } from "../xcmBuilder"
+import { DOT_LOCATION } from "../assets_v2"
 
 export class AssetHubParachain extends ParachainBase {
     getXC20DOT() {
@@ -288,6 +289,21 @@ function bridgeablePNAsOnAH(location: any, assetHubParaId: number, env: string):
                 x1: [
                     {
                         parachain: 2039,
+                    },
+                ],
+            },
+        }
+    } else if (
+        location.interior.x2 &&
+        location.interior.x2[0]?.globalConsensus?.polkadot !== undefined &&
+        location.interior.x2[1]?.parachain == 3388
+    ) {
+        return {
+            parents: 1,
+            interior: {
+                x1: [
+                    {
+                        parachain: 3388,
                     },
                 ],
             },

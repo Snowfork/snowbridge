@@ -1,10 +1,12 @@
-import { ApiPromise } from "@polkadot/api"
-import { AssetRegistry } from "@snowbridge/base-types"
-import { Connections, TransferInterface } from "./transferInterface"
 import {
-    IGatewayV2__factory as IGateway__factory,
-    IGatewayV2 as IGateway,
-} from "@snowbridge/contract-types"
+    AssetRegistry,
+    ChainId,
+    EthereumChain,
+    EthereumProviderTypes,
+    Parachain,
+    TransferRoute,
+} from "@snowbridge/base-types"
+import { TransferInterface } from "./transferInterface"
 import { Context } from "../../index"
 import {
     buildMessageId,
@@ -12,23 +14,26 @@ import {
     claimerFromBeneficiary,
     claimerLocationToBytes,
     DeliveryFee,
-    encodeNativeAsset,
+    messageId as getSharedMessageReceipt,
     Transfer,
     ValidationKind,
-    ValidationResult,
+    ValidatedTransfer,
 } from "../../toPolkadotSnowbridgeV2"
-import { accountId32Location, DOT_LOCATION, erc20Location, isDOT } from "../../xcmBuilder"
-import { paraImplementation } from "../../parachains"
-import { erc20Balance, ETHER_TOKEN_ADDRESS } from "../../assets_v2"
-import { beneficiaryMultiAddress, padFeeByPercentage, paraIdToSovereignAccount } from "../../utils"
-import { FeeInfo, resolveInputs, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
+import { accountId32Location, erc20Location, isDOT } from "../../xcmBuilder"
+import {
+    DOT_LOCATION,
+    ETHER_TOKEN_ADDRESS,
+    getAssetHubEtherMinBalance,
+} from "../../assets_v2"
+import { ensureValidationSuccess, padFeeByPercentage } from "../../utils"
+import { paraIdToSovereignAccount, resolveBeneficiary } from "../../crypto"
+import { FeeInfo, ValidationLog, ValidationReason } from "../../types/toPolkadot"
 import {
     buildAssetHubERC20ReceivedXcm,
     buildParachainERC20ReceivedXcmOnDestWithDOTFee,
     buildParachainERC20ReceivedXcmOnDestination,
     buildParachainERC20ReceivedXcmOnDestinationWithDOTFee,
 } from "../../xcmbuilders/toPolkadot/erc20ToParachain"
-import { AbstractProvider, Contract } from "ethers"
 import {
     sendMessageXCM,
     sendMessageXCMWithDOTDestFee,
@@ -36,36 +41,44 @@ import {
 import { getOperatingStatus } from "../../status"
 import { hexToU8a } from "@polkadot/util"
 
-export class ERC20ToParachain implements TransferInterface {
-    async getDeliveryFee(
-        context:
-            | Context
-            | {
-                  gateway: IGateway
-                  assetHub: ApiPromise
-                  bridgeHub: ApiPromise
-                  destination: ApiPromise
-              },
-        registry: AssetRegistry,
+export class ERC20ToParachain<T extends EthereumProviderTypes> implements TransferInterface<T> {
+    constructor(
+        public readonly context: Context<T>,
+        public readonly registry: AssetRegistry,
+        public readonly route: TransferRoute,
+        public readonly source: EthereumChain,
+        public readonly destination: Parachain,
+    ) {}
+
+    get from(): ChainId {
+        return this.route.from
+    }
+
+    get to(): ChainId {
+        return this.route.to
+    }
+
+    async fee(
         tokenAddress: string,
-        destinationParaId: number,
         options?: {
-            paddFeeByPercentage?: bigint
+            padFeeByPercentage?: bigint
             feeAsset?: any
             customXcm?: any[]
             overrideRelayerFee?: bigint
         },
     ): Promise<DeliveryFee> {
-        const { assetHub, bridgeHub, destination } =
-            context instanceof Context
-                ? {
-                      assetHub: await context.assetHub(),
-                      bridgeHub: await context.bridgeHub(),
-                      destination: await context.parachain(destinationParaId),
-                  }
-                : context
-
-        const { destParachain } = resolveInputs(registry, tokenAddress, destinationParaId)
+        const context = this.context
+        const registry = this.registry
+        const assetHub = await context.assetHub()
+        const bridgeHub = await context.bridgeHub()
+        const destination = await context.parachain(this.to.id)
+        const destParachain = this.destination
+        const destAssetMetadata = destParachain.assets[tokenAddress.toLowerCase()]
+        if (!destAssetMetadata) {
+            throw Error(
+                `Token ${tokenAddress} not registered on destination parachain ${destParachain.id}.`,
+            )
+        }
 
         // AssetHub fees
         let assetHubXcm = buildAssetHubERC20ReceivedXcm(
@@ -80,14 +93,14 @@ export class ERC20ToParachain implements TransferInterface {
             ),
             "0x0000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000000000000000000000000000",
-            destinationParaId,
+            this.to.id,
             1000000000000n,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
         )
-        const bridgeHubImpl = await paraImplementation(bridgeHub)
-        const assetHubImpl = await paraImplementation(assetHub)
+        const bridgeHubImpl = await this.context.paraImplementation(bridgeHub)
+        const assetHubImpl = await this.context.paraImplementation(assetHub)
         let ether = erc20Location(registry.ethChainId, ETHER_TOKEN_ADDRESS)
-        const paddFeeByPercentage = options?.paddFeeByPercentage
+        const feePadPercentage = options?.padFeeByPercentage
         const feeAsset = options?.feeAsset || ether
 
         // Delivery fee BridgeHub to AssetHub
@@ -105,8 +118,15 @@ export class ERC20ToParachain implements TransferInterface {
         )
         let assetHubExecutionFeeEther = padFeeByPercentage(
             await assetHubImpl.swapAsset1ForAsset2(DOT_LOCATION, ether, assetHubExecutionFeeDOT),
-            paddFeeByPercentage ?? 33n,
+            feePadPercentage ?? 33n,
         )
+        // For non-ether transfers, oversize executionFee by AH bridged-ether
+        // min_balance: the post-PayFees surplus then naturally lands at the
+        // recipient via RefundSurplus → DepositAsset, satisfying
+        // `Token::BelowMinimum` on a fresh asset account.
+        if (tokenAddress !== ETHER_TOKEN_ADDRESS) {
+            assetHubExecutionFeeEther += getAssetHubEtherMinBalance(registry)
+        }
 
         let destinationXcm: any
         // Destination fees
@@ -138,10 +158,10 @@ export class ERC20ToParachain implements TransferInterface {
             )
         }
 
-        const destinationImpl = await paraImplementation(destination)
+        const destinationImpl = await this.context.paraImplementation(destination)
         // Delivery fee AssetHub to Destination
         let destinationDeliveryFeeDOT = await assetHubImpl.calculateDeliveryFeeInDOT(
-            destinationParaId,
+            this.to.id,
             destinationXcm,
         )
 
@@ -167,12 +187,12 @@ export class ERC20ToParachain implements TransferInterface {
                     ether,
                     destinationExecutionFeeDOT,
                 ),
-                paddFeeByPercentage ?? 33n,
+                feePadPercentage ?? 33n,
             )
         } else if (feeAsset == ether) {
             destinationExecutionFeeEther = padFeeByPercentage(
                 await destinationImpl.calculateXcmFee(destinationXcm, ether),
-                paddFeeByPercentage ?? 33n,
+                feePadPercentage ?? 33n,
             )
         } else {
             throw Error(`Unsupported fee asset`)
@@ -191,6 +211,7 @@ export class ERC20ToParachain implements TransferInterface {
             destinationExecutionFeeEther +
             relayerFee
         return {
+            kind: "ethereum->polkadot",
             assetHubDeliveryFeeEther: deliveryFeeInEther,
             assetHubExecutionFeeEther: assetHubExecutionFeeEther,
             destinationDeliveryFeeEther: destinationDeliveryFeeEther,
@@ -204,59 +225,69 @@ export class ERC20ToParachain implements TransferInterface {
         }
     }
 
-    async createTransfer(
-        context:
-            | Context
-            | {
-                  ethereum: AbstractProvider
-                  assetHub: ApiPromise
-                  destination: ApiPromise
-              },
-        registry: AssetRegistry,
-        destinationParaId: number,
+    async tx(
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
         amount: bigint,
         fee: DeliveryFee,
         customXcm?: any[],
-    ): Promise<Transfer> {
-        const { ethereum, assetHub, destination } =
-            context instanceof Context
-                ? {
-                      ethereum: context.ethereum(),
-                      assetHub: await context.assetHub(),
-                      destination: await context.parachain(destinationParaId),
-                  }
-                : context
+    ): Promise<Transfer<T>> {
+        const context = this.context
+        const registry = this.registry
+        const ethereum = context.ethereum()
+        const assetHub = await context.assetHub()
+        const destination = await context.parachain(this.to.id)
 
         if (!destination) {
-            throw Error(`Unable to connect to destination parachain with ID ${destinationParaId}.`)
+            throw Error(`Unable to connect to destination parachain with ID ${this.to.id}.`)
         }
-        const { tokenErcMetadata, destParachain, ahAssetMetadata, destAssetMetadata } =
-            resolveInputs(registry, tokenAddress, destinationParaId)
+        const tokenErcMetadata =
+            registry.ethereumChains[`ethereum_${registry.ethChainId}`].assets[
+                tokenAddress.toLowerCase()
+            ]
+        if (!tokenErcMetadata) {
+            throw Error(
+                `No token ${tokenAddress} registered on ethereum chain ${registry.ethChainId}.`,
+            )
+        }
+        const ahAssetMetadata =
+            registry.parachains[`polkadot_${registry.assetHubParaId}`].assets[
+                tokenAddress.toLowerCase()
+            ]
+        if (!ahAssetMetadata) {
+            throw Error(`Token ${tokenAddress} not registered on asset hub.`)
+        }
+        const destParachain = this.destination
+        const destAssetMetadata = destParachain.assets[tokenAddress.toLowerCase()]
+        if (!destAssetMetadata) {
+            throw Error(
+                `Token ${tokenAddress} not registered on destination parachain ${destParachain.id}.`,
+            )
+        }
         const minimalBalance =
             ahAssetMetadata.minimumBalance > destAssetMetadata.minimumBalance
                 ? ahAssetMetadata.minimumBalance
                 : destAssetMetadata.minimumBalance
 
-        let { address: beneficiary, hexAddress: beneficiaryAddressHex } =
-            beneficiaryMultiAddress(beneficiaryAccount)
+        const { hexAddress: beneficiaryAddressHex } = resolveBeneficiary(beneficiaryAccount)
+        const beneficiary = context.ethereumProvider.beneficiaryMultiAddress(beneficiaryAddressHex)
         let value = fee.totalFeeInWei
         let inputAmount = amount
-        let assets: any = []
+        const assets: string[] = []
         if (tokenAddress === ETHER_TOKEN_ADDRESS) {
             value += amount
             inputAmount += fee.totalFeeInWei
         } else {
-            assets = [encodeNativeAsset(tokenAddress, amount)]
+            assets.push(context.ethereumProvider.encodeNativeAsset(tokenAddress, amount))
         }
-        const ifce = IGateway__factory.createInterface()
-        const con = new Contract(registry.gatewayAddress, ifce)
-
-        const accountNonce = await ethereum.getTransactionCount(sourceAccount, "pending")
+        const accountNonce = await context.ethereumProvider.getTransactionCount(
+            ethereum,
+            sourceAccount,
+            "pending",
+        )
         const topic = buildMessageId(
-            destinationParaId,
+            this.to.id,
             sourceAccount,
             tokenAddress,
             beneficiaryAddressHex,
@@ -270,7 +301,7 @@ export class ERC20ToParachain implements TransferInterface {
                 sendMessageXCMWithDOTDestFee(
                     destination.registry,
                     registry.ethChainId,
-                    destinationParaId,
+                    this.to.id,
                     tokenAddress,
                     beneficiaryAddressHex,
                     amount,
@@ -284,7 +315,7 @@ export class ERC20ToParachain implements TransferInterface {
                 sendMessageXCM(
                     destination.registry,
                     registry.ethChainId,
-                    destinationParaId,
+                    this.to.id,
                     tokenAddress,
                     beneficiaryAddressHex,
                     amount,
@@ -294,29 +325,28 @@ export class ERC20ToParachain implements TransferInterface {
                 ).toHex(),
             )
         }
-        let claimer = claimerFromBeneficiary(assetHub, beneficiaryAddressHex)
+        let claimer = claimerFromBeneficiary(assetHub, beneficiaryAddressHex, registry.environment)
 
-        const tx = await con
-            .getFunction("v2_sendMessage")
-            .populateTransaction(
-                xcm,
-                assets,
-                claimerLocationToBytes(claimer),
-                fee.assetHubExecutionFeeEther + fee.destinationDeliveryFeeEther,
-                fee.relayerFee,
-                {
-                    value,
-                    from: sourceAccount,
-                },
-            )
+        const tx = await context.ethereumProvider.gatewayV2SendMessage(
+            context.ethereum(),
+            context.environment.gatewayContract,
+            sourceAccount,
+            xcm,
+            assets,
+            claimerLocationToBytes(claimer),
+            fee.assetHubExecutionFeeEther + fee.destinationDeliveryFeeEther,
+            fee.relayerFee,
+            value,
+        )
 
         return {
+            kind: "ethereum->polkadot",
             input: {
                 registry,
                 sourceAccount,
                 beneficiaryAccount,
                 tokenAddress,
-                destinationParaId,
+                destinationParaId: this.to.id,
                 amount,
                 fee,
                 customXcm,
@@ -339,27 +369,42 @@ export class ERC20ToParachain implements TransferInterface {
         }
     }
 
-    async validateTransfer(
-        context: Context | Connections,
-        transfer: Transfer,
-    ): Promise<ValidationResult> {
+    async build(
+        sourceAccount: string,
+        beneficiaryAccount: string,
+        tokenAddress: string,
+        amount: bigint,
+        options?: {
+            fee?: {
+                padFeeByPercentage?: bigint
+                feeAsset?: any
+                customXcm?: any[]
+                overrideRelayerFee?: bigint
+            }
+            customXcm?: any[]
+        },
+    ): Promise<ValidatedTransfer<T>> {
+        const fee = await this.fee(tokenAddress, options?.fee)
+        const transfer = await this.tx(
+            sourceAccount,
+            beneficiaryAccount,
+            tokenAddress,
+            amount,
+            fee,
+            options?.customXcm,
+        )
+        return ensureValidationSuccess(await this.validate(transfer))
+    }
+
+    async validate(transfer: Transfer<T>): Promise<ValidatedTransfer<T>> {
+        const context = this.context
         const { tx } = transfer
         const { amount, sourceAccount, tokenAddress, registry, destinationParaId } = transfer.input
-        const {
-            ethereum,
-            gateway,
-            bridgeHub,
-            assetHub,
-            destination: destParachainApi,
-        } = context instanceof Context
-            ? {
-                  ethereum: context.ethereum(),
-                  gateway: context.gateway(),
-                  bridgeHub: await context.bridgeHub(),
-                  assetHub: await context.assetHub(),
-                  destination: await context.parachain(destinationParaId),
-              }
-            : context
+        const ethereum = context.ethereum()
+        const gateway = context.gateway()
+        const bridgeHub = await context.bridgeHub()
+        const assetHub = await context.assetHub()
+        const destParachainApi = await context.parachain(destinationParaId)
 
         const {
             totalValue,
@@ -379,11 +424,11 @@ export class ERC20ToParachain implements TransferInterface {
                 message: "The amount transferred is less than the minimum amount.",
             })
         }
-        const etherBalance = await ethereum.getBalance(sourceAccount)
+        const etherBalance = await context.ethereumProvider.getBalance(ethereum, sourceAccount)
 
         let tokenBalance: { balance: bigint; gatewayAllowance: bigint }
         if (tokenAddress !== ETHER_TOKEN_ADDRESS) {
-            tokenBalance = await erc20Balance(
+            tokenBalance = await context.ethereumProvider.erc20Balance(
                 ethereum,
                 tokenAddress,
                 sourceAccount,
@@ -414,8 +459,8 @@ export class ERC20ToParachain implements TransferInterface {
         let feeInfo: FeeInfo | undefined
         if (logs.length === 0) {
             const [estimatedGas, feeData] = await Promise.all([
-                ethereum.estimateGas(tx),
-                ethereum.getFeeData(),
+                context.ethereumProvider.estimateGas(ethereum, tx),
+                context.ethereumProvider.getFeeData(ethereum),
             ])
             const executionFee = (feeData.gasPrice ?? 0n) * estimatedGas
             if (executionFee === 0n) {
@@ -440,7 +485,11 @@ export class ERC20ToParachain implements TransferInterface {
                 totalTxCost,
             }
         }
-        const bridgeStatus = await getOperatingStatus({ gateway, bridgeHub })
+        const bridgeStatus = await getOperatingStatus({
+            ethereumProvider: context.ethereumProvider,
+            gateway,
+            bridgeHub,
+        })
         if (
             bridgeStatus.toPolkadot.outbound !== "Normal" ||
             bridgeStatus.toPolkadot.beacon !== "Normal"
@@ -454,7 +503,7 @@ export class ERC20ToParachain implements TransferInterface {
 
         // Check if asset can be received on asset hub (dry run)
         const ahParachain = registry.parachains[`polkadot_${registry.assetHubParaId}`]
-        const assetHubImpl = await paraImplementation(assetHub)
+        const assetHubImpl = await this.context.paraImplementation(assetHub)
         let dryRunAhSuccess, forwardedDestination, assetHubDryRunError
         if (!ahParachain.features.hasDryRunApi) {
             logs.push({
@@ -468,6 +517,8 @@ export class ERC20ToParachain implements TransferInterface {
             const assetHubFee =
                 transfer.input.fee.assetHubExecutionFeeEther +
                 transfer.input.fee.destinationDeliveryFeeEther
+            const payloadValue =
+                transfer.computed.totalValue - assetHubFee - transfer.input.fee.relayerFee
 
             let xcm
             if (isDOT(transfer.input.fee.feeAsset)) {
@@ -475,7 +526,7 @@ export class ERC20ToParachain implements TransferInterface {
                     assetHub.registry,
                     registry.ethChainId,
                     tokenAddress,
-                    transfer.computed.totalValue - assetHubFee,
+                    payloadValue,
                     assetHubFee,
                     amount,
                     claimer,
@@ -492,7 +543,7 @@ export class ERC20ToParachain implements TransferInterface {
                     assetHub.registry,
                     registry.ethChainId,
                     tokenAddress,
-                    transfer.computed.totalValue - assetHubFee,
+                    payloadValue,
                     assetHubFee,
                     amount,
                     claimer,
@@ -574,7 +625,8 @@ export class ERC20ToParachain implements TransferInterface {
                                 "Dry run on Asset Hub did not produce an XCM to be forwarded to the destination parachain.",
                         })
                     }
-                    const destParachainImpl = await paraImplementation(destParachainApi)
+                    const destParachainImpl =
+                        await this.context.paraImplementation(destParachainApi)
                     const { success: dryRunDestinationSuccess, errorMessage: destMessage } =
                         await destParachainImpl.dryRunXcm(registry.assetHubParaId, xcm[0])
                     if (!dryRunDestinationSuccess) {
@@ -599,7 +651,7 @@ export class ERC20ToParachain implements TransferInterface {
                 ((destParachain.features.hasDryRunApi && destinationParachainDryRunError) ||
                     !destParachain.features.hasDryRunApi)
             ) {
-                const destParachainImpl = await paraImplementation(destParachainApi)
+                const destParachainImpl = await this.context.paraImplementation(destParachainApi)
                 // Check if the account is created
                 const { accountMaxConsumers, accountExists } =
                     await destParachainImpl.validateAccount(
@@ -639,7 +691,11 @@ export class ERC20ToParachain implements TransferInterface {
                 assetHubDryRunError,
                 destinationParachainDryRunError,
             },
-            transfer,
+            ...transfer,
         }
+    }
+
+    async messageId(receipt: T["TransactionReceipt"]) {
+        return getSharedMessageReceipt(this.context.ethereumProvider, receipt)
     }
 }
