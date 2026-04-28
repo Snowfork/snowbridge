@@ -364,17 +364,20 @@ export const estimateEthereumExecutionFee = async <T extends EthereumProviderTyp
 
     // Calculate execution cost on ethereum including:
     // 1. the consensus update, which is the fiat-shamir submit (if accelerated) or two phase submit if not.
-    // 2. message verification, token delivery and the optional contract call.
+    // 2. message verification
+    // 3. a static dispatch margin
+    // 4. token delivery
+    // 5. and the optional contract call.
+
+    // All should leave enough margin
     const ethereumChain = registry.ethereumChains[`ethereum_${registry.ethChainId}`]
     const feeData = await context.ethereumProvider.getFeeData(ethereum)
     const gasPrice = feeData.gasPrice ?? 2_000_000_000n
-    const twoPhaseSubmitGas = ethereumChain.twoPhaseSubmitGas ?? 1_000_000n
-    const submitFiatShamirGas = options?.accelerated
-        ? (ethereumChain.submitFiatShamirGas ?? 2_200_000n)
-        : 0n
+    const twoPhaseSubmitGas = ethereumChain.twoPhaseSubmitGas ?? 1_200_000n
+    const submitFiatShamirGas = ethereumChain.submitFiatShamirGas ?? 2_200_000n
     const consensusUpdateGas = options?.accelerated ? submitFiatShamirGas : twoPhaseSubmitGas
-    const messageVerificationGas = ethereumChain.baseDeliveryGas ?? 120_000n
-    const tokenDeliveryGas = tokenErcMetadata.deliveryGas ?? 200_000n
+    const messageVerificationGas = ethereumChain.baseVerificationGas ?? 120_000n
+    const tokenDeliveryGas = tokenErcMetadata.deliveryGas ?? 150_000n
     const contractCallGas = options?.contractCall?.gas ?? 0n
     const totalGas =
         consensusUpdateGas + messageVerificationGas + tokenDeliveryGas + contractCallGas

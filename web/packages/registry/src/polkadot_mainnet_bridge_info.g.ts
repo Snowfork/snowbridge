@@ -15,8 +15,8 @@ const registry = {
             "1000": "wss://polkadot-asset-hub-rpc.polkadot.io",
             "1002": "wss://polkadot-bridge-hub-rpc.polkadot.io",
             "2000": "wss://acala-rpc-0.aca-api.network",
-            "2004": "wss://moonbeam.ibp.network",
-            "2030": "wss://bifrost-polkadot.ibp.network",
+            "2004": "wss://wss.api.moonbeam.network",
+            "2030": "wss://eu.bifrost-polkadot-rpc.liebi.com/ws",
             "2034": "wss://hydration-rpc.n.dwellir.com",
             "2043": "wss://parachain-rpc.origin-trail.network",
             "3369": "wss://polkadot-mythos-rpc.polkadot.io",
@@ -559,7 +559,7 @@ const registry = {
         },
     ],
     registry: {
-        timestamp: "2026-04-16T22:04:17.732Z",
+        timestamp: "2026-04-28T15:09:50.315Z",
         environment: "polkadot_mainnet",
         ethChainId: 1,
         gatewayAddress: "0x27ca963c279c93801941e1eb8799c23f407d68e7",
@@ -573,7 +573,7 @@ const registry = {
             accountType: "AccountId32",
             name: "Polkadot",
             specName: "polkadot",
-            specVersion: 2001001,
+            specVersion: 2002001,
         },
         bridgeHub: {
             tokenSymbols: "DOT",
@@ -583,7 +583,7 @@ const registry = {
             accountType: "AccountId32",
             name: "Polkadot BridgeHub",
             specName: "bridge-hub-polkadot",
-            specVersion: 2001001,
+            specVersion: 2002001,
         },
         ethereumChains: {
             ethereum_1: {
@@ -861,7 +861,7 @@ const registry = {
                         decimals: 9,
                         foreignId:
                             "0x3572e2b3281d738a7579848b023666ec5cb13a63a5372a6de7e74f16acfab7b8",
-                        deliveryGas: 80000n,
+                        deliveryGas: 120000n,
                     },
                     "0x92262680a8d6636bba9bffdf484c274ca2de6400": {
                         token: "0x92262680a8d6636bba9bffdf484c274ca2de6400",
@@ -874,7 +874,8 @@ const registry = {
                     },
                 },
                 key: "ethereum_1",
-                baseDeliveryGas: 120000n,
+                baseVerificationGas: 120000n,
+                baseDispatchGas: 120000n,
                 twoPhaseSubmitGas: 1000000n,
                 submitFiatShamirGas: 2200000n,
             },
@@ -1074,7 +1075,7 @@ const registry = {
                     accountType: "AccountId32",
                     name: "Polkadot Asset Hub",
                     specName: "statemint",
-                    specVersion: 2001001,
+                    specVersion: 2002001,
                 },
                 assets: {
                     "0x9d39a5de30e57443bff2a8307a4256c8797a3497": {
@@ -1899,7 +1900,7 @@ const registry = {
                         isSufficient: false,
                     },
                 },
-                estimatedExecutionFeeDOT: 57320930n,
+                estimatedExecutionFeeDOT: 59856004n,
                 estimatedDeliveryFeeDOT: 307100000n,
             },
             polkadot_2034: {
@@ -1927,7 +1928,7 @@ const registry = {
                     evmChainId: 222222,
                     name: "Hydration",
                     specName: "hydradx",
-                    specVersion: 405,
+                    specVersion: 411,
                 },
                 assets: {
                     "0x45804880de22913dafe09f4980848ece6ecbaf78": {
@@ -2083,7 +2084,7 @@ const registry = {
                         isSufficient: true,
                     },
                 },
-                estimatedExecutionFeeDOT: 1353931n,
+                estimatedExecutionFeeDOT: 2371188n,
                 estimatedDeliveryFeeDOT: 307100000n,
             },
             polkadot_2043: {
@@ -2191,7 +2192,7 @@ const registry = {
                         accountType: "AccountId32",
                         name: "Kusama Asset Hub",
                         specName: "statemine",
-                        specVersion: 2001000,
+                        specVersion: 2002000,
                     },
                     assets: {
                         "0x9d39a5de30e57443bff2a8307a4256c8797a3497": {

@@ -323,7 +323,7 @@ const registry = {
                     },
                 },
                 key: "ethereum_11155111",
-                baseDeliveryGas: 120000n,
+                baseVerificationGas: 120000n,
             },
         },
         parachains: {

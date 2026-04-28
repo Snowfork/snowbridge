@@ -40,11 +40,13 @@ export type EthereumChain = ChainId & {
   precompile?: `0x${string}`;
   xcDOT?: string;
   xcTokenMap?: XC20TokenMap;
-  // The gas cost of v2_submit excludes command execution, mainly covers the verification.
-  baseDeliveryGas?: bigint;
-  // The gas cost of the two phase submit (submitInitial + commitPrevRandao + submitFinal)
+  // Gas cost of `v2_submit`, excluding command execution; primarily covers verification.
+  baseVerificationGas?: bigint;
+  // Gas cost of `v2_submit`, including dispatch overhead such as multicall and internal command dispatch.
+  baseDispatchGas?: bigint;
+  // Gas cost of the two-phase submit flow (`submitInitial` + `commitPrevRandao` + `submitFinal`)
   twoPhaseSubmitGas?: bigint;
-  // The gas cost of submitFiatShamir
+  // Gas cost of `submitFiatShamir`
   submitFiatShamirGas?: bigint;
 };
 
