@@ -377,10 +377,15 @@ export const estimateEthereumExecutionFee = async <T extends EthereumProviderTyp
     const submitFiatShamirGas = ethereumChain.submitFiatShamirGas ?? 2_200_000n
     const consensusUpdateGas = options?.accelerated ? submitFiatShamirGas : twoPhaseSubmitGas
     const messageVerificationGas = ethereumChain.baseVerificationGas ?? 120_000n
+    const dispatchGas = ethereumChain.baseDispatchGas ?? 120_000n
     const tokenDeliveryGas = tokenErcMetadata.deliveryGas ?? 150_000n
     const contractCallGas = options?.contractCall?.gas ?? 0n
     const totalGas =
-        consensusUpdateGas + messageVerificationGas + tokenDeliveryGas + contractCallGas
+        consensusUpdateGas +
+        messageVerificationGas +
+        dispatchGas +
+        tokenDeliveryGas +
+        contractCallGas
     const ethereumExecutionFee = gasPrice * totalGas
     return ethereumExecutionFee
 }
