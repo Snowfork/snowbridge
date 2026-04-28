@@ -849,14 +849,20 @@ export async function signAndSendTransfer(
                     console.error(c.toHuman())
                     reject(c.internalError || c.dispatchError || c)
                 }
-                // We have to check for finalization here because re-orgs will produce a different messageId on Asset Hub.
-                // TODO: Change back to isInBlock when we switch to pallet-xcm.execute for Asset Hub and we can generate the messageId offchain.
-                if (c.isFinalized) {
+                // When the messageId is computed off-chain (V2 paths using polkadotXcm.execute
+                // with a SetTopic we control), re-orgs can't change it — resolve on isInBlock to
+                // avoid the ~12–24s finalization wait. The legacy AH path leaves messageId
+                // undefined and must keep waiting for finality to read the event-emitted id.
+                const resolveOnInBlock = transfer.computed.messageId !== undefined
+                if ((resolveOnInBlock && c.isInBlock) || c.isFinalized) {
+                    const blockHash = c.isInBlock
+                        ? c.status.asInBlock.toHex()
+                        : c.status.asFinalized.toHex()
                     const result = {
                         txHash: u8aToHex(c.txHash),
                         txIndex: c.txIndex || 0,
                         blockNumber: Number((c as any).blockNumber),
-                        blockHash: "",
+                        blockHash,
                         events: c.events,
                     }
                     for (const e of c.events) {
@@ -888,7 +894,6 @@ export async function signAndSendTransfer(
         }
     })
 
-    result.blockHash = u8aToHex(await sourceParachain.rpc.chain.getBlockHash(result.blockNumber))
     result.messageId = transfer.computed.messageId ?? result.messageId
 
     return result
