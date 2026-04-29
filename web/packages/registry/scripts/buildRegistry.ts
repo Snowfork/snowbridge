@@ -105,7 +105,7 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
         parachains: {
             "1000": "wss://polkadot-asset-hub-rpc.polkadot.io",
             "1002": "wss://polkadot-bridge-hub-rpc.polkadot.io",
-            "3369": "wss://polkadot-mythos-rpc.polkadot.io",
+            "3369": "wss://mythos-rpc.dmarket.com",
             "2034": "wss://hydration-rpc.n.dwellir.com",
             "2030": "wss://bifrost-polkadot.ibp.network",
             "2004": "wss://moonbeam.ibp.network",

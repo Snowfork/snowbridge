@@ -19,7 +19,7 @@ const registry = {
             "2030": "wss://bifrost-polkadot.ibp.network",
             "2034": "wss://hydration-rpc.n.dwellir.com",
             "2043": "wss://parachain-rpc.origin-trail.network",
-            "3369": "wss://polkadot-mythos-rpc.polkadot.io",
+            "3369": "wss://mythos-rpc.dmarket.com",
         },
         gatewayContract: "0x27ca963c279c93801941e1eb8799c23f407d68e7",
         beefyContract: "0x7cfc5c8b341991993080af67d940b6ad19a010e1",
