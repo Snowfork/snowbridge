@@ -63,6 +63,7 @@ export class ERC20FromAH<T extends EthereumProviderTypes> implements TransferInt
             defaultFee?: bigint
             feeTokenLocation?: any
             contractCall?: ContractCall
+            accelerated?: boolean
         },
     ): Promise<DeliveryFee> {
         const assetHub = await this.context.assetHub()
