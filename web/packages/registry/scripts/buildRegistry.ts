@@ -107,8 +107,8 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
             "1002": "wss://polkadot-bridge-hub-rpc.polkadot.io",
             "3369": "wss://mythos-rpc.dmarket.com",
             "2034": "wss://hydration-rpc.n.dwellir.com",
-            "2030": "wss://bifrost-polkadot.ibp.network",
-            "2004": "wss://moonbeam.ibp.network",
+            "2030": "wss://eu.bifrost-polkadot-rpc.liebi.com/ws",
+            "2004": "wss://wss.api.moonbeam.network",
             "2000": "wss://acala-rpc-0.aca-api.network",
             "2043": "wss://parachain-rpc.origin-trail.network",
             // TODO: Add back in jampton once we have an indexer in place.
