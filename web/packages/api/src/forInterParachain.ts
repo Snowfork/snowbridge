@@ -19,6 +19,7 @@ import {
     TransferRoute,
 } from "@snowbridge/base-types"
 import { ensureValidationSuccess, padFeeByPercentage } from "./utils"
+import { addBreakdown, computeTotals } from "./fees"
 import { resolveBeneficiary } from "./crypto"
 import { Context } from "."
 import { buildMessageId } from "./toEthereum_v2"
@@ -152,11 +153,22 @@ export class InterParachainTransfer<T extends EthereumProviderTypes>
             options?.padFeeByPercentage ?? 33n,
         )
 
+        const totalFeeInDot = deliveryFee + executionFee
+
+        const breakdown: DeliveryFee["breakdown"] = {}
+        addBreakdown(breakdown, "assetHubDelivery", { amount: deliveryFee, symbol: "DOT" })
+        addBreakdown(breakdown, "destinationExecution", { amount: executionFee, symbol: "DOT" })
+
+        const summary = [{ description: "Transfer fee", amount: totalFeeInDot, symbol: "DOT" }]
+
         return {
             kind: "polkadot->polkadot",
             deliveryFee,
             executionFee,
-            totalFeeInDot: deliveryFee + executionFee,
+            totalFeeInDot,
+            breakdown,
+            summary,
+            totals: computeTotals(summary),
         }
     }
 

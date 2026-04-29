@@ -58,6 +58,19 @@ export * as toEthereumV2 from "./types/toEthereum"
 export * as toEthereumFromEVMV2 from "./types/toEthereumEvm"
 export * as forInterParachain from "./types/forInterParachain"
 export * as forKusama from "./types/forKusama"
+export * as feeSchedule from "./feeSchedule"
+export type { VolumeFeeParams } from "./feeSchedule"
+export type {
+    FeeAsset,
+    FeeItem,
+    ToPolkadotFeeKey,
+    L2ToPolkadotFeeKey,
+    ToEthereumFeeKey,
+    InterParachainFeeKey,
+    KusamaFeeKey,
+    V1ToPolkadotFeeKey,
+} from "./types/fee"
+export { addBreakdown, computeTotals, findInBreakdown, findTotal } from "./fees"
 export * as utils from "./utils"
 export * as status from "./status"
 export * as assetsV2 from "./assets_v2"

@@ -35,6 +35,8 @@ import { buildMessageId, Transfer, ValidatedTransfer } from "../../toPolkadotSno
 import { getOperatingStatus } from "../../status"
 import { hexToU8a } from "@polkadot/util"
 import { estimateFees } from "../../across/api"
+import { VolumeFeeParams, calculateVolumeTipInWei } from "../../feeSchedule"
+import { addBreakdown, computeTotals } from "../../fees"
 
 export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInterface<T> {
     constructor(
@@ -63,8 +65,12 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             overrideRelayerFee?: bigint
             l2PadFeeByPercentage?: bigint
             fillDeadlineBuffer?: bigint
+            volumeFee?: VolumeFeeParams
         },
     ): Promise<DeliveryFee> {
+        if (options?.volumeFee && options?.overrideRelayerFee !== undefined) {
+            throw new Error("Cannot specify both volumeFee and overrideRelayerFee")
+        }
         const context = this.context
         const registry = this.registry
         const { assetHub, bridgeHub } = {
@@ -138,10 +144,17 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             deliveryFeeInEther,
         )
 
+        let volumeTip: bigint | undefined
+        let finalRelayerFee = relayerFee
+        if (options?.volumeFee) {
+            volumeTip = calculateVolumeTipInWei(options.volumeFee)
+            finalRelayerFee += volumeTip
+        }
+
         // Calculate fee with Across SDK
         let bridgeFeeInL2Token = 0n,
             swapFeeInL1Token = 0n
-        let totalFeeInWei = assetHubExecutionFeeEther + relayerFee
+        let totalFeeInWei = assetHubExecutionFeeEther + finalRelayerFee
         const acrossApiUrl = context.environment.l2Bridge?.acrossAPIUrl
         const l2FeeTokenAddress =
             context.environment.l2Bridge?.l2Chains[this.from.id]?.feeTokenAddress
@@ -161,7 +174,7 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
                 l1FeeTokenAddress,
                 this.from.id,
                 registry.ethChainId,
-                assetHubExecutionFeeEther + relayerFee + amount,
+                assetHubExecutionFeeEther + finalRelayerFee + amount,
             )
             bridgeFeeInL2Token = padFeeByPercentage(
                 bridgeFeeInL2Token,
@@ -180,7 +193,7 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             let params: QuoteExactOutputSingleParamsStruct = {
                 tokenIn: tokenAddress,
                 tokenOut: l1FeeTokenAddress,
-                amount: assetHubExecutionFeeEther + relayerFee,
+                amount: assetHubExecutionFeeEther + finalRelayerFee,
                 fee: swapFee ?? 500, // 0.05% pool fee
                 sqrtPriceLimitX96: 0, // no price limit
             }
@@ -204,19 +217,66 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             )
         }
 
+        const l2TokenMeta =
+            registry.ethereumChains?.[`ethereum_l2_${this.from.id}`]?.assets[l2TokenAddress]
+        const l2FeeTokenMeta = l2FeeTokenAddress
+            ? registry.ethereumChains?.[`ethereum_l2_${this.from.id}`]?.assets[l2FeeTokenAddress]
+            : undefined
+        const l2FeeSymbol = l2FeeTokenMeta?.symbol ?? l2FeeTokenAddress ?? "L2_FEE"
+        const l1TokenMeta = l2TokenMeta?.swapTokenAddress
+            ? registry.ethereumChains?.[`ethereum_${registry.ethChainId}`]?.assets[
+                  l2TokenMeta.swapTokenAddress.toLowerCase()
+              ]
+            : undefined
+        const l1TokenSymbol = l1TokenMeta?.symbol ?? "L1_TOKEN"
+
+        const breakdown: DeliveryFee["breakdown"] = {}
+        addBreakdown(breakdown, "assetHubDelivery", { amount: deliveryFeeInEther, symbol: "ETH" })
+        addBreakdown(breakdown, "assetHubExecution", {
+            amount: assetHubExecutionFeeEther,
+            symbol: "ETH",
+        })
+        addBreakdown(breakdown, "relayer", { amount: finalRelayerFee, symbol: "ETH" })
+        addBreakdown(breakdown, "extrinsic", { amount: extrinsicFeeDot, symbol: "DOT" })
+        addBreakdown(breakdown, "extrinsic", { amount: extrinsicFeeEther, symbol: "ETH" })
+        if (volumeTip !== undefined) {
+            addBreakdown(breakdown, "volumeTip", { amount: volumeTip, symbol: "ETH" })
+        }
+        if (bridgeFeeInL2Token > 0n) {
+            addBreakdown(breakdown, "l2Bridge", { amount: bridgeFeeInL2Token, symbol: l2FeeSymbol })
+        }
+        if (swapFeeInL1Token > 0n) {
+            addBreakdown(breakdown, "l1Swap", { amount: swapFeeInL1Token, symbol: l1TokenSymbol })
+        }
+
+        const ethBridgeFee = assetHubExecutionFeeEther + finalRelayerFee
+        const summary: DeliveryFee["summary"] = [
+            { description: "Bridge fee", amount: ethBridgeFee, symbol: "ETH" },
+        ]
+        if (bridgeFeeInL2Token > 0n) {
+            summary.push({ description: "L2 bridge fee", amount: bridgeFeeInL2Token, symbol: l2FeeSymbol })
+        }
+        if (swapFeeInL1Token > 0n) {
+            summary.push({ description: "L1 swap fee", amount: swapFeeInL1Token, symbol: l1TokenSymbol })
+        }
+
         return {
             kind: "ethereum_l2->polkadot",
             assetHubDeliveryFeeEther: deliveryFeeInEther,
             assetHubExecutionFeeEther: assetHubExecutionFeeEther,
             destinationDeliveryFeeEther: 0n,
             destinationExecutionFeeEther: 0n,
-            relayerFee: relayerFee,
+            relayerFee: finalRelayerFee,
             extrinsicFeeDot: extrinsicFeeDot,
             extrinsicFeeEther: extrinsicFeeEther,
             totalFeeInWei: totalFeeInWei,
             feeAsset: feeAsset,
             swapFeeInL1Token,
             bridgeFeeInL2Token,
+            volumeTip,
+            breakdown,
+            summary,
+            totals: computeTotals(summary),
         }
     }
 
@@ -426,6 +486,7 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
                 overrideRelayerFee?: bigint
                 l2PadFeeByPercentage?: bigint
                 fillDeadlineBuffer?: bigint
+                volumeFee?: VolumeFeeParams
             }
             tx?: {
                 customXcm?: any[]

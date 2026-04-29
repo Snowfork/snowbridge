@@ -8,6 +8,7 @@ import type {
     Parachain,
 } from "@snowbridge/base-types"
 import type { OperationStatus } from "../status"
+import type { FeeAsset, FeeItem, V1ToPolkadotFeeKey } from "./fee"
 
 export type Transfer<T extends EthereumProviderTypes> = {
     kind: "ethereum->polkadot"
@@ -72,6 +73,9 @@ export type DeliveryFee = {
     destinationDeliveryFeeDOT: bigint
     destinationExecutionFeeDOT: bigint
     totalFeeInWei: bigint
+    breakdown: { [P in V1ToPolkadotFeeKey]?: FeeAsset[] }
+    summary: FeeItem[]
+    totals: FeeAsset[]
 }
 
 export type ValidatedTransfer<T extends EthereumProviderTypes> = Transfer<T> & {

@@ -32,6 +32,8 @@ import { FeeInfo, ValidationLog, ValidationReason } from "../../types/toPolkadot
 import { buildMessageId, Transfer, ValidatedTransfer } from "../../toPolkadotSnowbridgeV2"
 import { getOperatingStatus } from "../../status"
 import { hexToU8a } from "@polkadot/util"
+import { VolumeFeeParams, calculateVolumeTipInWei } from "../../feeSchedule"
+import { addBreakdown, computeTotals } from "../../fees"
 
 export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInterface<T> {
     constructor(
@@ -57,8 +59,12 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             feeAsset?: any
             customXcm?: any[]
             overrideRelayerFee?: bigint
+            volumeFee?: VolumeFeeParams
         },
     ): Promise<DeliveryFee> {
+        if (options?.volumeFee && options?.overrideRelayerFee !== undefined) {
+            throw new Error("Cannot specify both volumeFee and overrideRelayerFee")
+        }
         const context = this.context
         const registry = this.registry
         const assetHub = await context.assetHub()
@@ -121,18 +127,47 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             deliveryFeeInEther,
         )
 
-        const totalFeeInWei = assetHubExecutionFeeEther + relayerFee
+        let volumeTip: bigint | undefined
+        let finalRelayerFee = relayerFee
+        if (options?.volumeFee) {
+            volumeTip = calculateVolumeTipInWei(options.volumeFee)
+            finalRelayerFee += volumeTip
+        }
+
+        const totalFeeInWei = assetHubExecutionFeeEther + finalRelayerFee
+
+        const breakdown: DeliveryFee["breakdown"] = {}
+        addBreakdown(breakdown, "assetHubDelivery", { amount: deliveryFeeInEther, symbol: "ETH" })
+        addBreakdown(breakdown, "assetHubExecution", {
+            amount: assetHubExecutionFeeEther,
+            symbol: "ETH",
+        })
+        addBreakdown(breakdown, "relayer", { amount: finalRelayerFee, symbol: "ETH" })
+        addBreakdown(breakdown, "extrinsic", { amount: extrinsicFeeDot, symbol: "DOT" })
+        addBreakdown(breakdown, "extrinsic", { amount: extrinsicFeeEther, symbol: "ETH" })
+        if (volumeTip !== undefined) {
+            addBreakdown(breakdown, "volumeTip", { amount: volumeTip, symbol: "ETH" })
+        }
+
+        const summary = [
+            { description: "Bridge fee", amount: totalFeeInWei, symbol: "ETH" },
+        ]
+
         return {
             kind: "ethereum->polkadot",
             assetHubDeliveryFeeEther: deliveryFeeInEther,
             assetHubExecutionFeeEther: assetHubExecutionFeeEther,
             destinationDeliveryFeeEther: 0n,
             destinationExecutionFeeEther: 0n,
-            relayerFee: relayerFee,
+            relayerFee: finalRelayerFee,
             extrinsicFeeDot: extrinsicFeeDot,
             extrinsicFeeEther: extrinsicFeeEther,
             totalFeeInWei: totalFeeInWei,
             feeAsset: feeAsset,
+            volumeTip,
+            breakdown,
+            summary,
+            totals: computeTotals(summary),
         }
     }
 
@@ -272,6 +307,7 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
                 feeAsset?: any
                 customXcm?: any[]
                 overrideRelayerFee?: bigint
+                volumeFee?: VolumeFeeParams
             }
             customXcm?: any[]
         },

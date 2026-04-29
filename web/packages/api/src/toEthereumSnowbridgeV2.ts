@@ -30,6 +30,8 @@ import { ensureValidationSuccess, padFeeByPercentage } from "./utils"
 import { Context } from "./index"
 import { DOT_LOCATION, ETHER_TOKEN_ADDRESS, findL2TokenAddress } from "./assets_v2"
 import { getOperatingStatus } from "./status"
+import { calculateVolumeTipInWei } from "./feeSchedule"
+import { addBreakdown, computeTotals } from "./fees"
 import { estimateFees } from "./across/api"
 import type { MessageReceipt, Transfer, ValidatedTransfer, ValidationLog } from "./types/toEthereum"
 import { ValidationKind, ValidationReason } from "./types/toEthereum"
@@ -114,6 +116,7 @@ export class TransferToEthereum<T extends EthereumProviderTypes> implements Tran
             feeTokenLocation?: any
             claimerLocation?: any
             contractCall?: ContractCall
+            volumeFee?: import("./feeSchedule").VolumeFeeParams
         },
     ): Promise<DeliveryFee> {
         return this.#resolveByTokenAddress(tokenAddress).fee(tokenAddress, options)
@@ -153,6 +156,7 @@ export class TransferToEthereum<T extends EthereumProviderTypes> implements Tran
                 feeTokenLocation?: any
                 claimerLocation?: any
                 contractCall?: ContractCall
+                volumeFee?: import("./feeSchedule").VolumeFeeParams
             }
             tx?: {
                 claimerLocation?: any
@@ -212,6 +216,7 @@ export async function dryRunOnSourceParachain(
     let assetHubForwarded
     let bridgeHubForwarded
     const success = result.isOk && result.asOk.executionResult.isOk
+    console.log('HEREEEREREREEE')
     if (!success) {
         console.error(
             "Error during dry run on source parachain:",
@@ -386,6 +391,7 @@ export const estimateFeesFromAssetHub = async <T extends EthereumProviderTypes>(
         l2PadFeeByPercentage?: bigint
         l2TransferGasLimit?: bigint
         fillDeadlineBuffer?: bigint
+        volumeFee?: import("./feeSchedule").VolumeFeeParams
     },
     l2ChainId?: number,
     tokenAmount?: bigint,
@@ -454,6 +460,12 @@ export const estimateFeesFromAssetHub = async <T extends EthereumProviderTypes>(
         feePadPercentage,
     )
 
+    let volumeTip: bigint | undefined
+    if (options?.volumeFee) {
+        volumeTip = calculateVolumeTipInWei(options.volumeFee)
+        ethereumExecutionFee += volumeTip
+    }
+
     // calculate the cost of swapping in native asset
     let totalFeeInNative: bigint | undefined = undefined
     let assetHubExecutionFeeNative: bigint | undefined = undefined
@@ -476,6 +488,43 @@ export const estimateFeesFromAssetHub = async <T extends EthereumProviderTypes>(
         }
     }
 
+    const breakdown: DeliveryFee["breakdown"] = {}
+    addBreakdown(breakdown, "localExecution", { amount: localExecutionFeeDOT, symbol: "DOT" })
+    addBreakdown(breakdown, "snowbridgeDelivery", {
+        amount: snowbridgeDeliveryFeeDOT,
+        symbol: "DOT",
+    })
+    addBreakdown(breakdown, "assetHubExecution", { amount: assetHubExecutionFeeDOT, symbol: "DOT" })
+    addBreakdown(breakdown, "bridgeHubDelivery", { amount: bridgeHubDeliveryFeeDOT, symbol: "DOT" })
+    addBreakdown(breakdown, "returnToSenderDelivery", {
+        amount: returnToSenderDeliveryFeeDOT,
+        symbol: "DOT",
+    })
+    addBreakdown(breakdown, "returnToSenderExecution", {
+        amount: returnToSenderExecutionFeeDOT,
+        symbol: "DOT",
+    })
+    addBreakdown(breakdown, "ethereumExecution", { amount: ethereumExecutionFee ?? 0n, symbol: "ETH" })
+    if (volumeTip !== undefined) {
+        addBreakdown(breakdown, "volumeTip", { amount: volumeTip, symbol: "ETH" })
+    }
+    if (ethereumExecutionFeeInNative !== undefined && feeLocation) {
+        addBreakdown(breakdown, "ethereumExecution", {
+            amount: ethereumExecutionFeeInNative,
+            symbol: "NATIVE",
+        })
+    }
+    if (l2BridgeFeeInL1Token > 0n) {
+        addBreakdown(breakdown, "l2Bridge", { amount: l2BridgeFeeInL1Token, symbol: "ETH" })
+    }
+
+    const summary: DeliveryFee["summary"] = feeLocation
+        ? [{ description: "Bridge fee", amount: totalFeeInNative!, symbol: "NATIVE" }]
+        : [{ description: "Bridge fee", amount: totalFeeInDot, symbol: "DOT" }]
+    if (l2BridgeFeeInL1Token > 0n) {
+        summary.push({ description: "L2 bridge fee", amount: l2BridgeFeeInL1Token, symbol: "ETH" })
+    }
+
     return {
         kind: l2ChainId ? "polkadot->ethereum_l2" : "polkadot->ethereum",
         localExecutionFeeDOT,
@@ -493,6 +542,10 @@ export const estimateFeesFromAssetHub = async <T extends EthereumProviderTypes>(
         localExecutionFeeInNative,
         totalFeeInNative,
         l2BridgeFeeInL1Token,
+        volumeTip,
+        breakdown,
+        summary,
+        totals: computeTotals(summary),
     }
 }
 
@@ -508,6 +561,7 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
         defaultFee?: bigint
         feeTokenLocation?: any
         contractCall?: ContractCall
+        volumeFee?: import("./feeSchedule").VolumeFeeParams
     },
 ): Promise<DeliveryFee> => {
     const sourceParachain = registry.parachains[`polkadot_${sourceParaId}`]
@@ -585,6 +639,12 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
         options,
     )
 
+    let volumeTip: bigint | undefined
+    if (options?.volumeFee) {
+        volumeTip = calculateVolumeTipInWei(options.volumeFee)
+        ethereumExecutionFee += volumeTip
+    }
+
     // calculate the cost of swapping in native asset
     let totalFeeInNative: bigint | undefined = undefined
     let assetHubExecutionFeeNative: bigint | undefined = undefined
@@ -631,6 +691,42 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
         }
     }
 
+    const breakdown: DeliveryFee["breakdown"] = {}
+    addBreakdown(breakdown, "localExecution", { amount: localExecutionFeeDOT, symbol: "DOT" })
+    addBreakdown(breakdown, "localDelivery", { amount: localDeliveryFeeDOT, symbol: "DOT" })
+    addBreakdown(breakdown, "snowbridgeDelivery", {
+        amount: snowbridgeDeliveryFeeDOT,
+        symbol: "DOT",
+    })
+    addBreakdown(breakdown, "assetHubExecution", { amount: assetHubExecutionFeeDOT, symbol: "DOT" })
+    addBreakdown(breakdown, "bridgeHubDelivery", { amount: bridgeHubDeliveryFeeDOT, symbol: "DOT" })
+    addBreakdown(breakdown, "ethereumExecution", { amount: ethereumExecutionFee, symbol: "ETH" })
+    if (volumeTip !== undefined) {
+        addBreakdown(breakdown, "volumeTip", { amount: volumeTip, symbol: "ETH" })
+    }
+    if (localExecutionFeeInNative !== undefined) {
+        addBreakdown(breakdown, "localExecution", {
+            amount: localExecutionFeeInNative,
+            symbol: "NATIVE",
+        })
+    }
+    if (localDeliveryFeeInNative !== undefined) {
+        addBreakdown(breakdown, "localDelivery", {
+            amount: localDeliveryFeeInNative,
+            symbol: "NATIVE",
+        })
+    }
+    if (ethereumExecutionFeeInNative !== undefined) {
+        addBreakdown(breakdown, "ethereumExecution", {
+            amount: ethereumExecutionFeeInNative,
+            symbol: "NATIVE",
+        })
+    }
+
+    const summary: DeliveryFee["summary"] = feeLocation
+        ? [{ description: "Bridge fee", amount: totalFeeInNative!, symbol: "NATIVE" }]
+        : [{ description: "Bridge fee", amount: totalFeeInDot, symbol: "DOT" }]
+
     return {
         kind: "polkadot->ethereum",
         localExecutionFeeDOT,
@@ -649,6 +745,10 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
         localExecutionFeeInNative,
         localDeliveryFeeInNative,
         totalFeeInNative,
+        volumeTip,
+        breakdown,
+        summary,
+        totals: computeTotals(summary),
     }
 }
 
@@ -1058,6 +1158,9 @@ export const mockDeliveryFee: DeliveryFee = {
     returnToSenderExecutionFeeDOT: 0n,
     totalFeeInDot: 10n,
     ethereumExecutionFee: 1n,
+    breakdown: {},
+    summary: [{ description: "Bridge fee", amount: 10n, symbol: "DOT" }],
+    totals: [{ amount: 10n, symbol: "DOT" }],
 }
 
 // Agent creation exports
