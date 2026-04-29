@@ -20,11 +20,7 @@ import {
     ValidatedTransfer,
 } from "../../toPolkadotSnowbridgeV2"
 import { accountId32Location, erc20Location } from "../../xcmBuilder"
-import {
-    DOT_LOCATION,
-    ETHER_TOKEN_ADDRESS,
-    getAssetHubEtherMinBalance,
-} from "../../assets_v2"
+import { DOT_LOCATION, ETHER_TOKEN_ADDRESS, getAssetHubEtherMinBalance } from "../../assets_v2"
 import { ensureValidationSuccess, padFeeByPercentage } from "../../utils"
 import { resolveBeneficiary } from "../../crypto"
 import { FeeInfo, ValidationLog, ValidationReason } from "../../types/toPolkadot"
@@ -32,7 +28,7 @@ import { buildAssetHubPNAReceivedXcm, sendMessageXCM } from "../../xcmbuilders/t
 import { getOperatingStatus } from "../../status"
 import { hexToU8a } from "@polkadot/util"
 import { VolumeFeeParams, calculateVolumeTipInWei } from "../../feeSchedule"
-import { addBreakdown, computeTotals } from "../../fees"
+import { addBreakdown, computeTotals, findInBreakdown, findTotal } from "../../fees"
 
 export class PNAToAH<T extends EthereumProviderTypes> implements TransferInterface<T> {
     constructor(
@@ -158,22 +154,11 @@ export class PNAToAH<T extends EthereumProviderTypes> implements TransferInterfa
             addBreakdown(breakdown, "volumeTip", { amount: volumeTip, symbol: "ETH" })
         }
 
-        const summary = [
-            { description: "Bridge fee", amount: totalFeeInWei, symbol: "ETH" },
-        ]
+        const summary = [{ description: "Bridge fee", amount: totalFeeInWei, symbol: "ETH" }]
 
         return {
             kind: "ethereum->polkadot",
-            assetHubDeliveryFeeEther: deliveryFeeInEther,
-            assetHubExecutionFeeEther: assetHubExecutionFeeEther,
-            destinationDeliveryFeeEther: 0n,
-            destinationExecutionFeeEther: 0n,
-            relayerFee: finalRelayerFee,
-            extrinsicFeeDot: extrinsicFeeDot,
-            extrinsicFeeEther: extrinsicFeeEther,
-            totalFeeInWei: totalFeeInWei,
-            feeAsset: feeAsset,
-            volumeTip,
+            feeAsset,
             breakdown,
             summary,
             totals: computeTotals(summary),
@@ -223,7 +208,7 @@ export class PNAToAH<T extends EthereumProviderTypes> implements TransferInterfa
 
         const { hexAddress: beneficiaryAddressHex } = resolveBeneficiary(beneficiaryAccount)
         const beneficiary = context.ethereumProvider.beneficiaryMultiAddress(beneficiaryAddressHex)
-        let value = fee.assetHubExecutionFeeEther + fee.assetHubDeliveryFeeEther + fee.relayerFee
+        let value = findTotal(fee, "ETH")
 
         if (!ahAssetMetadata.foreignId) {
             throw Error("asset foreign ID not set in metadata")
@@ -262,8 +247,8 @@ export class PNAToAH<T extends EthereumProviderTypes> implements TransferInterfa
             xcm,
             assets,
             claimerLocationToBytes(claimer),
-            fee.assetHubExecutionFeeEther,
-            fee.relayerFee,
+            findInBreakdown(fee.breakdown, "assetHubExecution", "ETH"),
+            findInBreakdown(fee.breakdown, "relayer", "ETH"),
             value,
         )
 
@@ -435,9 +420,13 @@ export class PNAToAH<T extends EthereumProviderTypes> implements TransferInterfa
                     "Asset Hub does not support dry running of XCM. Transaction success cannot be confirmed.",
             })
         } else {
-            const executionFee = transfer.input.fee.assetHubExecutionFeeEther
-            const payloadValue =
-                transfer.computed.totalValue - executionFee - transfer.input.fee.relayerFee
+            const executionFee = findInBreakdown(
+                transfer.input.fee.breakdown,
+                "assetHubExecution",
+                "ETH",
+            )
+            const relayerFee = findInBreakdown(transfer.input.fee.breakdown, "relayer", "ETH")
+            const payloadValue = transfer.computed.totalValue - executionFee - relayerFee
             const xcm = buildAssetHubPNAReceivedXcm(
                 assetHub.registry,
                 registry.ethChainId,

@@ -19,7 +19,7 @@ import {
     TransferRoute,
 } from "@snowbridge/base-types"
 import { ensureValidationSuccess, padFeeByPercentage } from "./utils"
-import { addBreakdown, computeTotals } from "./fees"
+import { addBreakdown, computeTotals, findTotal } from "./fees"
 import { resolveBeneficiary } from "./crypto"
 import { Context } from "."
 import { buildMessageId } from "./toEthereum_v2"
@@ -163,9 +163,6 @@ export class InterParachainTransfer<T extends EthereumProviderTypes>
 
         return {
             kind: "polkadot->polkadot",
-            deliveryFee,
-            executionFee,
-            totalFeeInDot,
             breakdown,
             summary,
             totals: computeTotals(summary),
@@ -209,7 +206,7 @@ export class InterParachainTransfer<T extends EthereumProviderTypes>
             beneficiaryAccount,
             messageId,
             amount,
-            fee.totalFeeInDot,
+            findTotal(fee, "DOT"),
             source.parachainId === this.info.registry.assetHubParaId
                 ? "LocalReserve"
                 : "DestinationReserve",

@@ -35,7 +35,7 @@ import {
 import { CallDryRunEffects, XcmDryRunApiError, XcmDryRunEffects } from "@polkadot/types/interfaces"
 import { Result } from "@polkadot/types"
 import { ensureValidationSuccess, padFeeByPercentage, u32ToLeBytes } from "./utils"
-import { addBreakdown, computeTotals } from "./fees"
+import { addBreakdown, computeTotals, findInBreakdown, findTotal } from "./fees"
 import { resolveBeneficiary } from "./crypto"
 import { TransferInterface as KusamaTransferInterface } from "./transfers/forKusama/transferInterface"
 import { Context } from "."
@@ -282,10 +282,6 @@ export class KusamaTransfer<T extends EthereumProviderTypes> implements KusamaTr
 
         return {
             kind: this.from.kind === "kusama" ? "kusama->polkadot" : "polkadot->kusama",
-            xcmBridgeFee: totalXcmBridgeFee,
-            destinationFee,
-            bridgeHubDeliveryFee,
-            totalFeeInNative: totalFee,
             breakdown,
             summary,
             totals: computeTotals(summary),
@@ -345,7 +341,7 @@ export class KusamaTransfer<T extends EthereumProviderTypes> implements KusamaTr
                 tokenLocationOnSource,
                 beneficiaryAddressHex,
                 amount,
-                fee.destinationFee,
+                findInBreakdown(fee.breakdown, "destinationExecution", fee.kind === "kusama->polkadot" ? "KSM" : "DOT"),
                 messageId,
             )
         } else {
@@ -355,7 +351,7 @@ export class KusamaTransfer<T extends EthereumProviderTypes> implements KusamaTr
                 tokenLocationOnSource,
                 beneficiaryAddressHex,
                 amount,
-                fee.destinationFee,
+                findInBreakdown(fee.breakdown, "destinationExecution", fee.kind === "kusama->polkadot" ? "KSM" : "DOT"),
                 messageId,
             )
         }
@@ -458,7 +454,7 @@ export class KusamaTransfer<T extends EthereumProviderTypes> implements KusamaTr
         const paymentInfo = await tx.paymentInfo(sourceAccountHex)
         const sourceExecutionFee = paymentInfo["partialFee"].toBigInt()
 
-        if (sourceExecutionFee + fee.totalFeeInNative > nativeBalance) {
+        if (sourceExecutionFee + findTotal(fee, fee.kind === "kusama->polkadot" ? "KSM" : "DOT") > nativeBalance) {
             logs.push({
                 kind: ValidationKind.Error,
                 reason: ValidationReason.InsufficientFee,
@@ -473,7 +469,7 @@ export class KusamaTransfer<T extends EthereumProviderTypes> implements KusamaTr
         if (this.#direction() == Direction.ToPolkadot) {
             destAssetHubXCM = buildKusamaToPolkadotDestAssetHubXCM(
                 destAssetHub.registry,
-                fee.destinationFee,
+                findInBreakdown(fee.breakdown, "destinationExecution", fee.kind === "kusama->polkadot" ? "KSM" : "DOT"),
                 registry.assetHubParaId,
                 tokenLocation,
                 transfer.input.amount,
@@ -483,7 +479,7 @@ export class KusamaTransfer<T extends EthereumProviderTypes> implements KusamaTr
         } else {
             destAssetHubXCM = buildPolkadotToKusamaDestAssetHubXCM(
                 destAssetHub.registry,
-                fee.destinationFee,
+                findInBreakdown(fee.breakdown, "destinationExecution", fee.kind === "kusama->polkadot" ? "KSM" : "DOT"),
                 registry.assetHubParaId,
                 tokenLocation,
                 transfer.input.amount,

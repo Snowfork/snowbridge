@@ -1,5 +1,5 @@
 import { ensureValidationSuccess, padFeeByPercentage } from "./utils"
-import { addBreakdown, computeTotals } from "./fees"
+import { addBreakdown, computeTotals, findInBreakdownOrZero, findTotal } from "./fees"
 import { resolveBeneficiary } from "./crypto"
 import { DOT_LOCATION, ETHER_TOKEN_ADDRESS } from "./assets_v2"
 import {
@@ -40,49 +40,49 @@ import { ValidationKind, ValidationReason } from "./types/toPolkadot"
 import type { ValidationLog } from "./types/toPolkadot"
 
 function toV2DeliveryFee(fee: DeliveryFee): ToPolkadotV2DeliveryFee {
+    const breakdown: ToPolkadotV2DeliveryFee["breakdown"] = {}
+    addBreakdown(breakdown, "destinationDelivery", {
+        amount: fee.destinationDeliveryFeeDOT,
+        symbol: "DOT",
+    })
+    addBreakdown(breakdown, "destinationExecution", {
+        amount: fee.destinationExecutionFeeDOT,
+        symbol: "DOT",
+    })
+    const summary = [{ description: "Bridge fee", amount: fee.totalFeeInWei, symbol: "ETH" }]
     return {
-        ...fee,
+        kind: "ethereum->polkadot",
         feeAsset: null,
-        assetHubDeliveryFeeEther: 0n,
-        assetHubExecutionFeeEther: 0n,
-        destinationDeliveryFeeEther: 0n,
-        destinationExecutionFeeEther: 0n,
-        destinationExecutionFeeDOT: fee.destinationExecutionFeeDOT,
-        relayerFee: 0n,
-        extrinsicFeeDot: 0n,
-        extrinsicFeeEther: 0n,
+        breakdown,
+        summary,
+        totals: computeTotals(summary),
     }
 }
 
 function toV1DeliveryFee(fee: ToPolkadotV2DeliveryFee): DeliveryFee {
-    const v1Fee = fee as unknown as {
-        destinationDeliveryFeeDOT?: bigint
-        destinationExecutionFeeDOT?: bigint
-        totalFeeInWei?: bigint
-        breakdown?: DeliveryFee["breakdown"]
-        summary?: DeliveryFee["summary"]
-        totals?: DeliveryFee["totals"]
-    }
-    if (
-        typeof v1Fee.destinationDeliveryFeeDOT !== "bigint" ||
-        typeof v1Fee.destinationExecutionFeeDOT !== "bigint" ||
-        typeof v1Fee.totalFeeInWei !== "bigint"
-    ) {
-        throw new Error(
-            "Unsupported fee object for v1 toPolkadot adapter. Expected destinationDeliveryFeeDOT, destinationExecutionFeeDOT, and totalFeeInWei.",
-        )
-    }
-    const summary = v1Fee.summary ?? [
-        { description: "Bridge fee", amount: v1Fee.totalFeeInWei, symbol: "ETH" },
-    ]
+    const destinationDeliveryFeeDOT = findInBreakdownOrZero(
+        fee.breakdown,
+        "destinationDelivery",
+        "DOT",
+    )
+    const destinationExecutionFeeDOT = findInBreakdownOrZero(
+        fee.breakdown,
+        "destinationExecution",
+        "DOT",
+    )
+    const totalFeeInWei = findTotal(fee, "ETH")
+    const breakdown: DeliveryFee["breakdown"] = {}
+    addBreakdown(breakdown, "destinationDelivery", { amount: destinationDeliveryFeeDOT, symbol: "DOT" })
+    addBreakdown(breakdown, "destinationExecution", { amount: destinationExecutionFeeDOT, symbol: "DOT" })
+    const summary = [{ description: "Bridge fee", amount: totalFeeInWei, symbol: "ETH" }]
     return {
         kind: "ethereum->polkadot",
-        destinationDeliveryFeeDOT: v1Fee.destinationDeliveryFeeDOT,
-        destinationExecutionFeeDOT: v1Fee.destinationExecutionFeeDOT,
-        totalFeeInWei: v1Fee.totalFeeInWei,
-        breakdown: v1Fee.breakdown ?? {},
+        destinationDeliveryFeeDOT,
+        destinationExecutionFeeDOT,
+        totalFeeInWei,
+        breakdown,
         summary,
-        totals: v1Fee.totals ?? computeTotals(summary),
+        totals: computeTotals(summary),
     }
 }
 

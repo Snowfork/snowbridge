@@ -24,11 +24,29 @@ export function findInBreakdown<K extends string>(
     key: K,
     symbol: string,
 ): bigint {
+    const entries = ((breakdown as Record<string, FeeAsset[]>)[key] ?? []).filter(
+        (a) => a.symbol === symbol,
+    )
+    if (entries.length === 0) {
+        throw new Error(`Fee breakdown missing entry: key="${key}" symbol="${symbol}"`)
+    }
+    return entries.reduce((acc, a) => acc + a.amount, 0n)
+}
+
+export function findInBreakdownOrZero<K extends string>(
+    breakdown: DeliveryFee<K>["breakdown"],
+    key: K,
+    symbol: string,
+): bigint {
     return ((breakdown as Record<string, FeeAsset[]>)[key] ?? [])
         .filter((a) => a.symbol === symbol)
         .reduce((acc, a) => acc + a.amount, 0n)
 }
 
 export function findTotal<K extends string>(fee: DeliveryFee<K>, symbol: string): bigint {
-    return fee.totals.find((t) => t.symbol === symbol)?.amount ?? 0n
+    const total = fee.totals.find((t) => t.symbol === symbol)
+    if (total === undefined) {
+        throw new Error(`Fee totals missing symbol: "${symbol}"`)
+    }
+    return total.amount
 }

@@ -20,11 +20,7 @@ import {
     ValidatedTransfer,
 } from "../../toPolkadotSnowbridgeV2"
 import { accountId32Location, erc20Location, isDOT } from "../../xcmBuilder"
-import {
-    DOT_LOCATION,
-    ETHER_TOKEN_ADDRESS,
-    getAssetHubEtherMinBalance,
-} from "../../assets_v2"
+import { DOT_LOCATION, ETHER_TOKEN_ADDRESS, getAssetHubEtherMinBalance } from "../../assets_v2"
 import { ensureValidationSuccess, padFeeByPercentage } from "../../utils"
 import { paraIdToSovereignAccount, resolveBeneficiary } from "../../crypto"
 import { FeeInfo, ValidationLog, ValidationReason } from "../../types/toPolkadot"
@@ -41,7 +37,13 @@ import {
 import { getOperatingStatus } from "../../status"
 import { hexToU8a } from "@polkadot/util"
 import { VolumeFeeParams, calculateVolumeTipInWei } from "../../feeSchedule"
-import { addBreakdown, computeTotals } from "../../fees"
+import {
+    addBreakdown,
+    computeTotals,
+    findInBreakdown,
+    findInBreakdownOrZero,
+    findTotal,
+} from "../../fees"
 
 export class ERC20ToParachain<T extends EthereumProviderTypes> implements TransferInterface<T> {
     constructor(
@@ -251,23 +253,11 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
             addBreakdown(breakdown, "volumeTip", { amount: volumeTip, symbol: "ETH" })
         }
 
-        const summary = [
-            { description: "Bridge fee", amount: totalFeeInWei, symbol: "ETH" },
-        ]
+        const summary = [{ description: "Bridge fee", amount: totalFeeInWei, symbol: "ETH" }]
 
         return {
             kind: "ethereum->polkadot",
-            assetHubDeliveryFeeEther: deliveryFeeInEther,
-            assetHubExecutionFeeEther: assetHubExecutionFeeEther,
-            destinationDeliveryFeeEther: destinationDeliveryFeeEther,
-            destinationExecutionFeeEther: destinationExecutionFeeEther,
-            destinationExecutionFeeDOT: destinationExecutionFeeDOT,
-            relayerFee: finalRelayerFee,
-            extrinsicFeeDot: extrinsicFeeDot,
-            extrinsicFeeEther: extrinsicFeeEther,
-            totalFeeInWei: totalFeeInWei,
-            feeAsset: feeAsset,
-            volumeTip,
+            feeAsset,
             breakdown,
             summary,
             totals: computeTotals(summary),
@@ -321,12 +311,13 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
 
         const { hexAddress: beneficiaryAddressHex } = resolveBeneficiary(beneficiaryAccount)
         const beneficiary = context.ethereumProvider.beneficiaryMultiAddress(beneficiaryAddressHex)
-        let value = fee.totalFeeInWei
+        const totalFeeInWei = findTotal(fee, "ETH")
+        let value = totalFeeInWei
         let inputAmount = amount
         const assets: string[] = []
         if (tokenAddress === ETHER_TOKEN_ADDRESS) {
             value += amount
-            inputAmount += fee.totalFeeInWei
+            inputAmount += totalFeeInWei
         } else {
             assets.push(context.ethereumProvider.encodeNativeAsset(tokenAddress, amount))
         }
@@ -344,6 +335,12 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
             accountNonce,
         )
 
+        const destExecutionFeeEther = findInBreakdown(fee.breakdown, "destinationExecution", "ETH")
+        const destExecutionFeeDOT = findInBreakdownOrZero(
+            fee.breakdown,
+            "destinationExecution",
+            "DOT",
+        )
         let xcm
         if (isDOT(fee.feeAsset)) {
             xcm = hexToU8a(
@@ -354,8 +351,8 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
                     tokenAddress,
                     beneficiaryAddressHex,
                     amount,
-                    fee.destinationExecutionFeeEther ?? 0n,
-                    fee.destinationExecutionFeeDOT ?? 0n,
+                    destExecutionFeeEther,
+                    destExecutionFeeDOT,
                     topic,
                 ).toHex(),
             )
@@ -368,7 +365,7 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
                     tokenAddress,
                     beneficiaryAddressHex,
                     amount,
-                    fee.destinationExecutionFeeEther ?? 0n,
+                    destExecutionFeeEther,
                     topic,
                     customXcm,
                 ).toHex(),
@@ -383,8 +380,9 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
             xcm,
             assets,
             claimerLocationToBytes(claimer),
-            fee.assetHubExecutionFeeEther + fee.destinationDeliveryFeeEther,
-            fee.relayerFee,
+            findInBreakdown(fee.breakdown, "assetHubExecution", "ETH") +
+                findInBreakdown(fee.breakdown, "destinationDelivery", "ETH"),
+            findInBreakdown(fee.breakdown, "relayer", "ETH"),
             value,
         )
 
@@ -564,14 +562,15 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
             })
         } else {
             // build asset hub packet and dryRun
+            const inputFee = transfer.input.fee
             const assetHubFee =
-                transfer.input.fee.assetHubExecutionFeeEther +
-                transfer.input.fee.destinationDeliveryFeeEther
-            const payloadValue =
-                transfer.computed.totalValue - assetHubFee - transfer.input.fee.relayerFee
+                findInBreakdown(inputFee.breakdown, "assetHubExecution", "ETH") +
+                findInBreakdown(inputFee.breakdown, "destinationDelivery", "ETH")
+            const relayerFee = findInBreakdown(inputFee.breakdown, "relayer", "ETH")
+            const payloadValue = transfer.computed.totalValue - assetHubFee - relayerFee
 
             let xcm
-            if (isDOT(transfer.input.fee.feeAsset)) {
+            if (isDOT(inputFee.feeAsset)) {
                 xcm = buildParachainERC20ReceivedXcmOnDestWithDOTFee(
                     assetHub.registry,
                     registry.ethChainId,
@@ -583,8 +582,8 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
                     transfer.input.sourceAccount,
                     transfer.computed.beneficiaryAddressHex,
                     destinationParaId,
-                    transfer.input.fee.destinationExecutionFeeEther ?? 0n,
-                    transfer.input.fee.destinationExecutionFeeDOT ?? 0n,
+                    findInBreakdown(inputFee.breakdown, "destinationExecution", "ETH"),
+                    findInBreakdownOrZero(inputFee.breakdown, "destinationExecution", "DOT"),
                     "0x0000000000000000000000000000000000000000000000000000000000000000",
                     transfer.input.customXcm,
                 )
@@ -600,7 +599,7 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
                     transfer.input.sourceAccount,
                     transfer.computed.beneficiaryAddressHex,
                     destinationParaId,
-                    transfer.input.fee.destinationExecutionFeeEther ?? 0n,
+                    findInBreakdown(inputFee.breakdown, "destinationExecution", "ETH"),
                     "0x0000000000000000000000000000000000000000000000000000000000000000",
                     transfer.input.customXcm,
                 )

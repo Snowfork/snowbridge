@@ -28,10 +28,6 @@ export type Transfer = {
 
 export type DeliveryFee = {
     kind: "kusama->polkadot" | "polkadot->kusama"
-    xcmBridgeFee: bigint
-    bridgeHubDeliveryFee: bigint
-    destinationFee: bigint
-    totalFeeInNative: bigint
     breakdown: { [P in KusamaFeeKey]?: FeeAsset[] }
     summary: FeeItem[]
     totals: FeeAsset[]

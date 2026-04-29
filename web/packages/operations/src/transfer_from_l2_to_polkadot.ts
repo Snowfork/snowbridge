@@ -6,6 +6,7 @@ import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { formatEther, Wallet } from "ethers"
 import { bridgeInfoFor } from "@snowbridge/registry"
 import { IERC20__factory } from "@snowbridge/contract-types"
+import { findFeeBreakdownTotal, findFeeTotal } from "./fee"
 
 export const transferToPolkadot = async (
     l2ChainId: number,
@@ -121,14 +122,16 @@ export const transferToPolkadot = async (
         )
         const feeData = await context.ethereumProvider.getFeeData(context.ethChain(l2ChainId))
         const executionFee = (feeData.gasPrice ?? 0n) * estimatedGas
+        const relayerFee = findFeeBreakdownTotal(fee, "relayer", "ETH")
+        const deliveryFee = findFeeTotal(fee, "ETH")
 
         console.log("tx:", tx)
         console.log("feeData:", feeData)
         console.log("gas:", estimatedGas)
-        console.log("relayer fee:", formatEther(fee.relayerFee))
+        console.log("relayer fee:", formatEther(relayerFee))
         console.log("execution cost:", formatEther(executionFee))
-        console.log("total cost:", formatEther(fee.totalFeeInWei + executionFee))
-        console.log("ether sent:", formatEther(totalValue - fee.totalFeeInWei))
+        console.log("total cost:", formatEther(deliveryFee + executionFee))
+        console.log("ether sent:", formatEther(totalValue - deliveryFee))
         console.log("dry run:", await context.ethChain(l2ChainId).call(tx))
 
         if (process.env["DRY_RUN"] != "true") {

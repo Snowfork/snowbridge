@@ -30,9 +30,6 @@ export type Transfer = {
 
 export type DeliveryFee = {
     kind: "polkadot->polkadot"
-    deliveryFee: bigint
-    executionFee: bigint
-    totalFeeInDot: bigint
     breakdown: { [P in InterParachainFeeKey]?: FeeAsset[] }
     summary: FeeItem[]
     totals: FeeAsset[]
