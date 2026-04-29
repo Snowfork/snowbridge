@@ -20,6 +20,7 @@ export interface TransferInterface<T extends EthereumProviderTypes> {
             feeTokenLocation?: any
             claimerLocation?: any
             contractCall?: ContractCall
+            accelerated?: boolean
         },
     ): Promise<DeliveryFee>
 

@@ -13,6 +13,7 @@ export const transferToEthereum = async (
     options?: {
         feeTokenLocation?: any
         contractCall?: ContractCall
+        accelerated?: boolean
     },
 ) => {
     await cryptoWaitReady()
@@ -62,6 +63,7 @@ export const transferToEthereum = async (
             feeTokenLocation: options?.feeTokenLocation,
             slippagePadPercentage: 20n,
             contractCall: options?.contractCall,
+            accelerated: options?.accelerated,
         })
 
         // Step 2. Create a transfer tx

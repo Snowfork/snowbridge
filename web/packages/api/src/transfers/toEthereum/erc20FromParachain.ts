@@ -1,4 +1,3 @@
-import { ApiPromise } from "@polkadot/api"
 import { AddressOrPair, SignerOptions, SubmittableExtrinsic } from "@polkadot/api/types"
 import { ISubmittableResult } from "@polkadot/types/types"
 import { isHex, u8aToHex } from "@polkadot/util"
@@ -67,6 +66,7 @@ export class ERC20FromParachain<T extends EthereumProviderTypes> implements Tran
             feeTokenLocation?: any
             claimerLocation?: any
             contractCall?: ContractCall
+            accelerated?: boolean
         },
     ): Promise<DeliveryFee> {
         const assetHub = await this.context.assetHub()

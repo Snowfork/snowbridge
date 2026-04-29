@@ -1,4 +1,3 @@
-import { ApiPromise } from "@polkadot/api"
 import { AddressOrPair, SignerOptions, SubmittableExtrinsic } from "@polkadot/api/types"
 import { ISubmittableResult } from "@polkadot/types/types"
 import { isHex, u8aToHex } from "@polkadot/util"
@@ -10,7 +9,6 @@ import {
 } from "../../xcmbuilders/toEthereum/erc20FromAH"
 import { buildTransferXcmFromAssetHubWithDOTAsFee } from "../../xcmbuilders/toEthereum/erc20FromAHWithDotAsFee"
 import {
-    Asset,
     AssetRegistry,
     ChainId,
     ContractCall,
@@ -63,6 +61,7 @@ export class ERC20FromAH<T extends EthereumProviderTypes> implements TransferInt
             defaultFee?: bigint
             feeTokenLocation?: any
             contractCall?: ContractCall
+            accelerated?: boolean
         },
     ): Promise<DeliveryFee> {
         const assetHub = await this.context.assetHub()

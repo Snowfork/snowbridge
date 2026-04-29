@@ -53,6 +53,7 @@
     "transferEthFromAcalaV2": "npx ts-node src/transfer_from_p2e_v2.ts 2000 ETH 150000000000000",
     "transferWndToEthereumV2": "npx ts-node src/transfer_from_p2e_v2.ts 1000 WND 2000000000",
     "transferEtherFromAHV2": "npx ts-node src/transfer_from_p2e_v2.ts 1000 Eth 1000000000000",
+    "transferEtherFromAHV2Accelerated": "npx ts-node src/transfer_from_p2e_v2_accelerated.ts 1000 Eth 1000000000000",
     "transferWethFromAHV2": "npx ts-node src/transfer_from_p2e_v2.ts 1000 WETH 1000000",
     "transferRocToEthereumV2": "npx ts-node src/transfer_from_p2e_v2.ts 1000 Roc 2000000000",
     "transferPenpalTokenFromAHToEthereumV2": "npx ts-node src/transfer_from_p2e_v2.ts 1000 pal 2000000000",

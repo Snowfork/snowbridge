@@ -880,7 +880,10 @@ const registry = {
                     },
                 },
                 key: "ethereum_1",
-                baseDeliveryGas: 120000n,
+                baseVerificationGas: 120000n,
+                baseDispatchGas: 80000n,
+                twoPhaseSubmitGas: 1000000n,
+                submitFiatShamirGas: 2000000n,
             },
             ethereum_l2_10: {
                 kind: "ethereum_l2",

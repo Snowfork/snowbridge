@@ -1,3 +1,6 @@
+export { ETHER_TOKEN_ADDRESS } from "./assets_v2"
+export { ParachainBase, paraImplementation } from "./parachains"
+export { NeurowebParachain } from "./parachains/neuroweb"
 import type { ApiPromise, HttpProvider, WsProvider } from "@polkadot/api"
 import {
     BeefyClient,

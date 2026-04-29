@@ -1,0 +1,22 @@
+import "dotenv/config"
+import { transferToEthereum } from "./transfer_to_ethereum_v2"
+
+const transfer = async (sourceParaId: number, symbol: string, amount: bigint) => {
+    await transferToEthereum(sourceParaId, symbol, amount, {
+        feeTokenLocation: undefined,
+        contractCall: undefined,
+        accelerated: true,
+    })
+}
+
+if (process.argv.length != 5) {
+    console.error("Expected arguments: `destinationChainId, symbol, amount`")
+    process.exit(1)
+}
+
+transfer(parseInt(process.argv[2]), process.argv[3], BigInt(process.argv[4]))
+    .then(() => process.exit(0))
+    .catch((error) => {
+        console.error("Error:", error)
+        process.exit(1)
+    })
