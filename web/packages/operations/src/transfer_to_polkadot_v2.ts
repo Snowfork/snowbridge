@@ -95,9 +95,15 @@ export const transferToPolkadot = async (
         const validation = await transferImpl.validate(transfer)
         console.log("validation result", validation)
 
-        // Step 4. Check validation logs for errors
+        // Step 4. Check validation logs for errors. SKIP_VALIDATION=true lets
+        // trap-test scripts proceed even when the dry-run correctly fails (e.g.
+        // intentionally sending USDT below min_balance to trigger an asset trap).
         if (!validation.success) {
-            throw Error(`validation has one of more errors.`)
+            if (process.env.SKIP_VALIDATION === "true") {
+                console.warn("validation failed; proceeding anyway (SKIP_VALIDATION=true)")
+            } else {
+                throw Error(`validation has one of more errors.`)
+            }
         }
 
         // Step 5. Estimate the cost of the execution cost of the transaction

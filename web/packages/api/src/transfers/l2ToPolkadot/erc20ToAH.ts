@@ -27,7 +27,11 @@ import {
     buildAssetHubERC20ReceivedXcm,
 } from "../../xcmbuilders/toPolkadot/erc20ToAH"
 import { accountId32Location, erc20Location } from "../../xcmBuilder"
-import { DOT_LOCATION, ETHER_TOKEN_ADDRESS } from "../../assets_v2"
+import {
+    DOT_LOCATION,
+    ETHER_TOKEN_ADDRESS,
+    getAssetHubEtherMinBalance,
+} from "../../assets_v2"
 import { ensureValidationSuccess, padFeeByPercentage } from "../../utils"
 import { resolveBeneficiary } from "../../crypto"
 import { FeeInfo, ValidationLog, ValidationReason } from "../../types/toPolkadot"
@@ -130,6 +134,13 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             await assetHubImpl.swapAsset1ForAsset2(DOT_LOCATION, ether, assetHubExecutionFeeDOT),
             feePadPercentage ?? 33n,
         )
+        // For non-ether transfers, oversize executionFee by AH bridged-ether
+        // min_balance: the post-PayFees surplus then naturally lands at the
+        // recipient via RefundSurplus → DepositAsset, satisfying
+        // `Token::BelowMinimum` on a fresh asset account.
+        if (tokenAddress !== ETHER_TOKEN_ADDRESS) {
+            assetHubExecutionFeeEther += getAssetHubEtherMinBalance(registry)
+        }
 
         const { relayerFee, extrinsicFeeDot, extrinsicFeeEther } = await calculateRelayerFee(
             assetHubImpl,
@@ -293,12 +304,18 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             accountNonce,
         )
 
+        // For ether transfers there's only one asset in holding so no split is needed.
+        const userAssetLocation =
+            tokenAddress === ETHER_TOKEN_ADDRESS
+                ? undefined
+                : erc20Location(registry.ethChainId, tokenAddress)
         const xcm = hexToU8a(
             sendMessageXCM(
                 assetHub.registry,
                 beneficiaryAddressHex,
                 topic,
                 options?.customXcm,
+                userAssetLocation,
             ).toHex(),
         )
         let claimer = claimerFromBeneficiary(assetHub, beneficiaryAddressHex, registry.environment)
