@@ -368,17 +368,16 @@ export const estimateEthereumExecutionFee = async <T extends EthereumProviderTyp
     // 3. a static dispatch margin
     // 4. token delivery
     // 5. and the optional contract call.
-
-    // All should leave enough margin
+    // All should leave enough margin to make sure the relay is profitable even in worst case scenarios.
     const ethereumChain = registry.ethereumChains[`ethereum_${registry.ethChainId}`]
     const feeData = await context.ethereumProvider.getFeeData(ethereum)
     const gasPrice = feeData.gasPrice ?? 2_000_000_000n
-    const twoPhaseSubmitGas = ethereumChain.twoPhaseSubmitGas ?? 1_200_000n
-    const submitFiatShamirGas = ethereumChain.submitFiatShamirGas ?? 2_200_000n
+    const twoPhaseSubmitGas = ethereumChain.twoPhaseSubmitGas ?? 1_000_000n
+    const submitFiatShamirGas = ethereumChain.submitFiatShamirGas ?? 2_000_000n
     const consensusUpdateGas = options?.accelerated ? submitFiatShamirGas : twoPhaseSubmitGas
     const messageVerificationGas = ethereumChain.baseVerificationGas ?? 120_000n
-    const dispatchGas = ethereumChain.baseDispatchGas ?? 120_000n
-    const tokenDeliveryGas = tokenErcMetadata.deliveryGas ?? 150_000n
+    const dispatchGas = ethereumChain.baseDispatchGas ?? 80_000n
+    const tokenDeliveryGas = tokenErcMetadata.deliveryGas ?? 100_000n
     const contractCallGas = options?.contractCall?.gas ?? 0n
     const totalGas =
         consensusUpdateGas +
