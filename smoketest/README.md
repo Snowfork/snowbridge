@@ -39,4 +39,4 @@ cargo test --test upgrade_gateway -- --nocapture
 Polkadot-JS explorers for local parachains:
 
 * [BridgeHub](https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A11144#/explorer)
-* [AssetHub]((https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A12144#/explorer))
+* [AssetHub](https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A12144#/explorer))
