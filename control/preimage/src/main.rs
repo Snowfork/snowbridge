@@ -204,24 +204,46 @@ pub struct PricingParametersArgs {
 
 #[derive(Debug, Args)]
 pub struct HaltBridgeArgs {
-    /// Halt the Ethereum gateway, blocking message from Ethereum to Polkadot in the Ethereum
-    /// contract.
+    /// Halt the Ethereum Gateway contract (both V1 and V2 paths). Sends
+    /// `Command::SetOperatingMode(Halted)` via both V1 and V2 system pallets so the halt
+    /// is delivered via whichever outbound queue is live. Once processed on Ethereum,
+    /// this blocks `v2_sendMessage`, `v2_registerToken`, and V1 `sendToken`/`sendMessage`
+    /// on the Gateway. Delivery is relayer-dependent.
     #[arg(long, value_name = "HALT_GATEWAY")]
     gateway: bool,
-    /// Halt the Ethereum Inbound Queue, blocking messages from BH to AH.
+    /// Halt both V1 and V2 inbound-queue pallets on BridgeHub, blocking processing of
+    /// Ethereum -> Polkadot messages. For surgical halts of a single version, use
+    /// `--inbound-queue-v1` or `--inbound-queue-v2`.
     #[arg(long, value_name = "HALT_INBOUND_QUEUE")]
     inbound_queue: bool,
-    /// Halt the Ethereum Outbound Queue, blocking message from AH to BH.
+    /// Halt only the V1 inbound-queue pallet on BridgeHub.
+    #[arg(long, value_name = "HALT_INBOUND_QUEUE_V1")]
+    inbound_queue_v1: bool,
+    /// Halt only the V2 inbound-queue pallet on BridgeHub.
+    #[arg(long, value_name = "HALT_INBOUND_QUEUE_V2")]
+    inbound_queue_v2: bool,
+    /// Halt AssetHub -> Ethereum outbound traffic. Halts the V1 outbound-queue pallet
+    /// on BridgeHub AND the system-frontend pallet on AssetHub; the latter short-circuits
+    /// the AssetHub->Ethereum `PausableExporter` for both V1 and V2 at the XcmRouter
+    /// layer (V2's `outbound-queue-v2` has no local halt, so the frontend halt is the
+    /// primary V2 outbound lever).
     #[arg(long, value_name = "HALT_OUTBOUND_QUEUE")]
     outbound_queue: bool,
-    /// Halt the Ethereum client, blocking consensus updates to the light client.
+    /// Halt the Ethereum beacon light client, blocking new beacon-header ingestion.
+    /// Note: this does NOT propagate into the `Verifier::verify` trait impl that
+    /// downstream consumers (`inbound-queue(-v2)::submit`,
+    /// `outbound-queue-v2::submit_delivery_receipt`) call — those verify against
+    /// already-stored finalised state. Halt those consumers individually to block
+    /// proof-consuming flows during a suspected beacon compromise.
     #[arg(long, value_name = "HALT_ETHEREUM_CLIENT")]
     ethereum_client: bool,
-    /// Set the AH to Ethereum fee to a high amount, effectively blocking messages from AH ->
-    /// Ethereum.
+    /// Set the AssetHub -> Ethereum outbound fee to `u128::MAX` for both V1
+    /// (`BridgeHubEthereumBaseFee`) and V2 (`BridgeHubEthereumBaseFeeV2`) storage
+    /// items, effectively deterring user sends via fee pricing. Complementary to the
+    /// system-frontend halt; does not block at the router layer.
     #[arg(long, value_name = "ASSETHUB_MAX_FEE")]
     assethub_max_fee: bool,
-    /// Halt all parts of the bridge
+    /// Halt all parts of the bridge (equivalent to passing every other flag).
     #[arg(long, value_name = "HALT_SNOWBRIDGE")]
     all: bool,
 }
@@ -419,24 +441,46 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             // if no individual option specified, assume halt the whole bridge.
             if !params.gateway
                 && !params.inbound_queue
+                && !params.inbound_queue_v1
+                && !params.inbound_queue_v2
                 && !params.outbound_queue
                 && !params.ethereum_client
                 && !params.assethub_max_fee
             {
                 halt_all = true;
             }
+            // Gateway halt commands must be enqueued BEFORE any local outbound-queue
+            // halt takes effect, otherwise the SetOperatingMode command cannot be
+            // committed for delivery to Ethereum. Push both V1 and V2 variants so the
+            // halt is delivered via whichever outbound queue is operational.
             if params.gateway || halt_all {
                 bh_calls.push(commands::gateway_operating_mode(
                     &GatewayOperatingModeEnum::RejectingOutboundMessages,
                 ));
+                bh_calls.push(commands::gateway_operating_mode_v2(
+                    &GatewayOperatingModeEnum::RejectingOutboundMessages,
+                ));
             }
-            if params.inbound_queue || halt_all {
+            if params.inbound_queue || params.inbound_queue_v1 || halt_all {
                 bh_calls.push(commands::inbound_queue_operating_mode(
                     &OperatingModeEnum::Halted,
                 ));
             }
+            if params.inbound_queue || params.inbound_queue_v2 || halt_all {
+                bh_calls.push(commands::inbound_queue_v2_operating_mode(
+                    &OperatingModeEnum::Halted,
+                ));
+            }
             if params.outbound_queue || halt_all {
+                // V1 local halt on BridgeHub. V2's outbound-queue-v2 has no local halt;
+                // the system-frontend halt below is the effective V2 outbound lever.
                 bh_calls.push(commands::outbound_queue_operating_mode(
+                    &OperatingModeEnum::Halted,
+                ));
+                // system-frontend halt on AssetHub: short-circuits the PausableExporter
+                // wrapping the AH->Ethereum router, blocking both V1 and V2 exports at
+                // the source regardless of user or parachain origin.
+                ah_calls.push(commands::system_frontend_operating_mode(
                     &OperatingModeEnum::Halted,
                 ));
             }
@@ -446,7 +490,9 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
                 ));
             }
             if params.assethub_max_fee || halt_all {
+                // Set both V1 and V2 AssetHub outbound fee storage items to u128::MAX.
                 ah_calls.push(commands::set_assethub_fee(u128::MAX));
+                ah_calls.push(commands::set_assethub_fee_v2(u128::MAX));
             }
             if bh_calls.len() > 0 && ah_calls.len() == 0 {
                 send_xcm_bridge_hub(&context, bh_calls).await?
