@@ -67,7 +67,7 @@ export function buildAssetHubRegisterTokenXcm(
         MINIMUM_DEPOSIT,
     )
 
-    const callData = createCall.method.toU8a()a
+    const callData = createCall.method.toU8a()
     const reserveData = {
         reserve: bridgeLocation(ethChainId),
         teleportable: false,
