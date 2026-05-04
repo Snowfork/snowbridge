@@ -68,6 +68,16 @@ export function buildAssetHubRegisterTokenXcm(
     )
 
     const callData = createCall.method.toU8a()
+    const reserveData = {
+        reserve: bridgeLocation(ethChainId),
+        teleportable: false,
+    }
+    const setReservesCall = assetHub.tx.foreignAssets.setReserves(
+        assetIdLocationTyped,
+        [reserveData],
+    )
+    const setReservesCallData = setReservesCall.method.toU8a()
+
     let bridgeOwnerLocation = accountToLocation(bridgeOwner)
 
     const instructions: any[] = [
@@ -167,6 +177,15 @@ export function buildAssetHubRegisterTokenXcm(
                 fallbackMaxWeight: null,
                 call: {
                     encoded: u8aToHex(callData),
+                },
+            },
+        },
+        {
+            Transact: {
+                originKind: "Xcm",
+                fallbackMaxWeight: null,
+                call: {
+                    encoded: u8aToHex(setReservesCallData),
                 },
             },
         },
