@@ -1,0 +1,32 @@
+{
+  "name": "@snowbridge/mcp",
+  "version": "0.1.0",
+  "description": "MCP server exposing Snowbridge debugging tools (message tracing, XCM error decoding, dead-nonce store reads).",
+  "license": "Apache-2.0",
+  "private": true,
+  "bin": {
+    "snowbridge-mcp": "dist/index.js"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "npx ts-node src/index.ts",
+    "lint": "eslint src/*",
+    "format": "prettier src --write"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@polkadot/api": "16.5.4",
+    "@polkadot/util": "14.0.3",
+    "@snowbridge/api": "workspace:*",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "20.11.30",
+    "ts-node": "10.9.2",
+    "tsconfig-paths": "4.2.0",
+    "typescript": "5.9.3"
+  }
+}

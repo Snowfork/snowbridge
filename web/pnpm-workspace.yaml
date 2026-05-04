@@ -9,4 +9,5 @@ packages:
   - "packages/registry"
   - "packages/test-helpers"
   - "packages/operations"
+  - "packages/mcp"
 minimumReleaseAge: 259200
