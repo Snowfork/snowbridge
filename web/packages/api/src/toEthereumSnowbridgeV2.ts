@@ -846,10 +846,17 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
         snowbridgeDeliveryFeeDOT + bridgeHubDeliveryFeeDOT + localDeliveryFeeDOT
     const summary: DeliveryFee["summary"] = []
     if (feeLocation) {
+        const tipInNative = volumeTipInNative ?? 0n
         if (isRelaychainLocation(feeLocation)) {
+            const ethereumExecInNative = (ethereumExecutionFeeInNative ?? 0n) - tipInNative
             summary.push({
                 description: "XCM execution fees",
-                amount: xcmExecDOT + ethereumExecutionFeeInNative!,
+                amount: xcmExecDOT,
+                symbol: feeNativeSymbol!,
+            })
+            summary.push({
+                description: "Ethereum execution fees",
+                amount: ethereumExecInNative,
                 symbol: feeNativeSymbol!,
             })
             summary.push({
@@ -857,12 +864,52 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
                 amount: bridgeFeesDOT,
                 symbol: feeNativeSymbol!,
             })
+            if (tipInNative > 0n) {
+                summary.push({
+                    description: "Relayer tip",
+                    amount: tipInNative,
+                    symbol: feeNativeSymbol!,
+                })
+            }
         } else {
+            // parachain-native pay: split totalFeeInNative across categories using
+            // proportional share of the DOT-side amounts. Sum is preserved exactly.
+            const localExecN = localExecutionFeeInNative ?? 0n
+            const localDelivN = localDeliveryFeeInNative ?? 0n
+            const ethExecN = (ethereumExecutionFeeInNative ?? 0n) - tipInNative
+            const otherN =
+                totalFeeInNative! - localExecN - localDelivN - (ethereumExecutionFeeInNative ?? 0n)
+            const totalDotOnly = xcmExecDOT + bridgeFeesDOT
+            let xcmExecPortion = 0n
+            let bridgeFeesPortion = 0n
+            if (totalDotOnly > 0n) {
+                xcmExecPortion = (otherN * xcmExecDOT) / totalDotOnly
+                bridgeFeesPortion = otherN - xcmExecPortion
+            } else {
+                xcmExecPortion = otherN
+            }
             summary.push({
                 description: "XCM execution fees",
-                amount: totalFeeInNative!,
+                amount: xcmExecPortion + localExecN,
                 symbol: feeNativeSymbol!,
             })
+            summary.push({
+                description: "Ethereum execution fees",
+                amount: ethExecN,
+                symbol: feeNativeSymbol!,
+            })
+            summary.push({
+                description: "Bridge fees",
+                amount: bridgeFeesPortion + localDelivN,
+                symbol: feeNativeSymbol!,
+            })
+            if (tipInNative > 0n) {
+                summary.push({
+                    description: "Relayer tip",
+                    amount: tipInNative,
+                    symbol: feeNativeSymbol!,
+                })
+            }
         }
     } else {
         summary.push({
@@ -890,7 +937,7 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
             })
         }
         summary.push({
-            description: "XCM execution fees",
+            description: "Ethereum execution fees",
             amount: ethereumExecutionFee - (volumeTip ?? 0n),
             symbol: "ETH",
         })
