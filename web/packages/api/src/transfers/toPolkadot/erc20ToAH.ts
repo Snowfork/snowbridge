@@ -145,7 +145,19 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             addBreakdown(breakdown, "volumeTip", { amount: volumeTip, symbol: "ETH" })
         }
 
-        const summary = [{ description: "Bridge fee", amount: totalFeeInWei, symbol: "ETH" }]
+        const summary = [
+            {
+                description: "XCM execution fees",
+                amount: assetHubExecutionFeeEther,
+                symbol: "ETH",
+            },
+            { description: "Bridge fees", amount: deliveryFeeInEther, symbol: "ETH" },
+            {
+                description: "Relayer tip",
+                amount: finalRelayerFee - deliveryFeeInEther,
+                symbol: "ETH",
+            },
+        ]
 
         return {
             kind: "ethereum->polkadot",

@@ -253,7 +253,23 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
             addBreakdown(breakdown, "volumeTip", { amount: volumeTip, symbol: "ETH" })
         }
 
-        const summary = [{ description: "Bridge fee", amount: totalFeeInWei, symbol: "ETH" }]
+        const summary = [
+            {
+                description: "XCM execution fees",
+                amount: assetHubExecutionFeeEther + destinationExecutionFeeEther,
+                symbol: "ETH",
+            },
+            {
+                description: "Bridge fees",
+                amount: deliveryFeeInEther + destinationDeliveryFeeEther,
+                symbol: "ETH",
+            },
+            {
+                description: "Relayer tip",
+                amount: finalRelayerFee - deliveryFeeInEther,
+                symbol: "ETH",
+            },
+        ]
 
         return {
             kind: "ethereum->polkadot",
