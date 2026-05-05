@@ -65,6 +65,23 @@ export function padFeeByPercentage(fee: bigint, padPercent: bigint) {
     return (fee * (100n + padPercent)) / 100n
 }
 
+// Quadratic decay: pad = staticPad * max(0, 1 - r)^2 where r = tip / rawCost.
+// Returns the scaled pad in the same percentage units (0..staticPad).
+// When the volume tip already meets or exceeds the raw cost it is meant to
+// protect (r >= 1), the pad collapses to zero — the tip itself is the buffer.
+export function scaledPadPercentage(
+    staticPadPercent: bigint,
+    tip: bigint,
+    rawCost: bigint,
+): bigint {
+    if (staticPadPercent <= 0n) return 0n
+    if (rawCost <= 0n) return staticPadPercent
+    if (tip <= 0n) return staticPadPercent
+    if (tip >= rawCost) return 0n
+    const remaining = rawCost - tip
+    return (remaining * remaining * staticPadPercent) / (rawCost * rawCost)
+}
+
 export class ValidationError<
     T extends { success: boolean; logs: { message: string }[] },
 > extends Error {
