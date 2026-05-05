@@ -841,7 +841,13 @@ export async function getDeliveryFeeV1(
 
     const summary: DeliveryFee["summary"] =
         totalFeeInNative !== undefined
-            ? [{ description: "Bridge fee", amount: totalFeeInNative, symbol: "NATIVE" }]
+            ? [
+                  {
+                      description: "Bridge fee",
+                      amount: totalFeeInNative,
+                      symbol: sourceParachain.info.tokenSymbols,
+                  },
+              ]
             : [{ description: "Bridge fee", amount: totalFeeInDot, symbol: "DOT" }]
 
     return {
@@ -849,7 +855,6 @@ export async function getDeliveryFeeV1(
         snowbridgeDeliveryFeeDOT,
         assetHubExecutionFeeDOT,
         bridgeHubDeliveryFeeDOT,
-        returnToSenderDeliveryFeeDOT,
         returnToSenderExecutionFeeDOT,
         totalFeeInDot,
         totalFeeInNative,

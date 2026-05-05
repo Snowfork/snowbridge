@@ -42,7 +42,6 @@ export type DeliveryFee = {
     bridgeHubDeliveryFeeDOT: bigint
     assetHubExecutionFeeDOT: bigint
     returnToSenderExecutionFeeDOT: bigint
-    returnToSenderDeliveryFeeDOT: bigint
     totalFeeInDot: bigint
     localExecutionFeeDOT?: bigint
     localDeliveryFeeDOT?: bigint
@@ -54,8 +53,6 @@ export type DeliveryFee = {
     localExecutionFeeInNative?: bigint
     localDeliveryFeeInNative?: bigint
     ethereumExecutionFeeInNative?: bigint
-    l2BridgeFeeInL1Token?: bigint
-    volumeTip?: bigint
     breakdown: { [P in ToEthereumFeeKey]?: FeeAsset[] }
     summary: FeeItem[]
     totals: FeeAsset[]
