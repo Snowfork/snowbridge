@@ -90,7 +90,11 @@ export function buildAssetHubRegisterTokenXcm(
         {
             SetHints: {
                 hints: [
-                    { AssetClaimer: { location: claimerFromBeneficiary(assetHub, bridgeOwner, envName) } },
+                    {
+                        AssetClaimer: {
+                            location: claimerFromBeneficiary(assetHub, bridgeOwner, envName),
+                        },
+                    },
                 ],
             },
         },

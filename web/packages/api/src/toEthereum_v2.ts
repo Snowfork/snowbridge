@@ -839,9 +839,10 @@ export async function getDeliveryFeeV1(
         symbol: "DOT",
     })
 
-    const summary: DeliveryFee["summary"] = totalFeeInNative !== undefined
-        ? [{ description: "Bridge fee", amount: totalFeeInNative, symbol: "NATIVE" }]
-        : [{ description: "Bridge fee", amount: totalFeeInDot, symbol: "DOT" }]
+    const summary: DeliveryFee["summary"] =
+        totalFeeInNative !== undefined
+            ? [{ description: "Bridge fee", amount: totalFeeInNative, symbol: "NATIVE" }]
+            : [{ description: "Bridge fee", amount: totalFeeInDot, symbol: "DOT" }]
 
     return {
         kind: options?.kind ?? "polkadot->ethereum",

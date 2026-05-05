@@ -8,12 +8,7 @@ import type {
 } from "@snowbridge/base-types"
 import type { OperationStatus } from "../status"
 import type { FeeInfo, ValidationLog } from "./toPolkadot"
-import type {
-    FeeAsset,
-    FeeItem,
-    L2ToPolkadotFeeKey,
-    ToPolkadotFeeKey,
-} from "./fee"
+import type { FeeAsset, FeeItem, L2ToPolkadotFeeKey, ToPolkadotFeeKey } from "./fee"
 
 export type DeliveryFee = {
     kind: "ethereum->polkadot" | "ethereum_l2->polkadot"

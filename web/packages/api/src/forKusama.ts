@@ -341,7 +341,11 @@ export class KusamaTransfer<T extends EthereumProviderTypes> implements KusamaTr
                 tokenLocationOnSource,
                 beneficiaryAddressHex,
                 amount,
-                findInBreakdown(fee.breakdown, "destinationExecution", fee.kind === "kusama->polkadot" ? "KSM" : "DOT"),
+                findInBreakdown(
+                    fee.breakdown,
+                    "destinationExecution",
+                    fee.kind === "kusama->polkadot" ? "KSM" : "DOT",
+                ),
                 messageId,
             )
         } else {
@@ -351,7 +355,11 @@ export class KusamaTransfer<T extends EthereumProviderTypes> implements KusamaTr
                 tokenLocationOnSource,
                 beneficiaryAddressHex,
                 amount,
-                findInBreakdown(fee.breakdown, "destinationExecution", fee.kind === "kusama->polkadot" ? "KSM" : "DOT"),
+                findInBreakdown(
+                    fee.breakdown,
+                    "destinationExecution",
+                    fee.kind === "kusama->polkadot" ? "KSM" : "DOT",
+                ),
                 messageId,
             )
         }
@@ -454,7 +462,10 @@ export class KusamaTransfer<T extends EthereumProviderTypes> implements KusamaTr
         const paymentInfo = await tx.paymentInfo(sourceAccountHex)
         const sourceExecutionFee = paymentInfo["partialFee"].toBigInt()
 
-        if (sourceExecutionFee + findTotal(fee, fee.kind === "kusama->polkadot" ? "KSM" : "DOT") > nativeBalance) {
+        if (
+            sourceExecutionFee + findTotal(fee, fee.kind === "kusama->polkadot" ? "KSM" : "DOT") >
+            nativeBalance
+        ) {
             logs.push({
                 kind: ValidationKind.Error,
                 reason: ValidationReason.InsufficientFee,
@@ -469,7 +480,11 @@ export class KusamaTransfer<T extends EthereumProviderTypes> implements KusamaTr
         if (this.#direction() == Direction.ToPolkadot) {
             destAssetHubXCM = buildKusamaToPolkadotDestAssetHubXCM(
                 destAssetHub.registry,
-                findInBreakdown(fee.breakdown, "destinationExecution", fee.kind === "kusama->polkadot" ? "KSM" : "DOT"),
+                findInBreakdown(
+                    fee.breakdown,
+                    "destinationExecution",
+                    fee.kind === "kusama->polkadot" ? "KSM" : "DOT",
+                ),
                 registry.assetHubParaId,
                 tokenLocation,
                 transfer.input.amount,
@@ -479,7 +494,11 @@ export class KusamaTransfer<T extends EthereumProviderTypes> implements KusamaTr
         } else {
             destAssetHubXCM = buildPolkadotToKusamaDestAssetHubXCM(
                 destAssetHub.registry,
-                findInBreakdown(fee.breakdown, "destinationExecution", fee.kind === "kusama->polkadot" ? "KSM" : "DOT"),
+                findInBreakdown(
+                    fee.breakdown,
+                    "destinationExecution",
+                    fee.kind === "kusama->polkadot" ? "KSM" : "DOT",
+                ),
                 registry.assetHubParaId,
                 tokenLocation,
                 transfer.input.amount,

@@ -522,7 +522,10 @@ export const estimateFeesFromAssetHub = async <T extends EthereumProviderTypes>(
         amount: returnToSenderExecutionFeeDOT,
         symbol: "DOT",
     })
-    addBreakdown(breakdown, "ethereumExecution", { amount: ethereumExecutionFee ?? 0n, symbol: "ETH" })
+    addBreakdown(breakdown, "ethereumExecution", {
+        amount: ethereumExecutionFee ?? 0n,
+        symbol: "ETH",
+    })
     if (volumeTip !== undefined) {
         addBreakdown(breakdown, "volumeTip", { amount: volumeTip, symbol: "ETH" })
     }
@@ -842,8 +845,7 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
     }
 
     const xcmExecDOT = localExecutionFeeDOT + assetHubExecutionFeeDOT
-    const bridgeFeesDOT =
-        snowbridgeDeliveryFeeDOT + bridgeHubDeliveryFeeDOT + localDeliveryFeeDOT
+    const bridgeFeesDOT = snowbridgeDeliveryFeeDOT + bridgeHubDeliveryFeeDOT + localDeliveryFeeDOT
     const summary: DeliveryFee["summary"] = []
     if (feeLocation) {
         const tipInNative = volumeTipInNative ?? 0n

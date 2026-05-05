@@ -249,20 +249,29 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             addBreakdown(breakdown, "l1Swap", { amount: swapFeeInL1Token, symbol: l1TokenSymbol })
         }
 
-        const ethBridgeFee = assetHubExecutionFeeEther + finalRelayerFee
         const summary: DeliveryFee["summary"] = [
-            { description: "Bridge fee", amount: ethBridgeFee, symbol: "ETH" },
+            {
+                description: "XCM execution fees",
+                amount: assetHubExecutionFeeEther,
+                symbol: "ETH",
+            },
+            { description: "Bridge fees", amount: deliveryFeeInEther, symbol: "ETH" },
+            {
+                description: "Relayer tip",
+                amount: finalRelayerFee - deliveryFeeInEther,
+                symbol: "ETH",
+            },
         ]
         if (bridgeFeeInL2Token > 0n) {
             summary.push({
-                description: "L2 bridge fee",
+                description: "Across fee",
                 amount: bridgeFeeInL2Token,
                 symbol: l2FeeSymbol,
             })
         }
         if (swapFeeInL1Token > 0n) {
             summary.push({
-                description: "L1 swap fee",
+                description: "Swap fee",
                 amount: swapFeeInL1Token,
                 symbol: l1TokenSymbol,
             })

@@ -72,8 +72,14 @@ function toV1DeliveryFee(fee: ToPolkadotV2DeliveryFee): DeliveryFee {
     )
     const totalFeeInWei = findTotal(fee, "ETH")
     const breakdown: DeliveryFee["breakdown"] = {}
-    addBreakdown(breakdown, "destinationDelivery", { amount: destinationDeliveryFeeDOT, symbol: "DOT" })
-    addBreakdown(breakdown, "destinationExecution", { amount: destinationExecutionFeeDOT, symbol: "DOT" })
+    addBreakdown(breakdown, "destinationDelivery", {
+        amount: destinationDeliveryFeeDOT,
+        symbol: "DOT",
+    })
+    addBreakdown(breakdown, "destinationExecution", {
+        amount: destinationExecutionFeeDOT,
+        symbol: "DOT",
+    })
     const summary = [{ description: "Bridge fee", amount: totalFeeInWei, symbol: "ETH" }]
     return {
         kind: "ethereum->polkadot",
