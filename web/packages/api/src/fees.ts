@@ -50,3 +50,17 @@ export function findTotal<K extends string>(fee: DeliveryFee<K>, symbol: string)
     }
     return total.amount
 }
+
+export function findTotalOrUndefined<K extends string>(
+    fee: DeliveryFee<K>,
+    symbol: string,
+): bigint | undefined {
+    return fee.totals.find((t) => t.symbol === symbol)?.amount
+}
+
+export function findTotalOrZero<K extends string>(
+    fee: DeliveryFee<K>,
+    symbol: string,
+): bigint {
+    return fee.totals.find((t) => t.symbol === symbol)?.amount ?? 0n
+}

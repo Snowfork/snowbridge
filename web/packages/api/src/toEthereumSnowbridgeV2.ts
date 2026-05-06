@@ -31,7 +31,13 @@ import { Context } from "./index"
 import { DOT_LOCATION, ETHER_TOKEN_ADDRESS, findL2TokenAddress } from "./assets_v2"
 import { getOperatingStatus } from "./status"
 import { calculateVolumeTipInWei, VolumeFeeParams } from "./feeSchedule"
-import { addBreakdown, computeTotals } from "./fees"
+import {
+    addBreakdown,
+    computeTotals,
+    findInBreakdownOrZero,
+    findTotal,
+    findTotalOrUndefined,
+} from "./fees"
 import { estimateFees } from "./across/api"
 import type { MessageReceipt, Transfer, ValidatedTransfer, ValidationLog } from "./types/toEthereum"
 import { ValidationKind, ValidationReason } from "./types/toEthereum"
@@ -602,19 +608,7 @@ export const estimateFeesFromAssetHub = async <T extends EthereumProviderTypes>(
 
     return {
         kind: l2ChainId ? "polkadot->ethereum_l2" : "polkadot->ethereum",
-        localExecutionFeeDOT,
-        snowbridgeDeliveryFeeDOT,
-        assetHubExecutionFeeDOT,
-        bridgeHubDeliveryFeeDOT,
-        returnToSenderExecutionFeeDOT,
-        totalFeeInDot,
-        ethereumExecutionFee,
         feeLocation,
-        assetHubExecutionFeeNative,
-        returnToSenderExecutionFeeNative,
-        ethereumExecutionFeeInNative,
-        localExecutionFeeInNative,
-        totalFeeInNative,
         breakdown,
         summary,
         totals: computeTotals(summary),
@@ -947,21 +941,7 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
 
     return {
         kind: "polkadot->ethereum",
-        localExecutionFeeDOT,
-        localDeliveryFeeDOT,
-        snowbridgeDeliveryFeeDOT,
-        assetHubExecutionFeeDOT,
-        bridgeHubDeliveryFeeDOT,
-        returnToSenderExecutionFeeDOT: 0n,
-        totalFeeInDot,
-        ethereumExecutionFee,
         feeLocation,
-        assetHubExecutionFeeNative,
-        returnToSenderExecutionFeeNative: 0n,
-        ethereumExecutionFeeInNative,
-        localExecutionFeeInNative,
-        localDeliveryFeeInNative,
-        totalFeeInNative,
         breakdown,
         summary,
         totals: computeTotals(summary),
@@ -1007,8 +987,9 @@ export const validateTransferFromAssetHub = async <T extends EthereumProviderTyp
             sourceAssetMetadata,
         )
     }
-    if (isNativeBalance && fee.totalFeeInNative) {
-        if (amount + fee.totalFeeInNative > tokenBalance) {
+    const ahTotalNative = findTotalOrUndefined(fee, "DOT")
+    if (isNativeBalance && ahTotalNative !== undefined) {
+        if (amount + ahTotalNative > tokenBalance) {
             logs.push({
                 kind: ValidationKind.Error,
                 reason: ValidationReason.InsufficientTokenBalance,
@@ -1033,7 +1014,7 @@ export const validateTransferFromAssetHub = async <T extends EthereumProviderTyp
             ETHER_TOKEN_ADDRESS,
         )
 
-        if (fee.ethereumExecutionFee! > etherBalance) {
+        if (findInBreakdownOrZero(fee.breakdown, "ethereumExecution", "ETH") > etherBalance) {
             logs.push({
                 kind: ValidationKind.Error,
                 reason: ValidationReason.InsufficientEtherBalance,
@@ -1107,8 +1088,8 @@ export const validateTransferFromAssetHub = async <T extends EthereumProviderTyp
     const sourceExecutionFee = paymentInfo["partialFee"].toBigInt()
 
     // recheck total after fee estimation
-    if (isNativeBalance && fee.totalFeeInNative) {
-        if (amount + fee.totalFeeInNative + sourceExecutionFee > tokenBalance) {
+    if (isNativeBalance && ahTotalNative !== undefined) {
+        if (amount + ahTotalNative + sourceExecutionFee > tokenBalance) {
             logs.push({
                 kind: ValidationKind.Error,
                 reason: ValidationReason.InsufficientTokenBalance,
@@ -1116,7 +1097,7 @@ export const validateTransferFromAssetHub = async <T extends EthereumProviderTyp
             })
         }
     }
-    if (sourceExecutionFee + fee.totalFeeInDot > dotBalance) {
+    if (sourceExecutionFee + findTotal(fee, "DOT") > dotBalance) {
         logs.push({
             kind: ValidationKind.Error,
             reason: ValidationReason.InsufficientDotFee,
@@ -1203,8 +1184,9 @@ export const validateTransferFromParachain = async <T extends EthereumProviderTy
         )
     }
 
-    if (isNativeBalance && fee.totalFeeInNative) {
-        if (amount + fee.totalFeeInNative > tokenBalance) {
+    const paraTotalNative = findTotalOrUndefined(fee, source.info.tokenSymbols)
+    if (isNativeBalance && paraTotalNative !== undefined) {
+        if (amount + paraTotalNative > tokenBalance) {
             logs.push({
                 kind: ValidationKind.Error,
                 reason: ValidationReason.InsufficientTokenBalance,
@@ -1229,7 +1211,7 @@ export const validateTransferFromParachain = async <T extends EthereumProviderTy
         )
 
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        if (fee.ethereumExecutionFee! > etherBalance) {
+        if (findInBreakdownOrZero(fee.breakdown, "ethereumExecution", "ETH") > etherBalance) {
             logs.push({
                 kind: ValidationKind.Error,
                 reason: ValidationReason.InsufficientEtherBalance,
@@ -1365,14 +1347,6 @@ export async function buildContractCallHex<T extends EthereumProviderTypes>(
 
 export const mockDeliveryFee: DeliveryFee = {
     kind: "polkadot->ethereum",
-    localExecutionFeeDOT: 1n,
-    localDeliveryFeeDOT: 1n,
-    snowbridgeDeliveryFeeDOT: 1n,
-    assetHubExecutionFeeDOT: 1n,
-    bridgeHubDeliveryFeeDOT: 1n,
-    returnToSenderExecutionFeeDOT: 0n,
-    totalFeeInDot: 10n,
-    ethereumExecutionFee: 1n,
     breakdown: {},
     summary: [{ description: "Bridge fee", amount: 10n, symbol: "DOT" }],
     totals: [{ amount: 10n, symbol: "DOT" }],

@@ -245,6 +245,7 @@ export class PNAFromParachain<T extends EthereumProviderTypes> implements Transf
                 ethChainId,
                 assetHubParaId,
                 sourceParachainImpl.parachainId,
+                sourceParachain.info.tokenSymbols,
                 sourceAccountHex,
                 beneficiaryAccount,
                 messageId,

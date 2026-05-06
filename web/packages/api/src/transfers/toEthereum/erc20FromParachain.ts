@@ -238,6 +238,7 @@ export class ERC20FromParachain<T extends EthereumProviderTypes> implements Tran
                 ethChainId,
                 assetHubParaId,
                 sourceParachainImpl.parachainId,
+                sourceParachain.info.tokenSymbols,
                 sourceAccountHex,
                 beneficiaryAccount,
                 messageId,

@@ -38,21 +38,7 @@ export type Transfer = {
 
 export type DeliveryFee = {
     kind: "polkadot->ethereum" | "polkadot->ethereum_l2" | "ethereum->ethereum"
-    snowbridgeDeliveryFeeDOT: bigint
-    bridgeHubDeliveryFeeDOT: bigint
-    assetHubExecutionFeeDOT: bigint
-    returnToSenderExecutionFeeDOT: bigint
-    totalFeeInDot: bigint
-    localExecutionFeeDOT?: bigint
-    localDeliveryFeeDOT?: bigint
-    ethereumExecutionFee?: bigint
     feeLocation?: any
-    totalFeeInNative?: bigint
-    assetHubExecutionFeeNative?: bigint
-    returnToSenderExecutionFeeNative?: bigint
-    localExecutionFeeInNative?: bigint
-    localDeliveryFeeInNative?: bigint
-    ethereumExecutionFeeInNative?: bigint
     breakdown: { [P in ToEthereumFeeKey]?: FeeAsset[] }
     summary: FeeItem[]
     totals: FeeAsset[]

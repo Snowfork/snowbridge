@@ -11,6 +11,7 @@ import {
 import { DOT_LOCATION } from "../../assets_v2"
 import { Asset } from "@snowbridge/base-types"
 import { DeliveryFee } from "../../toEthereum_v2"
+import { findInBreakdownOrZero, findTotal } from "../../fees"
 
 export function buildExportXcm(
     registry: Registry,
@@ -118,8 +119,8 @@ export function buildTransferXcmFromAssetHub(
     let sourceLocation = accountToLocation(sourceAccount)
     let tokenLocation = erc20Location(ethChainId, asset.token)
 
-    let totalDOTFeeAmount = fee.totalFeeInDot
-    let remoteEtherFeeAmount = fee.ethereumExecutionFee!
+    let totalDOTFeeAmount = findTotal(fee, "DOT")
+    let remoteEtherFeeAmount = findInBreakdownOrZero(fee.breakdown, "ethereumExecution", "ETH")
 
     let assets = []
     assets.push({

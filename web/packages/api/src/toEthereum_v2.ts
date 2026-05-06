@@ -33,7 +33,13 @@ import {
 import { CallDryRunEffects, XcmDryRunApiError, XcmDryRunEffects } from "@polkadot/types/interfaces"
 import { Result } from "@polkadot/types"
 import { ensureValidationSuccess, padFeeByPercentage, u32ToLeBytes } from "./utils"
-import { addBreakdown, computeTotals } from "./fees"
+import {
+    addBreakdown,
+    computeTotals,
+    findInBreakdownOrZero,
+    findTotal,
+    findTotalOrUndefined,
+} from "./fees"
 import { Context } from "./index"
 import { ParachainBase } from "./parachains/parachainBase"
 import { TransferInterface as ToEthereumTransferInterface } from "./transfers/toEthereum/transferInterface"
@@ -202,6 +208,11 @@ export class V1ToEthereumAdapter<T extends EthereumProviderTypes>
                 beneficiaryAccount,
                 amount,
             )
+            const totalNativeFromTotals = findTotalOrUndefined(
+                fee,
+                sourceParachain.info.tokenSymbols,
+            )
+            const totalForTx = totalNativeFromTotals ?? findTotal(fee, "DOT")
             if (sourceAssetMetadata.location) {
                 tx = createPNASourceParachainTx(
                     sourceParachainImpl,
@@ -210,9 +221,9 @@ export class V1ToEthereumAdapter<T extends EthereumProviderTypes>
                     sourceAssetMetadata,
                     beneficiaryAccount,
                     amount,
-                    fee.totalFeeInNative ?? fee.totalFeeInDot,
+                    totalForTx,
                     messageId,
-                    fee.totalFeeInNative !== undefined,
+                    totalNativeFromTotals !== undefined,
                 )
             } else {
                 tx = createERC20SourceParachainTx(
@@ -223,11 +234,11 @@ export class V1ToEthereumAdapter<T extends EthereumProviderTypes>
                     tokenAddress,
                     beneficiaryAccount,
                     amount,
-                    fee.totalFeeInNative ?? fee.totalFeeInDot,
+                    totalForTx,
                     messageId,
                     sourceParachainImpl.parachainId,
-                    fee.returnToSenderExecutionFeeDOT,
-                    fee.totalFeeInNative !== undefined,
+                    findInBreakdownOrZero(fee.breakdown, "returnToSenderExecution", "DOT"),
+                    totalNativeFromTotals !== undefined,
                 )
             }
         }
@@ -337,8 +348,9 @@ export class V1ToEthereumAdapter<T extends EthereumProviderTypes>
             }
         }
         let nativeBalanceCheckFailed = false
-        if (isNativeBalance && fee.totalFeeInNative) {
-            if (amount + fee.totalFeeInNative > tokenBalance) {
+        const v1ParaTotalNative = findTotalOrUndefined(fee, source.info.tokenSymbols)
+        if (isNativeBalance && v1ParaTotalNative !== undefined) {
+            if (amount + v1ParaTotalNative > tokenBalance) {
                 nativeBalanceCheckFailed = true
                 logs.push({
                     kind: ValidationKind.Error,
@@ -464,12 +476,12 @@ export class V1ToEthereumAdapter<T extends EthereumProviderTypes>
                             beneficiaryAccount,
                             "0x0000000000000000000000000000000000000000000000000000000000000000",
                             amount,
-                            fee.totalFeeInDot,
-                            fee.assetHubExecutionFeeDOT,
+                            findTotal(fee, "DOT"),
+                            findInBreakdownOrZero(fee.breakdown, "assetHubExecution", "DOT"),
                         ),
                     )
                 } else {
-                    if (!source.features.hasDotBalance && fee.totalFeeInNative) {
+                    if (!source.features.hasDotBalance && v1ParaTotalNative !== undefined) {
                         dryRunResultAssetHub = await dryRunAssetHub(
                             assetHub,
                             sourceParaId,
@@ -482,10 +494,18 @@ export class V1ToEthereumAdapter<T extends EthereumProviderTypes>
                                 tokenAddress,
                                 "0x0000000000000000000000000000000000000000000000000000000000000000",
                                 amount,
-                                fee.totalFeeInNative,
-                                fee.assetHubExecutionFeeNative ?? 0n,
+                                v1ParaTotalNative,
+                                findInBreakdownOrZero(
+                                    fee.breakdown,
+                                    "assetHubExecution",
+                                    source.info.tokenSymbols,
+                                ),
                                 sourceParaId,
-                                fee.returnToSenderExecutionFeeNative ?? 0n,
+                                findInBreakdownOrZero(
+                                    fee.breakdown,
+                                    "returnToSenderExecution",
+                                    source.info.tokenSymbols,
+                                ),
                                 sourceParachainImpl.getNativeBalanceLocation("here"),
                                 sourceParachainImpl.getNativeBalanceLocation("sibling"),
                                 true,
@@ -504,10 +524,14 @@ export class V1ToEthereumAdapter<T extends EthereumProviderTypes>
                                 tokenAddress,
                                 "0x0000000000000000000000000000000000000000000000000000000000000000",
                                 amount,
-                                fee.totalFeeInDot,
-                                fee.assetHubExecutionFeeDOT,
+                                findTotal(fee, "DOT"),
+                                findInBreakdownOrZero(fee.breakdown, "assetHubExecution", "DOT"),
                                 sourceParaId,
-                                fee.returnToSenderExecutionFeeDOT,
+                                findInBreakdownOrZero(
+                                    fee.breakdown,
+                                    "returnToSenderExecution",
+                                    "DOT",
+                                ),
                                 DOT_LOCATION,
                                 DOT_LOCATION,
                                 false,
@@ -530,8 +554,8 @@ export class V1ToEthereumAdapter<T extends EthereumProviderTypes>
         const sourceExecutionFee = paymentInfo["partialFee"].toBigInt()
 
         // recheck total after fee estimation
-        if (isNativeBalance && fee.totalFeeInNative && !nativeBalanceCheckFailed) {
-            if (amount + fee.totalFeeInNative + sourceExecutionFee > tokenBalance) {
+        if (isNativeBalance && v1ParaTotalNative !== undefined && !nativeBalanceCheckFailed) {
+            if (amount + v1ParaTotalNative + sourceExecutionFee > tokenBalance) {
                 logs.push({
                     kind: ValidationKind.Error,
                     reason: ValidationReason.InsufficientTokenBalance,
@@ -540,6 +564,7 @@ export class V1ToEthereumAdapter<T extends EthereumProviderTypes>
             }
         }
 
+        const v1TotalDot = findTotal(fee, "DOT")
         if (sourceParaId === registry.assetHubParaId) {
             if (!dotBalance) {
                 logs.push({
@@ -547,7 +572,7 @@ export class V1ToEthereumAdapter<T extends EthereumProviderTypes>
                     reason: ValidationReason.InsufficientDotFee,
                     message: "Could not determine the DOT balance",
                 })
-            } else if (sourceExecutionFee + fee.totalFeeInDot > dotBalance) {
+            } else if (sourceExecutionFee + v1TotalDot > dotBalance) {
                 logs.push({
                     kind: ValidationKind.Error,
                     reason: ValidationReason.InsufficientDotFee,
@@ -556,7 +581,7 @@ export class V1ToEthereumAdapter<T extends EthereumProviderTypes>
                 })
             }
         } else {
-            if (dotBalance && fee.totalFeeInDot > dotBalance) {
+            if (dotBalance && v1TotalDot > dotBalance) {
                 logs.push({
                     kind: ValidationKind.Error,
                     reason: ValidationReason.InsufficientDotFee,
@@ -564,8 +589,8 @@ export class V1ToEthereumAdapter<T extends EthereumProviderTypes>
                         "Insufficient DOT balance to submit transaction on the source parachain.",
                 })
             } else if (
-                fee.totalFeeInNative &&
-                fee.totalFeeInNative + sourceExecutionFee > nativeBalance &&
+                v1ParaTotalNative !== undefined &&
+                v1ParaTotalNative + sourceExecutionFee > nativeBalance &&
                 !nativeBalanceCheckFailed
             ) {
                 logs.push({
@@ -838,6 +863,21 @@ export async function getDeliveryFeeV1(
         amount: returnToSenderExecutionFeeDOT,
         symbol: "DOT",
     })
+    if (totalFeeInNative !== undefined) {
+        const nativeSymbol = sourceParachain.info.tokenSymbols
+        if (assetHubExecutionFeeNative !== undefined) {
+            addBreakdown(breakdown, "assetHubExecution", {
+                amount: assetHubExecutionFeeNative,
+                symbol: nativeSymbol,
+            })
+        }
+        if (returnToSenderExecutionFeeNative !== undefined) {
+            addBreakdown(breakdown, "returnToSenderExecution", {
+                amount: returnToSenderExecutionFeeNative,
+                symbol: nativeSymbol,
+            })
+        }
+    }
 
     const summary: DeliveryFee["summary"] =
         totalFeeInNative !== undefined
@@ -852,14 +892,6 @@ export async function getDeliveryFeeV1(
 
     return {
         kind: options?.kind ?? "polkadot->ethereum",
-        snowbridgeDeliveryFeeDOT,
-        assetHubExecutionFeeDOT,
-        bridgeHubDeliveryFeeDOT,
-        returnToSenderExecutionFeeDOT,
-        totalFeeInDot,
-        totalFeeInNative,
-        assetHubExecutionFeeNative,
-        returnToSenderExecutionFeeNative,
         breakdown,
         summary,
         totals: computeTotals(summary),

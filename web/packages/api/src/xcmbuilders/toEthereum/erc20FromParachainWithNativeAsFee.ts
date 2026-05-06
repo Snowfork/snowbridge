@@ -11,6 +11,7 @@ import {
 import { DOT_LOCATION } from "../../assets_v2"
 import { Asset } from "@snowbridge/base-types"
 import { DeliveryFee } from "../../toEthereum_v2"
+import { findInBreakdownOrZero, findTotal } from "../../fees"
 
 export function buildTransferXcmFromParachainWithNativeAssetFee(
     registry: Registry,
@@ -18,6 +19,7 @@ export function buildTransferXcmFromParachainWithNativeAssetFee(
     ethChainId: number,
     assetHubParaId: number,
     sourceParachainId: number,
+    nativeSymbol: string,
     sourceAccount: string,
     beneficiary: string,
     topic: string,
@@ -32,12 +34,16 @@ export function buildTransferXcmFromParachainWithNativeAssetFee(
     let tokenLocation = erc20Location(ethChainId, asset.token)
 
     let localNativeFeeAmount =
-        fee.localExecutionFeeInNative! +
-        fee.localDeliveryFeeInNative! +
-        fee.returnToSenderExecutionFeeNative!
-    let totalNativeFeeAmount = fee.totalFeeInNative!
-    let remoteEtherFeeAmount = fee.ethereumExecutionFee!
-    let remoteEtherFeeNativeAmount = fee.ethereumExecutionFeeInNative!
+        findInBreakdownOrZero(fee.breakdown, "localExecution", nativeSymbol) +
+        findInBreakdownOrZero(fee.breakdown, "localDelivery", nativeSymbol) +
+        findInBreakdownOrZero(fee.breakdown, "returnToSenderExecution", nativeSymbol)
+    let totalNativeFeeAmount = findTotal(fee, nativeSymbol)
+    let remoteEtherFeeAmount = findInBreakdownOrZero(fee.breakdown, "ethereumExecution", "ETH")
+    let remoteEtherFeeNativeAmount = findInBreakdownOrZero(
+        fee.breakdown,
+        "ethereumExecution",
+        nativeSymbol,
+    )
 
     let assets = [
         {
