@@ -1327,9 +1327,19 @@ export async function buildContractCallHex<T extends EthereumProviderTypes>(
     return "0x00" + callHex.toHex().slice(2)
 }
 
+// Breakdown entries are 1n placeholders so XCM builders that read fee amounts
+// via findInBreakdownOrZero produce non-zero fungible assets — the AH runtime
+// panics in XcmPaymentApi_query_xcm_weight on zero-amount assets.
 export const mockDeliveryFee: DeliveryFee = {
     kind: "polkadot->ethereum",
-    breakdown: {},
+    breakdown: {
+        localExecution: [{ amount: 1n, symbol: "DOT" }],
+        localDelivery: [{ amount: 1n, symbol: "DOT" }],
+        snowbridgeDelivery: [{ amount: 1n, symbol: "DOT" }],
+        assetHubExecution: [{ amount: 1n, symbol: "DOT" }],
+        bridgeHubDelivery: [{ amount: 1n, symbol: "DOT" }],
+        ethereumExecution: [{ amount: 1n, symbol: "ETH" }],
+    },
     summary: [{ description: "Bridge fee", amount: 10n, symbol: "DOT" }],
     totals: [{ amount: 10n, symbol: "DOT" }],
 }
