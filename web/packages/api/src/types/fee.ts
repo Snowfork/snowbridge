@@ -15,7 +15,6 @@ export type ToPolkadotFeeKey =
     | "destinationExecution"
     | "relayer"
     | "extrinsic"
-    | "volumeTip"
 
 // ethereum_l2 → polkadot
 export type L2ToPolkadotFeeKey = ToPolkadotFeeKey | "l2Bridge" | "l1Swap"
@@ -31,7 +30,6 @@ export type ToEthereumFeeKey =
     | "returnToSenderExecution"
     | "ethereumExecution"
     | "l2Bridge"
-    | "volumeTip"
 
 // polkadot → polkadot (inter-parachain)
 export type InterParachainFeeKey = "assetHubDelivery" | "destinationExecution"

@@ -249,9 +249,6 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
         addBreakdown(breakdown, "relayer", { amount: finalRelayerFee, symbol: "ETH" })
         addBreakdown(breakdown, "extrinsic", { amount: extrinsicFeeDot, symbol: "DOT" })
         addBreakdown(breakdown, "extrinsic", { amount: extrinsicFeeEther, symbol: "ETH" })
-        if (volumeTip !== undefined) {
-            addBreakdown(breakdown, "volumeTip", { amount: volumeTip, symbol: "ETH" })
-        }
 
         const summary = [
             {

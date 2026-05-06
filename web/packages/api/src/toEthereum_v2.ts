@@ -564,8 +564,8 @@ export class V1ToEthereumAdapter<T extends EthereumProviderTypes>
             }
         }
 
-        const v1TotalDot = findTotal(fee, "DOT")
         if (sourceParaId === registry.assetHubParaId) {
+            const v1TotalDot = findTotal(fee, "DOT")
             if (!dotBalance) {
                 logs.push({
                     kind: ValidationKind.Error,
@@ -581,7 +581,11 @@ export class V1ToEthereumAdapter<T extends EthereumProviderTypes>
                 })
             }
         } else {
-            if (dotBalance && v1TotalDot > dotBalance) {
+            const dotCheckFailed =
+                source.features.hasDotBalance &&
+                dotBalance &&
+                findTotal(fee, "DOT") > dotBalance
+            if (dotCheckFailed) {
                 logs.push({
                     kind: ValidationKind.Error,
                     reason: ValidationReason.InsufficientDotFee,

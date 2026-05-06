@@ -1,5 +1,6 @@
 import { Keyring } from "@polkadot/keyring"
 import { createApi } from "@snowbridge/api"
+import { findTotalOrZero } from "@snowbridge/api/dist/fees"
 import { EthersEthereumProvider } from "@snowbridge/provider-ethers"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { formatUnits, Wallet } from "ethers"
@@ -88,7 +89,10 @@ export const transferToEthereum = async (
         )
         console.log(
             `delivery fee (${registry.parachains[`polkadot_${registry.assetHubParaId}`].info.tokenSymbols}): `,
-            formatUnits(fee.totalFeeInDot, transfer.computed.sourceParachain.info.tokenDecimals),
+            formatUnits(
+                findTotalOrZero(fee, "DOT"),
+                transfer.computed.sourceParachain.info.tokenDecimals,
+            ),
         )
 
         // Step 4. Validate the transaction.

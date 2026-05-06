@@ -239,9 +239,6 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
         addBreakdown(breakdown, "relayer", { amount: finalRelayerFee, symbol: "ETH" })
         addBreakdown(breakdown, "extrinsic", { amount: extrinsicFeeDot, symbol: "DOT" })
         addBreakdown(breakdown, "extrinsic", { amount: extrinsicFeeEther, symbol: "ETH" })
-        if (volumeTip !== undefined) {
-            addBreakdown(breakdown, "volumeTip", { amount: volumeTip, symbol: "ETH" })
-        }
         if (bridgeFeeInL2Token > 0n) {
             addBreakdown(breakdown, "l2Bridge", { amount: bridgeFeeInL2Token, symbol: l2FeeSymbol })
         }
@@ -388,7 +385,11 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
         const bridgeFeeInL2Token = (fee.breakdown.l2Bridge ?? []).reduce((s, a) => s + a.amount, 0n)
         const swapFeeInL1Token = (fee.breakdown.l1Swap ?? []).reduce((s, a) => s + a.amount, 0n)
         if (l2TokenAddress === ETHER_TOKEN_ADDRESS || l2TokenAddress === l2FeeTokenAddress) {
-            value = totalFeeInWei + amount
+            // bridgeFeeInL2Token is denominated in the L2 fee token (WETH on
+            // OP/Base/Arbitrum), which is 1:1 with ETH wei but lives in its own
+            // symbol bucket in fee.totals. Add it explicitly so msg.value /
+            // depositParams.inputAmount cover the Across leg.
+            value = totalFeeInWei + amount + bridgeFeeInL2Token
             inputAmount = amount + (l2TokenAddress === l2FeeTokenAddress ? bridgeFeeInL2Token : 0n)
             depositParams = {
                 inputToken: l2TokenAddress,

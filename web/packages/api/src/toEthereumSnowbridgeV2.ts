@@ -532,19 +532,10 @@ export const estimateFeesFromAssetHub = async <T extends EthereumProviderTypes>(
         amount: ethereumExecutionFee ?? 0n,
         symbol: "ETH",
     })
-    if (volumeTip !== undefined) {
-        addBreakdown(breakdown, "volumeTip", { amount: volumeTip, symbol: "ETH" })
-    }
     const nativeSymbol = feeLocation ? registry.relaychain.tokenSymbols : undefined
     if (ethereumExecutionFeeInNative !== undefined && feeLocation) {
         addBreakdown(breakdown, "ethereumExecution", {
             amount: ethereumExecutionFeeInNative,
-            symbol: nativeSymbol!,
-        })
-    }
-    if (volumeTipInNative !== undefined && feeLocation) {
-        addBreakdown(breakdown, "volumeTip", {
-            amount: volumeTipInNative,
             symbol: nativeSymbol!,
         })
     }
@@ -801,9 +792,6 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
     addBreakdown(breakdown, "assetHubExecution", { amount: assetHubExecutionFeeDOT, symbol: "DOT" })
     addBreakdown(breakdown, "bridgeHubDelivery", { amount: bridgeHubDeliveryFeeDOT, symbol: "DOT" })
     addBreakdown(breakdown, "ethereumExecution", { amount: ethereumExecutionFee, symbol: "ETH" })
-    if (volumeTip !== undefined) {
-        addBreakdown(breakdown, "volumeTip", { amount: volumeTip, symbol: "ETH" })
-    }
     const sourceParaSymbol = sourceParachain.info.tokenSymbols
     const feeNativeSymbol = feeLocation
         ? isRelaychainLocation(feeLocation)
@@ -825,12 +813,6 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
     if (ethereumExecutionFeeInNative !== undefined) {
         addBreakdown(breakdown, "ethereumExecution", {
             amount: ethereumExecutionFeeInNative,
-            symbol: feeNativeSymbol!,
-        })
-    }
-    if (volumeTipInNative !== undefined) {
-        addBreakdown(breakdown, "volumeTip", {
-            amount: volumeTipInNative,
             symbol: feeNativeSymbol!,
         })
     }
