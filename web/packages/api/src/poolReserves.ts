@@ -79,6 +79,26 @@ export function checkDotEthPoolLiquidityForPolkadotToEthereum(
     )
 }
 
+// <native>/DOT pool on Polkadot AH — parachain (native fee) → Ethereum direction.
+// First of two AH swaps when fee is paid in the source parachain's native asset:
+// runtime swap on AH is native → DOT, which then funds the DOT → ETH swap.
+// Pool creation order: DOT first. Output = DOT = reserve1.
+export function checkNativeDotPoolLiquidityForParachainToEthereum(
+    assetHub: ParachainBase,
+    feeLocation: any,
+    requiredDotOut: bigint,
+    nativeSymbol?: string,
+): Promise<PoolReserveCheck> {
+    return checkPoolOutputReserve(
+        assetHub,
+        DOT_LOCATION,
+        feeLocation,
+        1,
+        requiredDotOut,
+        nativeSymbol ? `DOT/${nativeSymbol}` : "DOT/native",
+    )
+}
+
 // DOT/KSM pool on Polkadot AH — kusama → polkadot direction.
 // Swap runs on POLKADOT AH (destination). Runtime swap: KSM → DOT.
 // Pool creation order: DOT first. Output = DOT (native) = reserve1.

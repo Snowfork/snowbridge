@@ -43,6 +43,7 @@ import type { MessageReceipt, Transfer, ValidatedTransfer, ValidationLog } from 
 import { ValidationKind, ValidationReason } from "./types/toEthereum"
 import {
     checkDotEthPoolLiquidityForPolkadotToEthereum,
+    checkNativeDotPoolLiquidityForParachainToEthereum,
 } from "./poolReserves"
 
 export { signAndSendTransfer } from "./toEthereum_v2"
@@ -723,6 +724,7 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
     let totalFeeInNative: bigint | undefined = undefined
     let assetHubExecutionFeeNative: bigint | undefined = undefined
     let ethereumExecutionFeeInNative: bigint | undefined
+    let ethereumExecutionFeeInDot: bigint | undefined
     let volumeTipInNative: bigint | undefined
     let feeLocation = options?.feeTokenLocation
     if (feeLocation) {
@@ -746,7 +748,7 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
         // On Parachains, we can use their native asset as the fee token.
         // If the fee is in native, we need to swap it to DOT first, then swap DOT to Ether to cover the ethereum execution fee.
         else if (isParachainNative(feeLocation, sourceParaId)) {
-            let ethereumExecutionFeeInDOT = await assetHubImpl.getAssetHubConversionPalletSwap(
+            ethereumExecutionFeeInDot = await assetHubImpl.getAssetHubConversionPalletSwap(
                 DOT_LOCATION,
                 bridgeLocation(registry.ethChainId),
                 padFeeByPercentage(ethereumExecutionFee, scaledSlippagePad),
@@ -754,7 +756,7 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
             ethereumExecutionFeeInNative = await assetHubImpl.getAssetHubConversionPalletSwap(
                 feeLocation,
                 DOT_LOCATION,
-                padFeeByPercentage(ethereumExecutionFeeInDOT, scaledSlippagePad),
+                padFeeByPercentage(ethereumExecutionFeeInDot, scaledSlippagePad),
             )
             if (volumeTip !== undefined && volumeTip > 0n) {
                 const volumeTipInDOT = await assetHubImpl.getAssetHubConversionPalletSwap(
@@ -768,7 +770,7 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
                     volumeTipInDOT,
                 )
             }
-            totalFeeInDot += ethereumExecutionFeeInDOT
+            totalFeeInDot += ethereumExecutionFeeInDot
             totalFeeInNative = await assetHubImpl.getAssetHubConversionPalletSwap(
                 feeLocation,
                 DOT_LOCATION,
@@ -817,6 +819,16 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
         addBreakdown(breakdown, "ethereumExecution", {
             amount: ethereumExecutionFeeInNative,
             symbol: feeNativeSymbol!,
+        })
+    }
+    // Native-fee path goes native → DOT → ETH on AH. Persist the slippage-padded
+    // DOT input used to quote the DOT → ETH swap so reserve validation reconstructs
+    // the same DOT requirement fee estimation used (rather than re-quoting from
+    // unpadded ETH and getting a less conservative threshold).
+    if (ethereumExecutionFeeInDot !== undefined && feeNativeSymbol !== "DOT") {
+        addBreakdown(breakdown, "ethereumExecution", {
+            amount: ethereumExecutionFeeInDot,
+            symbol: "DOT",
         })
     }
 
@@ -1336,6 +1348,38 @@ export const validateTransferFromParachain = async <T extends EthereumProviderTy
                             ? `${reserveCheck.pool} pool does not exist on Asset Hub.`
                             : `${reserveCheck.pool} pool on Asset Hub has insufficient liquidity (need ${reserveCheck.requiredOut}, have ${reserveCheck.reserveOut}).`,
                 })
+            }
+
+            // Native-fee path runs an extra native → DOT swap on AH before DOT → ETH,
+            // so the <native>/DOT pool must also have enough DOT to cover all DOT-side
+            // fees plus the DOT amount fed into the DOT → ETH swap. Use the padded
+            // ethereumExecution DOT entry persisted by fee estimation so the threshold
+            // matches the value used to quote the native → DOT swap.
+            if (isParachainNative(fee.feeLocation, sourceParaId)) {
+                const requiredDotOut =
+                    findInBreakdownOrZero(fee.breakdown, "localExecution", "DOT") +
+                    findInBreakdownOrZero(fee.breakdown, "localDelivery", "DOT") +
+                    findInBreakdownOrZero(fee.breakdown, "snowbridgeDelivery", "DOT") +
+                    findInBreakdownOrZero(fee.breakdown, "assetHubExecution", "DOT") +
+                    findInBreakdownOrZero(fee.breakdown, "bridgeHubDelivery", "DOT") +
+                    findInBreakdownOrZero(fee.breakdown, "ethereumExecution", "DOT")
+                const nativeReserveCheck =
+                    await checkNativeDotPoolLiquidityForParachainToEthereum(
+                        assetHubImpl,
+                        fee.feeLocation,
+                        requiredDotOut,
+                        source.info.tokenSymbols,
+                    )
+                if (!nativeReserveCheck.ok) {
+                    logs.push({
+                        kind: ValidationKind.Error,
+                        reason: ValidationReason.InsufficientPoolReserves,
+                        message:
+                            nativeReserveCheck.reason === "pool-missing"
+                                ? `${nativeReserveCheck.pool} pool does not exist on Asset Hub.`
+                                : `${nativeReserveCheck.pool} pool on Asset Hub has insufficient liquidity (need ${nativeReserveCheck.requiredOut}, have ${nativeReserveCheck.reserveOut}).`,
+                    })
+                }
             }
         }
     }
