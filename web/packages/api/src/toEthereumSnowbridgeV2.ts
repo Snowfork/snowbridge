@@ -1202,16 +1202,30 @@ export const validateTransferFromParachain = async <T extends EthereumProviderTy
         )
     }
 
-    // For native-ETH transfers paid with ETH (default `buildTransferXcmFromParachain`
-    // path), the source `WithdrawAsset` is `amount + remoteEtherFeeAmount` of ETH —
-    // the eth-side execution fee is taken from the user's source ETH balance.
+    // The source `WithdrawAsset` may withdraw extra units of the token asset
+    // when the token shares a location with the fee asset:
+    //  - Native-ETH transfer paid with ETH (default builder): `amount + remoteEtherFeeAmount` of ETH.
+    //  - PNA DOT transfer paid with DOT: `amount + totalDOTFeeAmount` of DOT.
+    // Account for these overlaps so the token-balance check matches what the
+    // extrinsic actually withdraws.
     const isEthToken = tokenAddress.toLowerCase() === ETHER_TOKEN_ADDRESS.toLowerCase()
     const isAllEthFeePath = !fee.feeLocation
+    const isDotToken =
+        sourceAssetMetadata.location !== undefined &&
+        isRelaychainLocation(sourceAssetMetadata.location)
+    const isNativeFeePath =
+        fee.feeLocation !== undefined && isParachainNative(fee.feeLocation, sourceParaId)
+    const sourceWithdrawsDot = isAllEthFeePath || (!!fee.feeLocation && !isNativeFeePath)
+    const requiredDotFee = findTotalOrUndefined(fee, "DOT") ?? 0n
+
     const extraEthOnSourceWithdraw =
         isEthToken && isAllEthFeePath
             ? findInBreakdownOrZero(fee.breakdown, "ethereumExecution", "ETH")
             : 0n
-    const requiredTokenAmount = amount + extraEthOnSourceWithdraw
+    const extraDotOnSourceWithdraw =
+        isDotToken && sourceWithdrawsDot ? requiredDotFee : 0n
+    const requiredTokenAmount =
+        amount + extraEthOnSourceWithdraw + extraDotOnSourceWithdraw
 
     const paraTotalNative = findTotalOrUndefined(fee, source.info.tokenSymbols)
     if (isNativeBalance && paraTotalNative !== undefined) {
@@ -1248,6 +1262,38 @@ export const validateTransferFromParachain = async <T extends EthereumProviderTy
                 kind: ValidationKind.Error,
                 reason: ValidationReason.InsufficientEtherBalance,
                 message: "Insufficient ether balance to submit transaction.",
+            })
+        }
+    }
+
+    // DOT balance check: the source `WithdrawAsset` includes `totalDOTFeeAmount`
+    // for the default ETH-fee and DOT-fee paths. Skip when the token is DOT —
+    // the overlap is already captured in the token-balance check via `extraDotOnSourceWithdraw`.
+    if (
+        sourceWithdrawsDot &&
+        !isDotToken &&
+        source.features.hasDotBalance &&
+        dotBalance !== undefined &&
+        requiredDotFee > dotBalance
+    ) {
+        logs.push({
+            kind: ValidationKind.Error,
+            reason: ValidationReason.InsufficientDotFee,
+            message: "Insufficient DOT balance to submit transaction on the source parachain.",
+        })
+    }
+
+    // Native balance check: the source `WithdrawAsset` includes `totalNativeFeeAmount`
+    // for the native-fee path. Skip when the token is the parachain's native asset —
+    // the overlap is already captured by the `isNativeBalance && paraTotalNative` branch.
+    if (isNativeFeePath && !isNativeBalance) {
+        const requiredNativeFee = paraTotalNative ?? 0n
+        if (requiredNativeFee > nativeBalance) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.InsufficientNativeFee,
+                message:
+                    "Insufficient native balance to submit transaction on the source parachain.",
             })
         }
     }
