@@ -288,9 +288,11 @@ export type L2ForwardMetadata = {
   swapRoutes: readonly AssetSwapRoute[];
 };
 
+export type FeeEstimateErrorCode = "AMOUNT_TOO_LOW" | "AMOUNT_TOO_HIGH" | "COULD_NOT_SWAP"
+
 export type FeeEstimateErrorDetails = {
   type: string;
-  code: string;
+  code: FeeEstimateErrorCode | string;
   status: number;
   message: string;
   id: string;
@@ -300,6 +302,15 @@ export class FeeEstimateError extends Error {
   constructor(details: FeeEstimateErrorDetails) {
     super(details.message);
     this.details = details;
+  }
+  static couldNotSwap(asset1: unknown, asset2: unknown): FeeEstimateError {
+    return new FeeEstimateError({
+      type: "AssetConversion",
+      code: "COULD_NOT_SWAP",
+      status: 0,
+      message: `Could not estimate swap for '${JSON.stringify(asset1)}' -> '${JSON.stringify(asset2)}'`,
+      id: "could-not-swap",
+    })
   }
 }
 

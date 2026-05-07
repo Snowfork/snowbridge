@@ -1,4 +1,4 @@
-import { AssetMap, PNAMap } from "@snowbridge/base-types"
+import { AssetMap, FeeEstimateError, PNAMap } from "@snowbridge/base-types"
 import { dotLocationOnKusamaAssetHub } from "../xcmBuilder"
 import { AssetHubParachain } from "./assethub"
 
@@ -24,11 +24,7 @@ export class AssetHubKusamaParachain extends AssetHubParachain {
         )
         const asset2Balance = result.toPrimitive() as any
         if (asset2Balance == null) {
-            throw Error(
-                `No pool set up in asset conversion pallet for '${JSON.stringify(
-                    asset1,
-                )}' and '${JSON.stringify(asset2)}'.`,
-            )
+            throw FeeEstimateError.couldNotSwap(asset1, asset2)
         }
         return BigInt(asset2Balance)
     }
@@ -46,11 +42,7 @@ export class AssetHubKusamaParachain extends AssetHubParachain {
         )
         const asset1Balance = result.toPrimitive() as any
         if (asset1Balance == null) {
-            throw Error(
-                `No pool set up in asset conversion pallet for '${JSON.stringify(
-                    asset1,
-                )}' and '${JSON.stringify(asset2)}'.`,
-            )
+            throw FeeEstimateError.couldNotSwap(asset1, asset2)
         }
         return BigInt(asset1Balance)
     }

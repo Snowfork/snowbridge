@@ -67,6 +67,7 @@ export enum ValidationReason {
     InsufficientEtherBalance,
     ContractCallInvalidTarget,
     ContractCallAgentNotRegistered,
+    InsufficientPoolReserves,
 }
 
 export type ValidationLog = {

@@ -44,6 +44,7 @@ import {
     findInBreakdownOrZero,
     findTotal,
 } from "../../fees"
+import { checkDotEthPoolLiquidityForEthereumToPolkadot } from "../../poolReserves"
 
 export class ERC20ToParachain<T extends EthereumProviderTypes> implements TransferInterface<T> {
     constructor(
@@ -228,13 +229,22 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
 
         const breakdown: DeliveryFee["breakdown"] = {}
         addBreakdown(breakdown, "assetHubDelivery", { amount: deliveryFeeInEther, symbol: "ETH" })
+        addBreakdown(breakdown, "assetHubDelivery", { amount: deliveryFeeInDOT, symbol: "DOT" })
         addBreakdown(breakdown, "assetHubExecution", {
             amount: assetHubExecutionFeeEther,
             symbol: "ETH",
         })
+        addBreakdown(breakdown, "assetHubExecution", {
+            amount: assetHubExecutionFeeDOT,
+            symbol: "DOT",
+        })
         addBreakdown(breakdown, "destinationDelivery", {
             amount: destinationDeliveryFeeEther,
             symbol: "ETH",
+        })
+        addBreakdown(breakdown, "destinationDelivery", {
+            amount: destinationDeliveryFeeDOT,
+            symbol: "DOT",
         })
         addBreakdown(breakdown, "destinationExecution", {
             amount: destinationExecutionFeeEther,
@@ -562,9 +572,33 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
             })
         }
 
+        const assetHubImpl = await this.context.paraImplementation(assetHub)
+
+        const requiredDotOut =
+            findInBreakdownOrZero(transfer.input.fee.breakdown, "assetHubDelivery", "DOT") +
+            findInBreakdownOrZero(transfer.input.fee.breakdown, "assetHubExecution", "DOT") +
+            findInBreakdownOrZero(transfer.input.fee.breakdown, "destinationDelivery", "DOT") +
+            findInBreakdownOrZero(transfer.input.fee.breakdown, "destinationExecution", "DOT")
+        if (requiredDotOut > 0n) {
+            const reserveCheck = await checkDotEthPoolLiquidityForEthereumToPolkadot(
+                assetHubImpl,
+                registry.ethChainId,
+                requiredDotOut,
+            )
+            if (!reserveCheck.ok) {
+                logs.push({
+                    kind: ValidationKind.Error,
+                    reason: ValidationReason.InsufficientPoolReserves,
+                    message:
+                        reserveCheck.reason === "pool-missing"
+                            ? `${reserveCheck.pool} pool does not exist on Asset Hub.`
+                            : `${reserveCheck.pool} pool on Asset Hub has insufficient liquidity (need ${reserveCheck.requiredOut}, have ${reserveCheck.reserveOut}).`,
+                })
+            }
+        }
+
         // Check if asset can be received on asset hub (dry run)
         const ahParachain = registry.parachains[`polkadot_${registry.assetHubParaId}`]
-        const assetHubImpl = await this.context.paraImplementation(assetHub)
         let dryRunAhSuccess, forwardedDestination, assetHubDryRunError
         if (!ahParachain.features.hasDryRunApi) {
             logs.push({

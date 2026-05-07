@@ -44,6 +44,7 @@ export enum ValidationReason {
     DryRunFailed,
     MaxConsumersReached,
     AccountDoesNotExist,
+    InsufficientPoolReserves,
 }
 
 export type ValidationLog = {

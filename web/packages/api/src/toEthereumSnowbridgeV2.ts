@@ -41,6 +41,9 @@ import {
 import { estimateFees } from "./across/api"
 import type { MessageReceipt, Transfer, ValidatedTransfer, ValidationLog } from "./types/toEthereum"
 import { ValidationKind, ValidationReason } from "./types/toEthereum"
+import {
+    checkDotEthPoolLiquidityForPolkadotToEthereum,
+} from "./poolReserves"
 
 export { signAndSendTransfer } from "./toEthereum_v2"
 export { ValidationKind } from "./types/toEthereum"
@@ -1099,6 +1102,27 @@ export const validateTransferFromAssetHub = async <T extends EthereumProviderTyp
         })
     }
 
+    if (fee.feeLocation) {
+        const requiredEthOut = findInBreakdownOrZero(fee.breakdown, "ethereumExecution", "ETH")
+        if (requiredEthOut > 0n) {
+            const reserveCheck = await checkDotEthPoolLiquidityForPolkadotToEthereum(
+                sourceParachainImpl,
+                registry.ethChainId,
+                requiredEthOut,
+            )
+            if (!reserveCheck.ok) {
+                logs.push({
+                    kind: ValidationKind.Error,
+                    reason: ValidationReason.InsufficientPoolReserves,
+                    message:
+                        reserveCheck.reason === "pool-missing"
+                            ? `${reserveCheck.pool} pool does not exist on Asset Hub.`
+                            : `${reserveCheck.pool} pool on Asset Hub has insufficient liquidity (need ${reserveCheck.requiredOut}, have ${reserveCheck.reserveOut}).`,
+                })
+            }
+        }
+    }
+
     const success = logs.find((l) => l.kind === ValidationKind.Error) === undefined
 
     return {
@@ -1292,6 +1316,28 @@ export const validateTransferFromParachain = async <T extends EthereumProviderTy
             reason: ValidationReason.BridgeStatusNotOperational,
             message: "Bridge operations have been paused by onchain governance.",
         })
+    }
+
+    if (fee.feeLocation) {
+        const assetHubImpl = await context.paraImplementation(assetHub)
+        const requiredEthOut = findInBreakdownOrZero(fee.breakdown, "ethereumExecution", "ETH")
+        if (requiredEthOut > 0n) {
+            const reserveCheck = await checkDotEthPoolLiquidityForPolkadotToEthereum(
+                assetHubImpl,
+                registry.ethChainId,
+                requiredEthOut,
+            )
+            if (!reserveCheck.ok) {
+                logs.push({
+                    kind: ValidationKind.Error,
+                    reason: ValidationReason.InsufficientPoolReserves,
+                    message:
+                        reserveCheck.reason === "pool-missing"
+                            ? `${reserveCheck.pool} pool does not exist on Asset Hub.`
+                            : `${reserveCheck.pool} pool on Asset Hub has insufficient liquidity (need ${reserveCheck.requiredOut}, have ${reserveCheck.reserveOut}).`,
+                })
+            }
+        }
     }
 
     const success = logs.find((l) => l.kind === ValidationKind.Error) === undefined
