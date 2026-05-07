@@ -4,7 +4,6 @@ import {
     erc20Location,
     parachainLocation,
     accountToLocation,
-    isEthereumNative,
     buildAppendixInstructions,
     buildEthereumInstructions,
 } from "../../xcmBuilder"
@@ -52,21 +51,12 @@ export function buildTransferXcmFromParachainWithDOTAsFee(
             Fungible: totalDOTFeeAmount,
         },
     })
-    if (isEthereumNative(tokenLocation, ethChainId)) {
-        assets.push({
-            id: bridgeLocation(ethChainId),
-            fun: {
-                Fungible: remoteEtherFeeAmount + tokenAmount,
-            },
-        })
-    } else {
-        assets.push({
-            id: tokenLocation,
-            fun: {
-                Fungible: tokenAmount,
-            },
-        })
-    }
+    assets.push({
+        id: tokenLocation,
+        fun: {
+            Fungible: tokenAmount,
+        },
+    })
 
     let appendixInstructions = buildAppendixInstructions(
         envName,

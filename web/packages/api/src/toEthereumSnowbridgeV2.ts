@@ -1202,9 +1202,20 @@ export const validateTransferFromParachain = async <T extends EthereumProviderTy
         )
     }
 
+    // For native-ETH transfers paid with ETH (default `buildTransferXcmFromParachain`
+    // path), the source `WithdrawAsset` is `amount + remoteEtherFeeAmount` of ETH —
+    // the eth-side execution fee is taken from the user's source ETH balance.
+    const isEthToken = tokenAddress.toLowerCase() === ETHER_TOKEN_ADDRESS.toLowerCase()
+    const isAllEthFeePath = !fee.feeLocation
+    const extraEthOnSourceWithdraw =
+        isEthToken && isAllEthFeePath
+            ? findInBreakdownOrZero(fee.breakdown, "ethereumExecution", "ETH")
+            : 0n
+    const requiredTokenAmount = amount + extraEthOnSourceWithdraw
+
     const paraTotalNative = findTotalOrUndefined(fee, source.info.tokenSymbols)
     if (isNativeBalance && paraTotalNative !== undefined) {
-        if (amount + paraTotalNative > tokenBalance) {
+        if (requiredTokenAmount + paraTotalNative > tokenBalance) {
             logs.push({
                 kind: ValidationKind.Error,
                 reason: ValidationReason.InsufficientTokenBalance,
@@ -1212,7 +1223,7 @@ export const validateTransferFromParachain = async <T extends EthereumProviderTy
             })
         }
     } else {
-        if (amount > tokenBalance) {
+        if (requiredTokenAmount > tokenBalance) {
             logs.push({
                 kind: ValidationKind.Error,
                 reason: ValidationReason.InsufficientTokenBalance,
@@ -1221,7 +1232,10 @@ export const validateTransferFromParachain = async <T extends EthereumProviderTy
         }
     }
 
-    if (!fee.feeLocation) {
+    // When the token is ETH and the fee path is ETH, the eth-side fee is folded
+    // into the token-balance check above. Skip the standalone ether check to
+    // avoid querying the same balance twice and emitting a duplicate error.
+    if (!fee.feeLocation && !isEthToken) {
         let etherBalance = await sourceParachainImpl.getTokenBalance(
             sourceAccountHex,
             registry.ethChainId,
