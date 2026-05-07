@@ -29,6 +29,7 @@ import {
 import { Context } from "../.."
 import { TransferInterface } from "./transferInterface"
 import { ensureValidationSuccess } from "../../utils"
+import { VolumeFeeParams } from "../../feeSchedule"
 import {
     buildContractCallHex,
     buildL2Call,
@@ -67,7 +68,7 @@ export class ERC20FromAH<T extends EthereumProviderTypes> implements TransferInt
             contractCall?: ContractCall
             l2PadFeeByPercentage?: bigint
             fillDeadlineBuffer?: bigint
-            volumeFee?: import("../../feeSchedule").VolumeFeeParams
+            volumeFee?: VolumeFeeParams
         },
     ): Promise<DeliveryFee> {
         const context = this.context
@@ -268,7 +269,7 @@ export class ERC20FromAH<T extends EthereumProviderTypes> implements TransferInt
                 contractCall?: ContractCall
                 l2PadFeeByPercentage?: bigint
                 fillDeadlineBuffer?: bigint
-                volumeFee?: import("../../feeSchedule").VolumeFeeParams
+                volumeFee?: VolumeFeeParams
             }
             tx?: {
                 claimerLocation?: any

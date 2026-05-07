@@ -313,8 +313,10 @@ export abstract class ParachainBase {
         asset2: any,
         exactAsset2Balance: bigint,
     ): Promise<bigint>
-    abstract getAssetHubPoolReserves(
-        asset1: any,
-        asset2: any,
-    ): Promise<{ reserve1: bigint; reserve2: bigint } | null>
+    getAssetHubPoolReserves(
+        _asset1: any,
+        _asset2: any,
+    ): Promise<{ reserve1: bigint; reserve2: bigint } | null> {
+        return Promise.resolve(null)
+    }
 }

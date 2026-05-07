@@ -126,13 +126,6 @@ export class PenpalParachain extends ParachainBase {
     ): Promise<bigint> {
         throw Error(`${this.specName} does not support.`)
     }
-
-    getAssetHubPoolReserves(
-        _asset1: any,
-        _asset2: any,
-    ): Promise<{ reserve1: bigint; reserve2: bigint } | null> {
-        return Promise.resolve(null)
-    }
 }
 
 function bridgeablePNAsOnPenpal(location: any, assetHubParaId: number, env: string): any {
