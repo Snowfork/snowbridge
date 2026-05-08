@@ -474,7 +474,6 @@ export class PNAToAH<T extends EthereumProviderTypes> implements TransferInterfa
                 transfer.input.customXcm,
             )
 
-            console.log('XXXXXX', xcm)
             let result = await assetHubImpl.dryRunXcm(registry.bridgeHubParaId, xcm)
             dryRunAhSuccess = result.success
             assetHubDryRunError = result.errorMessage
