@@ -12,7 +12,6 @@ export function buildAssetHubPNAReceivedXcm(
     registry: Registry,
     ethChainId: number,
     tokenLocation: any,
-    etherAmount: bigint,
     totalAssetHubFeeInEther: bigint,
     remoteExecutionFee: bigint,
     value: bigint,
@@ -57,16 +56,6 @@ export function buildAssetHubPNAReceivedXcm(
                         },
                     },
                 },
-            },
-            {
-                reserveAssetDeposited: [
-                    {
-                        id: ether,
-                        fun: {
-                            Fungible: etherAmount,
-                        },
-                    },
-                ],
             },
             {
                 withdrawAsset: [
@@ -344,7 +333,6 @@ export function buildAssetHubPNAReceivedXcmWithDOTFee(
     registry: Registry,
     ethChainId: number,
     tokenLocation: any,
-    etherAmount: bigint,
     totalAssetHubFeeInEther: bigint,
     remoteEtherFeeAmount: bigint,
     remoteDotFeeAmount: bigint,
@@ -390,16 +378,6 @@ export function buildAssetHubPNAReceivedXcmWithDOTFee(
                         },
                     },
                 },
-            },
-            {
-                reserveAssetDeposited: [
-                    {
-                        id: ether,
-                        fun: {
-                            Fungible: etherAmount,
-                        },
-                    },
-                ],
             },
             {
                 withdrawAsset: [

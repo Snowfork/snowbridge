@@ -95,7 +95,6 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
             1000000000000n,
             1000000000000n,
             1000000000000n,
-            1000000000000n,
             accountId32Location(
                 "0x0000000000000000000000000000000000000000000000000000000000000000",
             ),
@@ -608,8 +607,6 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
             const assetHubFee =
                 findInBreakdown(inputFee.breakdown, "assetHubExecution", "ETH") +
                 findInBreakdown(inputFee.breakdown, "destinationDelivery", "ETH")
-            const relayerFee = findInBreakdown(inputFee.breakdown, "relayer", "ETH")
-            const payloadValue = transfer.computed.totalValue - assetHubFee - relayerFee
 
             let xcm
             if (isDOT(inputFee.feeAsset)) {
@@ -617,7 +614,6 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
                     assetHub.registry,
                     registry.ethChainId,
                     destAssetMetadata.location,
-                    payloadValue,
                     assetHubFee,
                     findInBreakdown(inputFee.breakdown, "destinationExecution", "ETH"),
                     findInBreakdownOrZero(inputFee.breakdown, "destinationExecution", "DOT"),
@@ -634,7 +630,6 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
                     assetHub.registry,
                     registry.ethChainId,
                     destAssetMetadata.location,
-                    payloadValue,
                     assetHubFee,
                     findInBreakdown(inputFee.breakdown, "destinationExecution", "ETH"),
                     amount,

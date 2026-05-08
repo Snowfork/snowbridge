@@ -78,7 +78,6 @@ export class PNAToAH<T extends EthereumProviderTypes> implements TransferInterfa
             assetHub.registry,
             registry.ethChainId,
             ahAssetMetadata.location,
-            3000000000000n,
             1000000000000n,
             1000000000000n,
             accountId32Location(
@@ -462,13 +461,10 @@ export class PNAToAH<T extends EthereumProviderTypes> implements TransferInterfa
                 "assetHubExecution",
                 "ETH",
             )
-            const relayerFee = findInBreakdown(transfer.input.fee.breakdown, "relayer", "ETH")
-            const payloadValue = transfer.computed.totalValue - executionFee - relayerFee
             const xcm = buildAssetHubPNAReceivedXcm(
                 assetHub.registry,
                 registry.ethChainId,
                 ahAssetMetadata.location,
-                payloadValue,
                 executionFee,
                 amount,
                 claimer,
@@ -478,6 +474,7 @@ export class PNAToAH<T extends EthereumProviderTypes> implements TransferInterfa
                 transfer.input.customXcm,
             )
 
+            console.log('XXXXXX', xcm)
             let result = await assetHubImpl.dryRunXcm(registry.bridgeHubParaId, xcm)
             dryRunAhSuccess = result.success
             assetHubDryRunError = result.errorMessage

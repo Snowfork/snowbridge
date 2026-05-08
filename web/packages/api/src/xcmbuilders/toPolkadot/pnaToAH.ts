@@ -11,7 +11,6 @@ export function buildAssetHubPNAReceivedXcm(
     registry: Registry,
     ethChainId: number,
     tokenLocation: any,
-    etherAmount: bigint,
     totalAssetHubFeeInEther: bigint,
     tokenValue: bigint,
     claimer: any,
@@ -54,16 +53,6 @@ export function buildAssetHubPNAReceivedXcm(
                         },
                     },
                 },
-            },
-            {
-                reserveAssetDeposited: [
-                    {
-                        id: ether,
-                        fun: {
-                            Fungible: etherAmount,
-                        },
-                    },
-                ],
             },
             {
                 withdrawAsset: [
