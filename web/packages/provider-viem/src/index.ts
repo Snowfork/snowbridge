@@ -36,6 +36,7 @@ import type {
   L1AdapterDepositParams,
   L1LegacySwapRouterExactOutputSingleParams,
   L1SwapRouterExactOutputSingleParams,
+  L2WrapperDepositCallInvoked,
   MultiAddressStruct,
   SendParamsStruct,
   SwapParamsStruct,
@@ -672,6 +673,37 @@ export class ViemEthereumProvider
               executionFee: BigInt(args.payload.executionFee),
               relayerFee: BigInt(args.payload.relayerFee),
             },
+            blockHash: receipt.blockHash,
+            blockNumber: Number(receipt.blockNumber),
+            txHash: receipt.transactionHash,
+            txIndex: Number(receipt.transactionIndex),
+          };
+        }
+      } catch {}
+    }
+    return null;
+  }
+
+  scanL2WrapperDepositCallInvoked(
+    receipt: TransactionReceipt,
+  ): L2WrapperDepositCallInvoked | null {
+    for (const log of receipt.logs as Log[]) {
+      try {
+        const event = decodeEventLog({
+          abi: asAbi(SNOWBRIDGE_L2_ADAPTOR_ABI),
+          topics: log.topics,
+          data: log.data,
+        });
+        if (event.eventName === "DepositCallInvoked") {
+          const args = event.args as unknown as
+            | { topic: Hex; depositId: bigint }
+            | undefined;
+          if (!args) {
+            continue;
+          }
+          return {
+            topic: args.topic,
+            depositId: BigInt(args.depositId),
             blockHash: receipt.blockHash,
             blockNumber: Number(receipt.blockNumber),
             txHash: receipt.transactionHash,

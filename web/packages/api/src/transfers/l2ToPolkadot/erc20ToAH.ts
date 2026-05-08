@@ -19,7 +19,6 @@ import {
     claimerFromBeneficiary,
     claimerLocationToBytes,
     DeliveryFee,
-    messageId as getSharedMessageReceipt,
     ValidationKind,
 } from "../../toPolkadotSnowbridgeV2"
 import {
@@ -751,6 +750,6 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
     }
 
     async messageId(receipt: T["TransactionReceipt"]) {
-        return getSharedMessageReceipt(this.context.ethereumProvider, receipt)
+        return this.context.ethereumProvider.scanL2WrapperDepositCallInvoked(receipt)
     }
 }

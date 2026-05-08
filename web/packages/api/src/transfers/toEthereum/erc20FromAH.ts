@@ -33,8 +33,8 @@ import { VolumeFeeParams } from "../../feeSchedule"
 import {
     buildContractCallHex,
     estimateFeesFromAssetHub,
-    MaxWeight,
     mockDeliveryFee,
+    queryXcmExecuteWeight,
     signAndSendTransfer,
     validateTransferFromAssetHub,
 } from "../../toEthereumSnowbridgeV2"
@@ -200,7 +200,10 @@ export class ERC20FromAH<T extends EthereumProviderTypes> implements TransferInt
             throw new Error(`Fee token as ${fee.feeLocation} is not supported yet.`)
         }
         let tx: SubmittableExtrinsic<"promise", ISubmittableResult> =
-            parachain.tx.polkadotXcm.execute(xcm, MaxWeight)
+            parachain.tx.polkadotXcm.execute(
+                xcm,
+                await queryXcmExecuteWeight(sourceParachainImpl, sourceParachain, xcm),
+            )
 
         return {
             kind: "polkadot->ethereum",

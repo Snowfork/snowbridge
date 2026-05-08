@@ -25,6 +25,7 @@ import type {
   L1AdapterDepositParams,
   L1LegacySwapRouterExactOutputSingleParams,
   L1SwapRouterExactOutputSingleParams,
+  L2WrapperDepositCallInvoked,
   MultiAddressStruct,
   SendParamsStruct,
   SwapParamsStruct,
@@ -55,6 +56,7 @@ export class EthersEthereumProvider
 
   static gatewayV1Interface = new Interface(IGATEWAY_V1_ABI);
   static gatewayV2Interface = new Interface(IGATEWAY_V2_ABI);
+  static l2AdaptorInterface = new Interface(SNOWBRIDGE_L2_ADAPTOR_ABI);
 
   createProvider(url: string): AbstractProvider {
     if (url.startsWith("http")) {
@@ -461,6 +463,30 @@ export class EthersEthereumProvider
               executionFee: BigInt(payload.executionFee),
               relayerFee: BigInt(payload.relayerFee),
             },
+            blockHash: receipt.blockHash,
+            blockNumber: receipt.blockNumber,
+            txHash: receipt.hash,
+            txIndex: receipt.index,
+          };
+        }
+      } catch {}
+    }
+    return null;
+  }
+
+  scanL2WrapperDepositCallInvoked(
+    receipt: TransactionReceipt,
+  ): L2WrapperDepositCallInvoked | null {
+    for (const log of receipt.logs) {
+      try {
+        const event = EthersEthereumProvider.l2AdaptorInterface.parseLog({
+          topics: [...log.topics],
+          data: log.data,
+        });
+        if (event && event.name === "DepositCallInvoked") {
+          return {
+            topic: String(event.args[0]),
+            depositId: BigInt(event.args[1]),
             blockHash: receipt.blockHash,
             blockNumber: receipt.blockNumber,
             txHash: receipt.hash,

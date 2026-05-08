@@ -45,6 +45,7 @@ import {
     checkDotEthPoolLiquidityForPolkadotToEthereum,
     checkNativeDotPoolLiquidityForParachainToEthereum,
 } from "./poolReserves"
+import { ParachainBase } from "./parachains/parachainBase"
 
 export { signAndSendTransfer } from "./toEthereum_v2"
 export { ValidationKind } from "./types/toEthereum"
@@ -330,7 +331,37 @@ export async function dryRunAssetHub(
     }
 }
 
-export const MaxWeight = { refTime: 30_000_000_000n, proofSize: 1_000_000 }
+// pallet_xcm::execute reserves max_weight up front in block weight accounting.
+// Querying the runtime for the actual weight (with margin) avoids over-reserving
+// past the collator's per-extrinsic carve-out, which can leave the tx stuck.
+// Per-field: a 0 from the runtime (some chains don't account for proofSize in
+// their XCM Weigher) is replaced with the chain's default; otherwise the value
+// is padded 25% and capped at the default.
+export const queryXcmExecuteWeight = async (
+    sourceParachainImpl: ParachainBase,
+    sourceParachain: Parachain,
+    xcm: any,
+): Promise<{ refTime: bigint; proofSize: bigint }> => {
+    const max = sourceParachainImpl.getMaxWeight()
+    if (!sourceParachain.features.hasXcmPaymentApi) {
+        return max
+    }
+    const result = (
+        await sourceParachainImpl.provider.call.xcmPaymentApi.queryXcmWeight(xcm)
+    ).toPrimitive() as any
+    if (!result?.ok) {
+        return max
+    }
+    const apply = (raw: bigint, ceiling: bigint): bigint => {
+        if (raw === 0n) return ceiling
+        const padded = (raw * 125n) / 100n
+        return padded > ceiling ? ceiling : padded
+    }
+    return {
+        refTime: apply(BigInt(result.ok.refTime.toString()), max.refTime),
+        proofSize: apply(BigInt(result.ok.proofSize.toString()), max.proofSize),
+    }
+}
 
 export const isFeeAllowed = (feeLocation: any, sourceParaId: number) => {
     return isRelaychainLocation(feeLocation) || isParachainNative(feeLocation, sourceParaId)
@@ -1185,6 +1216,8 @@ export const validateTransferFromParachain = async <T extends EthereumProviderTy
     if (source.features.hasDotBalance) {
         dotBalance = await sourceParachainImpl.getDotBalance(sourceAccountHex)
     }
+    const paymentInfo = await tx.paymentInfo(sourceAccountHex)
+    const sourceExecutionFee = paymentInfo["partialFee"].toBigInt()
     let tokenBalance: any
     let isNativeBalance = false
 
@@ -1228,8 +1261,11 @@ export const validateTransferFromParachain = async <T extends EthereumProviderTy
         amount + extraEthOnSourceWithdraw + extraDotOnSourceWithdraw
 
     const paraTotalNative = findTotalOrUndefined(fee, source.info.tokenSymbols)
+    // When the bridged token is the parachain's native asset, the substrate
+    // tx fee is withdrawn from the same balance, so include it in the threshold.
+    const nativeTxFeeShare = isNativeBalance ? sourceExecutionFee : 0n
     if (isNativeBalance && paraTotalNative !== undefined) {
-        if (requiredTokenAmount + paraTotalNative > tokenBalance) {
+        if (requiredTokenAmount + paraTotalNative + nativeTxFeeShare > tokenBalance) {
             logs.push({
                 kind: ValidationKind.Error,
                 reason: ValidationReason.InsufficientTokenBalance,
@@ -1237,7 +1273,7 @@ export const validateTransferFromParachain = async <T extends EthereumProviderTy
             })
         }
     } else {
-        if (requiredTokenAmount > tokenBalance) {
+        if (requiredTokenAmount + nativeTxFeeShare > tokenBalance) {
             logs.push({
                 kind: ValidationKind.Error,
                 reason: ValidationReason.InsufficientTokenBalance,
@@ -1283,12 +1319,13 @@ export const validateTransferFromParachain = async <T extends EthereumProviderTy
         })
     }
 
-    // Native balance check: the source `WithdrawAsset` includes `totalNativeFeeAmount`
-    // for the native-fee path. Skip when the token is the parachain's native asset —
-    // the overlap is already captured by the `isNativeBalance && paraTotalNative` branch.
-    if (isNativeFeePath && !isNativeBalance) {
-        const requiredNativeFee = paraTotalNative ?? 0n
-        if (requiredNativeFee > nativeBalance) {
+    // Native balance must cover the substrate tx fee plus, on the native-fee path,
+    // the `totalNativeFeeAmount` withdrawn by the source XCM. Skip when the token
+    // is the parachain's native asset — both costs are folded into the
+    // token-balance check above.
+    if (!isNativeBalance) {
+        const nativeFeeShare = isNativeFeePath ? paraTotalNative ?? 0n : 0n
+        if (sourceExecutionFee + nativeFeeShare > nativeBalance) {
             logs.push({
                 kind: ValidationKind.Error,
                 reason: ValidationReason.InsufficientNativeFee,
@@ -1373,9 +1410,6 @@ export const validateTransferFromParachain = async <T extends EthereumProviderTy
             }
         }
     }
-
-    const paymentInfo = await tx.paymentInfo(sourceAccountHex)
-    const sourceExecutionFee = paymentInfo["partialFee"].toBigInt()
 
     const bridgeStatus = await getOperatingStatus({
         ethereumProvider: context.ethereumProvider,

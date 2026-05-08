@@ -151,7 +151,8 @@ export const transferToPolkadot = async (
             }
 
             console.log(
-                `Success message with nonce: ${message.nonce}
+                `Success message with id: ${message.topic}
+                deposit id: ${message.depositId}
                 block number: ${receipt.blockNumber}
                 tx hash: ${receipt.hash}`,
             )

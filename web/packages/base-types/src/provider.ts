@@ -38,6 +38,15 @@ export type GatewayV2OutboundMessageAccepted = {
   txIndex: number;
 };
 
+export type L2WrapperDepositCallInvoked = {
+  topic: string;
+  depositId: bigint;
+  blockNumber: number;
+  blockHash: string;
+  txHash: string;
+  txIndex: number;
+};
+
 export type FeeData = {
   gasPrice: bigint | null;
   maxFeePerGas: bigint | null;
@@ -225,4 +234,7 @@ export interface EthereumProvider<T extends EthereumProviderTypes> {
   scanGatewayV2OutboundMessageAccepted(
     receipt: T["TransactionReceipt"],
   ): GatewayV2OutboundMessageAccepted | null;
+  scanL2WrapperDepositCallInvoked(
+    receipt: T["TransactionReceipt"],
+  ): L2WrapperDepositCallInvoked | null;
 }

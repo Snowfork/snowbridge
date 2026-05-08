@@ -243,6 +243,7 @@ export type {
   L1AdapterDepositParams,
   L1LegacySwapRouterExactOutputSingleParams,
   L1SwapRouterExactOutputSingleParams,
+  L2WrapperDepositCallInvoked,
   MultiAddressStruct,
 } from "./provider";
 

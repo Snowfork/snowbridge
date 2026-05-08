@@ -1,8 +1,7 @@
-import { EthereumProviderTypes } from "@snowbridge/base-types"
+import { EthereumProviderTypes, L2WrapperDepositCallInvoked } from "@snowbridge/base-types"
 import { Context } from "../.."
 import type {
     DeliveryFee,
-    MessageReceipt,
     Transfer,
     ValidatedTransfer,
 } from "../../types/toPolkadotSnowbridgeV2"
@@ -61,5 +60,5 @@ export interface TransferInterface<T extends EthereumProviderTypes> {
         },
     ): Promise<ValidatedTransfer<T>>
 
-    messageId(receipt: T["TransactionReceipt"]): Promise<MessageReceipt | null>
+    messageId(receipt: T["TransactionReceipt"]): Promise<L2WrapperDepositCallInvoked | null>
 }
