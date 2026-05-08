@@ -151,7 +151,7 @@ export const transferToPolkadot = async (
             }
 
             console.log(
-                `Success message with id: ${message.topic}
+                `Success message with id: ${message.messageId}
                 deposit id: ${message.depositId}
                 block number: ${receipt.blockNumber}
                 tx hash: ${receipt.hash}`,

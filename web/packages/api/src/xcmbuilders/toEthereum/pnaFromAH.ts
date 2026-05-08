@@ -160,7 +160,7 @@ export function buildTransferXcmFromAssetHub(
             assets.push({
                 id: DOT_LOCATION,
                 fun: {
-                    Fungible: totalDOTFeeAmount + remoteEtherFeeAmount,
+                    Fungible: totalDOTFeeAmount,
                 },
             })
             assets.push({
@@ -177,6 +177,12 @@ export function buildTransferXcmFromAssetHub(
             })
         }
     }
+
+    // Sort assets by parents because XCM requires it for binary search.
+    assets.sort((a, b) => {
+        return a.id.parents - b.id.parents
+    })
+
     let remoteXcm = buildEthereumInstructions(beneficiaryLocation, topic, callHex)
 
     let instructions: any[] = [

@@ -25,7 +25,7 @@ import type {
   L1AdapterDepositParams,
   L1LegacySwapRouterExactOutputSingleParams,
   L1SwapRouterExactOutputSingleParams,
-  L2WrapperDepositCallInvoked,
+  L2MessageReceipt,
   MultiAddressStruct,
   SendParamsStruct,
   SwapParamsStruct,
@@ -476,7 +476,7 @@ export class EthersEthereumProvider
 
   scanL2WrapperDepositCallInvoked(
     receipt: TransactionReceipt,
-  ): L2WrapperDepositCallInvoked | null {
+  ): L2MessageReceipt | null {
     for (const log of receipt.logs) {
       try {
         const event = EthersEthereumProvider.l2AdaptorInterface.parseLog({
@@ -485,7 +485,7 @@ export class EthersEthereumProvider
         });
         if (event && event.name === "DepositCallInvoked") {
           return {
-            topic: String(event.args[0]),
+            messageId: String(event.args[0]),
             depositId: BigInt(event.args[1]),
             blockHash: receipt.blockHash,
             blockNumber: receipt.blockNumber,

@@ -36,7 +36,7 @@ import type {
   L1AdapterDepositParams,
   L1LegacySwapRouterExactOutputSingleParams,
   L1SwapRouterExactOutputSingleParams,
-  L2WrapperDepositCallInvoked,
+  L2MessageReceipt,
   MultiAddressStruct,
   SendParamsStruct,
   SwapParamsStruct,
@@ -686,7 +686,7 @@ export class ViemEthereumProvider
 
   scanL2WrapperDepositCallInvoked(
     receipt: TransactionReceipt,
-  ): L2WrapperDepositCallInvoked | null {
+  ): L2MessageReceipt | null {
     for (const log of receipt.logs as Log[]) {
       try {
         const event = decodeEventLog({
@@ -702,7 +702,7 @@ export class ViemEthereumProvider
             continue;
           }
           return {
-            topic: args.topic,
+            messageId: args.topic,
             depositId: BigInt(args.depositId),
             blockHash: receipt.blockHash,
             blockNumber: Number(receipt.blockNumber),

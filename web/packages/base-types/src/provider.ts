@@ -38,8 +38,8 @@ export type GatewayV2OutboundMessageAccepted = {
   txIndex: number;
 };
 
-export type L2WrapperDepositCallInvoked = {
-  topic: string;
+export type L2MessageReceipt = {
+  messageId: string;
   depositId: bigint;
   blockNumber: number;
   blockHash: string;
@@ -236,5 +236,5 @@ export interface EthereumProvider<T extends EthereumProviderTypes> {
   ): GatewayV2OutboundMessageAccepted | null;
   scanL2WrapperDepositCallInvoked(
     receipt: T["TransactionReceipt"],
-  ): L2WrapperDepositCallInvoked | null;
+  ): L2MessageReceipt | null;
 }
