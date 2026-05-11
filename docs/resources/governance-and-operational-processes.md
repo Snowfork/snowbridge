@@ -69,8 +69,11 @@ The halt-bridge command has the following flags:
 * `--inbound-queue-v1` Halt only the V1 inbound-queue pallet on BridgeHub.
 * `--inbound-queue-v2` Halt only the V2 inbound-queue pallet on BridgeHub.
 * `--outbound-queue` Halt AssetHub → Ethereum traffic. Halts the V1 outbound-queue pallet on BridgeHub **and** the system-frontend pallet on AssetHub; the latter short-circuits the AssetHub → Ethereum `PausableExporter` for both V1 and V2 at the XcmRouter layer. (V2's `outbound-queue-v2` has no local halt, so the system-frontend halt is the primary V2 outbound lever.)
+* `--system-frontend` V2-only router-layer P→E halt: halts only the AssetHub system-frontend pallet, leaving V1's BridgeHub outbound-queue running. V2 P→E messages are rejected with `SendError::NotApplicable` at the `PausableExporter`; V1 traffic continues to drain. Use this when V2 needs to stop but V1 should keep flowing.
 * `--gateway` Halt the Ethereum Gateway contract (both V1 and V2 paths). Sends `Command::SetOperatingMode(Halted)` via both V1 and V2 system pallets so the halt is delivered via whichever outbound queue is live. Delivery is relayer-dependent, so schedule this **before** any local outbound halt takes effect.
+* `--gateway-v2` V2-only Gateway halt: sends `Command::SetOperatingMode(Halted)` only via the V2 system pallet. Once delivered to Ethereum, blocks `v2_sendMessage` and `v2_registerToken`; leaves V1 `sendToken`/`sendMessage` working. Pair with `--inbound-queue-v2`, `--system-frontend`, and `--assethub-max-fee-v2` for a full V2-only pause.
 * `--assethub-max-fee` Set the AssetHub → Ethereum outbound fee to `u128::MAX` for both V1 (`BridgeHubEthereumBaseFee`) and V2 (`BridgeHubEthereumBaseFeeV2`), effectively deterring user sends via fee pricing. Complementary to the system-frontend halt; does not block at the router layer.
+* `--assethub-max-fee-v2` V2-only variant of `--assethub-max-fee`: writes only `BridgeHubEthereumBaseFeeV2`, leaving V1 fee untouched. Pair with `--system-frontend` for a complete V2-only P→E pause without touching V1.
 
 Based on the nature of the emergency, the bridge might need to be halted in its entirety, or partially. Pick the narrowest lever that covers the suspected failure mode:
 
@@ -80,6 +83,8 @@ Based on the nature of the emergency, the bridge might need to be halted in its 
 | Ethereum Gateway contract compromise | `halt-bridge --gateway --assethub-max-fee` |
 | Inbound-queue bug (one version) | `halt-bridge --inbound-queue-v1` or `--inbound-queue-v2` |
 | Outbound-queue / system-frontend bug | `halt-bridge --outbound-queue` |
+| V2 P→E only (V1 keeps flowing) | `halt-bridge --system-frontend --assethub-max-fee-v2` |
+| Full V2 pause (both directions, V1 keeps flowing) | `halt-bridge --gateway-v2 --inbound-queue-v2 --system-frontend --assethub-max-fee-v2` |
 | Uncertain / any component suspect | `halt-bridge --all` |
 
 In case of emergency where there is uncertainty of the cause of a problem, it is best to block the bridge in its entirety using `halt-bridge --all`. To block both transfer directions at the earliest point possible, use `halt-bridge --gateway --assethub-max-fee`.

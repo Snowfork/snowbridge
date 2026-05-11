@@ -9,7 +9,7 @@ use crate::asset_hub_runtime::runtime_types::{
     },
 };
 use crate::asset_hub_runtime::RuntimeCall as AssetHubRuntimeCall;
-use crate::helpers::utility_force_batch;
+use crate::helpers::utility_batch_all;
 use polkadot_runtime_constants::currency::UNITS;
 use polkadot_runtime_constants::time::DAYS;
 
@@ -189,7 +189,7 @@ pub fn treasury_proposal(params: &TreasuryProposal2024Args) -> AssetHubRuntimeCa
         println!("Spend: {}, {}({})", spend.name, asset_id, asset_amount);
     }
 
-    utility_force_batch(calls)
+    utility_batch_all(calls)
 }
 
 fn make_treasury_spend(
