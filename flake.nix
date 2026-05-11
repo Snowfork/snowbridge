@@ -105,6 +105,14 @@
                     export LIBCLANG_PATH="$(readlink -f ${pkgs.clang}/resource-root/include | xargs dirname | xargs dirname | xargs dirname)"
                     export LD_LIBRARY_PATH=${pkgs.lib.makeLibraryPath [ pkgs.stdenv.cc.cc ]}
 
+                    # cc-rs passes --target=arm64-apple-macosx (the canonical clang triple),
+                    # which trips a non-suppressible-by-default warning in nixpkgs cc-wrapper.
+                    # The warning goes to stderr and breaks cc-rs's is_flag_supported probe
+                    # (any stderr -> flag treated as unsupported), causing wasm-opt-sys etc.
+                    # to fail with "C++ compiler does not support -std=c++17".
+                    # See https://github.com/NixOS/nixpkgs/issues/395191.
+                    export NIX_CC_WRAPPER_SUPPRESS_TARGET_WARNING=1
+
                     cowsay "Development Environment Ready"
                 '';
             };
