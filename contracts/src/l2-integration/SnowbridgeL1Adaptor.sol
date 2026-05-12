@@ -13,7 +13,7 @@ import {DepositParams} from "./Types.sol";
 ///      the same `Gateway.v2_submit` transaction that issues the preceding
 ///      `UnlockNativeToken(recipient = L1Adaptor, amount = X)` command. The paired
 ///      unlock funds this contract; the paired CallContract consumes the funds and
-///      sweeps any residual back to the BEEFY-signed `recipient`. Both commands execute
+///      sweeps any residual back to the BEEFY-verified `recipient`. Both commands execute
 ///      atomically in the same EVM transaction inside `v2_submit`'s `commands[]` loop —
 ///      the adaptor is never prefunded across transaction boundaries in production.
 ///
