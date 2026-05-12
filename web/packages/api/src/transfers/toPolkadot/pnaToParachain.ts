@@ -20,11 +20,7 @@ import {
     ValidatedTransfer,
 } from "../../toPolkadotSnowbridgeV2"
 import { accountId32Location, erc20Location, isDOT } from "../../xcmBuilder"
-import {
-    DOT_LOCATION,
-    ETHER_TOKEN_ADDRESS,
-    getAssetHubEtherMinBalance,
-} from "../../assets_v2"
+import { DOT_LOCATION, ETHER_TOKEN_ADDRESS, getAssetHubEtherMinBalance } from "../../assets_v2"
 import { ensureValidationSuccess, padFeeByPercentage } from "../../utils"
 import { paraIdToSovereignAccount, resolveBeneficiary } from "../../crypto"
 import { FeeInfo, ValidationLog, ValidationReason } from "../../types/toPolkadot"
@@ -38,6 +34,15 @@ import {
 } from "../../xcmbuilders/toPolkadot/pnaToParachain"
 import { getOperatingStatus } from "../../status"
 import { hexToU8a } from "@polkadot/util"
+import { VolumeFeeParams, calculateVolumeTipInWei } from "../../feeSchedule"
+import {
+    addBreakdown,
+    computeTotals,
+    findInBreakdown,
+    findInBreakdownOrZero,
+    findTotal,
+} from "../../fees"
+import { checkDotEthPoolLiquidityForEthereumToPolkadot } from "../../poolReserves"
 
 export class PNAToParachain<T extends EthereumProviderTypes> implements TransferInterface<T> {
     constructor(
@@ -63,8 +68,12 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
             feeAsset?: any
             customXcm?: any[]
             overrideRelayerFee?: bigint
+            volumeFee?: VolumeFeeParams
         },
     ): Promise<DeliveryFee> {
+        if (options?.volumeFee && options?.overrideRelayerFee !== undefined) {
+            throw new Error("Cannot specify both volumeFee and overrideRelayerFee")
+        }
         const context = this.context
         const registry = this.registry
         const assetHub = await context.assetHub()
@@ -83,7 +92,6 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
             assetHub.registry,
             registry.ethChainId,
             destAssetMetadata.location,
-            1000000000000n,
             1000000000000n,
             1000000000000n,
             1000000000000n,
@@ -203,23 +211,76 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
             deliveryFeeInEther,
         )
 
+        let volumeTip: bigint | undefined
+        let finalRelayerFee = relayerFee
+        if (options?.volumeFee) {
+            volumeTip = calculateVolumeTipInWei(options.volumeFee)
+            finalRelayerFee += volumeTip
+        }
+
         const totalFeeInWei =
             assetHubExecutionFeeEther +
             destinationDeliveryFeeEther +
             destinationExecutionFeeEther +
-            relayerFee
+            finalRelayerFee
+
+        const breakdown: DeliveryFee["breakdown"] = {}
+        addBreakdown(breakdown, "assetHubDelivery", { amount: deliveryFeeInEther, symbol: "ETH" })
+        addBreakdown(breakdown, "assetHubDelivery", { amount: deliveryFeeInDOT, symbol: "DOT" })
+        addBreakdown(breakdown, "assetHubExecution", {
+            amount: assetHubExecutionFeeEther,
+            symbol: "ETH",
+        })
+        addBreakdown(breakdown, "assetHubExecution", {
+            amount: assetHubExecutionFeeDOT,
+            symbol: "DOT",
+        })
+        addBreakdown(breakdown, "destinationDelivery", {
+            amount: destinationDeliveryFeeEther,
+            symbol: "ETH",
+        })
+        addBreakdown(breakdown, "destinationDelivery", {
+            amount: destinationDeliveryFeeDOT,
+            symbol: "DOT",
+        })
+        addBreakdown(breakdown, "destinationExecution", {
+            amount: destinationExecutionFeeEther,
+            symbol: "ETH",
+        })
+        if (destinationExecutionFeeDOT !== undefined) {
+            addBreakdown(breakdown, "destinationExecution", {
+                amount: destinationExecutionFeeDOT,
+                symbol: "DOT",
+            })
+        }
+        addBreakdown(breakdown, "relayer", { amount: finalRelayerFee, symbol: "ETH" })
+        addBreakdown(breakdown, "extrinsic", { amount: extrinsicFeeDot, symbol: "DOT" })
+        addBreakdown(breakdown, "extrinsic", { amount: extrinsicFeeEther, symbol: "ETH" })
+
+        const summary = [
+            {
+                description: "XCM execution fees",
+                amount: assetHubExecutionFeeEther + destinationExecutionFeeEther,
+                symbol: "ETH",
+            },
+            {
+                description: "Bridge fees",
+                amount: deliveryFeeInEther + destinationDeliveryFeeEther,
+                symbol: "ETH",
+            },
+            {
+                description: "Relayer tip",
+                amount: finalRelayerFee - deliveryFeeInEther,
+                symbol: "ETH",
+            },
+        ]
+
         return {
             kind: "ethereum->polkadot",
-            assetHubDeliveryFeeEther: deliveryFeeInEther,
-            assetHubExecutionFeeEther: assetHubExecutionFeeEther,
-            destinationDeliveryFeeEther: destinationDeliveryFeeEther,
-            destinationExecutionFeeEther: destinationExecutionFeeEther,
-            destinationExecutionFeeDOT: destinationExecutionFeeDOT,
-            relayerFee: relayerFee,
-            extrinsicFeeDot: extrinsicFeeDot,
-            extrinsicFeeEther: extrinsicFeeEther,
-            totalFeeInWei: totalFeeInWei,
-            feeAsset: feeAsset,
+            feeAsset,
+            breakdown,
+            summary,
+            totals: computeTotals(summary),
         }
     }
 
@@ -269,7 +330,7 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
 
         const { hexAddress: beneficiaryAddressHex } = resolveBeneficiary(beneficiaryAccount)
         const beneficiary = context.ethereumProvider.beneficiaryMultiAddress(beneficiaryAddressHex)
-        let value = fee.totalFeeInWei
+        let value = findTotal(fee, "ETH")
 
         if (!ahAssetMetadata.foreignId) {
             throw Error("asset foreign ID not set in metadata")
@@ -289,6 +350,12 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
             accountNonce,
         )
 
+        const destExecutionFeeEther = findInBreakdown(fee.breakdown, "destinationExecution", "ETH")
+        const destExecutionFeeDOT = findInBreakdownOrZero(
+            fee.breakdown,
+            "destinationExecution",
+            "DOT",
+        )
         let xcm
         if (isDOT(fee.feeAsset)) {
             xcm = hexToU8a(
@@ -299,8 +366,8 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
                     destAssetMetadata.location,
                     beneficiaryAddressHex,
                     amount,
-                    fee.destinationExecutionFeeEther ?? 0n,
-                    fee.destinationExecutionFeeDOT ?? 0n,
+                    destExecutionFeeEther,
+                    destExecutionFeeDOT,
                     topic,
                     customXcm,
                 ).toHex(),
@@ -314,7 +381,7 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
                     destAssetMetadata.location,
                     beneficiaryAddressHex,
                     amount,
-                    fee.destinationExecutionFeeEther ?? 0n,
+                    destExecutionFeeEther,
                     topic,
                     customXcm,
                 ).toHex(),
@@ -330,8 +397,9 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
             xcm,
             assets,
             claimerLocationToBytes(claimer),
-            fee.assetHubExecutionFeeEther + fee.destinationDeliveryFeeEther,
-            fee.relayerFee,
+            findInBreakdown(fee.breakdown, "assetHubExecution", "ETH") +
+                findInBreakdown(fee.breakdown, "destinationDelivery", "ETH"),
+            findInBreakdown(fee.breakdown, "relayer", "ETH"),
             value,
         )
 
@@ -376,6 +444,7 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
                 feeAsset?: any
                 customXcm?: any[]
                 overrideRelayerFee?: bigint
+                volumeFee?: VolumeFeeParams
             }
             customXcm?: any[]
         },
@@ -498,9 +567,33 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
             })
         }
 
+        const assetHubImpl = await this.context.paraImplementation(assetHub)
+
+        const requiredDotOut =
+            findInBreakdownOrZero(transfer.input.fee.breakdown, "assetHubDelivery", "DOT") +
+            findInBreakdownOrZero(transfer.input.fee.breakdown, "assetHubExecution", "DOT") +
+            findInBreakdownOrZero(transfer.input.fee.breakdown, "destinationDelivery", "DOT") +
+            findInBreakdownOrZero(transfer.input.fee.breakdown, "destinationExecution", "DOT")
+        if (requiredDotOut > 0n) {
+            const reserveCheck = await checkDotEthPoolLiquidityForEthereumToPolkadot(
+                assetHubImpl,
+                registry.ethChainId,
+                requiredDotOut,
+            )
+            if (!reserveCheck.ok) {
+                logs.push({
+                    kind: ValidationKind.Error,
+                    reason: ValidationReason.InsufficientPoolReserves,
+                    message:
+                        reserveCheck.reason === "pool-missing"
+                            ? `${reserveCheck.pool} pool does not exist on Asset Hub.`
+                            : `${reserveCheck.pool} pool on Asset Hub has insufficient liquidity (need ${reserveCheck.requiredOut}, have ${reserveCheck.reserveOut}).`,
+                })
+            }
+        }
+
         // Check if asset can be received on asset hub (dry run)
         const ahParachain = registry.parachains[`polkadot_${registry.assetHubParaId}`]
-        const assetHubImpl = await this.context.paraImplementation(assetHub)
         let dryRunAhSuccess, forwardedDestination, assetHubDryRunError
         if (!ahParachain.features.hasDryRunApi) {
             logs.push({
@@ -510,22 +603,20 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
                     "Asset Hub does not support dry running of XCM. Transaction success cannot be confirmed.",
             })
         } else {
+            const inputFee = transfer.input.fee
             const assetHubFee =
-                transfer.input.fee.assetHubExecutionFeeEther +
-                transfer.input.fee.destinationDeliveryFeeEther
-            const payloadValue =
-                transfer.computed.totalValue - assetHubFee - transfer.input.fee.relayerFee
+                findInBreakdown(inputFee.breakdown, "assetHubExecution", "ETH") +
+                findInBreakdown(inputFee.breakdown, "destinationDelivery", "ETH")
 
             let xcm
-            if (isDOT(transfer.input.fee.feeAsset)) {
+            if (isDOT(inputFee.feeAsset)) {
                 xcm = buildAssetHubPNAReceivedXcmWithDOTFee(
                     assetHub.registry,
                     registry.ethChainId,
                     destAssetMetadata.location,
-                    payloadValue,
                     assetHubFee,
-                    transfer.input.fee.destinationExecutionFeeEther ?? 0n,
-                    transfer.input.fee.destinationExecutionFeeDOT ?? 0n,
+                    findInBreakdown(inputFee.breakdown, "destinationExecution", "ETH"),
+                    findInBreakdownOrZero(inputFee.breakdown, "destinationExecution", "DOT"),
                     amount,
                     claimer,
                     transfer.input.sourceAccount,
@@ -539,9 +630,8 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
                     assetHub.registry,
                     registry.ethChainId,
                     destAssetMetadata.location,
-                    payloadValue,
                     assetHubFee,
-                    transfer.input.fee.destinationExecutionFeeEther ?? 0n,
+                    findInBreakdown(inputFee.breakdown, "destinationExecution", "ETH"),
                     amount,
                     claimer,
                     transfer.input.sourceAccount,

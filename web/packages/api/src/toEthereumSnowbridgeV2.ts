@@ -26,13 +26,26 @@ import {
 } from "./xcmBuilder"
 import { xxhashAsHex } from "@polkadot/util-crypto"
 import { BN } from "@polkadot/util"
-import { ensureValidationSuccess, padFeeByPercentage } from "./utils"
+import { ensureValidationSuccess, padFeeByPercentage, scaledPadPercentage } from "./utils"
 import { Context } from "./index"
 import { DOT_LOCATION, ETHER_TOKEN_ADDRESS, findL2TokenAddress } from "./assets_v2"
 import { getOperatingStatus } from "./status"
+import { calculateVolumeTipInWei, VolumeFeeParams } from "./feeSchedule"
+import {
+    addBreakdown,
+    computeTotals,
+    findInBreakdownOrZero,
+    findTotal,
+    findTotalOrUndefined,
+} from "./fees"
 import { estimateFees } from "./across/api"
 import type { MessageReceipt, Transfer, ValidatedTransfer, ValidationLog } from "./types/toEthereum"
 import { ValidationKind, ValidationReason } from "./types/toEthereum"
+import {
+    checkDotEthPoolLiquidityForPolkadotToEthereum,
+    checkNativeDotPoolLiquidityForParachainToEthereum,
+} from "./poolReserves"
+import { ParachainBase } from "./parachains/parachainBase"
 
 export { signAndSendTransfer } from "./toEthereum_v2"
 export { ValidationKind } from "./types/toEthereum"
@@ -114,6 +127,7 @@ export class TransferToEthereum<T extends EthereumProviderTypes> implements Tran
             feeTokenLocation?: any
             claimerLocation?: any
             contractCall?: ContractCall
+            volumeFee?: VolumeFeeParams
         },
     ): Promise<DeliveryFee> {
         return this.#resolveByTokenAddress(tokenAddress).fee(tokenAddress, options)
@@ -153,6 +167,7 @@ export class TransferToEthereum<T extends EthereumProviderTypes> implements Tran
                 feeTokenLocation?: any
                 claimerLocation?: any
                 contractCall?: ContractCall
+                volumeFee?: VolumeFeeParams
             }
             tx?: {
                 claimerLocation?: any
@@ -316,7 +331,37 @@ export async function dryRunAssetHub(
     }
 }
 
-export const MaxWeight = { refTime: 30_000_000_000n, proofSize: 1_000_000 }
+// pallet_xcm::execute reserves max_weight up front in block weight accounting.
+// Querying the runtime for the actual weight (with margin) avoids over-reserving
+// past the collator's per-extrinsic carve-out, which can leave the tx stuck.
+// Per-field: a 0 from the runtime (some chains don't account for proofSize in
+// their XCM Weigher) is replaced with the chain's default; otherwise the value
+// is padded 25% and capped at the default.
+export const queryXcmExecuteWeight = async (
+    sourceParachainImpl: ParachainBase,
+    sourceParachain: Parachain,
+    xcm: any,
+): Promise<{ refTime: bigint; proofSize: bigint }> => {
+    const max = sourceParachainImpl.getMaxWeight()
+    if (!sourceParachain.features.hasXcmPaymentApi) {
+        return max
+    }
+    const result = (
+        await sourceParachainImpl.provider.call.xcmPaymentApi.queryXcmWeight(xcm)
+    ).toPrimitive() as any
+    if (!result?.ok) {
+        return max
+    }
+    const apply = (raw: bigint, ceiling: bigint): bigint => {
+        if (raw === 0n) return ceiling
+        const padded = (raw * 125n) / 100n
+        return padded > ceiling ? ceiling : padded
+    }
+    return {
+        refTime: apply(BigInt(result.ok.refTime.toString()), max.refTime),
+        proofSize: apply(BigInt(result.ok.proofSize.toString()), max.proofSize),
+    }
+}
 
 export const isFeeAllowed = (feeLocation: any, sourceParaId: number) => {
     return isRelaychainLocation(feeLocation) || isParachainNative(feeLocation, sourceParaId)
@@ -403,6 +448,7 @@ export const estimateFeesFromAssetHub = async <T extends EthereumProviderTypes>(
         l2PadFeeByPercentage?: bigint
         l2TransferGasLimit?: bigint
         fillDeadlineBuffer?: bigint
+        volumeFee?: VolumeFeeParams
         accelerated?: boolean
     },
     l2ChainId?: number,
@@ -461,15 +507,32 @@ export const estimateFeesFromAssetHub = async <T extends EthereumProviderTypes>(
         options.contractCall = options.contractCall || callInfo.l2Call
         l2BridgeFeeInL1Token = callInfo.fee
     }
-    let ethereumExecutionFee = padFeeByPercentage(
-        await estimateEthereumExecutionFee(
-            context,
-            registry,
-            registry.parachains[`polkadot_${registry.assetHubParaId}`],
-            tokenAddress,
-            options,
-        ),
+    const rawEthereumExecutionFee = await estimateEthereumExecutionFee(
+        context,
+        registry,
+        registry.parachains[`polkadot_${registry.assetHubParaId}`],
+        tokenAddress,
+        options,
+    )
+
+    let volumeTip: bigint | undefined
+    if (options?.volumeFee) {
+        volumeTip = calculateVolumeTipInWei(options.volumeFee)
+    }
+    const tipForScaling = volumeTip ?? 0n
+
+    const scaledGasPad = scaledPadPercentage(
         feePadPercentage,
+        tipForScaling,
+        rawEthereumExecutionFee,
+    )
+    let ethereumExecutionFee =
+        padFeeByPercentage(rawEthereumExecutionFee, scaledGasPad) + tipForScaling
+
+    const scaledSlippagePad = scaledPadPercentage(
+        feeSlippagePadPercentage,
+        tipForScaling,
+        rawEthereumExecutionFee,
     )
 
     // calculate the cost of swapping in native asset
@@ -477,6 +540,7 @@ export const estimateFeesFromAssetHub = async <T extends EthereumProviderTypes>(
     let assetHubExecutionFeeNative: bigint | undefined = undefined
     let returnToSenderExecutionFeeNative: bigint | undefined = undefined
     let ethereumExecutionFeeInNative: bigint | undefined
+    let volumeTipInNative: bigint | undefined
     let localExecutionFeeInNative: bigint | undefined
     let feeLocation = options?.feeTokenLocation
     if (feeLocation) {
@@ -485,8 +549,15 @@ export const estimateFeesFromAssetHub = async <T extends EthereumProviderTypes>(
             ethereumExecutionFeeInNative = await assetHubImpl.getAssetHubConversionPalletSwap(
                 DOT_LOCATION,
                 bridgeLocation(registry.ethChainId),
-                padFeeByPercentage(ethereumExecutionFee, feeSlippagePadPercentage),
+                padFeeByPercentage(ethereumExecutionFee, scaledSlippagePad),
             )
+            if (volumeTip !== undefined && volumeTip > 0n) {
+                volumeTipInNative = await assetHubImpl.getAssetHubConversionPalletSwap(
+                    DOT_LOCATION,
+                    bridgeLocation(registry.ethChainId),
+                    volumeTip,
+                )
+            }
             totalFeeInDot += ethereumExecutionFeeInNative
             totalFeeInNative = totalFeeInDot
         } else {
@@ -494,23 +565,97 @@ export const estimateFeesFromAssetHub = async <T extends EthereumProviderTypes>(
         }
     }
 
+    const breakdown: DeliveryFee["breakdown"] = {}
+    addBreakdown(breakdown, "localExecution", { amount: localExecutionFeeDOT, symbol: "DOT" })
+    addBreakdown(breakdown, "snowbridgeDelivery", {
+        amount: snowbridgeDeliveryFeeDOT,
+        symbol: "DOT",
+    })
+    addBreakdown(breakdown, "assetHubExecution", { amount: assetHubExecutionFeeDOT, symbol: "DOT" })
+    addBreakdown(breakdown, "bridgeHubDelivery", { amount: bridgeHubDeliveryFeeDOT, symbol: "DOT" })
+    addBreakdown(breakdown, "returnToSenderDelivery", {
+        amount: returnToSenderDeliveryFeeDOT,
+        symbol: "DOT",
+    })
+    addBreakdown(breakdown, "returnToSenderExecution", {
+        amount: returnToSenderExecutionFeeDOT,
+        symbol: "DOT",
+    })
+    addBreakdown(breakdown, "ethereumExecution", {
+        amount: ethereumExecutionFee ?? 0n,
+        symbol: "ETH",
+    })
+    const nativeSymbol = feeLocation ? registry.relaychain.tokenSymbols : undefined
+    if (ethereumExecutionFeeInNative !== undefined && feeLocation) {
+        addBreakdown(breakdown, "ethereumExecution", {
+            amount: ethereumExecutionFeeInNative,
+            symbol: nativeSymbol!,
+        })
+    }
+    if (l2BridgeFeeInL1Token > 0n) {
+        addBreakdown(breakdown, "l2Bridge", { amount: l2BridgeFeeInL1Token, symbol: "ETH" })
+    }
+
+    const xcmExecDOT =
+        localExecutionFeeDOT + assetHubExecutionFeeDOT + returnToSenderExecutionFeeDOT
+    const bridgeFeesDOT =
+        snowbridgeDeliveryFeeDOT + bridgeHubDeliveryFeeDOT + returnToSenderDeliveryFeeDOT
+    const summary: DeliveryFee["summary"] = []
+    if (feeLocation) {
+        const tipInNative = volumeTipInNative ?? 0n
+        const ethereumExecInNative = (ethereumExecutionFeeInNative ?? 0n) - tipInNative
+        summary.push({
+            description: "XCM execution fees",
+            amount: xcmExecDOT,
+            symbol: nativeSymbol!,
+        })
+        summary.push({
+            description: "Ethereum execution fees",
+            amount: ethereumExecInNative,
+            symbol: nativeSymbol!,
+        })
+        summary.push({
+            description: "Bridge fees",
+            amount: bridgeFeesDOT,
+            symbol: nativeSymbol!,
+        })
+        if (tipInNative > 0n) {
+            summary.push({
+                description: "Relayer tip",
+                amount: tipInNative,
+                symbol: nativeSymbol!,
+            })
+        }
+    } else {
+        summary.push({
+            description: "XCM execution fees",
+            amount: xcmExecDOT,
+            symbol: "DOT",
+        })
+        summary.push({
+            description: "Bridge fees",
+            amount: bridgeFeesDOT,
+            symbol: "DOT",
+        })
+        summary.push({
+            description: "Ethereum execution fees",
+            amount: ethereumExecutionFee - (volumeTip ?? 0n),
+            symbol: "ETH",
+        })
+        if (volumeTip !== undefined) {
+            summary.push({ description: "Relayer tip", amount: volumeTip, symbol: "ETH" })
+        }
+    }
+    if (l2BridgeFeeInL1Token > 0n) {
+        summary.push({ description: "Across fee", amount: l2BridgeFeeInL1Token, symbol: "ETH" })
+    }
+
     return {
         kind: l2ChainId ? "polkadot->ethereum_l2" : "polkadot->ethereum",
-        localExecutionFeeDOT,
-        snowbridgeDeliveryFeeDOT,
-        assetHubExecutionFeeDOT,
-        bridgeHubDeliveryFeeDOT,
-        returnToSenderDeliveryFeeDOT,
-        returnToSenderExecutionFeeDOT,
-        totalFeeInDot,
-        ethereumExecutionFee,
         feeLocation,
-        assetHubExecutionFeeNative,
-        returnToSenderExecutionFeeNative,
-        ethereumExecutionFeeInNative,
-        localExecutionFeeInNative,
-        totalFeeInNative,
-        l2BridgeFeeInL1Token,
+        breakdown,
+        summary,
+        totals: computeTotals(summary),
     }
 }
 
@@ -526,6 +671,7 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
         defaultFee?: bigint
         feeTokenLocation?: any
         contractCall?: ContractCall
+        volumeFee?: VolumeFeeParams
         accelerated?: boolean
     },
 ): Promise<DeliveryFee> => {
@@ -596,7 +742,7 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
         assetHubExecutionFeeDOT +
         bridgeHubDeliveryFeeDOT
 
-    let ethereumExecutionFee = await estimateEthereumExecutionFee(
+    const rawEthereumExecutionFee = await estimateEthereumExecutionFee(
         context,
         registry,
         sourceParachain,
@@ -604,10 +750,32 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
         options,
     )
 
+    let volumeTip: bigint | undefined
+    if (options?.volumeFee) {
+        volumeTip = calculateVolumeTipInWei(options.volumeFee)
+    }
+    const tipForScaling = volumeTip ?? 0n
+
+    const scaledGasPad = scaledPadPercentage(
+        feePadPercentage,
+        tipForScaling,
+        rawEthereumExecutionFee,
+    )
+    let ethereumExecutionFee =
+        padFeeByPercentage(rawEthereumExecutionFee, scaledGasPad) + tipForScaling
+
+    const scaledSlippagePad = scaledPadPercentage(
+        feeSlippagePadPercentage,
+        tipForScaling,
+        rawEthereumExecutionFee,
+    )
+
     // calculate the cost of swapping in native asset
     let totalFeeInNative: bigint | undefined = undefined
     let assetHubExecutionFeeNative: bigint | undefined = undefined
     let ethereumExecutionFeeInNative: bigint | undefined
+    let ethereumExecutionFeeInDot: bigint | undefined
+    let volumeTipInNative: bigint | undefined
     let feeLocation = options?.feeTokenLocation
     if (feeLocation) {
         // If the fee asset is DOT, then one swap from DOT to Ether is required on AH
@@ -615,25 +783,44 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
             ethereumExecutionFeeInNative = await assetHubImpl.getAssetHubConversionPalletSwap(
                 DOT_LOCATION,
                 bridgeLocation(registry.ethChainId),
-                padFeeByPercentage(ethereumExecutionFee, feeSlippagePadPercentage),
+                padFeeByPercentage(ethereumExecutionFee, scaledSlippagePad),
             )
+            if (volumeTip !== undefined && volumeTip > 0n) {
+                volumeTipInNative = await assetHubImpl.getAssetHubConversionPalletSwap(
+                    DOT_LOCATION,
+                    bridgeLocation(registry.ethChainId),
+                    volumeTip,
+                )
+            }
             totalFeeInDot += ethereumExecutionFeeInNative
             totalFeeInNative = totalFeeInDot
         }
         // On Parachains, we can use their native asset as the fee token.
         // If the fee is in native, we need to swap it to DOT first, then swap DOT to Ether to cover the ethereum execution fee.
         else if (isParachainNative(feeLocation, sourceParaId)) {
-            let ethereumExecutionFeeInDOT = await assetHubImpl.getAssetHubConversionPalletSwap(
+            ethereumExecutionFeeInDot = await assetHubImpl.getAssetHubConversionPalletSwap(
                 DOT_LOCATION,
                 bridgeLocation(registry.ethChainId),
-                padFeeByPercentage(ethereumExecutionFee, feeSlippagePadPercentage),
+                padFeeByPercentage(ethereumExecutionFee, scaledSlippagePad),
             )
             ethereumExecutionFeeInNative = await assetHubImpl.getAssetHubConversionPalletSwap(
                 feeLocation,
                 DOT_LOCATION,
-                padFeeByPercentage(ethereumExecutionFeeInDOT, feeSlippagePadPercentage),
+                padFeeByPercentage(ethereumExecutionFeeInDot, scaledSlippagePad),
             )
-            totalFeeInDot += ethereumExecutionFeeInDOT
+            if (volumeTip !== undefined && volumeTip > 0n) {
+                const volumeTipInDOT = await assetHubImpl.getAssetHubConversionPalletSwap(
+                    DOT_LOCATION,
+                    bridgeLocation(registry.ethChainId),
+                    volumeTip,
+                )
+                volumeTipInNative = await assetHubImpl.getAssetHubConversionPalletSwap(
+                    feeLocation,
+                    DOT_LOCATION,
+                    volumeTipInDOT,
+                )
+            }
+            totalFeeInDot += ethereumExecutionFeeInDot
             totalFeeInNative = await assetHubImpl.getAssetHubConversionPalletSwap(
                 feeLocation,
                 DOT_LOCATION,
@@ -650,24 +837,161 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
         }
     }
 
+    const breakdown: DeliveryFee["breakdown"] = {}
+    addBreakdown(breakdown, "localExecution", { amount: localExecutionFeeDOT, symbol: "DOT" })
+    addBreakdown(breakdown, "localDelivery", { amount: localDeliveryFeeDOT, symbol: "DOT" })
+    addBreakdown(breakdown, "snowbridgeDelivery", {
+        amount: snowbridgeDeliveryFeeDOT,
+        symbol: "DOT",
+    })
+    addBreakdown(breakdown, "assetHubExecution", { amount: assetHubExecutionFeeDOT, symbol: "DOT" })
+    addBreakdown(breakdown, "bridgeHubDelivery", { amount: bridgeHubDeliveryFeeDOT, symbol: "DOT" })
+    addBreakdown(breakdown, "ethereumExecution", { amount: ethereumExecutionFee, symbol: "ETH" })
+    const sourceParaSymbol = sourceParachain.info.tokenSymbols
+    const feeNativeSymbol = feeLocation
+        ? isRelaychainLocation(feeLocation)
+            ? registry.relaychain.tokenSymbols
+            : sourceParaSymbol
+        : undefined
+    if (localExecutionFeeInNative !== undefined) {
+        addBreakdown(breakdown, "localExecution", {
+            amount: localExecutionFeeInNative,
+            symbol: sourceParaSymbol,
+        })
+    }
+    if (localDeliveryFeeInNative !== undefined) {
+        addBreakdown(breakdown, "localDelivery", {
+            amount: localDeliveryFeeInNative,
+            symbol: sourceParaSymbol,
+        })
+    }
+    if (ethereumExecutionFeeInNative !== undefined) {
+        addBreakdown(breakdown, "ethereumExecution", {
+            amount: ethereumExecutionFeeInNative,
+            symbol: feeNativeSymbol!,
+        })
+    }
+    // Native-fee path goes native → DOT → ETH on AH. Persist the slippage-padded
+    // DOT input used to quote the DOT → ETH swap so reserve validation reconstructs
+    // the same DOT requirement fee estimation used (rather than re-quoting from
+    // unpadded ETH and getting a less conservative threshold).
+    if (ethereumExecutionFeeInDot !== undefined && feeNativeSymbol !== "DOT") {
+        addBreakdown(breakdown, "ethereumExecution", {
+            amount: ethereumExecutionFeeInDot,
+            symbol: "DOT",
+        })
+    }
+
+    const xcmExecDOT = localExecutionFeeDOT + assetHubExecutionFeeDOT
+    const bridgeFeesDOT = snowbridgeDeliveryFeeDOT + bridgeHubDeliveryFeeDOT + localDeliveryFeeDOT
+    const summary: DeliveryFee["summary"] = []
+    if (feeLocation) {
+        const tipInNative = volumeTipInNative ?? 0n
+        if (isRelaychainLocation(feeLocation)) {
+            const ethereumExecInNative = (ethereumExecutionFeeInNative ?? 0n) - tipInNative
+            summary.push({
+                description: "XCM execution fees",
+                amount: xcmExecDOT,
+                symbol: feeNativeSymbol!,
+            })
+            summary.push({
+                description: "Ethereum execution fees",
+                amount: ethereumExecInNative,
+                symbol: feeNativeSymbol!,
+            })
+            summary.push({
+                description: "Bridge fees",
+                amount: bridgeFeesDOT,
+                symbol: feeNativeSymbol!,
+            })
+            if (tipInNative > 0n) {
+                summary.push({
+                    description: "Relayer tip",
+                    amount: tipInNative,
+                    symbol: feeNativeSymbol!,
+                })
+            }
+        } else {
+            // parachain-native pay: split totalFeeInNative across categories using
+            // proportional share of the DOT-side amounts. Sum is preserved exactly.
+            const localExecN = localExecutionFeeInNative ?? 0n
+            const localDelivN = localDeliveryFeeInNative ?? 0n
+            const ethExecN = (ethereumExecutionFeeInNative ?? 0n) - tipInNative
+            const otherN =
+                totalFeeInNative! - localExecN - localDelivN - (ethereumExecutionFeeInNative ?? 0n)
+            const totalDotOnly = xcmExecDOT + bridgeFeesDOT
+            let xcmExecPortion = 0n
+            let bridgeFeesPortion = 0n
+            if (totalDotOnly > 0n) {
+                xcmExecPortion = (otherN * xcmExecDOT) / totalDotOnly
+                bridgeFeesPortion = otherN - xcmExecPortion
+            } else {
+                xcmExecPortion = otherN
+            }
+            summary.push({
+                description: "XCM execution fees",
+                amount: xcmExecPortion + localExecN,
+                symbol: feeNativeSymbol!,
+            })
+            summary.push({
+                description: "Ethereum execution fees",
+                amount: ethExecN,
+                symbol: feeNativeSymbol!,
+            })
+            summary.push({
+                description: "Bridge fees",
+                amount: bridgeFeesPortion + localDelivN,
+                symbol: feeNativeSymbol!,
+            })
+            if (tipInNative > 0n) {
+                summary.push({
+                    description: "Relayer tip",
+                    amount: tipInNative,
+                    symbol: feeNativeSymbol!,
+                })
+            }
+        }
+    } else {
+        summary.push({
+            description: "XCM execution fees",
+            amount: xcmExecDOT,
+            symbol: "DOT",
+        })
+        summary.push({
+            description: "Bridge fees",
+            amount: bridgeFeesDOT,
+            symbol: "DOT",
+        })
+        if (localExecutionFeeInNative !== undefined && localExecutionFeeInNative > 0n) {
+            summary.push({
+                description: "XCM execution fees",
+                amount: localExecutionFeeInNative,
+                symbol: sourceParaSymbol,
+            })
+        }
+        if (localDeliveryFeeInNative !== undefined && localDeliveryFeeInNative > 0n) {
+            summary.push({
+                description: "Bridge fees",
+                amount: localDeliveryFeeInNative,
+                symbol: sourceParaSymbol,
+            })
+        }
+        summary.push({
+            description: "Ethereum execution fees",
+            amount: ethereumExecutionFee - (volumeTip ?? 0n),
+            symbol: "ETH",
+        })
+        if (volumeTip !== undefined) {
+            summary.push({ description: "Relayer tip", amount: volumeTip, symbol: "ETH" })
+        }
+    }
+
     return {
         kind: "polkadot->ethereum",
-        localExecutionFeeDOT,
-        localDeliveryFeeDOT,
-        snowbridgeDeliveryFeeDOT,
-        assetHubExecutionFeeDOT,
-        bridgeHubDeliveryFeeDOT,
-        returnToSenderDeliveryFeeDOT: 0n,
-        returnToSenderExecutionFeeDOT: 0n,
-        totalFeeInDot,
-        ethereumExecutionFee,
         feeLocation,
-        assetHubExecutionFeeNative,
-        returnToSenderExecutionFeeNative: 0n,
-        ethereumExecutionFeeInNative,
-        localExecutionFeeInNative,
-        localDeliveryFeeInNative,
-        totalFeeInNative,
+        breakdown,
+        summary,
+        totals: computeTotals(summary),
     }
 }
 
@@ -710,8 +1034,9 @@ export const validateTransferFromAssetHub = async <T extends EthereumProviderTyp
             sourceAssetMetadata,
         )
     }
-    if (isNativeBalance && fee.totalFeeInNative) {
-        if (amount + fee.totalFeeInNative > tokenBalance) {
+    const ahTotalNative = findTotalOrUndefined(fee, "DOT")
+    if (isNativeBalance && ahTotalNative !== undefined) {
+        if (amount + ahTotalNative > tokenBalance) {
             logs.push({
                 kind: ValidationKind.Error,
                 reason: ValidationReason.InsufficientTokenBalance,
@@ -736,7 +1061,7 @@ export const validateTransferFromAssetHub = async <T extends EthereumProviderTyp
             ETHER_TOKEN_ADDRESS,
         )
 
-        if (fee.ethereumExecutionFee! > etherBalance) {
+        if (findInBreakdownOrZero(fee.breakdown, "ethereumExecution", "ETH") > etherBalance) {
             logs.push({
                 kind: ValidationKind.Error,
                 reason: ValidationReason.InsufficientEtherBalance,
@@ -810,8 +1135,8 @@ export const validateTransferFromAssetHub = async <T extends EthereumProviderTyp
     const sourceExecutionFee = paymentInfo["partialFee"].toBigInt()
 
     // recheck total after fee estimation
-    if (isNativeBalance && fee.totalFeeInNative) {
-        if (amount + fee.totalFeeInNative + sourceExecutionFee > tokenBalance) {
+    if (isNativeBalance && ahTotalNative !== undefined) {
+        if (amount + ahTotalNative + sourceExecutionFee > tokenBalance) {
             logs.push({
                 kind: ValidationKind.Error,
                 reason: ValidationReason.InsufficientTokenBalance,
@@ -819,7 +1144,7 @@ export const validateTransferFromAssetHub = async <T extends EthereumProviderTyp
             })
         }
     }
-    if (sourceExecutionFee + fee.totalFeeInDot > dotBalance) {
+    if (sourceExecutionFee + findTotal(fee, "DOT") > dotBalance) {
         logs.push({
             kind: ValidationKind.Error,
             reason: ValidationReason.InsufficientDotFee,
@@ -837,6 +1162,27 @@ export const validateTransferFromAssetHub = async <T extends EthereumProviderTyp
             reason: ValidationReason.BridgeStatusNotOperational,
             message: "Bridge operations have been paused by onchain governance.",
         })
+    }
+
+    if (fee.feeLocation) {
+        const requiredEthOut = findInBreakdownOrZero(fee.breakdown, "ethereumExecution", "ETH")
+        if (requiredEthOut > 0n) {
+            const reserveCheck = await checkDotEthPoolLiquidityForPolkadotToEthereum(
+                sourceParachainImpl,
+                registry.ethChainId,
+                requiredEthOut,
+            )
+            if (!reserveCheck.ok) {
+                logs.push({
+                    kind: ValidationKind.Error,
+                    reason: ValidationReason.InsufficientPoolReserves,
+                    message:
+                        reserveCheck.reason === "pool-missing"
+                            ? `${reserveCheck.pool} pool does not exist on Asset Hub.`
+                            : `${reserveCheck.pool} pool on Asset Hub has insufficient liquidity (need ${reserveCheck.requiredOut}, have ${reserveCheck.reserveOut}).`,
+                })
+            }
+        }
     }
 
     const success = logs.find((l) => l.kind === ValidationKind.Error) === undefined
@@ -889,6 +1235,8 @@ export const validateTransferFromParachain = async <T extends EthereumProviderTy
     if (source.features.hasDotBalance) {
         dotBalance = await sourceParachainImpl.getDotBalance(sourceAccountHex)
     }
+    const paymentInfo = await tx.paymentInfo(sourceAccountHex)
+    const sourceExecutionFee = paymentInfo["partialFee"].toBigInt()
     let tokenBalance: any
     let isNativeBalance = false
 
@@ -906,8 +1254,35 @@ export const validateTransferFromParachain = async <T extends EthereumProviderTy
         )
     }
 
-    if (isNativeBalance && fee.totalFeeInNative) {
-        if (amount + fee.totalFeeInNative > tokenBalance) {
+    // The source `WithdrawAsset` may withdraw extra units of the token asset
+    // when the token shares a location with the fee asset:
+    //  - Native-ETH transfer paid with ETH (default builder): `amount + remoteEtherFeeAmount` of ETH.
+    //  - PNA DOT transfer paid with DOT: `amount + totalDOTFeeAmount` of DOT.
+    // Account for these overlaps so the token-balance check matches what the
+    // extrinsic actually withdraws.
+    const isEthToken = tokenAddress.toLowerCase() === ETHER_TOKEN_ADDRESS.toLowerCase()
+    const isAllEthFeePath = !fee.feeLocation
+    const isDotToken =
+        sourceAssetMetadata.location !== undefined &&
+        isRelaychainLocation(sourceAssetMetadata.location)
+    const isNativeFeePath =
+        fee.feeLocation !== undefined && isParachainNative(fee.feeLocation, sourceParaId)
+    const sourceWithdrawsDot = isAllEthFeePath || (!!fee.feeLocation && !isNativeFeePath)
+    const requiredDotFee = findTotalOrUndefined(fee, "DOT") ?? 0n
+
+    const extraEthOnSourceWithdraw =
+        isEthToken && isAllEthFeePath
+            ? findInBreakdownOrZero(fee.breakdown, "ethereumExecution", "ETH")
+            : 0n
+    const extraDotOnSourceWithdraw = isDotToken && sourceWithdrawsDot ? requiredDotFee : 0n
+    const requiredTokenAmount = amount + extraEthOnSourceWithdraw + extraDotOnSourceWithdraw
+
+    const paraTotalNative = findTotalOrUndefined(fee, source.info.tokenSymbols)
+    // When the bridged token is the parachain's native asset, the substrate
+    // tx fee is withdrawn from the same balance, so include it in the threshold.
+    const nativeTxFeeShare = isNativeBalance ? sourceExecutionFee : 0n
+    if (isNativeBalance && paraTotalNative !== undefined) {
+        if (requiredTokenAmount + paraTotalNative + nativeTxFeeShare > tokenBalance) {
             logs.push({
                 kind: ValidationKind.Error,
                 reason: ValidationReason.InsufficientTokenBalance,
@@ -915,7 +1290,7 @@ export const validateTransferFromParachain = async <T extends EthereumProviderTy
             })
         }
     } else {
-        if (amount > tokenBalance) {
+        if (requiredTokenAmount + nativeTxFeeShare > tokenBalance) {
             logs.push({
                 kind: ValidationKind.Error,
                 reason: ValidationReason.InsufficientTokenBalance,
@@ -924,7 +1299,10 @@ export const validateTransferFromParachain = async <T extends EthereumProviderTy
         }
     }
 
-    if (!fee.feeLocation) {
+    // When the token is ETH and the fee path is ETH, the eth-side fee is folded
+    // into the token-balance check above. Skip the standalone ether check to
+    // avoid querying the same balance twice and emitting a duplicate error.
+    if (!fee.feeLocation && !isEthToken) {
         let etherBalance = await sourceParachainImpl.getTokenBalance(
             sourceAccountHex,
             registry.ethChainId,
@@ -932,11 +1310,44 @@ export const validateTransferFromParachain = async <T extends EthereumProviderTy
         )
 
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        if (fee.ethereumExecutionFee! > etherBalance) {
+        if (findInBreakdownOrZero(fee.breakdown, "ethereumExecution", "ETH") > etherBalance) {
             logs.push({
                 kind: ValidationKind.Error,
                 reason: ValidationReason.InsufficientEtherBalance,
                 message: "Insufficient ether balance to submit transaction.",
+            })
+        }
+    }
+
+    // DOT balance check: the source `WithdrawAsset` includes `totalDOTFeeAmount`
+    // for the default ETH-fee and DOT-fee paths. Skip when the token is DOT —
+    // the overlap is already captured in the token-balance check via `extraDotOnSourceWithdraw`.
+    if (
+        sourceWithdrawsDot &&
+        !isDotToken &&
+        source.features.hasDotBalance &&
+        dotBalance !== undefined &&
+        requiredDotFee > dotBalance
+    ) {
+        logs.push({
+            kind: ValidationKind.Error,
+            reason: ValidationReason.InsufficientDotFee,
+            message: "Insufficient DOT balance to submit transaction on the source parachain.",
+        })
+    }
+
+    // Native balance must cover the substrate tx fee plus, on the native-fee path,
+    // the `totalNativeFeeAmount` withdrawn by the source XCM. Skip when the token
+    // is the parachain's native asset — both costs are folded into the
+    // token-balance check above.
+    if (!isNativeBalance) {
+        const nativeFeeShare = isNativeFeePath ? (paraTotalNative ?? 0n) : 0n
+        if (sourceExecutionFee + nativeFeeShare > nativeBalance) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.InsufficientNativeFee,
+                message:
+                    "Insufficient native balance to submit transaction on the source parachain.",
             })
         }
     }
@@ -1017,9 +1428,6 @@ export const validateTransferFromParachain = async <T extends EthereumProviderTy
         }
     }
 
-    const paymentInfo = await tx.paymentInfo(sourceAccountHex)
-    const sourceExecutionFee = paymentInfo["partialFee"].toBigInt()
-
     const bridgeStatus = await getOperatingStatus({
         ethereumProvider: context.ethereumProvider,
         gateway,
@@ -1031,6 +1439,59 @@ export const validateTransferFromParachain = async <T extends EthereumProviderTy
             reason: ValidationReason.BridgeStatusNotOperational,
             message: "Bridge operations have been paused by onchain governance.",
         })
+    }
+
+    if (fee.feeLocation) {
+        const assetHubImpl = await context.paraImplementation(assetHub)
+        const requiredEthOut = findInBreakdownOrZero(fee.breakdown, "ethereumExecution", "ETH")
+        if (requiredEthOut > 0n) {
+            const reserveCheck = await checkDotEthPoolLiquidityForPolkadotToEthereum(
+                assetHubImpl,
+                registry.ethChainId,
+                requiredEthOut,
+            )
+            if (!reserveCheck.ok) {
+                logs.push({
+                    kind: ValidationKind.Error,
+                    reason: ValidationReason.InsufficientPoolReserves,
+                    message:
+                        reserveCheck.reason === "pool-missing"
+                            ? `${reserveCheck.pool} pool does not exist on Asset Hub.`
+                            : `${reserveCheck.pool} pool on Asset Hub has insufficient liquidity (need ${reserveCheck.requiredOut}, have ${reserveCheck.reserveOut}).`,
+                })
+            }
+
+            // Native-fee path runs an extra native → DOT swap on AH before DOT → ETH,
+            // so the <native>/DOT pool must also have enough DOT to cover all DOT-side
+            // fees plus the DOT amount fed into the DOT → ETH swap. Use the padded
+            // ethereumExecution DOT entry persisted by fee estimation so the threshold
+            // matches the value used to quote the native → DOT swap.
+            if (isParachainNative(fee.feeLocation, sourceParaId)) {
+                const requiredDotOut =
+                    findInBreakdownOrZero(fee.breakdown, "localExecution", "DOT") +
+                    findInBreakdownOrZero(fee.breakdown, "localDelivery", "DOT") +
+                    findInBreakdownOrZero(fee.breakdown, "snowbridgeDelivery", "DOT") +
+                    findInBreakdownOrZero(fee.breakdown, "assetHubExecution", "DOT") +
+                    findInBreakdownOrZero(fee.breakdown, "bridgeHubDelivery", "DOT") +
+                    findInBreakdownOrZero(fee.breakdown, "ethereumExecution", "DOT")
+                const nativeReserveCheck = await checkNativeDotPoolLiquidityForParachainToEthereum(
+                    assetHubImpl,
+                    fee.feeLocation,
+                    requiredDotOut,
+                    source.info.tokenSymbols,
+                )
+                if (!nativeReserveCheck.ok) {
+                    logs.push({
+                        kind: ValidationKind.Error,
+                        reason: ValidationReason.InsufficientPoolReserves,
+                        message:
+                            nativeReserveCheck.reason === "pool-missing"
+                                ? `${nativeReserveCheck.pool} pool does not exist on Asset Hub.`
+                                : `${nativeReserveCheck.pool} pool on Asset Hub has insufficient liquidity (need ${nativeReserveCheck.requiredOut}, have ${nativeReserveCheck.reserveOut}).`,
+                    })
+                }
+            }
+        }
     }
 
     const success = logs.find((l) => l.kind === ValidationKind.Error) === undefined
@@ -1066,17 +1527,21 @@ export async function buildContractCallHex<T extends EthereumProviderTypes>(
     return "0x00" + callHex.toHex().slice(2)
 }
 
+// Breakdown entries are 1n placeholders so XCM builders that read fee amounts
+// via findInBreakdownOrZero produce non-zero fungible assets — the AH runtime
+// panics in XcmPaymentApi_query_xcm_weight on zero-amount assets.
 export const mockDeliveryFee: DeliveryFee = {
     kind: "polkadot->ethereum",
-    localExecutionFeeDOT: 1n,
-    localDeliveryFeeDOT: 1n,
-    snowbridgeDeliveryFeeDOT: 1n,
-    assetHubExecutionFeeDOT: 1n,
-    bridgeHubDeliveryFeeDOT: 1n,
-    returnToSenderDeliveryFeeDOT: 0n,
-    returnToSenderExecutionFeeDOT: 0n,
-    totalFeeInDot: 10n,
-    ethereumExecutionFee: 1n,
+    breakdown: {
+        localExecution: [{ amount: 1n, symbol: "DOT" }],
+        localDelivery: [{ amount: 1n, symbol: "DOT" }],
+        snowbridgeDelivery: [{ amount: 1n, symbol: "DOT" }],
+        assetHubExecution: [{ amount: 1n, symbol: "DOT" }],
+        bridgeHubDelivery: [{ amount: 1n, symbol: "DOT" }],
+        ethereumExecution: [{ amount: 1n, symbol: "ETH" }],
+    },
+    summary: [{ description: "Bridge fee", amount: 10n, symbol: "DOT" }],
+    totals: [{ amount: 10n, symbol: "DOT" }],
 }
 
 // Agent creation exports

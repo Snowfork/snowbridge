@@ -114,6 +114,13 @@ export abstract class ParachainBase {
         }
     }
 
+    // Upper bound for the max_weight argument passed to pallet_xcm::execute on
+    // this chain. Used to cap the value queried from xcmPaymentApi and as the
+    // default when the query is unavailable or returns 0 for a field.
+    getMaxWeight(): { refTime: bigint; proofSize: bigint } {
+        return { refTime: 30_000_000_000n, proofSize: 1_000_000n }
+    }
+
     getTokenBalance(
         account: string,
         ethChainId: number,
@@ -313,4 +320,10 @@ export abstract class ParachainBase {
         asset2: any,
         exactAsset2Balance: bigint,
     ): Promise<bigint>
+    getAssetHubPoolReserves(
+        _asset1: any,
+        _asset2: any,
+    ): Promise<{ reserve1: bigint; reserve2: bigint } | null> {
+        return Promise.resolve(null)
+    }
 }

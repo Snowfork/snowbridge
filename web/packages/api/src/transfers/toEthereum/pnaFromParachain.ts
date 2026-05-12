@@ -31,11 +31,12 @@ import {
 import { Context } from "../.."
 import { TransferInterface } from "./transferInterface"
 import { ensureValidationSuccess } from "../../utils"
+import { VolumeFeeParams } from "../../feeSchedule"
 import {
     buildContractCallHex,
     estimateFeesFromParachains,
-    MaxWeight,
     mockDeliveryFee,
+    queryXcmExecuteWeight,
     signAndSendTransfer,
     validateTransferFromParachain,
 } from "../../toEthereumSnowbridgeV2"
@@ -66,6 +67,7 @@ export class PNAFromParachain<T extends EthereumProviderTypes> implements Transf
             feeTokenLocation?: any
             claimerLocation?: any
             contractCall?: ContractCall
+            volumeFee?: VolumeFeeParams
             accelerated?: boolean
         },
     ): Promise<DeliveryFee> {
@@ -244,6 +246,7 @@ export class PNAFromParachain<T extends EthereumProviderTypes> implements Transf
                 ethChainId,
                 assetHubParaId,
                 sourceParachainImpl.parachainId,
+                sourceParachain.info.tokenSymbols,
                 sourceAccountHex,
                 beneficiaryAccount,
                 messageId,
@@ -259,7 +262,10 @@ export class PNAFromParachain<T extends EthereumProviderTypes> implements Transf
             )
         }
         let tx: SubmittableExtrinsic<"promise", ISubmittableResult> =
-            parachain.tx.polkadotXcm.execute(xcm, MaxWeight)
+            parachain.tx.polkadotXcm.execute(
+                xcm,
+                await queryXcmExecuteWeight(sourceParachainImpl, sourceParachain, xcm),
+            )
 
         return {
             kind: "polkadot->ethereum",
@@ -298,6 +304,7 @@ export class PNAFromParachain<T extends EthereumProviderTypes> implements Transf
                 feeTokenLocation?: any
                 claimerLocation?: any
                 contractCall?: ContractCall
+                volumeFee?: VolumeFeeParams
             }
             tx?: {
                 claimerLocation?: any

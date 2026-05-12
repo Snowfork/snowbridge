@@ -4,13 +4,13 @@ import {
     erc20Location,
     parachainLocation,
     accountToLocation,
-    isEthereumNative,
     buildAppendixInstructions,
     buildEthereumInstructions,
 } from "../../xcmBuilder"
 import { DOT_LOCATION } from "../../assets_v2"
 import { Asset } from "@snowbridge/base-types"
 import { DeliveryFee } from "../../toEthereum_v2"
+import { findInBreakdownOrZero, findTotal } from "../../fees"
 
 export function buildTransferXcmFromParachainWithDOTAsFee(
     registry: Registry,
@@ -32,12 +32,16 @@ export function buildTransferXcmFromParachainWithDOTAsFee(
     let tokenLocation = erc20Location(ethChainId, asset.token)
 
     let localDOTFeeAmount: bigint =
-        (fee.localExecutionFeeDOT ?? 0n) +
-        (fee.localDeliveryFeeDOT ?? 0n) +
-        fee.returnToSenderExecutionFeeDOT
-    let totalDOTFeeAmount: bigint = fee.totalFeeInDot
-    let remoteEtherFeeAmount: bigint = fee.ethereumExecutionFee!
-    let remoteEtherFeeInDOTAmount: bigint = fee.ethereumExecutionFeeInNative!
+        findInBreakdownOrZero(fee.breakdown, "localExecution", "DOT") +
+        findInBreakdownOrZero(fee.breakdown, "localDelivery", "DOT") +
+        findInBreakdownOrZero(fee.breakdown, "returnToSenderExecution", "DOT")
+    let totalDOTFeeAmount: bigint = findTotal(fee, "DOT")
+    let remoteEtherFeeAmount: bigint = findInBreakdownOrZero(fee.breakdown, "ethereumExecution", "ETH")
+    let remoteEtherFeeInDOTAmount: bigint = findInBreakdownOrZero(
+        fee.breakdown,
+        "ethereumExecution",
+        "DOT",
+    )
 
     let assets = []
 
@@ -47,21 +51,12 @@ export function buildTransferXcmFromParachainWithDOTAsFee(
             Fungible: totalDOTFeeAmount,
         },
     })
-    if (isEthereumNative(tokenLocation, ethChainId)) {
-        assets.push({
-            id: bridgeLocation(ethChainId),
-            fun: {
-                Fungible: remoteEtherFeeAmount + tokenAmount,
-            },
-        })
-    } else {
-        assets.push({
-            id: tokenLocation,
-            fun: {
-                Fungible: tokenAmount,
-            },
-        })
-    }
+    assets.push({
+        id: tokenLocation,
+        fun: {
+            Fungible: tokenAmount,
+        },
+    })
 
     let appendixInstructions = buildAppendixInstructions(
         envName,

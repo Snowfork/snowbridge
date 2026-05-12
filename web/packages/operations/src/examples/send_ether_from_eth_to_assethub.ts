@@ -6,6 +6,7 @@ import { formatEther, Wallet } from "ethers"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { setTimeout } from "timers/promises"
 import { bridgeInfoFor } from "@snowbridge/registry"
+import { findFeeTotal } from "../fee"
 ;(async () => {
     // Initialize polkadot-js crypto
     await cryptoWaitReady()
@@ -74,19 +75,20 @@ import { bridgeInfoFor } from "@snowbridge/registry"
         tx,
         computed: { totalValue },
     } = transfer
+    const deliveryFee = findFeeTotal(fee, "ETH")
 
     // Viewing gas and tx cost
     console.log("tx:", tx)
     console.log("Gas price quoted:", validation.data.feeInfo?.feeData)
     console.log("Transaction Gas Cost:", validation.data.feeInfo?.estimatedGas)
 
-    console.log("Delivery Fee:", formatEther(fee.totalFeeInWei))
+    console.log("Delivery Fee:", formatEther(deliveryFee))
     console.log("Execution Fee:", formatEther(validation.data.feeInfo?.executionFee ?? 0n))
     console.log(
         "Total cost:",
-        formatEther(fee.totalFeeInWei + (validation.data.feeInfo?.executionFee ?? 0n)),
+        formatEther(deliveryFee + (validation.data.feeInfo?.executionFee ?? 0n)),
     )
-    console.log("Ether sent:", formatEther(totalValue - fee.totalFeeInWei))
+    console.log("Ether sent:", formatEther(totalValue - deliveryFee))
 
     // Step 5. Submit the transaction
     const response = await ETHEREUM_ACCOUNT.sendTransaction(tx)

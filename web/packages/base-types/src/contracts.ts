@@ -590,6 +590,15 @@ export const SNOWBRIDGE_L2_ADAPTOR_ABI = [
     outputs: [],
     stateMutability: "nonpayable",
   },
+  {
+    type: "event",
+    name: "DepositCallInvoked",
+    inputs: [
+      { name: "topic", type: "bytes32", internalType: "bytes32", indexed: false },
+      { name: "depositId", type: "uint256", internalType: "uint256", indexed: false },
+    ],
+    anonymous: false,
+  },
 ] as const;
 
 export const MOONBEAM_PALLET_XCM_PRECOMPILE_ABI = [

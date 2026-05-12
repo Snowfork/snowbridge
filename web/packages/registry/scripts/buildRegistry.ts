@@ -118,7 +118,7 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
         beefyContract: "0x7cfc5c8b341991993080af67d940b6ad19a010e1",
         assetHubParaId: 1000,
         bridgeHubParaId: 1002,
-        v2_parachains: [1000],
+        v2_parachains: [1000, 2034],
         indexerGraphQlUrl: "https://subsquid.snowbridge.network/graphql",
         kusama: {
             assetHubParaId: 1000,

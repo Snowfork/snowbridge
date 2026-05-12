@@ -8,21 +8,14 @@ import type {
 } from "@snowbridge/base-types"
 import type { OperationStatus } from "../status"
 import type { FeeInfo, ValidationLog } from "./toPolkadot"
+import type { FeeAsset, FeeItem, L2ToPolkadotFeeKey, ToPolkadotFeeKey } from "./fee"
 
 export type DeliveryFee = {
     kind: "ethereum->polkadot" | "ethereum_l2->polkadot"
     feeAsset: any
-    assetHubDeliveryFeeEther: bigint
-    assetHubExecutionFeeEther: bigint
-    destinationDeliveryFeeEther: bigint
-    destinationExecutionFeeEther?: bigint
-    destinationExecutionFeeDOT?: bigint
-    relayerFee: bigint
-    extrinsicFeeDot: bigint
-    extrinsicFeeEther: bigint
-    totalFeeInWei: bigint
-    bridgeFeeInL2Token?: bigint
-    swapFeeInL1Token?: bigint
+    breakdown: { [P in ToPolkadotFeeKey | L2ToPolkadotFeeKey]?: FeeAsset[] }
+    summary: FeeItem[]
+    totals: FeeAsset[]
 }
 
 export type Transfer<T extends EthereumProviderTypes> = {

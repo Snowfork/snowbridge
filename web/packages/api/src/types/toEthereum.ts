@@ -10,6 +10,7 @@ import type {
 } from "@snowbridge/base-types"
 import type { EventRecord } from "@polkadot/types/interfaces"
 import type { OperationStatus } from "../status"
+import type { FeeAsset, FeeItem, ToEthereumFeeKey } from "./fee"
 
 export type Transfer = {
     kind: "polkadot->ethereum" | "polkadot->ethereum_l2"
@@ -37,23 +38,10 @@ export type Transfer = {
 
 export type DeliveryFee = {
     kind: "polkadot->ethereum" | "polkadot->ethereum_l2" | "ethereum->ethereum"
-    snowbridgeDeliveryFeeDOT: bigint
-    bridgeHubDeliveryFeeDOT: bigint
-    assetHubExecutionFeeDOT: bigint
-    returnToSenderExecutionFeeDOT: bigint
-    returnToSenderDeliveryFeeDOT: bigint
-    totalFeeInDot: bigint
-    localExecutionFeeDOT?: bigint
-    localDeliveryFeeDOT?: bigint
-    ethereumExecutionFee?: bigint
     feeLocation?: any
-    totalFeeInNative?: bigint
-    assetHubExecutionFeeNative?: bigint
-    returnToSenderExecutionFeeNative?: bigint
-    localExecutionFeeInNative?: bigint
-    localDeliveryFeeInNative?: bigint
-    ethereumExecutionFeeInNative?: bigint
-    l2BridgeFeeInL1Token?: bigint
+    breakdown: { [P in ToEthereumFeeKey]?: FeeAsset[] }
+    summary: FeeItem[]
+    totals: FeeAsset[]
 }
 
 export type FeeInfo = {
@@ -79,6 +67,7 @@ export enum ValidationReason {
     InsufficientEtherBalance,
     ContractCallInvalidTarget,
     ContractCallAgentNotRegistered,
+    InsufficientPoolReserves,
 }
 
 export type ValidationLog = {
