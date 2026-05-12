@@ -65,7 +65,7 @@ export * as history from "./history"
 export * as historyV2 from "./history_v2"
 export { TransferStatus } from "./history_v2"
 export * as subsquidV2 from "./subsquid_v2"
-export * as governance from "./governance"
+export * as governance from "./governance/halt_bridge"
 
 export class Context<T extends EthereumProviderTypes> {
     readonly environment: Environment
