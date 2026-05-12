@@ -579,6 +579,32 @@ contract GatewayV2Test is Test {
         vm.expectEmit(true, false, false, true);
         emit IGatewayV2.InboundMessageDispatched(1, topic, true, relayerRewardAddress);
 
+        address bridgeHubAgent = IGatewayV2(address(gateway)).agentOf(Constants.BRIDGE_HUB_AGENT_ID);
+        vm.deal(bridgeHubAgent, 1 ether);
+        hoax(relayer, 1 ether);
+        IGatewayV2(address(gateway))
+            .v2_submit(
+                InboundMessageV2({
+                    origin: Constants.BRIDGE_HUB_AGENT_ID,
+                    nonce: 1,
+                    topic: topic,
+                    commands: makeCallContractCommand(0.1 ether)
+                }),
+                proof,
+                makeMockProof(),
+                relayerRewardAddress
+            );
+    }
+
+    function testAgentCallContractFailsForAssetHub() public {
+        bytes32 topic = keccak256("topic");
+
+        // The command fails, then the message is dispatched with success: false
+        vm.expectEmit(true, false, false, false);
+        emit IGatewayV2.CommandFailed(1, 0);
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.InboundMessageDispatched(1, topic, false, relayerRewardAddress);
+
         vm.deal(assetHubAgent, 1 ether);
         hoax(relayer, 1 ether);
         IGatewayV2(address(gateway))

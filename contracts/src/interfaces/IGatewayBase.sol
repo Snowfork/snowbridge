@@ -13,6 +13,7 @@ interface IGatewayBase {
     error Unsupported();
     error InvalidDestinationFee();
     error AgentDoesNotExist();
+    error AgentNotAuthorized();
     error TokenAlreadyRegistered();
     error TokenMintFailed();
     error TokenTransferFailed();
