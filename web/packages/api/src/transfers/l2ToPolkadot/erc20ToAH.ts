@@ -42,6 +42,13 @@ import { VolumeFeeParams, calculateVolumeTipInWei } from "../../feeSchedule"
 import { addBreakdown, computeTotals, findInBreakdown, findInBreakdownOrZero, findTotal } from "../../fees"
 import { checkDotEthPoolLiquidityForEthereumToPolkadot } from "../../poolReserves"
 
+// 20% slippage on AssetConversion DOT↔ETH quotes. The pool rate drifts over
+// the L2→L1 (Across) + L1→AH (Snowbridge) delivery window, so quotes taken at
+// estimation time under-quote actual execution cost.
+const SWAP_SLIPPAGE_BPS = 2000n // 20% in basis points
+const applySwapSlippage = (amount: bigint): bigint =>
+    (amount * (10_000n + SWAP_SLIPPAGE_BPS)) / 10_000n
+
 export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInterface<T> {
     constructor(
         public readonly context: Context<T>,
@@ -128,16 +135,17 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
         )
 
         const assetHubImpl = await this.context.paraImplementation(assetHub)
-        const deliveryFeeInEther = await assetHubImpl.swapAsset1ForAsset2(
-            DOT_LOCATION,
-            ether,
-            deliveryFeeInDOT,
+        // 20% slippage buffer on every DOT→ETH swap result: the AssetConversion
+        // pool rate can drift over the Across+Snowbridge delivery window, so
+        // overcompensate at quote time to keep `PayFees` from running short.
+        const deliveryFeeInEther = applySwapSlippage(
+            await assetHubImpl.swapAsset1ForAsset2(DOT_LOCATION, ether, deliveryFeeInDOT),
         )
         // AssetHub Execution fee. Always compute the DOT figure for the fee
-        // breakdown, then prefer AH's direct weight→ether quote when available,
-        // using the indirect DOT→ETH swap exposes us to AssetConversion pool
-        // movement during the Across+Snowbridge delivery window, which has
-        // produced `TooExpensive` traps on L2 ether transfers.
+        // breakdown. The ether figure goes through the AssetConversion pool
+        // either way (AH's `SwapFirstAssetTrader` resolves bridged-ether via
+        // the same pool the SDK queries), so apply the slippage buffer to
+        // both the direct ether quote and the manual DOT→ETH fallback.
         let assetHubExecutionFeeDOT = await assetHubImpl.calculateXcmFee(assetHubXcm, DOT_LOCATION)
 
         let assetHubExecutionFeeEtherRaw: bigint
@@ -150,11 +158,10 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
                 assetHubExecutionFeeDOT,
             )
         }
-        // Bumped pad for L2: the L2→L1 (Across) + L1→AH (Snowbridge) latency is
-        // minutes, so pool/rate movement can exceed the L1-path's 33% buffer.
+        assetHubExecutionFeeEtherRaw = applySwapSlippage(assetHubExecutionFeeEtherRaw)
         let assetHubExecutionFeeEther = padFeeByPercentage(
             assetHubExecutionFeeEtherRaw,
-            feePadPercentage ?? 100n,
+            feePadPercentage ?? 33n,
         )
         // For non-ether transfers, oversize executionFee by AH bridged-ether
         // min_balance: the post-PayFees surplus then naturally lands at the
