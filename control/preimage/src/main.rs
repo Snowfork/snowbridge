@@ -237,11 +237,11 @@ pub struct HaltBridgeArgs {
     /// primary V2 outbound lever).
     #[arg(long, value_name = "HALT_OUTBOUND_QUEUE")]
     outbound_queue: bool,
-    /// V2-only router-layer P->E halt: halts only the AssetHub system-frontend pallet,
-    /// leaving the V1 outbound-queue on BridgeHub running. Short-circuits the
-    /// `PausableExporter` for V2 (and V1 — frontend halt covers both at the router
-    /// layer), so V2 P->E messages are rejected with `SendError::NotApplicable` while
-    /// V1's BH outbound-queue continues to drain in-flight messages.
+    /// Router-layer P->E halt: halts only the AssetHub system-frontend pallet. Blocks
+    /// BOTH V1 and V2 P->E at the `PausableExporter`, returning `SendError::NotApplicable`
+    /// to the XcmRouter. The V1 BridgeHub outbound-queue is left untouched so it keeps
+    /// draining in-flight V1 messages already enqueued there. There is no V2-only
+    /// operating-mode halt for P->E; for a V2-only deterrent use `--assethub-max-fee-v2`.
     #[arg(long, value_name = "HALT_SYSTEM_FRONTEND")]
     system_frontend: bool,
     /// Halt the Ethereum beacon light client, blocking new beacon-header ingestion.
@@ -512,7 +512,9 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
                     &OperatingModeEnum::Halted,
                 ));
             } else if params.system_frontend {
-                // V2-only router-layer halt: AH frontend, no V1 BH outbound-queue change.
+                // Router-layer halt: AH frontend, blocks both V1 and V2 P->E at the
+                // PausableExporter. V1 BH outbound-queue left running so in-flight V1
+                // messages continue to drain.
                 ah_calls.push(commands::system_frontend_operating_mode(
                     &OperatingModeEnum::Halted,
                 ));
