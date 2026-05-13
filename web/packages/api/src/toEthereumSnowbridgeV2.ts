@@ -398,6 +398,27 @@ export const estimateEthereumExecutionFee = async <T extends EthereumProviderTyp
         accelerated?: boolean
     },
 ): Promise<bigint> => {
+    const { executionFee } = await estimateEthereumExecutionFees(
+        context,
+        registry,
+        sourceParachain,
+        tokenAddress,
+        options,
+    )
+    return executionFee
+}
+
+const estimateEthereumExecutionFees = async <T extends EthereumProviderTypes>(
+    context: Context<T>,
+    registry: AssetRegistry,
+    sourceParachain: Parachain,
+    tokenAddress: string,
+    options?: {
+        contractCall?: ContractCall
+        fillDeadlineBuffer?: bigint
+        accelerated?: boolean
+    },
+): Promise<{ executionFee: bigint; accelerationFee: bigint }> => {
     const ethereum = await context.ethereum()
     const tokenErcMetadata =
         registry.ethereumChains[`ethereum_${registry.ethChainId}`].assets[
@@ -431,7 +452,12 @@ export const estimateEthereumExecutionFee = async <T extends EthereumProviderTyp
         tokenDeliveryGas +
         contractCallGas
     const ethereumExecutionFee = gasPrice * totalGas
-    return ethereumExecutionFee
+    const accelerationGas: bigint =
+        options?.accelerated && submitFiatShamirGas > twoPhaseSubmitGas
+            ? submitFiatShamirGas - twoPhaseSubmitGas
+            : 0n
+    const accelerationFee = gasPrice * accelerationGas
+    return { executionFee: ethereumExecutionFee, accelerationFee }
 }
 
 export const estimateFeesFromAssetHub = async <T extends EthereumProviderTypes>(
@@ -507,13 +533,14 @@ export const estimateFeesFromAssetHub = async <T extends EthereumProviderTypes>(
         options.contractCall = options.contractCall || callInfo.l2Call
         l2BridgeFeeInL1Token = callInfo.fee
     }
-    const rawEthereumExecutionFee = await estimateEthereumExecutionFee(
+    const ethereumExecutionFees = await estimateEthereumExecutionFees(
         context,
         registry,
         registry.parachains[`polkadot_${registry.assetHubParaId}`],
         tokenAddress,
         options,
     )
+    const rawEthereumExecutionFee = ethereumExecutionFees.executionFee
 
     let volumeTip: bigint | undefined
     if (options?.volumeFee) {
@@ -528,6 +555,10 @@ export const estimateFeesFromAssetHub = async <T extends EthereumProviderTypes>(
     )
     let ethereumExecutionFee =
         padFeeByPercentage(rawEthereumExecutionFee, scaledGasPad) + tipForScaling
+    const accelerationFee =
+        ethereumExecutionFees.accelerationFee > 0n
+            ? padFeeByPercentage(ethereumExecutionFees.accelerationFee, scaledGasPad)
+            : 0n
 
     const scaledSlippagePad = scaledPadPercentage(
         feeSlippagePadPercentage,
@@ -541,6 +572,7 @@ export const estimateFeesFromAssetHub = async <T extends EthereumProviderTypes>(
     let returnToSenderExecutionFeeNative: bigint | undefined = undefined
     let ethereumExecutionFeeInNative: bigint | undefined
     let volumeTipInNative: bigint | undefined
+    let accelerationFeeInNative: bigint | undefined
     let localExecutionFeeInNative: bigint | undefined
     let feeLocation = options?.feeTokenLocation
     if (feeLocation) {
@@ -556,6 +588,13 @@ export const estimateFeesFromAssetHub = async <T extends EthereumProviderTypes>(
                     DOT_LOCATION,
                     bridgeLocation(registry.ethChainId),
                     volumeTip,
+                )
+            }
+            if (accelerationFee > 0n) {
+                accelerationFeeInNative = await assetHubImpl.getAssetHubConversionPalletSwap(
+                    DOT_LOCATION,
+                    bridgeLocation(registry.ethChainId),
+                    accelerationFee,
                 )
             }
             totalFeeInDot += ethereumExecutionFeeInNative
@@ -603,7 +642,9 @@ export const estimateFeesFromAssetHub = async <T extends EthereumProviderTypes>(
     const summary: DeliveryFee["summary"] = []
     if (feeLocation) {
         const tipInNative = volumeTipInNative ?? 0n
-        const ethereumExecInNative = (ethereumExecutionFeeInNative ?? 0n) - tipInNative
+        const accelerationInNative = accelerationFeeInNative ?? 0n
+        const ethereumExecInNative =
+            (ethereumExecutionFeeInNative ?? 0n) - tipInNative - accelerationInNative
         summary.push({
             description: "XCM execution fees",
             amount: xcmExecDOT,
@@ -626,6 +667,13 @@ export const estimateFeesFromAssetHub = async <T extends EthereumProviderTypes>(
                 symbol: nativeSymbol!,
             })
         }
+        if (accelerationInNative > 0n) {
+            summary.push({
+                description: "Acceleration fee",
+                amount: accelerationInNative,
+                symbol: nativeSymbol!,
+            })
+        }
     } else {
         summary.push({
             description: "XCM execution fees",
@@ -639,11 +687,18 @@ export const estimateFeesFromAssetHub = async <T extends EthereumProviderTypes>(
         })
         summary.push({
             description: "Ethereum execution fees",
-            amount: ethereumExecutionFee - (volumeTip ?? 0n),
+            amount: ethereumExecutionFee - (volumeTip ?? 0n) - accelerationFee,
             symbol: "ETH",
         })
         if (volumeTip !== undefined) {
             summary.push({ description: "Relayer tip", amount: volumeTip, symbol: "ETH" })
+        }
+        if (accelerationFee > 0n) {
+            summary.push({
+                description: "Acceleration fee",
+                amount: accelerationFee,
+                symbol: "ETH",
+            })
         }
     }
     if (l2BridgeFeeInL1Token > 0n) {
@@ -742,13 +797,14 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
         assetHubExecutionFeeDOT +
         bridgeHubDeliveryFeeDOT
 
-    const rawEthereumExecutionFee = await estimateEthereumExecutionFee(
+    const ethereumExecutionFees = await estimateEthereumExecutionFees(
         context,
         registry,
         sourceParachain,
         tokenAddress,
         options,
     )
+    const rawEthereumExecutionFee = ethereumExecutionFees.executionFee
 
     let volumeTip: bigint | undefined
     if (options?.volumeFee) {
@@ -763,6 +819,10 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
     )
     let ethereumExecutionFee =
         padFeeByPercentage(rawEthereumExecutionFee, scaledGasPad) + tipForScaling
+    const accelerationFee =
+        ethereumExecutionFees.accelerationFee > 0n
+            ? padFeeByPercentage(ethereumExecutionFees.accelerationFee, scaledGasPad)
+            : 0n
 
     const scaledSlippagePad = scaledPadPercentage(
         feeSlippagePadPercentage,
@@ -776,6 +836,7 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
     let ethereumExecutionFeeInNative: bigint | undefined
     let ethereumExecutionFeeInDot: bigint | undefined
     let volumeTipInNative: bigint | undefined
+    let accelerationFeeInNative: bigint | undefined
     let feeLocation = options?.feeTokenLocation
     if (feeLocation) {
         // If the fee asset is DOT, then one swap from DOT to Ether is required on AH
@@ -790,6 +851,13 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
                     DOT_LOCATION,
                     bridgeLocation(registry.ethChainId),
                     volumeTip,
+                )
+            }
+            if (accelerationFee > 0n) {
+                accelerationFeeInNative = await assetHubImpl.getAssetHubConversionPalletSwap(
+                    DOT_LOCATION,
+                    bridgeLocation(registry.ethChainId),
+                    accelerationFee,
                 )
             }
             totalFeeInDot += ethereumExecutionFeeInNative
@@ -818,6 +886,18 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
                     feeLocation,
                     DOT_LOCATION,
                     volumeTipInDOT,
+                )
+            }
+            if (accelerationFee > 0n) {
+                const accelerationFeeInDOT = await assetHubImpl.getAssetHubConversionPalletSwap(
+                    DOT_LOCATION,
+                    bridgeLocation(registry.ethChainId),
+                    accelerationFee,
+                )
+                accelerationFeeInNative = await assetHubImpl.getAssetHubConversionPalletSwap(
+                    feeLocation,
+                    DOT_LOCATION,
+                    accelerationFeeInDOT,
                 )
             }
             totalFeeInDot += ethereumExecutionFeeInDot
@@ -887,8 +967,10 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
     const summary: DeliveryFee["summary"] = []
     if (feeLocation) {
         const tipInNative = volumeTipInNative ?? 0n
+        const accelerationInNative = accelerationFeeInNative ?? 0n
         if (isRelaychainLocation(feeLocation)) {
-            const ethereumExecInNative = (ethereumExecutionFeeInNative ?? 0n) - tipInNative
+            const ethereumExecInNative =
+                (ethereumExecutionFeeInNative ?? 0n) - tipInNative - accelerationInNative
             summary.push({
                 description: "XCM execution fees",
                 amount: xcmExecDOT,
@@ -911,12 +993,20 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
                     symbol: feeNativeSymbol!,
                 })
             }
+            if (accelerationInNative > 0n) {
+                summary.push({
+                    description: "Acceleration fee",
+                    amount: accelerationInNative,
+                    symbol: feeNativeSymbol!,
+                })
+            }
         } else {
             // parachain-native pay: split totalFeeInNative across categories using
             // proportional share of the DOT-side amounts. Sum is preserved exactly.
             const localExecN = localExecutionFeeInNative ?? 0n
             const localDelivN = localDeliveryFeeInNative ?? 0n
-            const ethExecN = (ethereumExecutionFeeInNative ?? 0n) - tipInNative
+            const ethExecN =
+                (ethereumExecutionFeeInNative ?? 0n) - tipInNative - accelerationInNative
             const otherN =
                 totalFeeInNative! - localExecN - localDelivN - (ethereumExecutionFeeInNative ?? 0n)
             const totalDotOnly = xcmExecDOT + bridgeFeesDOT
@@ -950,6 +1040,13 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
                     symbol: feeNativeSymbol!,
                 })
             }
+            if (accelerationInNative > 0n) {
+                summary.push({
+                    description: "Acceleration fee",
+                    amount: accelerationInNative,
+                    symbol: feeNativeSymbol!,
+                })
+            }
         }
     } else {
         summary.push({
@@ -978,11 +1075,18 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
         }
         summary.push({
             description: "Ethereum execution fees",
-            amount: ethereumExecutionFee - (volumeTip ?? 0n),
+            amount: ethereumExecutionFee - (volumeTip ?? 0n) - accelerationFee,
             symbol: "ETH",
         })
         if (volumeTip !== undefined) {
             summary.push({ description: "Relayer tip", amount: volumeTip, symbol: "ETH" })
+        }
+        if (accelerationFee > 0n) {
+            summary.push({
+                description: "Acceleration fee",
+                amount: accelerationFee,
+                symbol: "ETH",
+            })
         }
     }
 
