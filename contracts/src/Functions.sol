@@ -35,7 +35,7 @@ library Functions {
     }
 
     /// Looks up an agent contract address, failing if no such mapping exists or if the agent is the primary asset hub agent
-    function ensureAuthorizedAgent(bytes32 agentID) internal view returns (address agent) {
+    function ensureNonPrivilegedAgent(bytes32 agentID) internal view returns (address agent) {
         if(agentID == Constants.ASSET_HUB_AGENT_ID) {
             revert IGatewayBase.AgentNotAuthorized();
         }
