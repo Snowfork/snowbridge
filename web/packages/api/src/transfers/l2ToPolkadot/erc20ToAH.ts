@@ -133,12 +133,28 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             ether,
             deliveryFeeInDOT,
         )
-        // AssetHub Execution fee
+        // AssetHub Execution fee. Always compute the DOT figure for the fee
+        // breakdown, then prefer AH's direct weight→ether quote when available,
+        // using the indirect DOT→ETH swap exposes us to AssetConversion pool
+        // movement during the Across+Snowbridge delivery window, which has
+        // produced `TooExpensive` traps on L2 ether transfers.
         let assetHubExecutionFeeDOT = await assetHubImpl.calculateXcmFee(assetHubXcm, DOT_LOCATION)
 
+        let assetHubExecutionFeeEtherRaw: bigint
+        try {
+            assetHubExecutionFeeEtherRaw = await assetHubImpl.calculateXcmFee(assetHubXcm, ether)
+        } catch {
+            assetHubExecutionFeeEtherRaw = await assetHubImpl.swapAsset1ForAsset2(
+                DOT_LOCATION,
+                ether,
+                assetHubExecutionFeeDOT,
+            )
+        }
+        // Bumped pad for L2: the L2→L1 (Across) + L1→AH (Snowbridge) latency is
+        // minutes, so pool/rate movement can exceed the L1-path's 33% buffer.
         let assetHubExecutionFeeEther = padFeeByPercentage(
-            await assetHubImpl.swapAsset1ForAsset2(DOT_LOCATION, ether, assetHubExecutionFeeDOT),
-            feePadPercentage ?? 33n,
+            assetHubExecutionFeeEtherRaw,
+            feePadPercentage ?? 100n,
         )
         // For non-ether transfers, oversize executionFee by AH bridged-ether
         // min_balance: the post-PayFees surplus then naturally lands at the
