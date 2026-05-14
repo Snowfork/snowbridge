@@ -58,6 +58,10 @@ export const getEventIndex = (id: string) => {
     return `${blockNumber}-${eventIndex}`
 }
 
+// Pad a fee estimate by `padPercent` percent. For E->P fees computed by
+// quoting an ETH->DOT swap on AssetConversion, the padding also absorbs AMM
+// pool drift between estimation time and AH execution, slippage is rolled
+// into the same buffer rather than applied separately.
 export function padFeeByPercentage(fee: bigint, padPercent: bigint) {
     if (padPercent < 0 || padPercent > 100) {
         throw Error(`padPercent ${padPercent} not in range of 0 to 100.`)

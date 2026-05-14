@@ -42,13 +42,6 @@ import { VolumeFeeParams, calculateVolumeTipInWei } from "../../feeSchedule"
 import { addBreakdown, computeTotals, findInBreakdown, findInBreakdownOrZero, findTotal } from "../../fees"
 import { checkDotEthPoolLiquidityForEthereumToPolkadot } from "../../poolReserves"
 
-// 20% slippage on AssetConversion DOT↔ETH quotes. The pool rate drifts over
-// the L2→L1 (Across) + L1→AH (Snowbridge) delivery window, so quotes taken at
-// estimation time under-quote actual execution cost.
-const SWAP_SLIPPAGE_BPS = 2000n // 20% in basis points
-const applySwapSlippage = (amount: bigint): bigint =>
-    (amount * (10_000n + SWAP_SLIPPAGE_BPS)) / 10_000n
-
 export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInterface<T> {
     constructor(
         public readonly context: Context<T>,
@@ -135,33 +128,31 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
         )
 
         const assetHubImpl = await this.context.paraImplementation(assetHub)
-        // 20% slippage buffer on every DOT→ETH swap result: the AssetConversion
-        // pool rate can drift over the Across+Snowbridge delivery window, so
-        // overcompensate at quote time to keep `PayFees` from running short.
-        const deliveryFeeInEther = applySwapSlippage(
-            await assetHubImpl.swapAsset1ForAsset2(DOT_LOCATION, ether, deliveryFeeInDOT),
+        // Quote in the runtime swap direction (ETH->DOT) so the LP fee lands
+        // on the ETH input side, matching what AH's SwapFirstAssetTrader does.
+        const deliveryFeeInEther = await assetHubImpl.getAssetHubConversionPalletSwap(
+            ether,
+            DOT_LOCATION,
+            deliveryFeeInDOT,
         )
         // AssetHub Execution fee. Always compute the DOT figure for the fee
-        // breakdown. The ether figure goes through the AssetConversion pool
-        // either way (AH's `SwapFirstAssetTrader` resolves bridged-ether via
-        // the same pool the SDK queries), so apply the slippage buffer to
-        // both the direct ether quote and the manual DOT→ETH fallback.
+        // breakdown. Prefer AH's direct weight->ether quote when available,
+        // fall back to the manual ETH->DOT swap.
         let assetHubExecutionFeeDOT = await assetHubImpl.calculateXcmFee(assetHubXcm, DOT_LOCATION)
 
         let assetHubExecutionFeeEtherRaw: bigint
         try {
             assetHubExecutionFeeEtherRaw = await assetHubImpl.calculateXcmFee(assetHubXcm, ether)
         } catch {
-            assetHubExecutionFeeEtherRaw = await assetHubImpl.swapAsset1ForAsset2(
-                DOT_LOCATION,
+            assetHubExecutionFeeEtherRaw = await assetHubImpl.getAssetHubConversionPalletSwap(
                 ether,
+                DOT_LOCATION,
                 assetHubExecutionFeeDOT,
             )
         }
-        assetHubExecutionFeeEtherRaw = applySwapSlippage(assetHubExecutionFeeEtherRaw)
         let assetHubExecutionFeeEther = padFeeByPercentage(
             assetHubExecutionFeeEtherRaw,
-            feePadPercentage ?? 33n,
+            feePadPercentage ?? 50n,
         )
         // For non-ether transfers, oversize executionFee by AH bridged-ether
         // min_balance: the post-PayFees surplus then naturally lands at the

@@ -242,9 +242,12 @@ export async function inboundMessageExtrinsicFee(
     const extrinsicFeeDot = 250_000_000n
 
     const etherLocation = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
-    const extrinsicFeeEther = await assetHub.swapAsset1ForAsset2(
-        DOT_LOCATION,
+    // Quote in the runtime swap direction (ETH->DOT): the runtime swaps the
+    // user's ETH for DOT to pay weight, so charge the LP fee on the ETH input
+    // side (`quotePriceTokensForExactTokens`).
+    const extrinsicFeeEther = await assetHub.getAssetHubConversionPalletSwap(
         etherLocation,
+        DOT_LOCATION,
         extrinsicFeeDot,
     )
 

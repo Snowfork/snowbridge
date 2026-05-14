@@ -103,9 +103,10 @@ export class PNAToAH<T extends EthereumProviderTypes> implements TransferInterfa
         )
 
         const assetHubImpl = await this.context.paraImplementation(assetHub)
-        const deliveryFeeInEther = await assetHubImpl.swapAsset1ForAsset2(
-            DOT_LOCATION,
+        // Runtime direction (ETH->DOT).
+        const deliveryFeeInEther = await assetHubImpl.getAssetHubConversionPalletSwap(
             ether,
+            DOT_LOCATION,
             deliveryFeeInDOT,
         )
         // AssetHub Execution fee
@@ -113,12 +114,12 @@ export class PNAToAH<T extends EthereumProviderTypes> implements TransferInterfa
 
         let assetHubExecutionFeeEther =
             padFeeByPercentage(
-                await assetHubImpl.swapAsset1ForAsset2(
-                    DOT_LOCATION,
+                await assetHubImpl.getAssetHubConversionPalletSwap(
                     ether,
+                    DOT_LOCATION,
                     assetHubExecutionFeeDOT,
                 ),
-                feePadPercentage ?? 33n,
+                feePadPercentage ?? 50n,
             ) +
             // PNAs never carry ether themselves, so the post-PayFees surplus
             // must alone cover the recipient's bridged-ether min_balance —

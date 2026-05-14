@@ -116,20 +116,20 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
         )
         // AssetHub execution fee
         let assetHubExecutionFeeDOT = await assetHubImpl.calculateXcmFee(assetHubXcm, DOT_LOCATION)
-        // Swap to ether
-        const deliveryFeeInEther = await assetHubImpl.swapAsset1ForAsset2(
-            DOT_LOCATION,
+        // Swap to ether, runtime direction (ETH->DOT).
+        const deliveryFeeInEther = await assetHubImpl.getAssetHubConversionPalletSwap(
             ether,
+            DOT_LOCATION,
             deliveryFeeInDOT,
         )
         let assetHubExecutionFeeEther =
             padFeeByPercentage(
-                await assetHubImpl.swapAsset1ForAsset2(
-                    DOT_LOCATION,
+                await assetHubImpl.getAssetHubConversionPalletSwap(
                     ether,
+                    DOT_LOCATION,
                     assetHubExecutionFeeDOT,
                 ),
-                feePadPercentage ?? 33n,
+                feePadPercentage ?? 50n,
             ) +
             // PNAs never carry ether themselves, so the post-PayFees surplus
             // must alone cover the recipient's bridged-ether min_balance —
@@ -171,10 +171,10 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
             this.to.id,
             destinationXcm,
         )
-        // Swap to ether
-        const destinationDeliveryFeeEther = await assetHubImpl.swapAsset1ForAsset2(
-            DOT_LOCATION,
+        // Swap to ether, runtime direction (ETH->DOT).
+        const destinationDeliveryFeeEther = await assetHubImpl.getAssetHubConversionPalletSwap(
             ether,
+            DOT_LOCATION,
             destinationDeliveryFeeDOT,
         )
 
@@ -188,17 +188,17 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
                 DOT_LOCATION,
             )
             destinationExecutionFeeEther = padFeeByPercentage(
-                await assetHubImpl.swapAsset1ForAsset2(
-                    DOT_LOCATION,
+                await assetHubImpl.getAssetHubConversionPalletSwap(
                     ether,
+                    DOT_LOCATION,
                     destinationExecutionFeeDOT,
                 ),
-                feePadPercentage ?? 33n,
+                feePadPercentage ?? 50n,
             )
         } else if (feeAsset == ether) {
             destinationExecutionFeeEther = padFeeByPercentage(
                 await destinationImpl.calculateXcmFee(destinationXcm, ether),
-                feePadPercentage ?? 33n,
+                feePadPercentage ?? 50n,
             )
         } else {
             throw Error(`Unsupported fee asset`)

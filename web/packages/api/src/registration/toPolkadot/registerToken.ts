@@ -38,7 +38,7 @@ export class RegisterToken<T extends EthereumProviderTypes> implements Registrat
         const assetHub = await context.assetHub()
         const bridgeHub = await context.bridgeHub()
 
-        const feePadPercentage = options?.padFeeByPercentage ?? 33n
+        const feePadPercentage = options?.padFeeByPercentage ?? 50n
         const ether = erc20Location(registry.ethChainId, ETHER_TOKEN_ADDRESS)
 
         const assetDepositDOT = getAssetDeposit(assetHub)
@@ -63,9 +63,12 @@ export class RegisterToken<T extends EthereumProviderTypes> implements Registrat
         // AssetHub Execution fee
         const assetHubImpl = await context.paraImplementation(assetHub)
 
-        const deliveryFeeInEther = await assetHubImpl.swapAsset1ForAsset2(
-            DOT_LOCATION,
+        // Quote in the runtime swap direction (ETH->DOT) for all three legs:
+        // delivery, AH execution, and asset deposit are all paid by swapping
+        // user ETH for DOT, so the LP fee must be charged on the ETH input.
+        const deliveryFeeInEther = await assetHubImpl.getAssetHubConversionPalletSwap(
             ether,
+            DOT_LOCATION,
             deliveryFeeInDOT,
         )
 
@@ -75,13 +78,21 @@ export class RegisterToken<T extends EthereumProviderTypes> implements Registrat
         )
 
         const assetHubExecutionFeeEther = padFeeByPercentage(
-            await assetHubImpl.swapAsset1ForAsset2(DOT_LOCATION, ether, assetHubExecutionFeeDOT),
+            await assetHubImpl.getAssetHubConversionPalletSwap(
+                ether,
+                DOT_LOCATION,
+                assetHubExecutionFeeDOT,
+            ),
             feePadPercentage,
         )
 
         // Convert asset deposit from DOT to Ether
         const assetDepositEther = padFeeByPercentage(
-            await assetHubImpl.swapAsset1ForAsset2(DOT_LOCATION, ether, assetDepositDOT),
+            await assetHubImpl.getAssetHubConversionPalletSwap(
+                ether,
+                DOT_LOCATION,
+                assetDepositDOT,
+            ),
             10n,
         )
 

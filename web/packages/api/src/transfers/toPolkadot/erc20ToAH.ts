@@ -97,17 +97,23 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
         )
 
         const assetHubImpl = await this.context.paraImplementation(assetHub)
-        const deliveryFeeInEther = await assetHubImpl.swapAsset1ForAsset2(
-            DOT_LOCATION,
+        // Quote in the runtime swap direction (ETH->DOT) so the LP fee lands
+        // on the ETH input side, matching what AH's SwapFirstAssetTrader does.
+        const deliveryFeeInEther = await assetHubImpl.getAssetHubConversionPalletSwap(
             ether,
+            DOT_LOCATION,
             deliveryFeeInDOT,
         )
         // AssetHub Execution fee
         let assetHubExecutionFeeDOT = await assetHubImpl.calculateXcmFee(assetHubXcm, DOT_LOCATION)
 
         let assetHubExecutionFeeEther = padFeeByPercentage(
-            await assetHubImpl.swapAsset1ForAsset2(DOT_LOCATION, ether, assetHubExecutionFeeDOT),
-            feePadPercentage ?? 33n,
+            await assetHubImpl.getAssetHubConversionPalletSwap(
+                ether,
+                DOT_LOCATION,
+                assetHubExecutionFeeDOT,
+            ),
+            feePadPercentage ?? 50n,
         )
         // For non-ether transfers, oversize executionFee by AH bridged-ether
         // min_balance: the post-PayFees surplus then naturally lands at the
