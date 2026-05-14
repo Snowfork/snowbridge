@@ -560,12 +560,6 @@ export const estimateFeesFromAssetHub = async <T extends EthereumProviderTypes>(
             ? padFeeByPercentage(ethereumExecutionFees.accelerationFee, scaledGasPad)
             : 0n
 
-    const scaledSlippagePad = scaledPadPercentage(
-        feeSlippagePadPercentage,
-        tipForScaling,
-        rawEthereumExecutionFee,
-    )
-
     // calculate the cost of swapping in native asset
     let totalFeeInNative: bigint | undefined = undefined
     let assetHubExecutionFeeNative: bigint | undefined = undefined
@@ -581,7 +575,7 @@ export const estimateFeesFromAssetHub = async <T extends EthereumProviderTypes>(
             ethereumExecutionFeeInNative = await assetHubImpl.getAssetHubConversionPalletSwap(
                 DOT_LOCATION,
                 bridgeLocation(registry.ethChainId),
-                padFeeByPercentage(ethereumExecutionFee, scaledSlippagePad),
+                padFeeByPercentage(ethereumExecutionFee, feeSlippagePadPercentage),
             )
             if (volumeTip !== undefined && volumeTip > 0n) {
                 volumeTipInNative = await assetHubImpl.getAssetHubConversionPalletSwap(
@@ -824,12 +818,6 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
             ? padFeeByPercentage(ethereumExecutionFees.accelerationFee, scaledGasPad)
             : 0n
 
-    const scaledSlippagePad = scaledPadPercentage(
-        feeSlippagePadPercentage,
-        tipForScaling,
-        rawEthereumExecutionFee,
-    )
-
     // calculate the cost of swapping in native asset
     let totalFeeInNative: bigint | undefined = undefined
     let assetHubExecutionFeeNative: bigint | undefined = undefined
@@ -844,7 +832,7 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
             ethereumExecutionFeeInNative = await assetHubImpl.getAssetHubConversionPalletSwap(
                 DOT_LOCATION,
                 bridgeLocation(registry.ethChainId),
-                padFeeByPercentage(ethereumExecutionFee, scaledSlippagePad),
+                padFeeByPercentage(ethereumExecutionFee, feeSlippagePadPercentage),
             )
             if (volumeTip !== undefined && volumeTip > 0n) {
                 volumeTipInNative = await assetHubImpl.getAssetHubConversionPalletSwap(
@@ -869,12 +857,12 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
             ethereumExecutionFeeInDot = await assetHubImpl.getAssetHubConversionPalletSwap(
                 DOT_LOCATION,
                 bridgeLocation(registry.ethChainId),
-                padFeeByPercentage(ethereumExecutionFee, scaledSlippagePad),
+                padFeeByPercentage(ethereumExecutionFee, feeSlippagePadPercentage),
             )
             ethereumExecutionFeeInNative = await assetHubImpl.getAssetHubConversionPalletSwap(
                 feeLocation,
                 DOT_LOCATION,
-                padFeeByPercentage(ethereumExecutionFeeInDot, scaledSlippagePad),
+                padFeeByPercentage(ethereumExecutionFeeInDot, feeSlippagePadPercentage),
             )
             if (volumeTip !== undefined && volumeTip > 0n) {
                 const volumeTipInDOT = await assetHubImpl.getAssetHubConversionPalletSwap(
