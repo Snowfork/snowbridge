@@ -29,6 +29,7 @@ export type ToEthereumFeeKey =
     | "returnToSenderDelivery"
     | "returnToSenderExecution"
     | "ethereumExecution"
+    | "ethereumExchangeWant"
     | "l2Bridge"
 
 // polkadot → polkadot (inter-parachain)

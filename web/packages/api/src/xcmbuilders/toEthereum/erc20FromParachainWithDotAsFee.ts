@@ -37,6 +37,8 @@ export function buildTransferXcmFromParachainWithDOTAsFee(
         findInBreakdownOrZero(fee.breakdown, "returnToSenderExecution", "DOT")
     let totalDOTFeeAmount: bigint = findTotal(fee, "DOT")
     let remoteEtherFeeAmount: bigint = findInBreakdownOrZero(fee.breakdown, "ethereumExecution", "ETH")
+    let exchangeWantAmount: bigint =
+        findInBreakdownOrZero(fee.breakdown, "ethereumExchangeWant", "ETH") || remoteEtherFeeAmount
     let remoteEtherFeeInDOTAmount: bigint = findInBreakdownOrZero(
         fee.breakdown,
         "ethereumExecution",
@@ -85,7 +87,7 @@ export function buildTransferXcmFromParachainWithDOTAsFee(
                     {
                         id: bridgeLocation(ethChainId),
                         fun: {
-                            Fungible: remoteEtherFeeAmount,
+                            Fungible: exchangeWantAmount,
                         },
                     },
                 ],
@@ -101,7 +103,7 @@ export function buildTransferXcmFromParachainWithDOTAsFee(
                             {
                                 id: bridgeLocation(ethChainId),
                                 fun: {
-                                    Fungible: remoteEtherFeeAmount,
+                                    Fungible: exchangeWantAmount,
                                 },
                             },
                         ],

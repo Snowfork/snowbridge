@@ -31,6 +31,8 @@ export function buildTransferXcmFromAssetHubWithDOTAsFee(
         findInBreakdownOrZero(fee.breakdown, "snowbridgeDelivery", "DOT")
     let totalDOTFeeAmount = findTotal(fee, "DOT")
     let remoteEtherFeeAmount = findInBreakdownOrZero(fee.breakdown, "ethereumExecution", "ETH")
+    let exchangeWantAmount =
+        findInBreakdownOrZero(fee.breakdown, "ethereumExchangeWant", "ETH") || remoteEtherFeeAmount
 
     let assets = []
     if (isRelaychainLocation(tokenLocation)) {
@@ -110,7 +112,7 @@ export function buildTransferXcmFromAssetHubWithDOTAsFee(
                     {
                         id: bridgeLocation(ethChainId),
                         fun: {
-                            Fungible: remoteEtherFeeAmount,
+                            Fungible: exchangeWantAmount,
                         },
                     },
                 ],
@@ -126,7 +128,7 @@ export function buildTransferXcmFromAssetHubWithDOTAsFee(
                             {
                                 id: bridgeLocation(ethChainId),
                                 fun: {
-                                    Fungible: remoteEtherFeeAmount,
+                                    Fungible: exchangeWantAmount,
                                 },
                             },
                         ],

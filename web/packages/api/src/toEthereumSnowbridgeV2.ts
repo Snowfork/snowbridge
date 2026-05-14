@@ -623,6 +623,13 @@ export const estimateFeesFromAssetHub = async <T extends EthereumProviderTypes>(
         amount: ethereumExecutionFee ?? 0n,
         symbol: "ETH",
     })
+    // The DOT→ETH swap's `want` and `remoteFees` use a reduced amount: the tip's
+    // slippage budget is absorbed by the relayer (lower compensation) rather than
+    // charged to the user. Excess ETH between swap output and remoteFees flows back
+    // through RefundSurplus as ETH-on-AH (no dust risk, ETH-on-AH ED ≈ 0).
+    const exchangeWantETH =
+        (ethereumExecutionFee ?? 0n) - (tipForScaling * feeSlippagePadPercentage) / 100n
+    addBreakdown(breakdown, "ethereumExchangeWant", { amount: exchangeWantETH, symbol: "ETH" })
     const nativeSymbol = feeLocation ? registry.relaychain.tokenSymbols : undefined
     if (ethereumExecutionFeeInNative !== undefined && feeLocation) {
         addBreakdown(breakdown, "ethereumExecution", {
@@ -921,6 +928,9 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
     addBreakdown(breakdown, "assetHubExecution", { amount: assetHubExecutionFeeDOT, symbol: "DOT" })
     addBreakdown(breakdown, "bridgeHubDelivery", { amount: bridgeHubDeliveryFeeDOT, symbol: "DOT" })
     addBreakdown(breakdown, "ethereumExecution", { amount: ethereumExecutionFee, symbol: "ETH" })
+    const exchangeWantETH =
+        ethereumExecutionFee - (tipForScaling * feeSlippagePadPercentage) / 100n
+    addBreakdown(breakdown, "ethereumExchangeWant", { amount: exchangeWantETH, symbol: "ETH" })
     const sourceParaSymbol = sourceParachain.info.tokenSymbols
     const feeNativeSymbol = feeLocation
         ? isRelaychainLocation(feeLocation)

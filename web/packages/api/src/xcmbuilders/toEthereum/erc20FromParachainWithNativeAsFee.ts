@@ -39,6 +39,8 @@ export function buildTransferXcmFromParachainWithNativeAssetFee(
         findInBreakdownOrZero(fee.breakdown, "returnToSenderExecution", nativeSymbol)
     let totalNativeFeeAmount = findTotal(fee, nativeSymbol)
     let remoteEtherFeeAmount = findInBreakdownOrZero(fee.breakdown, "ethereumExecution", "ETH")
+    let exchangeWantAmount =
+        findInBreakdownOrZero(fee.breakdown, "ethereumExchangeWant", "ETH") || remoteEtherFeeAmount
     let remoteEtherFeeNativeAmount = findInBreakdownOrZero(
         fee.breakdown,
         "ethereumExecution",
@@ -113,7 +115,7 @@ export function buildTransferXcmFromParachainWithNativeAssetFee(
                     {
                         id: bridgeLocation(ethChainId),
                         fun: {
-                            Fungible: remoteEtherFeeAmount,
+                            Fungible: exchangeWantAmount,
                         },
                     },
                 ],
@@ -129,7 +131,7 @@ export function buildTransferXcmFromParachainWithNativeAssetFee(
                             {
                                 id: bridgeLocation(ethChainId),
                                 fun: {
-                                    Fungible: remoteEtherFeeAmount,
+                                    Fungible: exchangeWantAmount,
                                 },
                             },
                         ],
