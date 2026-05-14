@@ -69,10 +69,10 @@ export function padFeeByPercentage(fee: bigint, padPercent: bigint) {
     return (fee * (100n + padPercent)) / 100n
 }
 
-// Quadratic decay: pad = staticPad * max(0, 1 - r)^2 where r = tip / rawCost.
-// Returns the scaled pad in the same percentage units (0..staticPad).
-// When the volume tip already meets or exceeds the raw cost it is meant to
-// protect (r >= 1), the pad collapses to zero — the tip itself is the buffer.
+// Quadratic decay: pad = staticPad * max(0, 1 - r/2)^2 where r = tip / rawCost.
+// Stretched to k=2 so the pad only collapses to 0 once tip >= 2×rawCost —
+// meaning the tip alone can absorb a 3× gas spike. At tip == rawCost the pad
+// is still ~8.25%, giving meaningful headroom through mid-volume bands.
 export function scaledPadPercentage(
     staticPadPercent: bigint,
     tip: bigint,
@@ -81,9 +81,10 @@ export function scaledPadPercentage(
     if (staticPadPercent <= 0n) return 0n
     if (rawCost <= 0n) return staticPadPercent
     if (tip <= 0n) return staticPadPercent
-    if (tip >= rawCost) return 0n
-    const remaining = rawCost - tip
-    return (remaining * remaining * staticPadPercent) / (rawCost * rawCost)
+    const stretched = rawCost * 2n
+    if (tip >= stretched) return 0n
+    const remaining = stretched - tip
+    return (remaining * remaining * staticPadPercent) / (stretched * stretched)
 }
 
 export class ValidationError<
