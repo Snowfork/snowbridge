@@ -367,6 +367,10 @@ export const isFeeAllowed = (feeLocation: any, sourceParaId: number) => {
     return isRelaychainLocation(feeLocation) || isParachainNative(feeLocation, sourceParaId)
 }
 
+// AH DOT existential deposit: 0.01 DOT. Used as the minimum surplus floor for
+// PayFees to ensure RefundSurplus never tries to deposit a sub-ED amount.
+const AH_DOT_ED = 100_000_000n
+
 export const getSnowbridgeDeliveryFee = async (assetHub: ApiPromise, defaultFee?: bigint) => {
     const feeStorageKey = xxhashAsHex(":BridgeHubEthereumBaseFeeV2:", 128, true)
     const feeStorageItem = await assetHub.rpc.state.getStorage(feeStorageKey)
@@ -493,10 +497,11 @@ export const estimateFeesFromAssetHub = async <T extends EthereumProviderTypes>(
     let bridgeHubDeliveryFeeDOT = 0n
     let snowbridgeDeliveryFeeDOT = 0n
 
-    localExecutionFeeDOT = padFeeByPercentage(
-        await assetHubImpl.calculateXcmFee(deliveryXcm.localXcm, DOT_LOCATION),
-        feePadPercentage,
-    )
+    localExecutionFeeDOT =
+        padFeeByPercentage(
+            await assetHubImpl.calculateXcmFee(deliveryXcm.localXcm, DOT_LOCATION),
+            feePadPercentage,
+        ) + AH_DOT_ED
 
     bridgeHubDeliveryFeeDOT = padFeeByPercentage(
         await assetHubImpl.calculateDeliveryFeeInDOT(
@@ -769,10 +774,11 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
         )
     }
 
-    assetHubExecutionFeeDOT = padFeeByPercentage(
-        await assetHubImpl.calculateXcmFee(deliveryXcm.forwardXcmToAH, DOT_LOCATION),
-        feePadPercentage,
-    )
+    assetHubExecutionFeeDOT =
+        padFeeByPercentage(
+            await assetHubImpl.calculateXcmFee(deliveryXcm.forwardXcmToAH, DOT_LOCATION),
+            feePadPercentage,
+        ) + AH_DOT_ED
 
     bridgeHubDeliveryFeeDOT = padFeeByPercentage(
         await assetHubImpl.calculateDeliveryFeeInDOT(
