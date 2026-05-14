@@ -565,10 +565,10 @@ export const estimateFeesFromAssetHub = async <T extends EthereumProviderTypes>(
             ? padFeeByPercentage(ethereumExecutionFees.accelerationFee, scaledGasPad)
             : 0n
     let feeLocation = options?.feeTokenLocation
-    const tipSlippageOffset = (tipForScaling * feeSlippagePadPercentage) / 100n
     const remoteEthereumFee = feeLocation
-        ? ethereumExecutionFee - tipSlippageOffset
+        ? (ethereumExecutionFee * 100n) / (100n + feeSlippagePadPercentage)
         : ethereumExecutionFee
+    const tipSlippageOffset = ethereumExecutionFee - remoteEthereumFee
     const effectiveVolumeTip =
         volumeTip !== undefined ? volumeTip - tipSlippageOffset : undefined
 
@@ -827,10 +827,10 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
             ? padFeeByPercentage(ethereumExecutionFees.accelerationFee, scaledGasPad)
             : 0n
     let feeLocation = options?.feeTokenLocation
-    const tipSlippageOffset = (tipForScaling * feeSlippagePadPercentage) / 100n
     const remoteEthereumFee = feeLocation
-        ? ethereumExecutionFee - tipSlippageOffset
+        ? (ethereumExecutionFee * 100n) / (100n + feeSlippagePadPercentage)
         : ethereumExecutionFee
+    const tipSlippageOffset = ethereumExecutionFee - remoteEthereumFee
     const effectiveVolumeTip =
         volumeTip !== undefined ? volumeTip - tipSlippageOffset : undefined
 
