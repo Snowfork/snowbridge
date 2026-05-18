@@ -1,0 +1,12 @@
+endpoint: wss://polkadot-asset-hub-rpc.polkadot.io
+mock-signature-host: true
+port: 8000
+
+# Fund Alice on the fork so signed extrinsics work if the test needs them.
+import-storage:
+  System:
+    Account:
+      - - - 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY
+        - providers: 1
+          data:
+            free: 1000000000000000
