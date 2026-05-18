@@ -206,6 +206,196 @@ export async function buildHaltBridgePreimage(
 
 const MAX_U128 = (1n << 128n) - 1n
 
+// Production base-fee values captured 2026-05-18 from
+// wss://polkadot-asset-hub-rpc.polkadot.io. These are the storage values the
+// resume preimage writes back to `:BridgeHubEthereumBaseFee:` /
+// `:BridgeHubEthereumBaseFeeV2:` to restore the current governance-tuned fee
+// policy after a halt sets them to u128::MAX. Raw LE bytes:
+//   :BridgeHubEthereumBaseFee:   = 0x86b7de79030000000000000000000000
+//   :BridgeHubEthereumBaseFeeV2: = 0x00ca9a3b000000000000000000000000
+//
+// IMPORTANT: do NOT pull these from the runtime source defaults in
+// polkadot-fellows/runtimes
+// (system-parachains/asset-hubs/asset-hub-polkadot/src/xcm_config.rs ~line 802:
+// `DefaultBridgeHubEthereumBaseFee = Balance::MAX`). The source defaults are
+// intentionally `u128::MAX` to ship the bridge in a halted state; the live
+// values were set by past governance via `system.setStorage` and are what we
+// want to restore on resume. If the fee policy is ever updated on-chain,
+// re-query these storage keys and refresh the constants below.
+const PROD_BASE_FEE_V1 = 14_929_540_998n
+const PROD_BASE_FEE_V2 = 1_000_000_000n
+
+export interface ResumeBridgeOptions {
+    gateway?: boolean
+    gatewayV1?: boolean
+    gatewayV2?: boolean
+    inboundQueue?: boolean
+    inboundQueueV1?: boolean
+    inboundQueueV2?: boolean
+    outboundQueue?: boolean
+    outboundQueueV1?: boolean
+    systemFrontend?: boolean
+    ethereumClient?: boolean
+    assethubBaseFee?: boolean
+    assethubBaseFeeV1?: boolean
+    assethubBaseFeeV2?: boolean
+    all?: boolean
+}
+
+/**
+ * Build a preimage for resuming (un-halting) the Snowbridge V1/V2 stack on
+ * Polkadot. Inverse of `buildHaltBridgePreimage`: queues `setOperatingMode`
+ * calls back to `Normal` / `RejectingOutboundMessages` -> `Normal`, and
+ * restores the AssetHub base fees from u128::MAX to their pre-halt prod
+ * values (see {@link PROD_BASE_FEE_V1} / {@link PROD_BASE_FEE_V2}).
+ *
+ * The structure (force_batch, polkadotXcm.send wrapping BH Transacts, weight
+ * queries with 2x cap, ExpectTransactStatus(Success) after each Transact) is
+ * identical to the halt preimage.
+ *
+ * @param assetHub  Connected ApiPromise for AssetHub-Polkadot.
+ * @param bridgeHub Connected ApiPromise for BridgeHub-Polkadot.
+ * @param opts      Which resume levers to apply. If all entries are
+ *                  false/undefined, `all` is treated as true.
+ * @param assetHubWsUrl Optional override for the WS URL embedded in `decodeUrl`.
+ */
+export async function buildResumeBridgePreimage(
+    assetHub: ApiPromise,
+    bridgeHub: ApiPromise,
+    opts: ResumeBridgeOptions,
+    assetHubWsUrl: string = "wss://polkadot-asset-hub-rpc.polkadot.io",
+): Promise<HaltBridgePreimage> {
+    const resumeAll = isResumeAllImplied(opts)
+
+    const bhCalls: SubmittableExtrinsic<"promise">[] = []
+    const ahCalls: SubmittableExtrinsic<"promise">[] = []
+    const summary: string[] = []
+    const storageWrites: StorageWrite[] = []
+
+    const pushFeeWrite = (name: string, value: bigint) => {
+        const { call, write } = setAssetHubFeeCallWithWrite(assetHub, name, value)
+        ahCalls.push(call)
+        storageWrites.push(write)
+    }
+
+    if (opts.gateway || resumeAll) {
+        bhCalls.push(bridgeHub.tx.ethereumSystem.setOperatingMode("Normal"))
+        bhCalls.push(bridgeHub.tx.ethereumSystemV2.setOperatingMode("Normal"))
+        summary.push("Resume Ethereum Gateway (V1 + V2 paths), sends SetOperatingMode(Normal) commands to the Gateway contract.")
+    } else {
+        if (opts.gatewayV1) {
+            bhCalls.push(bridgeHub.tx.ethereumSystem.setOperatingMode("Normal"))
+            summary.push("Resume Ethereum Gateway V1 only.")
+        }
+        if (opts.gatewayV2) {
+            bhCalls.push(bridgeHub.tx.ethereumSystemV2.setOperatingMode("Normal"))
+            summary.push("Resume Ethereum Gateway V2 only.")
+        }
+    }
+
+    if (opts.inboundQueue || opts.inboundQueueV1 || resumeAll) {
+        bhCalls.push(bridgeHub.tx.ethereumInboundQueue.setOperatingMode("Normal"))
+        summary.push("Resume V1 inbound-queue on BridgeHub.")
+    }
+    if (opts.inboundQueue || opts.inboundQueueV2 || resumeAll) {
+        bhCalls.push(bridgeHub.tx.ethereumInboundQueueV2.setOperatingMode("Normal"))
+        summary.push("Resume V2 inbound-queue on BridgeHub.")
+    }
+
+    if (opts.outboundQueue || resumeAll) {
+        bhCalls.push(bridgeHub.tx.ethereumOutboundQueue.setOperatingMode("Normal"))
+        ahCalls.push(assetHub.tx.snowbridgeSystemFrontend.setOperatingMode("Normal"))
+        summary.push("Resume V1 outbound-queue on BridgeHub.")
+        summary.push("Resume AssetHub system-frontend.")
+    } else {
+        if (opts.outboundQueueV1) {
+            bhCalls.push(bridgeHub.tx.ethereumOutboundQueue.setOperatingMode("Normal"))
+            summary.push("Resume V1 outbound-queue on BridgeHub only.")
+        }
+        if (opts.systemFrontend) {
+            ahCalls.push(assetHub.tx.snowbridgeSystemFrontend.setOperatingMode("Normal"))
+            summary.push("Resume AssetHub system-frontend only.")
+        }
+    }
+
+    if (opts.ethereumClient || resumeAll) {
+        bhCalls.push(bridgeHub.tx.ethereumBeaconClient.setOperatingMode("Normal"))
+        summary.push("Resume Ethereum beacon light client on BridgeHub.")
+    }
+
+    if (opts.assethubBaseFee || resumeAll) {
+        pushFeeWrite("BridgeHubEthereumBaseFee", PROD_BASE_FEE_V1)
+        pushFeeWrite("BridgeHubEthereumBaseFeeV2", PROD_BASE_FEE_V2)
+        summary.push(
+            `Restore AssetHub outbound base fees: V1=${PROD_BASE_FEE_V1}, V2=${PROD_BASE_FEE_V2} (captured from prod 2026-05-18).`,
+        )
+    } else {
+        if (opts.assethubBaseFeeV1) {
+            pushFeeWrite("BridgeHubEthereumBaseFee", PROD_BASE_FEE_V1)
+            summary.push(`Restore AssetHub V1 base fee = ${PROD_BASE_FEE_V1}.`)
+        }
+        if (opts.assethubBaseFeeV2) {
+            pushFeeWrite("BridgeHubEthereumBaseFeeV2", PROD_BASE_FEE_V2)
+            summary.push(`Restore AssetHub V2 base fee = ${PROD_BASE_FEE_V2}.`)
+        }
+    }
+
+    if (bhCalls.length === 0 && ahCalls.length === 0) {
+        throw new Error("buildResumeBridgePreimage: no levers selected (and `all` was not set).")
+    }
+
+    const ahCall =
+        ahCalls.length === 0
+            ? null
+            : ahCalls.length === 1
+                ? ahCalls[0]
+                : assetHub.tx.utility.forceBatch(ahCalls)
+
+    const bhXcmSend = bhCalls.length === 0
+        ? null
+        : await wrapBridgeHubCallsInXcmSend(assetHub, bridgeHub, bhCalls)
+
+    let outer: SubmittableExtrinsic<"promise">
+    if (bhXcmSend && ahCall) {
+        outer = assetHub.tx.utility.forceBatch([bhXcmSend, ahCall])
+    } else if (bhXcmSend) {
+        outer = bhXcmSend
+    } else if (ahCall) {
+        outer = ahCall
+    } else {
+        throw new Error("unreachable")
+    }
+
+    const callData = outer.method.toHex()
+    const hash = blake2AsHex(callData, 256)
+    const encodedSize = (callData.length - 2) / 2
+
+    const decodeUrl =
+        `https://polkadot.js.org/apps/?rpc=${encodeURIComponent(assetHubWsUrl)}` +
+        `#/extrinsics/decode/${callData}`
+
+    return { hash, callData, encodedSize, decodeUrl, summary, storageWrites }
+}
+
+function isResumeAllImplied(opts: ResumeBridgeOptions): boolean {
+    if (opts.all) return true
+    return !(
+        opts.gateway ||
+        opts.gatewayV1 ||
+        opts.gatewayV2 ||
+        opts.inboundQueue ||
+        opts.inboundQueueV1 ||
+        opts.inboundQueueV2 ||
+        opts.outboundQueue ||
+        opts.outboundQueueV1 ||
+        opts.systemFrontend ||
+        opts.ethereumClient ||
+        opts.assethubBaseFee ||
+        opts.assethubBaseFeeV1 ||
+        opts.assethubBaseFeeV2
+    )
+}
+
 /**
  * Whether the option set should be treated as "halt everything",true when the
  * caller passed `all`, or when no individual flag was set (matches CLI behaviour).

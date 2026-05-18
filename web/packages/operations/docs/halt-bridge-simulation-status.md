@@ -1,6 +1,6 @@
-# Halt-Bridge SDK Simulation
+# Halt + Resume Bridge SDK Simulation
 
-Two-phase simulation that exercises the halt-bridge SDK end-to-end against a forked Polkadot AssetHub + BridgeHub (chopsticks) and Ethereum mainnet (Foundry/anvil). Used to demo or sanity-check a halt preimage before submitting it to OpenGov.
+Two-phase simulation that exercises the halt-bridge and resume-bridge SDK preimages end-to-end against a forked Polkadot AssetHub + BridgeHub (chopsticks) and Ethereum mainnet (Foundry/anvil). Used to demo or sanity-check the preimages before submitting them to OpenGov.
 
 ## What it tests
 
@@ -17,6 +17,22 @@ For the SDK's `{all: true}` halt lever, all 9 halt items are verified at the sto
 | 7 | AH `snowbridgeSystemFrontend.exportOperatingMode == Halted` | event + Phase 1 storage read |
 | 8 | AH `:BridgeHubEthereumBaseFee:` = u128::MAX | Phase 1 reads `state.getStorage(twox_128(":BridgeHubEthereumBaseFee:"))` |
 | 9 | AH `:BridgeHubEthereumBaseFeeV2:` = u128::MAX | same, V2 key |
+
+In addition, two negative tests assert the halt actually blocks user-facing sends, not just that the bit is flipped:
+
+- **AH frontend rejects P→E**: Phase 1 submits a signed `snowbridgeSystemFrontend.registerToken` extrinsic from Alice (chopsticks accepts mock signatures) and asserts the dispatch errors with `snowbridgeSystemFrontend.Halted` ("Message export is halted").
+- **Gateway rejects V2 send**: Phase 2 calls `v2_sendMessage` from a regular EOA and asserts the call reverts with the `Disabled()` selector (`0x75884cda`). The V1 `sendToken` assertion is best-effort: it probes a list of well-known mainnet ERC20s via `quoteSendTokenFee` to find one the Gateway has registered. If none of them are registered at the fork block, the V1 assertion is skipped, since unregistered tokens would revert with `TokenNotRegistered` and not actually test the mode gate. The V1 and V2 send paths share the same global `CoreStorage.layout().mode`, so V2's `Disabled()` revert is sufficient evidence that the halt gates both.
+
+After the halt-side checks, Phase 1 builds a **resume preimage** via `governance.buildResumeBridgePreimage(ah, bh, {all: true})`, dispatches it through the same scheduler-injection mechanism, and asserts the inverse of every halt assertion:
+
+- Every BH `operatingMode` storage item is back to `Normal`.
+- AH `snowbridgeSystemFrontend.exportOperatingMode` is back to `Normal`.
+- `:BridgeHubEthereumBaseFee:` / `:BridgeHubEthereumBaseFeeV2:` storage values match the **exact bytes** that were on-chain before the halt (captured pre-halt in the same run). This catches drift between the SDK's hardcoded `PROD_BASE_FEE_V1` / `PROD_BASE_FEE_V2` constants and what prod actually holds.
+- The same `snowbridgeSystemFrontend.registerToken` call that previously failed with `Halted` now fails for an unrelated downstream reason (`BadOrigin` with throwaway args), proving the halt gate is no longer firing.
+
+Phase 2 then replays the V2 resume message captured by Phase 1: `v2_dispatchCommand` with `payload = abi.encode(uint8(0))`. The deployed Gateway accepts the V2 unhalt (flips `operatingMode` to `Normal`), and a subsequent `v2_sendMessage` eth_call no longer reverts with `Disabled()`.
+
+Phase 2 intentionally does **not** use the V1 path to reset operating mode back to `Normal`: on the deployed mainnet Gateway, sending a V1 `setOperatingMode(Normal)` via `eth_sendTransaction` from the impersonated Gateway address reverts (even though `eth_call` simulates it as a success). V2 dispatch works for both halt and unhalt, so the resume Phase 2 test uses V2.
 
 ## What it does not test
 
