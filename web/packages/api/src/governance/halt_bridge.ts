@@ -220,10 +220,14 @@ const MAX_U128 = (1n << 128n) - 1n
 // `DefaultBridgeHubEthereumBaseFee = Balance::MAX`). The source defaults are
 // intentionally `u128::MAX` to ship the bridge in a halted state; the live
 // values were set by past governance via `system.setStorage` and are what we
-// want to restore on resume. If the fee policy is ever updated on-chain,
-// re-query these storage keys and refresh the constants below.
-const PROD_BASE_FEE_V1 = 14_929_540_998n
-const PROD_BASE_FEE_V2 = 1_000_000_000n
+// want to restore on resume.
+//
+// Exported so callers (e.g. the snowbridge-app governance UI) can prefill
+// fee inputs and let the operator confirm or override them at submission
+// time. If the fee policy is ever updated on-chain, refresh these constants
+// from the same storage keys.
+export const PROD_BASE_FEE_V1 = 14_929_540_998n
+export const PROD_BASE_FEE_V2 = 1_000_000_000n
 
 export interface ResumeBridgeOptions {
     gateway?: boolean
@@ -239,6 +243,18 @@ export interface ResumeBridgeOptions {
     assethubBaseFee?: boolean
     assethubBaseFeeV1?: boolean
     assethubBaseFeeV2?: boolean
+    /**
+     * Override the V1 base-fee value written when the assethubBaseFee or
+     * assethubBaseFeeV1 (or `all`) levers are active. Defaults to
+     * {@link PROD_BASE_FEE_V1}.
+     */
+    baseFeeV1?: bigint
+    /**
+     * Override the V2 base-fee value written when the assethubBaseFee or
+     * assethubBaseFeeV2 (or `all`) levers are active. Defaults to
+     * {@link PROD_BASE_FEE_V2}.
+     */
+    baseFeeV2?: bigint
     all?: boolean
 }
 
@@ -323,20 +339,27 @@ export async function buildResumeBridgePreimage(
         summary.push("Resume Ethereum beacon light client on BridgeHub.")
     }
 
+    const feeV1 = opts.baseFeeV1 ?? PROD_BASE_FEE_V1
+    const feeV2 = opts.baseFeeV2 ?? PROD_BASE_FEE_V2
+    const v1Note =
+        opts.baseFeeV1 === undefined ? "default" : "caller-supplied override"
+    const v2Note =
+        opts.baseFeeV2 === undefined ? "default" : "caller-supplied override"
+
     if (opts.assethubBaseFee || resumeAll) {
-        pushFeeWrite("BridgeHubEthereumBaseFee", PROD_BASE_FEE_V1)
-        pushFeeWrite("BridgeHubEthereumBaseFeeV2", PROD_BASE_FEE_V2)
+        pushFeeWrite("BridgeHubEthereumBaseFee", feeV1)
+        pushFeeWrite("BridgeHubEthereumBaseFeeV2", feeV2)
         summary.push(
-            `Restore AssetHub outbound base fees: V1=${PROD_BASE_FEE_V1}, V2=${PROD_BASE_FEE_V2} (captured from prod 2026-05-18).`,
+            `Restore AssetHub outbound base fees: V1=${feeV1} (${v1Note}), V2=${feeV2} (${v2Note}).`,
         )
     } else {
         if (opts.assethubBaseFeeV1) {
-            pushFeeWrite("BridgeHubEthereumBaseFee", PROD_BASE_FEE_V1)
-            summary.push(`Restore AssetHub V1 base fee = ${PROD_BASE_FEE_V1}.`)
+            pushFeeWrite("BridgeHubEthereumBaseFee", feeV1)
+            summary.push(`Restore AssetHub V1 base fee = ${feeV1} (${v1Note}).`)
         }
         if (opts.assethubBaseFeeV2) {
-            pushFeeWrite("BridgeHubEthereumBaseFeeV2", PROD_BASE_FEE_V2)
-            summary.push(`Restore AssetHub V2 base fee = ${PROD_BASE_FEE_V2}.`)
+            pushFeeWrite("BridgeHubEthereumBaseFeeV2", feeV2)
+            summary.push(`Restore AssetHub V2 base fee = ${feeV2} (${v2Note}).`)
         }
     }
 
