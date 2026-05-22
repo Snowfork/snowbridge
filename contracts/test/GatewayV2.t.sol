@@ -622,9 +622,9 @@ contract GatewayV2Test is Test {
             );
     }
 
-    // Additional coverage around the AssetHub-agent callContract block
-    // introduced in #1788. Each test pins one invariant that the headline
-    // pair (success + AssetHub-fails) does not cover.
+    // Coverage for the AssetHub-agent callContract block. Each test pins
+    // one invariant that the headline pair (success + AssetHub-fails) does
+    // not cover.
 
     // (1) Positive test using a v2_createAgent'd user-controlled agent.
     // This is the legitimate flow the deny list must keep working.
