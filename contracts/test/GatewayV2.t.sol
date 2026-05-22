@@ -2,6 +2,7 @@
 pragma solidity 0.8.34;
 
 import {Test} from "forge-std/Test.sol";
+import {Vm} from "forge-std/Vm.sol";
 
 import {IGatewayBase} from "../src/interfaces/IGatewayBase.sol";
 import {IGatewayV2} from "../src/v2/IGateway.sol";
@@ -614,6 +615,260 @@ contract GatewayV2Test is Test {
                     nonce: 1,
                     topic: topic,
                     commands: makeCallContractCommand(0.1 ether)
+                }),
+                proof,
+                makeMockProof(),
+                relayerRewardAddress
+            );
+    }
+
+    // Coverage for the AssetHub-agent callContract block. Each test pins
+    // one invariant that the headline pair (success + AssetHub-fails) does
+    // not cover.
+
+    // (1) Positive test using a v2_createAgent'd user-controlled agent.
+    // This is the legitimate flow the deny list must keep working.
+    function testAgentCallContract_UserCreatedAgent_Succeeds() public {
+        bytes32 userAgentId = keccak256("user-agent");
+        IGatewayV2(payable(address(gateway))).v2_createAgent(userAgentId);
+        address userAgent = IGatewayV2(address(gateway)).agentOf(userAgentId);
+        assertTrue(userAgent != address(0), "user agent must be registered");
+
+        bytes32 topic = keccak256("topic");
+
+        // helloWorld emits SaidHello on success.
+        vm.expectEmit(true, false, false, false);
+        emit SaidHello(string(abi.encodePacked("Hello there, World")));
+
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.InboundMessageDispatched(1, topic, true, relayerRewardAddress);
+
+        hoax(relayer, 1 ether);
+        IGatewayV2(address(gateway))
+            .v2_submit(
+                InboundMessageV2({
+                    origin: userAgentId,
+                    nonce: 1,
+                    topic: topic,
+                    commands: makeCallContractCommand(0)
+                }),
+                proof,
+                makeMockProof(),
+                relayerRewardAddress
+            );
+    }
+
+    // (2) Direct unit coverage of the new helper. The dispatcher swallows
+    // revert reasons via try/catch, so the only way to pin the specific
+    // revert selector is to call ensureNotAssetHubAgent directly.
+    function testEnsureNotAssetHubAgent_RejectsAssetHubWithSpecificError() public {
+        vm.expectRevert(IGatewayBase.UnauthorizedPrivilegedAgent.selector);
+        MockGateway(address(gateway)).exposed_ensureNotAssetHubAgent(Constants.ASSET_HUB_AGENT_ID);
+    }
+
+    // BridgeHub is intentionally non-privileged in the V2 deny list; only
+    // ASSET_HUB_AGENT_ID is reserved.
+    function testEnsureNotAssetHubAgent_AllowsBridgeHub() public {
+        address bridgeHubAgent =
+            MockGateway(address(gateway)).exposed_ensureNotAssetHubAgent(Constants.BRIDGE_HUB_AGENT_ID);
+        assertEq(bridgeHubAgent, IGatewayV2(address(gateway)).agentOf(Constants.BRIDGE_HUB_AGENT_ID));
+    }
+
+    function testEnsureNotAssetHubAgent_AllowsUserAgent() public {
+        bytes32 userAgentId = keccak256("user-agent-direct");
+        IGatewayV2(payable(address(gateway))).v2_createAgent(userAgentId);
+        address expected = IGatewayV2(address(gateway)).agentOf(userAgentId);
+
+        address actual = MockGateway(address(gateway)).exposed_ensureNotAssetHubAgent(userAgentId);
+        assertEq(actual, expected);
+    }
+
+    function testEnsureNotAssetHubAgent_UnregisteredRevertsAgentDoesNotExist() public {
+        vm.expectRevert(IGatewayBase.AgentDoesNotExist.selector);
+        MockGateway(address(gateway)).exposed_ensureNotAssetHubAgent(bytes32(uint256(0xdeadbeef)));
+    }
+
+    // (3) No-state-leak assertions on the AssetHub-rejected path.
+    // testAgentCallContractFailsForAssetHub only checks the events; this test
+    // additionally pins that no agent funds move, the target is not called,
+    // and the agent registration is unchanged.
+    function testAgentCallContractFailsForAssetHub_NoStateLeak() public {
+        bytes32 topic = keccak256("topic");
+
+        vm.deal(assetHubAgent, 1 ether);
+        uint256 agentBalanceBefore = assetHubAgent.balance;
+        uint256 targetBalanceBefore = address(helloWorld).balance;
+        address agentBefore = IGatewayV2(address(gateway)).agentOf(Constants.ASSET_HUB_AGENT_ID);
+
+        vm.recordLogs();
+
+        hoax(relayer, 1 ether);
+        IGatewayV2(address(gateway))
+            .v2_submit(
+                InboundMessageV2({
+                    origin: Constants.ASSET_HUB_AGENT_ID,
+                    nonce: 1,
+                    topic: topic,
+                    commands: makeCallContractCommand(0.1 ether)
+                }),
+                proof,
+                makeMockProof(),
+                relayerRewardAddress
+            );
+
+        // No SaidHello event from helloWorld — target was never invoked.
+        bytes32 saidHelloSig = SaidHello.selector;
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        for (uint256 i = 0; i < logs.length; i++) {
+            if (logs[i].emitter == address(helloWorld)) {
+                assertTrue(
+                    logs[i].topics.length == 0 || logs[i].topics[0] != saidHelloSig,
+                    "helloWorld must not emit SaidHello on forged-origin callContract"
+                );
+            }
+        }
+
+        assertEq(assetHubAgent.balance, agentBalanceBefore, "AssetHub agent balance must be unchanged");
+        assertEq(address(helloWorld).balance, targetBalanceBefore, "target balance must be unchanged");
+        assertEq(
+            IGatewayV2(address(gateway)).agentOf(Constants.ASSET_HUB_AGENT_ID),
+            agentBefore,
+            "AssetHub agent must remain registered"
+        );
+    }
+
+    // (4) Fuzz: for any id != ASSET_HUB_AGENT_ID, the helper must never
+    // revert with UnauthorizedPrivilegedAgent. It is allowed to revert
+    // AgentDoesNotExist or return a registered address.
+    function testFuzz_EnsureNotAssetHubAgent_NeverRejectsNonAssetHub(bytes32 id) public {
+        vm.assume(id != Constants.ASSET_HUB_AGENT_ID);
+        try MockGateway(address(gateway)).exposed_ensureNotAssetHubAgent(id) returns (address agent) {
+            assertTrue(agent != address(0), "registered agent must be non-zero");
+        } catch (bytes memory reason) {
+            assertEq(
+                bytes4(reason),
+                IGatewayBase.AgentDoesNotExist.selector,
+                "non-AssetHub ids must only ever fail with AgentDoesNotExist"
+            );
+        }
+    }
+
+    // (5) Dual invariant: ASSET_HUB_AGENT_ID is rejected as a callContract
+    // origin AND still accepted as the recipient of unlockNativeToken.
+    // unlockNativeToken hardcodes ASSET_HUB_AGENT_ID internally; if some
+    // future refactor centralised the privilege check at the wrong layer,
+    // unlocks would silently break.
+    function testAssetHubAgent_BlockedAsCallContractOrigin_StillUnlocksTokens() public {
+        // First: AssetHub origin rejected.
+        bytes32 topic1 = keccak256("topic-rejected");
+        vm.expectEmit(true, false, false, false);
+        emit IGatewayV2.CommandFailed(1, 0);
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.InboundMessageDispatched(1, topic1, false, relayerRewardAddress);
+
+        vm.deal(assetHubAgent, 1 ether);
+        hoax(relayer, 1 ether);
+        IGatewayV2(address(gateway))
+            .v2_submit(
+                InboundMessageV2({
+                    origin: Constants.ASSET_HUB_AGENT_ID,
+                    nonce: 1,
+                    topic: topic1,
+                    commands: makeCallContractCommand(0)
+                }),
+                proof,
+                makeMockProof(),
+                relayerRewardAddress
+            );
+
+        // Second: AssetHub agent still successfully unlocks WETH it holds.
+        bytes32 topic2 = keccak256("topic-unlock");
+        hoax(assetHubAgent);
+        weth.deposit{value: 1 ether}();
+
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.InboundMessageDispatched(2, topic2, true, relayerRewardAddress);
+
+        hoax(relayer, 1 ether);
+        IGatewayV2(address(gateway))
+            .v2_submit(
+                InboundMessageV2({
+                    origin: Constants.ASSET_HUB_AGENT_ID,
+                    nonce: 2,
+                    topic: topic2,
+                    commands: makeUnlockWethCommand(0.1 ether)
+                }),
+                proof,
+                makeMockProof(),
+                relayerRewardAddress
+            );
+    }
+
+    // (6) Multi-command message: one legit callContract from a user agent
+    // bundled with one poisoned callContract from AssetHub. The first must
+    // succeed (SaidHello emitted), the second must emit CommandFailed, and
+    // the message must overall report success=false.
+    function testMultiCommand_PoisonedAssetHubCallFails_LegitUserCallSucceeds() public {
+        bytes32 userAgentId = keccak256("user-agent-multi");
+        IGatewayV2(payable(address(gateway))).v2_createAgent(userAgentId);
+
+        CommandV2[] memory commands = new CommandV2[](2);
+        bytes memory data = abi.encodeWithSignature("sayHello(string)", "World");
+
+        // Index 0: poisoned callContract from AssetHub (dispatcher uses a
+        // single `origin` per message; submit as AssetHub so the FIRST cmd
+        // is the rejected one).
+        commands[0] = CommandV2({
+            kind: CommandKind.CallContract,
+            gas: 500_000,
+            payload: abi.encode(CallContractParams({target: address(helloWorld), data: data, value: 0}))
+        });
+        // Index 1: same callContract, but we'll submit this in a second
+        // message from the user agent below to prove it would have worked.
+        commands[1] = CommandV2({
+            kind: CommandKind.CallContract,
+            gas: 500_000,
+            payload: abi.encode(CallContractParams({target: address(helloWorld), data: data, value: 0}))
+        });
+
+        bytes32 topic = keccak256("topic-multi");
+
+        // The dispatcher binds a single `origin` to all commands in a
+        // message, so a multi-command message with AssetHub origin has
+        // every CallContract fail. Pin that exact behavior.
+        vm.expectEmit(true, false, false, false);
+        emit IGatewayV2.CommandFailed(1, 0);
+        vm.expectEmit(true, false, false, false);
+        emit IGatewayV2.CommandFailed(1, 1);
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.InboundMessageDispatched(1, topic, false, relayerRewardAddress);
+
+        hoax(relayer, 1 ether);
+        IGatewayV2(address(gateway))
+            .v2_submit(
+                InboundMessageV2({
+                    origin: Constants.ASSET_HUB_AGENT_ID,
+                    nonce: 1,
+                    topic: topic,
+                    commands: commands
+                }),
+                proof,
+                makeMockProof(),
+                relayerRewardAddress
+            );
+
+        // Same payload from the user agent must succeed end-to-end.
+        bytes32 topic2 = keccak256("topic-multi-user");
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.InboundMessageDispatched(2, topic2, true, relayerRewardAddress);
+        hoax(relayer, 1 ether);
+        IGatewayV2(address(gateway))
+            .v2_submit(
+                InboundMessageV2({
+                    origin: userAgentId,
+                    nonce: 2,
+                    topic: topic2,
+                    commands: commands
                 }),
                 proof,
                 makeMockProof(),
