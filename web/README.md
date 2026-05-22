@@ -4,6 +4,7 @@ Packages:
 
 - [Solidity Contracts](packages/contracts/README.md)
 - [API Client](packages/api/README.md)
+- [Viem Provider](packages/provider-viem/README.md)
 - [Integration tests](packages/test/README.md)
 
 See the [main README's Development section](../README.md#Development) for setup instructions.

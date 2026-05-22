@@ -2,6 +2,7 @@ export type BridgeInfo = {
   environment: Environment;
   routes: readonly TransferRoute[];
   registry: AssetRegistry;
+  chains: ChainMap;
 };
 
 export type AccountType = "AccountId20" | "AccountId32";
@@ -39,8 +40,14 @@ export type EthereumChain = ChainId & {
   precompile?: `0x${string}`;
   xcDOT?: string;
   xcTokenMap?: XC20TokenMap;
-  // The gas cost of v2_submit excludes command execution, mainly covers the verification.
-  baseDeliveryGas?: bigint;
+  // Gas cost of `v2_submit`, excluding command execution; primarily covers verification.
+  baseVerificationGas?: bigint;
+  // Gas cost of `v2_submit`, including dispatch overhead such as multicall and internal command dispatch.
+  baseDispatchGas?: bigint;
+  // Gas cost of the two-phase submit flow (`submitInitial` + `commitPrevRandao` + `submitFinal`)
+  twoPhaseSubmitGas?: bigint;
+  // Gas cost of `submitFiatShamir`
+  submitFiatShamirGas?: bigint;
 };
 
 export type ChainProperties = {
@@ -104,6 +111,10 @@ export type Parachain = ChainId & {
 
 export type EthereumChainMap = Record<ChainKey<EthereumKind>, EthereumChain>;
 export type ParachainMap = Record<ChainKey<ParachainKind>, Parachain>;
+export type ChainRef = ChainId & {
+  key: ChainKey<ChainKind>;
+};
+export type ChainMap = Record<string, ChainRef>;
 
 export type KusamaConfig = {
   assetHubParaId: number;
@@ -164,6 +175,16 @@ export type TransferRoute = {
   assets: readonly string[];
 };
 
+export type TransferKind =
+  | "polkadot->polkadot"
+  | "kusama->polkadot"
+  | "polkadot->kusama"
+  | "polkadot->ethereum"
+  | "ethereum->polkadot"
+  | "ethereum->ethereum"
+  | "polkadot->ethereum_l2"
+  | "ethereum_l2->polkadot";
+
 export type ChainKey<T extends string> = `${T}_${number}`;
 
 export type Source = ChainId & {
@@ -219,6 +240,19 @@ export type AssetRegistry = {
   kusama?: KusamaConfig;
 };
 
+export type {
+  EthereumProvider,
+  EthereumProviderTypes,
+  FeeData,
+  GatewayV1OutboundMessageAccepted,
+  GatewayV2OutboundMessageAccepted,
+  L1AdapterDepositParams,
+  L1LegacySwapRouterExactOutputSingleParams,
+  L1SwapRouterExactOutputSingleParams,
+  L2MessageReceipt,
+  MultiAddressStruct,
+} from "./provider";
+
 export type ContractCall = {
   target: string;
   calldata: string;
@@ -235,6 +269,8 @@ export type SubstrateAccount = {
     free: bigint;
     reserved: bigint;
     frozen: bigint;
+    transferable: bigint;
+    total: bigint;
   };
 };
 
@@ -259,9 +295,11 @@ export type L2ForwardMetadata = {
   swapRoutes: readonly AssetSwapRoute[];
 };
 
+export type FeeEstimateErrorCode = "AMOUNT_TOO_LOW" | "AMOUNT_TOO_HIGH" | "COULD_NOT_SWAP"
+
 export type FeeEstimateErrorDetails = {
   type: string;
-  code: string;
+  code: FeeEstimateErrorCode | string;
   status: number;
   message: string;
   id: string;
@@ -272,4 +310,15 @@ export class FeeEstimateError extends Error {
     super(details.message);
     this.details = details;
   }
+  static couldNotSwap(asset1: unknown, asset2: unknown): FeeEstimateError {
+    return new FeeEstimateError({
+      type: "AssetConversion",
+      code: "COULD_NOT_SWAP",
+      status: 0,
+      message: `Could not estimate swap for '${JSON.stringify(asset1)}' -> '${JSON.stringify(asset2)}'`,
+      id: "could-not-swap",
+    })
+  }
 }
+
+export * from "./contracts";

@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.33;
+pragma solidity 0.8.34;
 
-import {Strings} from "openzeppelin/utils/Strings.sol";
 import {Test} from "forge-std/Test.sol";
+import {Strings} from "openzeppelin/utils/Strings.sol";
 import {console} from "forge-std/console.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 
 import {BeefyClient} from "../src/BeefyClient.sol";
 import {BeefyClientMock} from "./mocks/BeefyClientMock.sol";
-import {ScaleCodec} from "../src/utils/ScaleCodec.sol";
 import {Bitfield} from "../src/utils/Bitfield.sol";
 
 contract BeefyClientTest is Test {
@@ -39,6 +38,7 @@ contract BeefyClientTest is Test {
     BeefyClient.MMRLeaf emptyLeaf;
     bytes32[] emptyLeafProofs;
     uint256 emptyLeafProofOrder;
+    // forge-lint: disable-next-line(unsafe-typecast)
     bytes2 mmrRootID = bytes2("mh");
     string bitFieldFile;
     uint256[] fiatShamirFinalBitfield;
@@ -545,8 +545,9 @@ contract BeefyClientTest is Test {
         );
     }
 
-    function testScaleEncodeCommit() public {
+    function testScaleEncodeCommit() public view {
         BeefyClient.PayloadItem[] memory _payload = new BeefyClient.PayloadItem[](2);
+        // forge-lint: disable-next-line(unsafe-typecast)
         _payload[0] = BeefyClient.PayloadItem(bytes2("ab"), hex"000102");
         _payload[1] = BeefyClient.PayloadItem(
             mmrRootID, hex"3ac49cd24778522203e8bf40a4712ea3f07c3803bbd638cb53ebb3564ec13e8c"
@@ -683,6 +684,39 @@ contract BeefyClientTest is Test {
         );
     }
 
+    /// @dev Candidate nextValidatorSet ID must be > current nextValidatorSet.id; revert when less.
+    function testSubmitFailWithInvalidMMRLeafWhenNextAuthoritySetIdLessThanCurrent() public {
+        //initialize with previous set (nextValidatorSet.id = setId)
+        BeefyClient.Commitment memory commitment = initialize(setId - 1);
+
+        beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
+
+        vm.roll(block.number + randaoCommitDelay);
+        vm.prevrandao(bytes32(uint256(prevRandao)));
+        beefyClient.commitPrevRandao(commitHash);
+        createFinalProofs();
+
+        // nextValidatorSet.id == setId; set leaf to less than that
+        mmrLeaf.nextAuthoritySetID = uint64(setId > 0 ? setId - 1 : 0);
+        vm.expectRevert(BeefyClient.InvalidMMRLeaf.selector);
+        beefyClient.submitFinal(
+            commitment, bitfield, finalValidatorProofs, mmrLeaf, mmrLeafProofs, leafProofOrder
+        );
+    }
+
+    /// @dev FiatShamir path: candidate nextValidatorSet ID must be > current; revert when less.
+    function testSubmitFiatShamirFailWithInvalidMMRLeafWhenNextAuthoritySetIdLessThanCurrent()
+        public
+    {
+        BeefyClient.Commitment memory commitment = initialize(setId - 1);
+
+        mmrLeaf.nextAuthoritySetID = uint64(setId > 0 ? setId - 1 : 0);
+        vm.expectRevert(BeefyClient.InvalidMMRLeaf.selector);
+        beefyClient.submitFiatShamir(
+            commitment, bitfield, fiatShamirValidatorProofs, mmrLeaf, mmrLeafProofs, leafProofOrder
+        );
+    }
+
     function testSubmitFailWithInvalidMMRLeafProof() public {
         //initialize with previous set
         BeefyClient.Commitment memory commitment = initialize(setId - 1);
@@ -729,7 +763,7 @@ contract BeefyClientTest is Test {
         regenerateBitField(bitFieldFile, numRequiredSignatures);
     }
 
-    function testFuzzComputeValidatorSetQuorum(uint128 validatorSetLen) public {
+    function testFuzzComputeValidatorSetQuorum(uint128 validatorSetLen) public view {
         // There must be atleast 1 validator.
         vm.assume(validatorSetLen > 0);
         // Calculator 1/3 with flooring due to integer division.
@@ -742,6 +776,7 @@ contract BeefyClientTest is Test {
 
     function testFuzzSignatureSamplingRanges(uint128 validatorSetLen, uint16 minSignatures)
         public
+        view
     {
         // There must be atleast 1 validator.
         vm.assume(validatorSetLen > 0);
@@ -760,7 +795,7 @@ contract BeefyClientTest is Test {
         assertGt(result, 0, "result is greater than zero.");
     }
 
-    function testSignatureSamplingCases() public {
+    function testSignatureSamplingCases() public view {
         uint256 result = beefyClient.computeQuorum_public(1);
         assertEq(1, result, "B");
         result = beefyClient.computeNumRequiredSignatures_public(1, 0, 0);

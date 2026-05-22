@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.33;
+pragma solidity 0.8.34;
 
 import {ECDSA} from "openzeppelin/utils/cryptography/ECDSA.sol";
 import {SubstrateMerkleProof} from "./utils/SubstrateMerkleProof.sol";
@@ -187,12 +187,13 @@ contract BeefyClient {
     /**
      * @dev Fiat-Shamir domain separator ID
      */
-    bytes public constant FIAT_SHAMIR_DOMAIN_ID = bytes("SNOWBRIDGE-FIAT-SHAMIR-v1");
+    bytes public constant FIAT_SHAMIR_DOMAIN_ID = bytes("SNOWBRIDGE-FIAT-SHAMIR-V1");
 
     /**
      * @dev Beefy payload id for MMR Root payload items:
      * https://github.com/paritytech/substrate/blob/fe1f8ba1c4f23931ae89c1ada35efb3d908b50f5/primitives/consensus/beefy/src/payload.rs#L33
      */
+    // forge-lint: disable-next-line(unsafe-typecast)
     bytes2 public constant MMR_ROOT_ID = bytes2("mh");
 
     /**
@@ -412,7 +413,9 @@ contract BeefyClient {
         bytes32 newMMRRoot = ensureProvidesMMRRoot(commitment);
 
         if (is_next_session) {
-            if (leaf.nextAuthoritySetID != nextValidatorSet.id + 1) {
+            // The id for candidate nextValidatorSet should be greater than the current
+            // nextValidatorSet id
+            if (leaf.nextAuthoritySetID <= nextValidatorSet.id) {
                 revert InvalidMMRLeaf();
             }
             bool leafIsValid = MMRProof.verifyLeafProof(
@@ -566,7 +569,9 @@ contract BeefyClient {
         verifyFiatShamirCommitment(commitmentHash, bitfield, vset, proofs);
 
         if (is_next_session) {
-            if (leaf.nextAuthoritySetID != nextValidatorSet.id + 1) {
+            // The id for candidate nextValidatorSet should be greater than the current
+            // nextValidatorSet id
+            if (leaf.nextAuthoritySetID <= nextValidatorSet.id) {
                 revert InvalidMMRLeaf();
             }
             bool leafIsValid = MMRProof.verifyLeafProof(
@@ -623,7 +628,7 @@ contract BeefyClient {
         numRequiredSignatures += Math.log2(validatorSetLen, Math.Rounding.Ceil);
         // Add signatures based on the signature usage count.
         numRequiredSignatures += 1 + (2 * Math.log2(signatureUsageCount, Math.Rounding.Ceil));
-        // Never require more signatures than a 1/3 + 1 which is sufficient to ensure at least one honest validator.
+        // Never require more signatures than 1/3 + 1, which is sufficient to ensure at least one honest validator.
         return Math.min(numRequiredSignatures, computeMaxRequiredSignatures(validatorSetLen));
     }
 

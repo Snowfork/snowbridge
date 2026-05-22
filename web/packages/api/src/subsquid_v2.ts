@@ -1,9 +1,8 @@
 import { queryByGraphQL } from "./subsquid"
 
 export {
-    fetchLatestBlocksSynced,
     fetchInterParachainMessageById,
-    fetchSyncStatusOfParachain,
+    fetchLatestBlockFromIndexer,
     queryByGraphQL,
 } from "./subsquid"
 
@@ -473,9 +472,6 @@ export const fetchToEthereumPendingTransfers = async (
             messageId
             nonce
             senderAddress
-            sourceNetwork
-            destinationNetwork
-            l2ChainId
             sourceParaId
             sourceNetwork
             destinationNetwork
@@ -590,9 +586,6 @@ export const fetchToEthereumTransfersBySenders = async (
             messageId
             nonce
             senderAddress
-            sourceNetwork
-            destinationNetwork
-            l2ChainId
             sourceParaId
             sourceNetwork
             destinationNetwork

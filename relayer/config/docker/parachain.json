@@ -1,0 +1,34 @@
+{
+  "source": {
+    "polkadot": {
+      "endpoint": "${POLKADOT_ENDPOINT}",
+      "heartbeat-secs": 45
+    },
+    "parachain": {
+      "endpoint": "${BRIDGEHUB_ENDPOINT}",
+      "heartbeat-secs": 45
+    },
+    "ethereum": {
+      "endpoint": "${ETHEREUM_ENDPOINT}",
+      "heartbeat-secs": 600
+    },
+    "contracts": {
+      "BeefyClient": "${BEEFY_CLIENT_CONTRACT}",
+      "Gateway": "${GATEWAY_CONTRACT}"
+    },
+    "channel-id": "${CHANNEL_ID}"
+  },
+  "sink": {
+    "ethereum": {
+      "endpoint": "${FLASHBOTS_ENDPOINT}",
+      "pending-tx-timeout-secs": 240
+    },
+    "contracts": {
+      "Gateway": "${GATEWAY_CONTRACT}"
+    }
+  },
+  "ofac": {
+    "enabled": ${OFAC_ENABLED},
+    "apiKey": "${CHAINALYSIS_API_KEY}"
+  }
+}

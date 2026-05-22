@@ -1,0 +1,78 @@
+import type {
+    Asset,
+    AssetRegistry,
+    ERC20Metadata,
+    EthereumProviderTypes,
+    MultiAddressStruct,
+    Parachain,
+} from "@snowbridge/base-types"
+import type { OperationStatus } from "../status"
+import type { FeeInfo, ValidationLog } from "./toPolkadot"
+import type { FeeAsset, FeeItem, L2ToPolkadotFeeKey, ToPolkadotFeeKey } from "./fee"
+
+export type DeliveryFee = {
+    kind: "ethereum->polkadot" | "ethereum_l2->polkadot"
+    feeAsset: any
+    breakdown: { [P in ToPolkadotFeeKey | L2ToPolkadotFeeKey]?: FeeAsset[] }
+    summary: FeeItem[]
+    totals: FeeAsset[]
+}
+
+export type Transfer<T extends EthereumProviderTypes> = {
+    kind: "ethereum->polkadot" | "ethereum_l2->polkadot"
+    input: {
+        registry: AssetRegistry
+        sourceAccount: string
+        beneficiaryAccount: string
+        tokenAddress: string
+        destinationParaId: number
+        amount: bigint
+        fee: DeliveryFee
+        customXcm?: any[]
+        l2TokenAddress?: string
+        sourceChainId?: number
+    }
+    computed: {
+        gatewayAddress: string
+        beneficiaryAddressHex: string
+        beneficiaryMultiAddress: MultiAddressStruct
+        totalValue: bigint
+        tokenErcMetadata: ERC20Metadata
+        ahAssetMetadata: Asset
+        destAssetMetadata: Asset
+        destParachain: Parachain
+        minimalBalance: bigint
+        claimer: any
+        topic: string
+        l2AdapterAddress?: string
+        totalInputAmount: bigint
+    }
+    tx: T["ContractTransaction"]
+}
+
+export type ValidatedTransfer<T extends EthereumProviderTypes> = Transfer<T> & {
+    logs: ValidationLog[]
+    success: boolean
+    data: {
+        etherBalance: bigint
+        totalInputAmount?: bigint
+        tokenBalance: {
+            balance: bigint
+            gatewayAllowance: bigint
+        }
+        feeInfo?: FeeInfo
+        bridgeStatus: OperationStatus
+        assetHubDryRunError?: string
+        destinationParachainDryRunError?: string
+        l2BridgeDryRunError?: string
+    }
+}
+
+export type MessageReceipt = {
+    nonce: bigint
+    payload: any
+    blockNumber: number
+    blockHash: string
+    txHash: string
+    txIndex: number
+}

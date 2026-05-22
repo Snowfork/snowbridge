@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.33;
+pragma solidity 0.8.34;
 
 // Sepolia addresses
 address constant SPOKE_POOL = 0x5ef6C01E11889d86803e0B23e3cB3F9E9d97B662;

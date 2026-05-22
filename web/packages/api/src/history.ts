@@ -282,7 +282,7 @@ export const buildToEthereumTransferResult = (transfer: any): ToEthereumTransfer
         }
         if (!ethereumMessageDispatched.success) {
             result.status = TransferStatus.Failed
-        } else if (transfer.transfer.destinationNetwork !== "ethereum_l2") {
+        } else if (transfer.destinationNetwork !== "ethereum_l2") {
             // if l2 leave pending
             result.status = TransferStatus.Complete
         }

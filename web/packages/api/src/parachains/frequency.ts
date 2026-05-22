@@ -1,6 +1,7 @@
 import { AssetMap, PNAMap } from "@snowbridge/base-types"
 import { ParachainBase } from "./parachainBase"
-import { DOT_LOCATION, HERE_LOCATION, WESTEND_GENESIS } from "../xcmBuilder"
+import { HERE_LOCATION, WESTEND_GENESIS } from "../xcmBuilder"
+import { DOT_LOCATION } from "../assets_v2"
 
 export const FREQUENCY_WESTEND_TOKEN_ID = "0x23838b1bb57cecf4422a57dd8e7f8a087b30d54f"
 export const FREQUENCY_WESTEND_PARA_ID = 2313

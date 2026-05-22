@@ -1,25 +1,8 @@
-import { AbstractProvider } from "ethers"
-import { IERC20__factory } from "@snowbridge/contract-types"
 import { AssetRegistry, Parachain } from "@snowbridge/base-types"
 
 export const ETHER_TOKEN_ADDRESS = "0x0000000000000000000000000000000000000000"
+export const DOT_LOCATION = { parents: 1, interior: "Here" }
 
-export async function erc20Balance(
-    ethereum: AbstractProvider,
-    tokenAddress: string,
-    owner: string,
-    spender: string,
-) {
-    const tokenContract = IERC20__factory.connect(tokenAddress, ethereum)
-    const [balance, gatewayAllowance] = await Promise.all([
-        tokenContract.balanceOf(owner),
-        tokenContract.allowance(owner, spender),
-    ])
-    return {
-        balance,
-        gatewayAllowance,
-    }
-}
 export function findL2TokenAddress(
     registry: AssetRegistry,
     l2ChainId: number,
@@ -35,6 +18,19 @@ export function findL2TokenAddress(
         }
     }
     return undefined
+}
+
+// Returns the bridged-ether `min_balance` registered in the AH foreign-assets
+// pallet. Callers add this to `executionFee` for non-ETH transfers so the
+// post-PayFees ether surplus deposited to a fresh recipient meets
+// `Token::BelowMinimum` — otherwise the dust traps the entire DepositAsset.
+export function getAssetHubEtherMinBalance(registry: AssetRegistry): bigint {
+    const metadata =
+        registry.parachains[`polkadot_${registry.assetHubParaId}`].assets[ETHER_TOKEN_ADDRESS]
+    if (!metadata) {
+        throw Error("Bridged ether not registered on asset hub.")
+    }
+    return metadata.minimumBalance
 }
 
 export function supportsEthereumToPolkadotV2(parachain: Parachain): boolean {

@@ -1673,6 +1673,7 @@ interface IGatewayV2 {
     error InsufficientGasLimit();
     error InsufficientValue();
     error InvalidAsset();
+    error InvalidCommand();
     error InvalidNetwork();
     error ShouldNotReachHere();
     error TooManyAssets();
@@ -2213,6 +2214,11 @@ interface IGatewayV2 {
   {
     "type": "error",
     "name": "InvalidAsset",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidCommand",
     "inputs": []
   },
   {
@@ -4042,6 +4048,80 @@ error InvalidAsset();
             > as alloy_sol_types::SolType>::Token<'a>;
             const SIGNATURE: &'static str = "InvalidAsset()";
             const SELECTOR: [u8; 4] = [200u8, 145u8, 173u8, 210u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                ()
+            }
+            #[inline]
+            fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
+                <Self::Parameters<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Self::new)
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Custom error with signature `InvalidCommand()` and selector `0x12f269e5`.
+```solidity
+error InvalidCommand();
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct InvalidCommand;
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        #[doc(hidden)]
+        #[allow(dead_code)]
+        type UnderlyingSolTuple<'a> = ();
+        #[doc(hidden)]
+        type UnderlyingRustTuple<'a> = ();
+        #[cfg(test)]
+        #[allow(dead_code, unreachable_patterns)]
+        fn _type_assertion(
+            _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+        ) {
+            match _t {
+                alloy_sol_types::private::AssertTypeEq::<
+                    <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                >(_) => {}
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<InvalidCommand> for UnderlyingRustTuple<'_> {
+            fn from(value: InvalidCommand) -> Self {
+                ()
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<UnderlyingRustTuple<'_>> for InvalidCommand {
+            fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                Self
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolError for InvalidCommand {
+            type Parameters<'a> = UnderlyingSolTuple<'a>;
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "InvalidCommand()";
+            const SELECTOR: [u8; 4] = [18u8, 242u8, 105u8, 229u8];
             #[inline]
             fn new<'a>(
                 tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
@@ -6712,6 +6792,8 @@ function v2_submit(InboundMessage memory message, bytes32[] memory leafProof, Ve
         #[allow(missing_docs)]
         InvalidAsset(InvalidAsset),
         #[allow(missing_docs)]
+        InvalidCommand(InvalidCommand),
+        #[allow(missing_docs)]
         InvalidNetwork(InvalidNetwork),
         #[allow(missing_docs)]
         ShouldNotReachHere(ShouldNotReachHere),
@@ -6727,6 +6809,7 @@ function v2_submit(InboundMessage memory message, bytes32[] memory leafProof, Ve
         /// Prefer using `SolInterface` methods instead.
         pub const SELECTORS: &'static [[u8; 4usize]] = &[
             [17u8, 1u8, 18u8, 148u8],
+            [18u8, 242u8, 105u8, 229u8],
             [48u8, 233u8, 114u8, 173u8],
             [54u8, 9u8, 76u8, 180u8],
             [96u8, 238u8, 18u8, 71u8],
@@ -6738,6 +6821,7 @@ function v2_submit(InboundMessage memory message, bytes32[] memory leafProof, Ve
         /// The names of the variants in the same order as `SELECTORS`.
         pub const VARIANT_NAMES: &'static [&'static str] = &[
             ::core::stringify!(InsufficientValue),
+            ::core::stringify!(InvalidCommand),
             ::core::stringify!(ExceededMaximumValue),
             ::core::stringify!(AgentAlreadyExists),
             ::core::stringify!(InsufficientGasLimit),
@@ -6749,6 +6833,7 @@ function v2_submit(InboundMessage memory message, bytes32[] memory leafProof, Ve
         /// The signatures in the same order as `SELECTORS`.
         pub const SIGNATURES: &'static [&'static str] = &[
             <InsufficientValue as alloy_sol_types::SolError>::SIGNATURE,
+            <InvalidCommand as alloy_sol_types::SolError>::SIGNATURE,
             <ExceededMaximumValue as alloy_sol_types::SolError>::SIGNATURE,
             <AgentAlreadyExists as alloy_sol_types::SolError>::SIGNATURE,
             <InsufficientGasLimit as alloy_sol_types::SolError>::SIGNATURE,
@@ -6782,7 +6867,7 @@ function v2_submit(InboundMessage memory message, bytes32[] memory leafProof, Ve
     impl alloy_sol_types::SolInterface for IGatewayV2Errors {
         const NAME: &'static str = "IGatewayV2Errors";
         const MIN_DATA_LENGTH: usize = 0usize;
-        const COUNT: usize = 8usize;
+        const COUNT: usize = 9usize;
         #[inline]
         fn selector(&self) -> [u8; 4] {
             match self {
@@ -6800,6 +6885,9 @@ function v2_submit(InboundMessage memory message, bytes32[] memory leafProof, Ve
                 }
                 Self::InvalidAsset(_) => {
                     <InvalidAsset as alloy_sol_types::SolError>::SELECTOR
+                }
+                Self::InvalidCommand(_) => {
+                    <InvalidCommand as alloy_sol_types::SolError>::SELECTOR
                 }
                 Self::InvalidNetwork(_) => {
                     <InvalidNetwork as alloy_sol_types::SolError>::SELECTOR
@@ -6839,6 +6927,17 @@ function v2_submit(InboundMessage memory message, bytes32[] memory leafProof, Ve
                             .map(IGatewayV2Errors::InsufficientValue)
                     }
                     InsufficientValue
+                },
+                {
+                    fn InvalidCommand(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<IGatewayV2Errors> {
+                        <InvalidCommand as alloy_sol_types::SolError>::abi_decode_raw(
+                                data,
+                            )
+                            .map(IGatewayV2Errors::InvalidCommand)
+                    }
+                    InvalidCommand
                 },
                 {
                     fn ExceededMaximumValue(
@@ -6945,6 +7044,17 @@ function v2_submit(InboundMessage memory message, bytes32[] memory leafProof, Ve
                             .map(IGatewayV2Errors::InsufficientValue)
                     }
                     InsufficientValue
+                },
+                {
+                    fn InvalidCommand(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<IGatewayV2Errors> {
+                        <InvalidCommand as alloy_sol_types::SolError>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(IGatewayV2Errors::InvalidCommand)
+                    }
+                    InvalidCommand
                 },
                 {
                     fn ExceededMaximumValue(
@@ -7060,6 +7170,11 @@ function v2_submit(InboundMessage memory message, bytes32[] memory leafProof, Ve
                 Self::InvalidAsset(inner) => {
                     <InvalidAsset as alloy_sol_types::SolError>::abi_encoded_size(inner)
                 }
+                Self::InvalidCommand(inner) => {
+                    <InvalidCommand as alloy_sol_types::SolError>::abi_encoded_size(
+                        inner,
+                    )
+                }
                 Self::InvalidNetwork(inner) => {
                     <InvalidNetwork as alloy_sol_types::SolError>::abi_encoded_size(
                         inner,
@@ -7104,6 +7219,12 @@ function v2_submit(InboundMessage memory message, bytes32[] memory leafProof, Ve
                 }
                 Self::InvalidAsset(inner) => {
                     <InvalidAsset as alloy_sol_types::SolError>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
+                Self::InvalidCommand(inner) => {
+                    <InvalidCommand as alloy_sol_types::SolError>::abi_encode_raw(
                         inner,
                         out,
                     )

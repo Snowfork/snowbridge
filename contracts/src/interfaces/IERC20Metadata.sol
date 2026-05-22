@@ -2,9 +2,9 @@
 // SPDX-FileCopyrightText: 2023 OpenZeppelin
 // SPDX-FileCopyrightText: 2024 Snowfork <hello@snowfork.com>
 
-pragma solidity 0.8.33;
+pragma solidity 0.8.34;
 
-import "./IERC20.sol";
+import {IERC20} from "./IERC20.sol";
 
 /**
  * @dev Interface for the optional metadata functions from the ERC20 standard.

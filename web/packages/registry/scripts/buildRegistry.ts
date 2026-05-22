@@ -17,6 +17,7 @@ import {
     XC20TokenMap,
     XcmVersion,
     BridgeInfo,
+    ChainMap,
     TransferRoute,
     ChainId,
     ChainKey,
@@ -27,7 +28,11 @@ import { isFunction } from "@polkadot/util"
 import { writeFile } from "fs/promises"
 import { AbstractProvider, Contract, ethers } from "ethers"
 import { IGatewayV1__factory as IGateway__factory } from "@snowbridge/contract-types"
-import { parachains as ParaImpl, xcmBuilder, assetsV2 } from "@snowbridge/api"
+import { assetsV2 } from "@snowbridge/api"
+import { ParachainBase, paraImplementation } from "@snowbridge/api/dist/parachains"
+import { buildParachainERC20ReceivedXcmOnDestination } from "@snowbridge/api/dist/xcmBuilder"
+import { EthersEthereumProvider, EthersProviderTypes } from "@snowbridge/provider-ethers"
+import { buildFriendlyChains } from "./friendlyChains"
 
 export type Path = {
     source: ChainId
@@ -98,24 +103,23 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
         },
         relaychainUrl: "https://polkadot-rpc.n.dwellir.com",
         parachains: {
-            "1000": "wss://asset-hub-polkadot-rpc.n.dwellir.com",
-            "1002": "https://bridge-hub-polkadot-rpc.n.dwellir.com",
-            "3369": "wss://polkadot-mythos-rpc.polkadot.io",
+            "1000": "wss://polkadot-asset-hub-rpc.polkadot.io",
+            "1002": "wss://polkadot-bridge-hub-rpc.polkadot.io",
+            "3369": "wss://mythos-rpc.dmarket.com",
             "2034": "wss://hydration-rpc.n.dwellir.com",
-            "2030": "wss://bifrost-polkadot.ibp.network",
-            "2004": "wss://moonbeam.ibp.network",
+            "2030": "wss://eu.bifrost-polkadot-rpc.liebi.com/ws",
+            "2004": "wss://wss.api.moonbeam.network",
             "2000": "wss://acala-rpc-0.aca-api.network",
             "2043": "wss://parachain-rpc.origin-trail.network",
             // TODO: Add back in jampton once we have an indexer in place.
             //"3397": "wss://rpc.jamton.network",
         },
         gatewayContract: "0x27ca963c279c93801941e1eb8799c23f407d68e7",
-        beefyContract: "0x1817874feab3ce053d0f40abc23870db35c2affc",
+        beefyContract: "0x7cfc5c8b341991993080af67d940b6ad19a010e1",
         assetHubParaId: 1000,
         bridgeHubParaId: 1002,
-        v2_parachains: [1000],
-        indexerGraphQlUrl:
-            "https://snowbridge.squids.live/snowbridge-subsquid-polkadot@v2/api/graphql",
+        v2_parachains: [1000, 2034],
+        indexerGraphQlUrl: "https://subsquid.snowbridge.network/graphql",
         kusama: {
             assetHubParaId: 1000,
             bridgeHubParaId: 1002,
@@ -208,13 +212,13 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
             "84532": "https://base-sepolia-rpc.publicnode.com",
             "421614": "https://arbitrum-sepolia-rpc.publicnode.com",
         },
-        relaychainUrl: "wss://westend-rpc.n.dwellir.com",
+        relaychainUrl: "https://westend-rpc.polkadot.io",
         parachains: {
-            "1000": "wss://asset-hub-westend-rpc.n.dwellir.com",
-            "1002": "wss://bridge-hub-westend-rpc.n.dwellir.com",
+            "1000": "https://westend-asset-hub-rpc.polkadot.io",
+            "1002": "https://westend-bridge-hub-rpc.polkadot.io",
         },
         gatewayContract: "0x9ed8b47bc3417e3bd0507adc06e56e2fa360a4e9",
-        beefyContract: "0xa04460b1d8bbef33f54edb2c3115e3e4d41237a6",
+        beefyContract: "0xEBD1CFcF82BaA170b86BDe532f69A6A49c6c790D".toLowerCase(),
         assetHubParaId: 1000,
         bridgeHubParaId: 1002,
         v2_parachains: [1000],
@@ -304,6 +308,11 @@ export function defaultPathFilter(envName: string): (_: Path) => boolean {
             }
         case "polkadot_mainnet":
             return (path: Path) => {
+                // Disallow Robonomic
+                if (path.asset === "0x7de91b204c1c737bcee6f000aaa6569cf7061cb7") {
+                    return false
+                }
+
                 // Disallow MYTH to any location but 3369
                 if (
                     path.asset === "0xba41ddf06b7ffd89d1267b5a93bfef2424eb2003" &&
@@ -560,15 +569,18 @@ async function buildRegistry(environment: Environment): Promise<AssetRegistry> {
 
     let relayInfo: ChainProperties
     {
+        console.log("Connecting to relaychain:", relaychainUrl)
         let provider = await ApiPromise.create({
             noInitWarn: true,
             provider: relaychainUrl.startsWith("http")
                 ? new HttpProvider(relaychainUrl)
                 : new WsProvider(relaychainUrl),
         })
-        relayInfo = await (await ParaImpl.paraImplementation(provider)).chainProperties()
-
+        console.log("Connected to relaychain. Getting chain properties...")
+        relayInfo = await (await paraImplementation(provider)).chainProperties()
+        console.log("Got relaychain properties.")
         await provider.disconnect()
+        console.log("Disconnected from relaychain.")
     }
 
     // Connect to all eth connections
@@ -580,10 +592,13 @@ async function buildRegistry(environment: Environment): Promise<AssetRegistry> {
         }
     } = {}
     {
+        console.log("Connecting to Ethereum chains:", ethereumChains)
         for (const result of await Promise.all(
             Object.keys(ethereumChains).map(async (ethChain) => {
+                console.log(`Connecting to Ethereum chain ${ethChain}: ${ethereumChains[ethChain]}`)
                 let provider = ethers.getDefaultProvider(ethereumChains[ethChain])
                 const network = await provider.getNetwork()
+                console.log(`Connected to Ethereum chain ${ethChain}, network:`, network)
                 return { chainId: Number(network.chainId), provider, name: network.name }
             }),
         )) {
@@ -592,6 +607,7 @@ async function buildRegistry(environment: Environment): Promise<AssetRegistry> {
         if (!(ethChainId.toString() in ethProviders)) {
             throw Error(`Cannot find ethereum chain ${ethChainId} in the list of ethereum chains.`)
         }
+        console.log("Connected to all Ethereum chains.")
     }
 
     let pnaAssets: PNAMap = {}
@@ -601,37 +617,45 @@ async function buildRegistry(environment: Environment): Promise<AssetRegistry> {
             throw Error(`Cannot find bridge hub ${bridgeHubParaId} in the list of parachains.`)
         }
         const bridgeHubUrl = parachains[bridgeHubParaId.toString()]
+        console.log("Connecting to Bridge Hub:", bridgeHubUrl)
         let provider = await ApiPromise.create({
             noInitWarn: true,
             provider: bridgeHubUrl.startsWith("http")
                 ? new HttpProvider(bridgeHubUrl)
                 : new WsProvider(bridgeHubUrl),
         })
-        bridgeHubInfo = await (await ParaImpl.paraImplementation(provider)).chainProperties()
+        console.log("Connected to Bridge Hub. Getting chain properties...")
+        bridgeHubInfo = await (await paraImplementation(provider)).chainProperties()
+        console.log("Getting registered PNAs from Bridge Hub...")
         pnaAssets = await getRegisteredPnas(
             provider,
             ethProviders[ethChainId].provider,
             gatewayContract,
         )
-
+        console.log("Got registered PNAs from Bridge Hub.")
         await provider.disconnect()
+        console.log("Disconnected from Bridge Hub.")
     }
 
     // Connect to all substrate parachains.
     const providers: {
-        [paraIdKey: string]: { parachainId: number; accessor: ParaImpl.ParachainBase }
+        [paraIdKey: string]: { parachainId: number; accessor: ParachainBase }
     } = {}
     {
+        console.log("Connecting to all substrate parachains:", parachains)
         for (const { parachainId, accessor } of await Promise.all(
             Object.keys(parachains).map(async (parachainId) => {
                 const parachainUrl = parachains[parachainId]
+                console.log(`Connecting to parachain ${parachainId}: ${parachainUrl}`)
                 const provider = await ApiPromise.create({
                     noInitWarn: true,
                     provider: parachainUrl.startsWith("http")
                         ? new HttpProvider(parachainUrl)
                         : new WsProvider(parachainUrl),
                 })
-                const accessor = await ParaImpl.paraImplementation(provider)
+                console.log(`Connected to parachain ${parachainId}. Getting accessor...`)
+                const accessor = await paraImplementation(provider, new EthersEthereumProvider())
+                console.log(`Got accessor for parachain ${parachainId}.`)
                 return { parachainId: accessor.parachainId, accessor }
             }),
         )) {
@@ -642,6 +666,7 @@ async function buildRegistry(environment: Environment): Promise<AssetRegistry> {
                 `Could not resolve asset hub para id ${assetHubParaId} in the list of parachains provided.`,
             )
         }
+        console.log("Connected to all substrate parachains.")
     }
 
     // Index parachains
@@ -698,7 +723,10 @@ async function buildRegistry(environment: Environment): Promise<AssetRegistry> {
                 ? new HttpProvider(assetHubUrl)
                 : new WsProvider(assetHubUrl),
         })
-        const accessor = await ParaImpl.paraImplementation(provider)
+        const accessor = await paraImplementation<EthersProviderTypes>(
+            provider,
+            new EthersEthereumProvider(),
+        )
 
         const para = await indexParachain(
             accessor,
@@ -750,7 +778,7 @@ async function buildRegistry(environment: Environment): Promise<AssetRegistry> {
 }
 
 async function checkSnowbridgeV2Support(
-    parachain: ParaImpl.ParachainBase,
+    parachain: ParachainBase,
     ethChainId: number,
 ): Promise<{
     xcmVersion: XcmVersion
@@ -819,8 +847,8 @@ async function checkSnowbridgeV2Support(
 }
 
 async function indexParachain(
-    parachain: ParaImpl.ParachainBase,
-    assetHub: ParaImpl.ParachainBase,
+    parachain: ParachainBase,
+    assetHub: ParachainBase,
     kind: ParachainKind,
     ethChainId: number,
     parachainId: number,
@@ -878,12 +906,13 @@ async function indexParachain(
         info.accountType === "AccountId32"
             ? "0x0000000000000000000000000000000000000000000000000000000000000000"
             : "0x0000000000000000000000000000000000000000",
+        false,
     )
 
     let estimatedExecutionFeeDOT = 0n
     let estimatedDeliveryFeeDOT = 0n
     if (parachainId !== assetHubParaId) {
-        const destinationXcm = xcmBuilder.buildParachainERC20ReceivedXcmOnDestination(
+        const destinationXcm = buildParachainERC20ReceivedXcmOnDestination(
             parachain.provider.registry,
             ethChainId,
             assetsV2.ETHER_TOKEN_ADDRESS,
@@ -900,7 +929,7 @@ async function indexParachain(
         )
         estimatedExecutionFeeDOT = await parachain.calculateXcmFee(
             destinationXcm,
-            xcmBuilder.DOT_LOCATION,
+            assetsV2.DOT_LOCATION,
         )
     }
     return {
@@ -1000,7 +1029,10 @@ async function indexEthChain(
             name,
             assets,
             key: `ethereum_${networkChainId}`,
-            baseDeliveryGas: 120_000n,
+            baseVerificationGas: 120_000n,
+            baseDispatchGas: 80_000n,
+            twoPhaseSubmitGas: 1_000_000n,
+            submitFiatShamirGas: 2_000_000n,
         }
     } else if (networkChainId in l2Chains) {
         const assets: ERC20MetadataMap = {}
@@ -1174,7 +1206,7 @@ async function getRegisteredPnas(
 }
 
 ;(async () => {
-    let env = "local_e2e"
+    let env = "polkadot_mainnet"
     if (process.env.NODE_ENV !== undefined) {
         env = process.env.NODE_ENV
     }
@@ -1184,7 +1216,12 @@ async function getRegisteredPnas(
     const environment = SNOWBRIDGE_ENV[env]
     const registry = await buildRegistry(environment)
     const routes = buildTransferLocations(registry, environment)
-    const bridge: BridgeInfo = { environment, routes, registry }
+    const chains = buildFriendlyChains([
+        ...Object.values(registry.ethereumChains),
+        ...Object.values(registry.parachains),
+        ...Object.values(registry.kusama?.parachains ?? {}),
+    ])
+    const bridge: BridgeInfo = { environment, routes, registry, chains }
     const json = generateTsObject(bridge, 4)
     const fileContents = `const registry = ${json} as const\nexport default registry\n`
     const filepath = `src/${env}_bridge_info.g.ts`

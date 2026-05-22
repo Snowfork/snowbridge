@@ -89,16 +89,16 @@ start_lodestar() {
         --rest.address "0.0.0.0" \
         --eth1.providerUrls "http://127.0.0.1:8545" \
         --execution.urls "http://127.0.0.1:8551" \
+        --execution.engineMock false \
         --dataDir "$ethereum_data_dir" \
         --reset \
-        --terminal-total-difficulty-override 0 \
         --genesisEth1Hash $genesisHash \
         --params.ALTAIR_FORK_EPOCH 0 \
         --params.BELLATRIX_FORK_EPOCH 0 \
         --params.CAPELLA_FORK_EPOCH 0 \
         --params.DENEB_FORK_EPOCH 0 \
         --params.ELECTRA_FORK_EPOCH 0 \
-        --params.FULU_FORK_EPOCH 50000000 \
+        --params.FULU_FORK_EPOCH 0 \
         --rest.namespace="*" \
         --jwt-secret $config_dir/jwtsecret \
         --chain.archiveStateEpochFrequency 1 \

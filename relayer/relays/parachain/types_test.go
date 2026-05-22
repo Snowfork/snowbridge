@@ -1,1 +1,1 @@
-package parachain
+package parachainv1

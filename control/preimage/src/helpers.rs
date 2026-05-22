@@ -2,12 +2,12 @@ use bridge_hub_runtime::ethereum_system::storage::types::pricing_parameters::Pri
 use codec::Encode;
 use subxt::{utils::H160, utils::H256, OnlineClient, PolkadotConfig};
 
-use crate::constants::{ASSET_HUB_ID, BRIDGE_HUB_ID};
+use crate::constants::BRIDGE_HUB_ID;
 use crate::Context;
 
 use crate::bridge_hub_runtime::{self, RuntimeCall as BridgeHubRuntimeCall};
 
-use crate::relay_runtime::runtime_types::{
+use crate::asset_hub_runtime::runtime_types::{
     pallet_xcm,
     sp_weights::weight_v2::Weight,
     staging_xcm::v5::{
@@ -23,7 +23,6 @@ use crate::relay_runtime::runtime_types::{
 };
 
 use crate::asset_hub_runtime::RuntimeCall as AssetHubRuntimeCall;
-use crate::relay_runtime::RuntimeCall as RelayRuntimeCall;
 
 use bridge_hub_runtime::runtime_types::snowbridge_outbound_queue_primitives::v1::message::{
     AgentExecuteCommand, Command, Fee,
@@ -51,7 +50,7 @@ pub fn increase_weight(ref_time: &mut u64, proof_size: &mut u64) {
 pub async fn send_xcm_bridge_hub(
     context: &Context,
     calls: Vec<BridgeHubRuntimeCall>,
-) -> Result<RelayRuntimeCall, Box<dyn std::error::Error>> {
+) -> Result<AssetHubRuntimeCall, Box<dyn std::error::Error>> {
     let mut accum: Vec<(u64, u64, Vec<u8>)> = vec![];
 
     for call in calls.iter() {
@@ -80,9 +79,9 @@ pub async fn send_xcm_bridge_hub(
         ]);
     }
 
-    let call = RelayRuntimeCall::XcmPallet(pallet_xcm::pallet::Call::send {
+    let call = AssetHubRuntimeCall::PolkadotXcm(pallet_xcm::pallet::Call::send {
         dest: Box::new(VersionedLocation::V5(Location {
-            parents: 0,
+            parents: 1,
             interior: Junctions::X1([Junction::Parachain(BRIDGE_HUB_ID)]),
         })),
         message: Box::new(VersionedXcm::V5(Xcm(instructions))),
@@ -92,46 +91,14 @@ pub async fn send_xcm_bridge_hub(
 }
 
 pub async fn send_xcm_asset_hub(
-    context: &Context,
+    _context: &Context,
     calls: Vec<AssetHubRuntimeCall>,
-) -> Result<RelayRuntimeCall, Box<dyn std::error::Error>> {
-    let mut accum: Vec<(u64, u64, Vec<u8>)> = vec![];
-
-    for call in calls.iter() {
-        let (mut ref_time, mut proof_size) =
-            query_weight_asset_hub(&context.asset_hub_api, call.clone()).await?;
-        increase_weight(&mut ref_time, &mut proof_size);
-        accum.push((ref_time, proof_size, call.encode()));
+) -> Result<AssetHubRuntimeCall, Box<dyn std::error::Error>> {
+    if calls.len() == 1 {
+        Ok(calls.into_iter().next().unwrap())
+    } else {
+        Ok(utility_force_batch(calls))
     }
-
-    let mut instructions: Vec<Instruction> = vec![UnpaidExecution {
-        weight_limit: WeightLimit::Unlimited,
-        check_origin: None,
-    }];
-
-    for (ref_time, proof_size, encoded) in accum.into_iter() {
-        instructions.append(&mut vec![
-            Transact {
-                origin_kind: OriginKind::Superuser,
-                fallback_max_weight: Some(Weight {
-                    ref_time: ref_time,
-                    proof_size: proof_size,
-                }),
-                call: DoubleEncoded { encoded },
-            },
-            ExpectTransactStatus(MaybeErrorCode::Success),
-        ]);
-    }
-
-    let call = RelayRuntimeCall::XcmPallet(pallet_xcm::pallet::Call::send {
-        dest: Box::new(VersionedLocation::V5(Location {
-            parents: 0,
-            interior: Junctions::X1([Junction::Parachain(ASSET_HUB_ID)]),
-        })),
-        message: Box::new(VersionedXcm::V5(Xcm(instructions))),
-    });
-
-    Ok(call)
 }
 
 pub async fn query_weight_bridge_hub(
@@ -150,6 +117,7 @@ pub async fn query_weight_bridge_hub(
     Ok((call_info.weight.ref_time, call_info.weight.proof_size))
 }
 
+#[allow(dead_code)]
 pub async fn query_weight_asset_hub(
     api: &OnlineClient<PolkadotConfig>,
     call: AssetHubRuntimeCall,
@@ -166,16 +134,16 @@ pub async fn query_weight_asset_hub(
     Ok((call_info.weight.ref_time, call_info.weight.proof_size))
 }
 
-pub fn utility_force_batch(calls: Vec<RelayRuntimeCall>) -> RelayRuntimeCall {
-    RelayRuntimeCall::Utility(
-        crate::relay_runtime::runtime_types::pallet_utility::pallet::Call::batch_all { calls },
+pub fn utility_force_batch(calls: Vec<AssetHubRuntimeCall>) -> AssetHubRuntimeCall {
+    AssetHubRuntimeCall::Utility(
+        crate::asset_hub_runtime::runtime_types::pallet_utility::pallet::Call::batch_all { calls },
     )
 }
 
 #[cfg(any(feature = "westend", feature = "paseo"))]
-pub fn sudo(call: Box<RelayRuntimeCall>) -> RelayRuntimeCall {
-    return RelayRuntimeCall::Sudo(
-        crate::relay_runtime::runtime_types::pallet_sudo::pallet::Call::sudo { call },
+pub fn sudo(call: Box<AssetHubRuntimeCall>) -> AssetHubRuntimeCall {
+    return AssetHubRuntimeCall::Sudo(
+        crate::asset_hub_runtime::runtime_types::pallet_sudo::pallet::Call::sudo { call },
     );
 }
 

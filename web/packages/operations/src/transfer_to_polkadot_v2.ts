@@ -1,11 +1,18 @@
 import { Keyring } from "@polkadot/keyring"
-import { Context, toPolkadotSnowbridgeV2, toPolkadotV2 } from "@snowbridge/api"
+import { assetsV2, Context, createApi } from "@snowbridge/api"
+import { EthersEthereumProvider, EthersProviderTypes } from "@snowbridge/provider-ethers"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { formatEther, Wallet } from "ethers"
 import { bridgeInfoFor } from "@snowbridge/registry"
 import { WETH9__factory } from "@snowbridge/contract-types"
+import { findFeeBreakdownTotal, findFeeTotal } from "./fee"
 
-export const transferToPolkadot = async (destParaId: number, symbol: string, amount: bigint) => {
+export const transferToPolkadot = async (
+    destParaId: number,
+    symbol: string,
+    amount: bigint,
+    feeAsset?: string,
+) => {
     await cryptoWaitReady()
 
     let env = "local_e2e"
@@ -14,8 +21,13 @@ export const transferToPolkadot = async (destParaId: number, symbol: string, amo
     }
     console.log(`Using environment '${env}'`)
 
-    const { registry, environment } = bridgeInfoFor(env)
-    const context = new Context(environment)
+    const info = bridgeInfoFor(env)
+    const { registry } = info
+    const api = createApi({
+        info,
+        ethereumProvider: new EthersEthereumProvider(),
+    })
+    const context: Context<EthersProviderTypes> = api.context
 
     const polkadot_keyring = new Keyring({ type: "sr25519" })
 
@@ -25,7 +37,10 @@ export const transferToPolkadot = async (destParaId: number, symbol: string, amo
     )
     const ETHEREUM_ACCOUNT_PUBLIC = await ETHEREUM_ACCOUNT.getAddress()
     const POLKADOT_ACCOUNT = polkadot_keyring.addFromUri(process.env.SUBSTRATE_KEY ?? "//Ferdie")
-    const POLKADOT_ACCOUNT_PUBLIC = POLKADOT_ACCOUNT.address
+    // Optional override: send to a specific beneficiary instead of the signer's
+    // own account. Used to reproduce a known trap scenario by targeting the
+    // exact AH account that failed in production.
+    const POLKADOT_ACCOUNT_PUBLIC = process.env.SUBSTRATE_BENEFICIARY ?? POLKADOT_ACCOUNT.address
 
     console.log("eth", ETHEREUM_ACCOUNT_PUBLIC, "sub", POLKADOT_ACCOUNT_PUBLIC)
 
@@ -37,8 +52,6 @@ export const transferToPolkadot = async (destParaId: number, symbol: string, amo
         console.error("no token contract exists, check it and rebuild asset registry.")
         throw Error(`No token found for ${symbol}`)
     }
-
-    const relayerFee = 100_000_000_000_000n // 0.000100000000000000 ETH (~ $.5)
 
     console.log("TOKEN_CONTRACT", TOKEN_CONTRACT)
     if (symbol.toLowerCase().startsWith("weth")) {
@@ -58,27 +71,20 @@ export const transferToPolkadot = async (destParaId: number, symbol: string, amo
     console.log("Ethereum to Polkadot")
     {
         // Step 0. Create a transfer implementation
-        const transferImpl = toPolkadotSnowbridgeV2.createTransferImplementation(
-            destParaId,
-            registry,
-            TOKEN_CONTRACT,
+        const transferImpl = api.sender(
+            { kind: "ethereum", id: registry.ethChainId },
+            { kind: "polkadot", id: destParaId },
         )
         // Step 1. Get the delivery fee for the transaction
-        let fee = await transferImpl.getDeliveryFee(context, registry, TOKEN_CONTRACT, destParaId)
+        const feeAssetLocation =
+            feeAsset?.toLowerCase() === "dot" ? assetsV2.DOT_LOCATION : undefined
+        let fee = await transferImpl.fee(TOKEN_CONTRACT, {
+            feeAsset: feeAssetLocation,
+        })
 
         console.log("fee: ", fee)
         // Step 2. Create a transfer tx
-        const transfer = await transferImpl.createTransfer(
-            {
-                ethereum: context.ethereum(),
-                assetHub: await context.assetHub(),
-                destination:
-                    destParaId !== registry.assetHubParaId
-                        ? await context.parachain(destParaId)
-                        : undefined,
-            },
-            registry,
-            destParaId,
+        const transfer = await transferImpl.tx(
             ETHEREUM_ACCOUNT_PUBLIC,
             POLKADOT_ACCOUNT_PUBLIC,
             TOKEN_CONTRACT,
@@ -87,24 +93,18 @@ export const transferToPolkadot = async (destParaId: number, symbol: string, amo
         )
 
         // Step 3. Validate the transaction.
-        const validation = await transferImpl.validateTransfer(
-            {
-                ethereum: context.ethereum(),
-                gateway: context.gatewayV2(),
-                bridgeHub: await context.bridgeHub(),
-                assetHub: await context.assetHub(),
-                destination:
-                    destParaId !== registry.assetHubParaId
-                        ? await context.parachain(destParaId)
-                        : undefined,
-            },
-            transfer,
-        )
+        const validation = await transferImpl.validate(transfer)
         console.log("validation result", validation)
 
-        // Step 4. Check validation logs for errors
-        if (validation.logs.find((l) => l.kind == toPolkadotV2.ValidationKind.Error)) {
-            throw Error(`validation has one of more errors.`)
+        // Step 4. Check validation logs for errors. SKIP_VALIDATION=true lets
+        // trap-test scripts proceed even when the dry-run correctly fails (e.g.
+        // intentionally sending USDT below min_balance to trigger an asset trap).
+        if (!validation.success) {
+            if (process.env.SKIP_VALIDATION === "true") {
+                console.warn("validation failed; proceeding anyway (SKIP_VALIDATION=true)")
+            } else {
+                throw Error(`validation has one of more errors.`)
+            }
         }
 
         // Step 5. Estimate the cost of the execution cost of the transaction
@@ -112,17 +112,19 @@ export const transferToPolkadot = async (destParaId: number, symbol: string, amo
             tx,
             computed: { totalValue },
         } = transfer
-        const estimatedGas = await context.ethereum().estimateGas(tx)
-        const feeData = await context.ethereum().getFeeData()
+        const estimatedGas = await context.ethereumProvider.estimateGas(context.ethereum(), tx)
+        const feeData = await context.ethereumProvider.getFeeData(context.ethereum())
         const executionFee = (feeData.gasPrice ?? 0n) * estimatedGas
+        const relayerFee = findFeeBreakdownTotal(fee, "relayer", "ETH")
+        const deliveryFee = findFeeTotal(fee, "ETH")
 
         console.log("tx:", tx)
-        console.log("feeData:", feeData.toJSON())
+        console.log("feeData:", feeData)
         console.log("gas:", estimatedGas)
-        console.log("relayer fee:", formatEther(fee.relayerFee))
+        console.log("relayer fee:", formatEther(relayerFee))
         console.log("execution cost:", formatEther(executionFee))
-        console.log("total cost:", formatEther(fee.totalFeeInWei + executionFee))
-        console.log("ether sent:", formatEther(totalValue - fee.totalFeeInWei))
+        console.log("total cost:", formatEther(deliveryFee + executionFee))
+        console.log("ether sent:", formatEther(totalValue - deliveryFee))
         console.log("dry run:", await context.ethereum().call(tx))
 
         if (process.env["DRY_RUN"] != "true") {
@@ -137,7 +139,7 @@ export const transferToPolkadot = async (destParaId: number, symbol: string, amo
             }
 
             // Step 7. Get the message receipt for tracking purposes
-            const message = await toPolkadotSnowbridgeV2.getMessageReceipt(receipt)
+            const message = await transferImpl.messageId(receipt)
             if (!message) {
                 throw Error(`Transaction ${receipt.hash} did not emit a message.`)
             }

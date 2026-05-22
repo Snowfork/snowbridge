@@ -1,13 +1,14 @@
 import { Registry } from "@polkadot/types/types"
 import {
     bridgeLocation,
-    DOT_LOCATION,
     accountToLocation,
     isRelaychainLocation,
     buildEthereumInstructions,
 } from "../../xcmBuilder"
+import { DOT_LOCATION } from "../../assets_v2"
 import { Asset } from "@snowbridge/base-types"
 import { DeliveryFee } from "../../toEthereum_v2"
+import { findInBreakdownOrZero, findTotal } from "../../fees"
 
 export function buildTransferXcmFromAssetHubWithDOTAsFee(
     registry: Registry,
@@ -25,9 +26,11 @@ export function buildTransferXcmFromAssetHubWithDOTAsFee(
     let tokenLocation = asset.location
 
     let localDOTFeeAmount =
-        fee.localExecutionFeeDOT! + fee.bridgeHubDeliveryFeeDOT + fee.snowbridgeDeliveryFeeDOT
-    let totalDOTFeeAmount = fee.totalFeeInDot!
-    let remoteEtherFeeAmount = fee.ethereumExecutionFee!
+        findInBreakdownOrZero(fee.breakdown, "localExecution", "DOT") +
+        findInBreakdownOrZero(fee.breakdown, "bridgeHubDelivery", "DOT") +
+        findInBreakdownOrZero(fee.breakdown, "snowbridgeDelivery", "DOT")
+    let totalDOTFeeAmount = findTotal(fee, "DOT")
+    let remoteEtherFeeAmount = findInBreakdownOrZero(fee.breakdown, "ethereumExecution", "ETH")
 
     let assets = []
     if (isRelaychainLocation(tokenLocation)) {
@@ -39,18 +42,23 @@ export function buildTransferXcmFromAssetHubWithDOTAsFee(
         })
     } else {
         assets.push({
-            id: tokenLocation,
-            fun: {
-                Fungible: tokenAmount,
-            },
-        })
-        assets.push({
             id: DOT_LOCATION,
             fun: {
                 Fungible: totalDOTFeeAmount,
             },
         })
+        assets.push({
+            id: tokenLocation,
+            fun: {
+                Fungible: tokenAmount,
+            },
+        })
     }
+
+    // Sort assets by parents because XCM requires it for binary search.
+    assets.sort((a, b) => {
+        return a.id.parents - b.id.parents
+    })
 
     let remoteXcm = buildEthereumInstructions(beneficiaryLocation, topic, callHex)
 

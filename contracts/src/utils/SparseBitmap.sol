@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.33;
+pragma solidity 0.8.34;
 
 struct SparseBitmap {
     mapping(uint256 bucket => uint256) data;
@@ -9,12 +9,14 @@ using {get, set} for SparseBitmap global;
 
 function get(SparseBitmap storage self, uint256 index) view returns (bool) {
     uint256 bucket = index >> 8;
+    // forge-lint: disable-next-line(incorrect-shift)
     uint256 mask = 1 << (index & 0xff);
     return self.data[bucket] & mask != 0;
 }
 
 function set(SparseBitmap storage self, uint256 index) {
     uint256 bucket = index >> 8;
+    // forge-lint: disable-next-line(incorrect-shift)
     uint256 mask = 1 << (index & 0xff);
     self.data[bucket] |= mask;
 }

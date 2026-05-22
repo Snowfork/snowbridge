@@ -1,7 +1,19 @@
-import { Context, subsquidV2 } from "./index"
+import {
+    ToEthereumTransferResult,
+    ToPolkadotTransferResult,
+    toEthereumPendingTransfers,
+    toPolkadotPendingTransfers,
+} from "./history_v2"
+import { Context } from "./index"
+import * as subsquidV2 from "./subsquid_v2"
 import { fetchBeaconSlot, fetchFinalityUpdate } from "./utils"
 import { ApiPromise } from "@polkadot/api"
-import { IGatewayV1, IGatewayV2 } from "@snowbridge/contract-types"
+import {
+    EthereumProvider,
+    EthereumProviderTypes,
+    IGatewayV1,
+    IGatewayV2,
+} from "@snowbridge/base-types"
 
 export type OperatingMode = "Normal" | "Halted"
 export type BridgeStatusInfo = {
@@ -46,6 +58,8 @@ export type ChannelStatusInfo = {
         estimatedDeliveryTime?: number
         // The timeout duration of the oldest undelivered message.
         undeliveredTimeout?: number
+        // Pending transfers
+        pendingTransfers?: ToEthereumTransferResult[]
     }
     toPolkadot: {
         operatingMode: {
@@ -57,6 +71,8 @@ export type ChannelStatusInfo = {
         v2Inbound?: number
         estimatedDeliveryTime?: number
         undeliveredTimeout?: number
+        // Pending transfers
+        pendingTransfers?: ToPolkadotTransferResult[]
     }
 }
 
@@ -67,19 +83,10 @@ export type Sovereign = { name: string; account: string; balance: bigint; type: 
 export type IndexerServiceStatusInfo = {
     chain: string
     latency: number
-    paraid?: number
+    id?: number
 }
 
 type Relayer = { name: string; account: string; type: SourceType; balance?: bigint }
-
-export type AllMetrics = {
-    name: string
-    bridgeStatus: BridgeStatusInfo
-    channels: ChannelStatusInfo[]
-    sovereigns: Sovereign[]
-    relayers: Relayer[]
-    indexerStatus: IndexerServiceStatusInfo[]
-}
 
 export type OperationStatus = {
     toEthereum: {
@@ -92,13 +99,15 @@ export type OperationStatus = {
     }
 }
 export async function getOperatingStatus({
+    ethereumProvider,
     gateway,
     bridgeHub,
 }: {
+    ethereumProvider: EthereumProvider<EthereumProviderTypes>
     gateway: IGatewayV1 | IGatewayV2
     bridgeHub: ApiPromise
 }): Promise<OperationStatus> {
-    const ethereumOperatingMode = await gateway.operatingMode()
+    const ethereumOperatingMode = await ethereumProvider.gatewayOperatingMode(gateway)
     const beaconOperatingMode = (
         await bridgeHub.query.ethereumBeaconClient.operatingMode()
     ).toPrimitive()
@@ -116,13 +125,13 @@ export async function getOperatingStatus({
         toPolkadot: {
             beacon: beaconOperatingMode as OperatingMode,
             inbound: inboundOperatingMode as OperatingMode,
-            outbound: ethereumOperatingMode === 0n ? "Normal" : ("Halted" as OperatingMode),
+            outbound: BigInt(ethereumOperatingMode) === 0n ? "Normal" : ("Halted" as OperatingMode),
         },
     }
 }
 
 export const bridgeStatusInfo = async (
-    context: Context,
+    context: Context<EthereumProviderTypes>,
     options = {
         polkadotBlockTimeInSeconds: 6,
         ethereumBlockTimeInSeconds: 12,
@@ -164,7 +173,11 @@ export const bridgeStatusInfo = async (
     const beaconLatencySeconds = beaconBlockLatency * options.ethereumBlockTimeInSeconds
 
     // Operating mode
-    const op = await getOperatingStatus({ gateway, bridgeHub })
+    const op = await getOperatingStatus({
+        ethereumProvider: context.ethereumProvider,
+        gateway,
+        bridgeHub,
+    })
 
     return {
         toEthereum: {
@@ -190,7 +203,7 @@ export const ASSET_HUB_CHANNEL_ID =
     "0xc173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539"
 
 export const channelStatusInfo = async (
-    context: Context,
+    context: Context<EthereumProviderTypes>,
     channelId: string,
 ): Promise<ChannelStatusInfo> => {
     const [bridgeHub, gateway, gatewayV2] = await Promise.all([
@@ -201,7 +214,10 @@ export const channelStatusInfo = async (
 
     // V1 nonces
     const [inbound_nonce_eth, outbound_nonce_eth] = await gateway.channelNoncesOf(channelId)
-    const operatingMode = await gateway.channelOperatingModeOf(channelId)
+    const operatingMode = await context.ethereumProvider.gatewayChannelOperatingModeOf(
+        gateway,
+        channelId,
+    )
     const inbound_nonce_sub = (
         await bridgeHub.query.ethereumInboundQueue.nonce(channelId)
     ).toPrimitive() as number
@@ -209,35 +225,47 @@ export const channelStatusInfo = async (
         await bridgeHub.query.ethereumOutboundQueue.nonce(channelId)
     ).toPrimitive() as number
 
-    // V2 nonces
-    const v2_outbound_nonce_eth = Number(await gatewayV2.v2_outboundNonce())
-    const v2_outbound_nonce_sub = (
-        await bridgeHub.query.ethereumOutboundQueueV2.nonce()
-    ).toPrimitive() as number
-
-    const v2_max_delivered_nonce_to_polkadot = await subsquidV2.fetchMaxDeliveredNonceToPolkadot(
-        context.graphqlApiUrl(),
-        v2_outbound_nonce_eth,
-    )
-    const v2_max_delivered_nonce_to_ethereum = await subsquidV2.fetchMaxDeliveredNonceToEthereum(
-        context.graphqlApiUrl(),
-        v2_outbound_nonce_sub,
-    )
-
     let estimatedDeliveryTime: any,
         toEthereumUndeliveredTimeout: number | undefined,
-        toPolkadotUndeliveredTimeout: number | undefined = undefined
+        toPolkadotUndeliveredTimeout: number | undefined = undefined,
+        toEthereumPendings: ToEthereumTransferResult[] = [],
+        toPolkadotPendings: ToPolkadotTransferResult[] = [],
+        v2_max_delivered_nonce_to_polkadot: number | undefined = undefined,
+        v2_max_delivered_nonce_to_ethereum: number | undefined = undefined,
+        v2_outbound_nonce_eth: number | undefined = undefined,
+        v2_outbound_nonce_sub: number | undefined = undefined
 
-    if (channelId.toLowerCase() == ASSET_HUB_CHANNEL_ID.toLowerCase()) {
+    if (
+        context.environment.name == "polkadot_mainnet" &&
+        channelId.toLowerCase() == ASSET_HUB_CHANNEL_ID.toLowerCase()
+    ) {
+        v2_outbound_nonce_eth = Number(await gatewayV2.v2_outboundNonce())
+        v2_outbound_nonce_sub = (
+            await bridgeHub.query.ethereumOutboundQueueV2.nonce()
+        ).toPrimitive() as number
+        v2_max_delivered_nonce_to_polkadot = await subsquidV2.fetchMaxDeliveredNonceToPolkadot(
+            context.graphqlApiUrl(),
+            v2_outbound_nonce_eth,
+        )
+        v2_max_delivered_nonce_to_ethereum = await subsquidV2.fetchMaxDeliveredNonceToEthereum(
+            context.graphqlApiUrl(),
+            v2_outbound_nonce_sub,
+        )
         estimatedDeliveryTime = await subsquidV2.fetchEstimatedDeliveryTime(context.graphqlApiUrl())
 
-        let latency = await subsquidV2.fetchToEthereumUndeliveredLatency(context.graphqlApiUrl())
-        if (latency && latency.elapse) {
-            toEthereumUndeliveredTimeout = latency.elapse
+        let toEthereumUndelivered = await subsquidV2.fetchToEthereumUndeliveredLatency(
+            context.graphqlApiUrl(),
+        )
+        if (toEthereumUndelivered && toEthereumUndelivered.elapse) {
+            toEthereumUndeliveredTimeout = toEthereumUndelivered.elapse
+            toEthereumPendings = await toEthereumPendingTransfers(context.graphqlApiUrl(), 10)
         }
-        latency = await subsquidV2.fetchToPolkadotUndeliveredLatency(context.graphqlApiUrl())
-        if (latency && latency.elapse) {
-            toPolkadotUndeliveredTimeout = latency.elapse
+        let toPolkadotUndelivered = await subsquidV2.fetchToPolkadotUndeliveredLatency(
+            context.graphqlApiUrl(),
+        )
+        if (toPolkadotUndelivered && toPolkadotUndelivered.elapse) {
+            toPolkadotUndeliveredTimeout = toPolkadotUndelivered.elapse
+            toPolkadotPendings = await toPolkadotPendingTransfers(context.graphqlApiUrl(), 10)
         }
     }
 
@@ -249,6 +277,7 @@ export const channelStatusInfo = async (
             v2Inbound: v2_max_delivered_nonce_to_ethereum,
             estimatedDeliveryTime: estimatedDeliveryTime?.toEthereumV2Elapse?.elapse,
             undeliveredTimeout: toEthereumUndeliveredTimeout,
+            pendingTransfers: toEthereumPendings.length > 0 ? toEthereumPendings : undefined,
         },
         toPolkadot: {
             operatingMode: {
@@ -260,6 +289,7 @@ export const channelStatusInfo = async (
             v2Inbound: v2_max_delivered_nonce_to_polkadot,
             estimatedDeliveryTime: estimatedDeliveryTime?.toPolkadotV2Elapse?.elapse,
             undeliveredTimeout: toPolkadotUndeliveredTimeout,
+            pendingTransfers: toPolkadotPendings.length > 0 ? toPolkadotPendings : undefined,
         },
     }
 }

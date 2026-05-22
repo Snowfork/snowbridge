@@ -1,12 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.33;
+pragma solidity 0.8.34;
 
-import {Script, console} from "forge-std/Script.sol";
+import {Script} from "forge-std/Script.sol";
 import {IERC20} from "openzeppelin/token/ERC20/IERC20.sol";
-import {WETH9} from "canonical-weth/WETH9.sol";
 
 import {SnowbridgeL2Adaptor} from "../../../../src/l2-integration/SnowbridgeL2Adaptor.sol";
-import {ISpokePool} from "../../../../src/l2-integration/interfaces/ISpokePool.sol";
 import {ISwapRouter} from "../interfaces/ISwapRouter.sol";
 import {ISwapLegacyRouter} from "../interfaces/ISwapLegacyRouter.sol";
 import {DepositParams, SendParams, SwapParams} from "../../../../src/l2-integration/Types.sol";
@@ -15,29 +13,21 @@ import {
     USDC as SEPOLIA_USDC,
     BASE_USDC as SEPOLIA_BASE_USDC,
     CHAIN_ID as SEPOLIA_CHAIN_ID,
-    BASE_CHAIN_ID as SEPOLIA_BASE_CHAIN_ID,
     WETH9 as SEPOLIA_WETH9,
-    BASE_WETH9 as SEPOLIA_BASE_WETH9,
     MULTI_CALL_HANDLER as SEPOLIA_MULTI_CALL_HANDLER,
     TIME_BUFFER as SEPOLIA_TIME_BUFFER,
     UNISWAP_ROUTER as SEPOLIA_UNISWAP_ROUTER,
-    ARBITRUM_USDC as SEPOLIA_ARBITRUM_USDC,
-    ARBITRUM_CHAIN_ID as SEPOLIA_ARBITRUM_CHAIN_ID,
-    ARBITRUM_WETH9 as SEPOLIA_ARBITRUM_WETH9
+    ARBITRUM_USDC as SEPOLIA_ARBITRUM_USDC
 } from "../constants/Sepolia.sol";
 
 import {
     USDC as MAINNET_USDC,
     BASE_USDC as MAINNET_BASE_USDC,
     CHAIN_ID as MAINNET_CHAIN_ID,
-    BASE_CHAIN_ID as MAINNET_BASE_CHAIN_ID,
     WETH9 as MAINNET_WETH9,
-    BASE_WETH9 as MAINNET_BASE_WETH9,
     MULTI_CALL_HANDLER as MAINNET_MULTI_CALL_HANDLER,
     TIME_BUFFER as MAINNET_TIME_BUFFER,
     UNISWAP_ROUTER as MAINNET_UNISWAP_ROUTER,
-    ARBITRUM_CHAIN_ID as MAINNET_ARBITRUM_CHAIN_ID,
-    ARBITRUM_WETH9 as MAINNET_ARBITRUM_WETH9,
     ARBITRUM_USDC as MAINNET_ARBITRUM_USDC
 } from "../constants/Mainnet.sol";
 

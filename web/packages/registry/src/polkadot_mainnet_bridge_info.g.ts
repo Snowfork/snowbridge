@@ -12,22 +12,21 @@ const registry = {
         },
         relaychainUrl: "https://polkadot-rpc.n.dwellir.com",
         parachains: {
-            "1000": "wss://asset-hub-polkadot-rpc.n.dwellir.com",
-            "1002": "https://bridge-hub-polkadot-rpc.n.dwellir.com",
+            "1000": "wss://polkadot-asset-hub-rpc.polkadot.io",
+            "1002": "wss://polkadot-bridge-hub-rpc.polkadot.io",
             "2000": "wss://acala-rpc-0.aca-api.network",
-            "2004": "wss://moonbeam.ibp.network",
-            "2030": "wss://bifrost-polkadot.ibp.network",
+            "2004": "wss://wss.api.moonbeam.network",
+            "2030": "wss://eu.bifrost-polkadot-rpc.liebi.com/ws",
             "2034": "wss://hydration-rpc.n.dwellir.com",
             "2043": "wss://parachain-rpc.origin-trail.network",
-            "3369": "wss://polkadot-mythos-rpc.polkadot.io",
+            "3369": "wss://mythos-rpc.dmarket.com",
         },
         gatewayContract: "0x27ca963c279c93801941e1eb8799c23f407d68e7",
-        beefyContract: "0x1817874feab3ce053d0f40abc23870db35c2affc",
+        beefyContract: "0x7cfc5c8b341991993080af67d940b6ad19a010e1",
         assetHubParaId: 1000,
         bridgeHubParaId: 1002,
-        v2_parachains: [1000],
-        indexerGraphQlUrl:
-            "https://snowbridge.squids.live/snowbridge-subsquid-polkadot@v2/api/graphql",
+        v2_parachains: [1000, 2034],
+        indexerGraphQlUrl: "https://subsquid.snowbridge.network/graphql",
         kusama: {
             assetHubParaId: 1000,
             bridgeHubParaId: 1002,
@@ -69,7 +68,7 @@ const registry = {
                     ],
                 },
                 "8453": {
-                    adapterAddress: "0x07fe4E7340976FC873B74bAfe3C3e5b0e01f3665".toLowerCase(),
+                    adapterAddress: "0x07fe4e7340976fc873b74bafe3c3e5b0e01f3665",
                     feeTokenAddress: "0x4200000000000000000000000000000000000006",
                     swapRoutes: [
                         {
@@ -125,6 +124,8 @@ const registry = {
                 "0x57e114b691db790c35207b2e685d4a43181e6061",
                 "0x8236a87084f8b84306f72007f36f2618a5634494",
                 "0x1abaea1f7c830bd89acc67ec4af516284b1bc33c",
+                "0xb62132e35a6c13ee1ee0f84dc5d40bad8d815206",
+                "0xd166337499e176bbc38a1fbd113ab144e5bd2df7",
                 "0x56072c95faa701256059aa122697b133aded9279",
                 "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
                 "0x0e186357c323c806c1efdad36d217f7a54b63d18",
@@ -134,7 +135,6 @@ const registry = {
                 "0x582d872a1b094fc48f5de31d3b73f2d9be47def1",
                 "0x6b175474e89094c44da98b954eedeac495271d0f",
                 "0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce",
-                "0x7de91b204c1c737bcee6f000aaa6569cf7061cb7",
                 "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
                 "0x8daebade922df735c38c80c7ebd708af50815faa",
                 "0x0000000000000000000000000000000000000000",
@@ -148,6 +148,7 @@ const registry = {
                 "0x5fdcd48f09fb67de3d202cd854b372aec1100ed5",
                 "0xa37b046782518a80e2e69056009fbd0431d36e50",
                 "0x769916a66fdac0e3d57363129caac59386ea622b",
+                "0x1f752250f518e419f2f03804e25728c5c6dff73f",
                 "0x92262680a8d6636bba9bffdf484c274ca2de6400",
             ],
         },
@@ -172,6 +173,8 @@ const registry = {
                 "0x57e114b691db790c35207b2e685d4a43181e6061",
                 "0x8236a87084f8b84306f72007f36f2618a5634494",
                 "0x1abaea1f7c830bd89acc67ec4af516284b1bc33c",
+                "0xb62132e35a6c13ee1ee0f84dc5d40bad8d815206",
+                "0xd166337499e176bbc38a1fbd113ab144e5bd2df7",
                 "0x56072c95faa701256059aa122697b133aded9279",
                 "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
                 "0x0e186357c323c806c1efdad36d217f7a54b63d18",
@@ -181,7 +184,6 @@ const registry = {
                 "0x582d872a1b094fc48f5de31d3b73f2d9be47def1",
                 "0x6b175474e89094c44da98b954eedeac495271d0f",
                 "0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce",
-                "0x7de91b204c1c737bcee6f000aaa6569cf7061cb7",
                 "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
                 "0x8daebade922df735c38c80c7ebd708af50815faa",
                 "0x0000000000000000000000000000000000000000",
@@ -195,6 +197,7 @@ const registry = {
                 "0x5fdcd48f09fb67de3d202cd854b372aec1100ed5",
                 "0xa37b046782518a80e2e69056009fbd0431d36e50",
                 "0x769916a66fdac0e3d57363129caac59386ea622b",
+                "0x1f752250f518e419f2f03804e25728c5c6dff73f",
                 "0x92262680a8d6636bba9bffdf484c274ca2de6400",
             ],
         },
@@ -495,6 +498,7 @@ const registry = {
             assets: [
                 "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
                 "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                "0x0000000000000000000000000000000000000000",
             ],
         },
         {
@@ -554,11 +558,12 @@ const registry = {
             assets: [
                 "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
                 "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                "0x0000000000000000000000000000000000000000",
             ],
         },
     ],
     registry: {
-        timestamp: "2026-02-13T02:45:52.753Z",
+        timestamp: "2026-05-05T21:57:00.463Z",
         environment: "polkadot_mainnet",
         ethChainId: 1,
         gatewayAddress: "0x27ca963c279c93801941e1eb8799c23f407d68e7",
@@ -572,7 +577,7 @@ const registry = {
             accountType: "AccountId32",
             name: "Polkadot",
             specName: "polkadot",
-            specVersion: 2000006,
+            specVersion: 2002001,
         },
         bridgeHub: {
             tokenSymbols: "DOT",
@@ -582,7 +587,7 @@ const registry = {
             accountType: "AccountId32",
             name: "Polkadot BridgeHub",
             specName: "bridge-hub-polkadot",
-            specVersion: 2000006,
+            specVersion: 2002001,
         },
         ethereumChains: {
             ethereum_1: {
@@ -665,6 +670,20 @@ const registry = {
                         name: "Euro Coin",
                         symbol: "EURC",
                         decimals: 6,
+                        deliveryGas: 80000n,
+                    },
+                    "0xb62132e35a6c13ee1ee0f84dc5d40bad8d815206": {
+                        token: "0xb62132e35a6c13ee1ee0f84dc5d40bad8d815206",
+                        name: "Nexo",
+                        symbol: "NEXO",
+                        decimals: 18,
+                        deliveryGas: 80000n,
+                    },
+                    "0xd166337499e176bbc38a1fbd113ab144e5bd2df7": {
+                        token: "0xd166337499e176bbc38a1fbd113ab144e5bd2df7",
+                        name: "Staked USDat",
+                        symbol: "sUSDat",
+                        decimals: 18,
                         deliveryGas: 80000n,
                     },
                     "0x56072c95faa701256059aa122697b133aded9279": {
@@ -853,6 +872,15 @@ const registry = {
                             "0x3b7f577715347bdcde4739a1bf1a7f1dec71e8ff4dbe23a6a49348ebf920c658",
                         deliveryGas: 80000n,
                     },
+                    "0x1f752250f518e419f2f03804e25728c5c6dff73f": {
+                        token: "0x1f752250f518e419f2f03804e25728c5c6dff73f",
+                        name: "Robonomics",
+                        symbol: "XRT",
+                        decimals: 9,
+                        foreignId:
+                            "0x3572e2b3281d738a7579848b023666ec5cb13a63a5372a6de7e74f16acfab7b8",
+                        deliveryGas: 80000n,
+                    },
                     "0x92262680a8d6636bba9bffdf484c274ca2de6400": {
                         token: "0x92262680a8d6636bba9bffdf484c274ca2de6400",
                         name: "DED",
@@ -864,7 +892,10 @@ const registry = {
                     },
                 },
                 key: "ethereum_1",
-                baseDeliveryGas: 120000n,
+                baseVerificationGas: 120000n,
+                baseDispatchGas: 80000n,
+                twoPhaseSubmitGas: 1000000n,
+                submitFiatShamirGas: 2000000n,
             },
             ethereum_l2_10: {
                 kind: "ethereum_l2",
@@ -1062,7 +1093,7 @@ const registry = {
                     accountType: "AccountId32",
                     name: "Polkadot Asset Hub",
                     specName: "statemint",
-                    specVersion: 2000006,
+                    specVersion: 2002001,
                 },
                 assets: {
                     "0x9d39a5de30e57443bff2a8307a4256c8797a3497": {
@@ -1151,6 +1182,22 @@ const registry = {
                         minimumBalance: 1n,
                         symbol: "EURC",
                         decimals: 6,
+                        isSufficient: false,
+                    },
+                    "0xb62132e35a6c13ee1ee0f84dc5d40bad8d815206": {
+                        token: "0xb62132e35a6c13ee1ee0f84dc5d40bad8d815206",
+                        name: "",
+                        minimumBalance: 1n,
+                        symbol: "",
+                        decimals: 0,
+                        isSufficient: false,
+                    },
+                    "0xd166337499e176bbc38a1fbd113ab144e5bd2df7": {
+                        token: "0xd166337499e176bbc38a1fbd113ab144e5bd2df7",
+                        name: "",
+                        minimumBalance: 1n,
+                        symbol: "",
+                        decimals: 0,
                         isSufficient: false,
                     },
                     "0x56072c95faa701256059aa122697b133aded9279": {
@@ -1600,6 +1647,51 @@ const registry = {
                         minimumBalance: 1000000000n,
                         isSufficient: false,
                     },
+                    "0x1f752250f518e419f2f03804e25728c5c6dff73f": {
+                        token: "0x1f752250f518e419f2f03804e25728c5c6dff73f",
+                        name: "Robonomics",
+                        symbol: "XRT",
+                        decimals: 9,
+                        locationOnEthereum: {
+                            parents: 1,
+                            interior: {
+                                x2: [
+                                    {
+                                        globalConsensus: {
+                                            polkadot: null,
+                                        },
+                                    },
+                                    {
+                                        parachain: 3388,
+                                    },
+                                ],
+                            },
+                        },
+                        location: {
+                            parents: 1,
+                            interior: {
+                                x1: [
+                                    {
+                                        parachain: 3388,
+                                    },
+                                ],
+                            },
+                        },
+                        locationOnAH: {
+                            parents: 1,
+                            interior: {
+                                x1: [
+                                    {
+                                        parachain: 3388,
+                                    },
+                                ],
+                            },
+                        },
+                        foreignId:
+                            "0x3572e2b3281d738a7579848b023666ec5cb13a63a5372a6de7e74f16acfab7b8",
+                        minimumBalance: 1000n,
+                        isSufficient: false,
+                    },
                     "0x92262680a8d6636bba9bffdf484c274ca2de6400": {
                         token: "0x92262680a8d6636bba9bffdf484c274ca2de6400",
                         name: "DED",
@@ -1686,7 +1778,7 @@ const registry = {
                     accountType: "AccountId32",
                     name: "Acala",
                     specName: "acala",
-                    specVersion: 2330,
+                    specVersion: 2350,
                 },
                 assets: {
                     "0x0000000000000000000000000000000000000000": {
@@ -1698,7 +1790,7 @@ const registry = {
                         isSufficient: false,
                     },
                 },
-                estimatedExecutionFeeDOT: 300000000n,
+                estimatedExecutionFeeDOT: 484934n,
                 estimatedDeliveryFeeDOT: 307100000n,
             },
             polkadot_2004: {
@@ -1726,7 +1818,7 @@ const registry = {
                     evmChainId: 1284,
                     name: "Moonbeam",
                     specName: "moonbeam",
-                    specVersion: 4102,
+                    specVersion: 4203,
                 },
                 xcDOT: "0xffffffff1fcacbd218edc0eba20fc2308c778080",
                 assets: {
@@ -1794,7 +1886,7 @@ const registry = {
                         xc20: "0xffffffff7bc304425217b49e9598415c514ae81b",
                     },
                 },
-                estimatedExecutionFeeDOT: 105696134n,
+                estimatedExecutionFeeDOT: 49217139n,
                 estimatedDeliveryFeeDOT: 306500000n,
             },
             polkadot_2030: {
@@ -1822,7 +1914,7 @@ const registry = {
                     evmChainId: 996,
                     name: "Bifrost Polkadot",
                     specName: "bifrost_polkadot",
-                    specVersion: 23001,
+                    specVersion: 24001,
                 },
                 assets: {
                     "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2": {
@@ -1842,7 +1934,7 @@ const registry = {
                         isSufficient: false,
                     },
                 },
-                estimatedExecutionFeeDOT: 87105967n,
+                estimatedExecutionFeeDOT: 58945570n,
                 estimatedDeliveryFeeDOT: 307100000n,
             },
             polkadot_2034: {
@@ -1855,11 +1947,11 @@ const registry = {
                     hasTxPaymentApi: true,
                     hasDryRunRpc: true,
                     hasDotBalance: true,
-                    hasEthBalance: false,
+                    hasEthBalance: true,
                     hasXcmPaymentApi: true,
-                    supportsAliasOrigin: false,
-                    xcmVersion: "v4",
-                    supportsV2: false,
+                    supportsAliasOrigin: true,
+                    xcmVersion: "v5",
+                    supportsV2: true,
                 },
                 info: {
                     tokenSymbols: "HDX",
@@ -1870,7 +1962,7 @@ const registry = {
                     evmChainId: 222222,
                     name: "Hydration",
                     specName: "hydradx",
-                    specVersion: 379,
+                    specVersion: 411,
                 },
                 assets: {
                     "0x45804880de22913dafe09f4980848ece6ecbaf78": {
@@ -2026,7 +2118,7 @@ const registry = {
                         isSufficient: true,
                     },
                 },
-                estimatedExecutionFeeDOT: 1668340n,
+                estimatedExecutionFeeDOT: 2536089n,
                 estimatedDeliveryFeeDOT: 307100000n,
             },
             polkadot_2043: {
@@ -2079,9 +2171,9 @@ const registry = {
                     hasDryRunRpc: true,
                     hasDotBalance: false,
                     hasEthBalance: false,
-                    hasXcmPaymentApi: false,
-                    supportsAliasOrigin: false,
-                    xcmVersion: "v4",
+                    hasXcmPaymentApi: true,
+                    supportsAliasOrigin: true,
+                    xcmVersion: "v5",
                     supportsV2: false,
                 },
                 info: {
@@ -2092,7 +2184,7 @@ const registry = {
                     accountType: "AccountId20",
                     name: "Mythos",
                     specName: "mythos",
-                    specVersion: 1016,
+                    specVersion: 1021,
                 },
                 assets: {
                     "0xba41ddf06b7ffd89d1267b5a93bfef2424eb2003": {
@@ -2134,7 +2226,7 @@ const registry = {
                         accountType: "AccountId32",
                         name: "Kusama Asset Hub",
                         specName: "statemine",
-                        specVersion: 2000006,
+                        specVersion: 2002000,
                     },
                     assets: {
                         "0x9d39a5de30e57443bff2a8307a4256c8797a3497": {
@@ -2469,6 +2561,73 @@ const registry = {
             },
             assetHubParaId: 1000,
             bridgeHubParaId: 1002,
+        },
+    },
+    chains: {
+        ethereum: {
+            key: "ethereum_1",
+            kind: "ethereum",
+            id: 1,
+        },
+        optimism: {
+            key: "ethereum_l2_10",
+            kind: "ethereum_l2",
+            id: 10,
+        },
+        moonbeam: {
+            key: "ethereum_1284",
+            kind: "ethereum",
+            id: 1284,
+        },
+        base: {
+            key: "ethereum_l2_8453",
+            kind: "ethereum_l2",
+            id: 8453,
+        },
+        arbitrum: {
+            key: "ethereum_l2_42161",
+            kind: "ethereum_l2",
+            id: 42161,
+        },
+        assetHub: {
+            key: "polkadot_1000",
+            kind: "polkadot",
+            id: 1000,
+        },
+        acala: {
+            key: "polkadot_2000",
+            kind: "polkadot",
+            id: 2000,
+        },
+        moonbeamSubstrate: {
+            key: "polkadot_2004",
+            kind: "polkadot",
+            id: 2004,
+        },
+        bifrostPolkadot: {
+            key: "polkadot_2030",
+            kind: "polkadot",
+            id: 2030,
+        },
+        hydration: {
+            key: "polkadot_2034",
+            kind: "polkadot",
+            id: 2034,
+        },
+        neuroWeb: {
+            key: "polkadot_2043",
+            kind: "polkadot",
+            id: 2043,
+        },
+        mythos: {
+            key: "polkadot_3369",
+            kind: "polkadot",
+            id: 3369,
+        },
+        kusamaAssetHub: {
+            key: "kusama_1000",
+            kind: "kusama",
+            id: 1000,
         },
     },
 } as const

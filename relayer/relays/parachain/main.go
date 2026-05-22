@@ -1,4 +1,4 @@
-package parachain
+package parachainv1
 
 import (
 	"context"
@@ -11,8 +11,6 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
 	"github.com/snowfork/snowbridge/relayer/crypto/secp256k1"
-	"github.com/snowfork/snowbridge/relayer/crypto/sr25519"
-
 	"github.com/snowfork/snowbridge/relayer/ofac"
 
 	log "github.com/sirupsen/logrus"
@@ -28,7 +26,7 @@ type Relay struct {
 	beefyListener         *BeefyListener
 }
 
-func NewRelay(config *Config, keypair *secp256k1.Keypair, keypair2 *sr25519.Keypair) (*Relay, error) {
+func NewRelay(config *Config, keypair *secp256k1.Keypair) (*Relay, error) {
 	log.Info("Creating worker")
 
 	parachainConn := parachain.NewConnection(config.Source.Parachain.Endpoint, nil)
@@ -46,7 +44,6 @@ func NewRelay(config *Config, keypair *secp256k1.Keypair, keypair2 *sr25519.Keyp
 		&config.Sink,
 		ethereumConnWriter,
 		tasks,
-		config,
 	)
 	if err != nil {
 		return nil, err
@@ -54,7 +51,6 @@ func NewRelay(config *Config, keypair *secp256k1.Keypair, keypair2 *sr25519.Keyp
 
 	beefyListener := NewBeefyListener(
 		&config.Source,
-		&config.Schedule,
 		ethereumConnBeefy,
 		relaychainConn,
 		parachainConn,
@@ -105,8 +101,6 @@ func (relay *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	if err != nil {
 		return err
 	}
-
-	log.Info("Current relay's ID:", relay.config.Schedule.ID)
 
 	return nil
 }

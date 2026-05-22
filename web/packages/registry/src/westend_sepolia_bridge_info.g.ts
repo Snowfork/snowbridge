@@ -8,13 +8,13 @@ const registry = {
             "421614": "https://arbitrum-sepolia-rpc.publicnode.com",
             "11155111": "https://ethereum-sepolia-rpc.publicnode.com",
         },
-        relaychainUrl: "wss://westend-rpc.n.dwellir.com",
+        relaychainUrl: "https://westend-rpc.polkadot.io",
         parachains: {
-            "1000": "wss://asset-hub-westend-rpc.n.dwellir.com",
-            "1002": "wss://bridge-hub-westend-rpc.n.dwellir.com",
+            "1000": "https://westend-asset-hub-rpc.polkadot.io",
+            "1002": "https://westend-bridge-hub-rpc.polkadot.io",
         },
         gatewayContract: "0x9ed8b47bc3417e3bd0507adc06e56e2fa360a4e9",
-        beefyContract: "0xa04460b1d8bbef33f54edb2c3115e3e4d41237a6",
+        beefyContract: "0xebd1cfcf82baa170b86bde532f69a6a49c6c790d",
         assetHubParaId: 1000,
         bridgeHubParaId: 1002,
         v2_parachains: [1000],
@@ -76,6 +76,7 @@ const registry = {
             assets: [
                 "0x0000000000000000000000000000000000000000",
                 "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
+                "0x7169d38820dfd117c3fa1f22a697dba58d90ba06",
                 "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
                 "0x23838b1bb57cecf4422a57dd8e7f8a087b30d54f",
                 "0xb8a0f2703ac6bdd352096c90c2945a097e8f4055",
@@ -94,6 +95,7 @@ const registry = {
             assets: [
                 "0x0000000000000000000000000000000000000000",
                 "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
+                "0x7169d38820dfd117c3fa1f22a697dba58d90ba06",
                 "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
                 "0x23838b1bb57cecf4422a57dd8e7f8a087b30d54f",
                 "0xb8a0f2703ac6bdd352096c90c2945a097e8f4055",
@@ -155,13 +157,14 @@ const registry = {
                 id: 1000,
             },
             assets: [
+                "0x0000000000000000000000000000000000000000",
                 "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
                 "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
             ],
         },
     ],
     registry: {
-        timestamp: "2026-02-12T08:34:32.096Z",
+        timestamp: "2026-03-12T12:21:19.866Z",
         environment: "westend_sepolia",
         ethChainId: 11155111,
         gatewayAddress: "0x9ed8b47bc3417e3bd0507adc06e56e2fa360a4e9",
@@ -175,7 +178,7 @@ const registry = {
             accountType: "AccountId32",
             name: "Westend",
             specName: "westend",
-            specVersion: 1021002,
+            specVersion: 1022000,
         },
         bridgeHub: {
             tokenSymbols: "WND",
@@ -185,7 +188,7 @@ const registry = {
             accountType: "AccountId32",
             name: "Westend BridgeHub",
             specName: "bridge-hub-westend",
-            specVersion: 1021001,
+            specVersion: 1022000,
         },
         ethereumChains: {
             ethereum_l2_84532: {
@@ -270,6 +273,13 @@ const registry = {
                         decimals: 6,
                         deliveryGas: 80000n,
                     },
+                    "0x7169d38820dfd117c3fa1f22a697dba58d90ba06": {
+                        token: "0x7169d38820dfd117c3fa1f22a697dba58d90ba06",
+                        name: "Test Tether USD",
+                        symbol: "USDT",
+                        decimals: 6,
+                        deliveryGas: 80000n,
+                    },
                     "0x72c610e05eaafcdf1fa7a2da15374ee90edb1620": {
                         token: "0x72c610e05eaafcdf1fa7a2da15374ee90edb1620",
                         name: "Frequency",
@@ -313,7 +323,7 @@ const registry = {
                     },
                 },
                 key: "ethereum_11155111",
-                baseDeliveryGas: 120000n,
+                baseVerificationGas: 120000n,
             },
         },
         parachains: {
@@ -341,7 +351,7 @@ const registry = {
                     accountType: "AccountId32",
                     name: "Westend Asset Hub",
                     specName: "westmint",
-                    specVersion: 1021003,
+                    specVersion: 1022000,
                 },
                 assets: {
                     "0x0000000000000000000000000000000000000000": {
@@ -354,6 +364,14 @@ const registry = {
                     },
                     "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238": {
                         token: "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
+                        name: "",
+                        minimumBalance: 1n,
+                        symbol: "",
+                        decimals: 0,
+                        isSufficient: false,
+                    },
+                    "0x7169d38820dfd117c3fa1f22a697dba58d90ba06": {
+                        token: "0x7169d38820dfd117c3fa1f22a697dba58d90ba06",
                         name: "",
                         minimumBalance: 1n,
                         symbol: "",
@@ -488,6 +506,28 @@ const registry = {
                 estimatedExecutionFeeDOT: 0n,
                 estimatedDeliveryFeeDOT: 0n,
             },
+        },
+    },
+    chains: {
+        baseSepolia: {
+            key: "ethereum_l2_84532",
+            kind: "ethereum_l2",
+            id: 84532,
+        },
+        arbitrumSepolia: {
+            key: "ethereum_l2_421614",
+            kind: "ethereum_l2",
+            id: 421614,
+        },
+        sepolia: {
+            key: "ethereum_11155111",
+            kind: "ethereum",
+            id: 11155111,
+        },
+        assetHub: {
+            key: "polkadot_1000",
+            kind: "polkadot",
+            id: 1000,
         },
     },
 } as const

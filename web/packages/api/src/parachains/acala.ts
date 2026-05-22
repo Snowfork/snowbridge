@@ -58,17 +58,6 @@ export class AcalaParachain extends ParachainBase {
         return assets
     }
 
-    // Acala does not support xcm fee payment queries
-    async calculateXcmFee(_destinationXcm: any, asset: any): Promise<bigint> {
-        console.warn(
-            `${this.specName} does not support calculating fee with asset '${JSON.stringify(
-                asset,
-            )}'. Using default.`,
-        )
-
-        return 300_000_000n
-    }
-
     async calculateDeliveryFeeInDOT(_destParachainId: number, _xcm: any): Promise<bigint> {
         throw Error(`${this.specName} does not support.`)
     }

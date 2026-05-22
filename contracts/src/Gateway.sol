@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.33;
+pragma solidity 0.8.34;
 
 import {MerkleProof} from "openzeppelin/utils/cryptography/MerkleProof.sol";
 import {Verification} from "./Verification.sol";
 import {Initializer} from "./Initializer.sol";
-import {AgentExecutor} from "./AgentExecutor.sol";
 import {IGatewayBase} from "./interfaces/IGatewayBase.sol";
 import {
     OperatingMode,
@@ -26,7 +25,6 @@ import {
     IGatewayV2
 } from "./Types.sol";
 import {Network} from "./v2/Types.sol";
-import {Upgrade} from "./Upgrade.sol";
 import {IInitializable} from "./interfaces/IInitializable.sol";
 import {IUpgradable} from "./interfaces/IUpgradable.sol";
 import {ERC1967} from "./utils/ERC1967.sol";
@@ -38,10 +36,9 @@ import {Functions} from "./Functions.sol";
 import {Constants} from "./Constants.sol";
 
 import {CoreStorage} from "./storage/CoreStorage.sol";
-import {PricingStorage} from "./storage/PricingStorage.sol";
 import {AssetsStorage} from "./storage/AssetsStorage.sol";
 
-import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
+import {UD60x18} from "prb/math/src/UD60x18.sol";
 
 contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgradable {
     using Address for address;
@@ -55,10 +52,14 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
 
     // Message handlers can only be dispatched by the gateway itself
     modifier onlySelf() {
+        _onlySelf();
+        _;
+    }
+
+    function _onlySelf() internal view {
         if (msg.sender != address(this)) {
             revert IGatewayBase.Unauthorized();
         }
-        _;
     }
 
     // Makes functions nonreentrant
@@ -277,7 +278,7 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
         override(IGatewayV1, IGatewayV2)
         returns (bool)
     {
-        return CallsV1.isTokenRegistered(token);
+        return CallsV2.isTokenRegistered(token);
     }
 
     function depositEther() external payable {
@@ -286,16 +287,6 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
 
     function queryForeignTokenID(address token) external view returns (bytes32) {
         return AssetsStorage.layout().tokenRegistry[token].foreignID;
-    }
-
-    // Total fee for registering a token
-    function quoteRegisterTokenFee() external view returns (uint256) {
-        return CallsV1.quoteRegisterTokenFee();
-    }
-
-    // Register an Ethereum-native token in the gateway and on AssetHub
-    function registerToken(address token) external payable nonreentrant {
-        CallsV1.registerToken(token);
     }
 
     // Total fee for sending a token

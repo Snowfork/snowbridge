@@ -178,14 +178,20 @@ fn parse_hex_address(hex_str: &str) -> Result<Vec<u8>, EstimatorError> {
     hex::decode(&hex_str[2..]).map_err(|_| EstimatorError::InvalidHexFormat)
 }
 
+// Decode claimer bytes as a SCALE-encoded Location. The claimer is provided by the
+// user calling the Gateway contract and is not validated on-chain, so it may not be
+// decodable (e.g. manually constructed transactions may pass invalid or versioned bytes).
+// On decode failure we return None, which causes the downstream code to fall back to the
+// bridge owner as claimer — matching the behavior of the inbound queue pallet on Polkadot.
 fn parse_claimer(claimer_hex: &str) -> Result<Option<Location>, EstimatorError> {
     let claimer_bytes = parse_hex_address(claimer_hex)?;
     if claimer_bytes.len() < 2 {
         return Ok(None);
     }
-    let location = codec::Decode::decode(&mut &claimer_bytes[..])
-        .map_err(|_| EstimatorError::InvalidCommand("Failed to decode claimer".to_string()))?;
-    Ok(Some(location))
+    match codec::Decode::decode(&mut &claimer_bytes[..]) {
+        Ok(location) => Ok(Some(location)),
+        Err(_) => Ok(None),
+    }
 }
 
 fn parse_origin(origin_hex: &str) -> Result<[u8; 20], EstimatorError> {

@@ -1,5 +1,6 @@
 import { Keyring } from "@polkadot/keyring"
-import { Context, addTip } from "@snowbridge/api"
+import { createApi } from "@snowbridge/api"
+import { EthersEthereumProvider } from "@snowbridge/provider-ethers"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { bridgeInfoFor } from "@snowbridge/registry"
 
@@ -34,15 +35,14 @@ export const addTipToMessage = async () => {
     }
     console.log(`Using environment '${env}'`)
 
-    const { registry, environment } = bridgeInfoFor(env)
-    const context = new Context(environment)
+    const info = bridgeInfoFor(env)
+    const api = createApi({ info, ethereumProvider: new EthersEthereumProvider() })
+    const addTip = api.addTip()
 
     // Get user's Polkadot account
     const keyring = new Keyring({ type: "sr25519" })
     const userAccount = keyring.addFromUri(process.env.SUBSTRATE_KEY ?? "//Alice")
     console.log("User account:", userAccount.address)
-
-    const assetHub = await context.assetHub()
 
     const tipParams = {
         direction,
@@ -52,28 +52,21 @@ export const addTipToMessage = async () => {
     }
 
     // Step 1: Estimate the extrinsic fee
-    const estimatedFee = await addTip.getFee(assetHub, registry, tipParams, userAccount.address)
+    const estimatedFee = await addTip.fee(tipParams, userAccount.address)
     console.log("Estimated extrinsic fee:", estimatedFee, " DOT")
 
     // Step 2: Dry run the transaction
-    const dryRunResult = await addTip.dryRunAddTip(
-        assetHub,
-        registry,
-        tipParams,
-        userAccount.address,
-    )
+    const tipTx = await addTip.tx(tipParams)
+    const dryRunResult = await addTip.validate(tipTx, userAccount.address)
 
     if (!dryRunResult.success) {
-        throw new Error(`Dry run failed: ${dryRunResult.errorMessage}`)
+        throw new Error(dryRunResult.data.errorMessage ?? "Dry run failed")
     }
     console.log("Dry run successful")
 
-    // Step 3: Create the tip transaction
-    const tipTx = await addTip.createAddTip(assetHub, registry, tipParams)
-
     // Step 4: Sign and send if not a dry run
     if (process.env.DRY_RUN !== "true") {
-        const response = await addTip.signAndSend(assetHub, tipTx, userAccount, {
+        const response = await addTip.signAndSend(tipTx, userAccount, {
             withSignedTransaction: true,
         })
         if (!response) {
@@ -86,7 +79,7 @@ export const addTipToMessage = async () => {
         )
     }
 
-    await context.destroyContext()
+    await api.context.destroyContext()
 }
 
 if (require.main === module) {

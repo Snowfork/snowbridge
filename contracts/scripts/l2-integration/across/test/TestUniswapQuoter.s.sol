@@ -1,12 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "forge-std/Script.sol";
-import "forge-std/console.sol";
-import "openzeppelin/token/ERC20/IERC20.sol";
-import {WETH9} from "canonical-weth/WETH9.sol";
+import {Script} from "forge-std/Script.sol";
+import {console} from "forge-std/console.sol";
 
-import {ISwapRouter} from "../interfaces/ISwapRouter.sol";
 import {ISwapQuoter} from "../interfaces/ISwapQuoter.sol";
 
 import {

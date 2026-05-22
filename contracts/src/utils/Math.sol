@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2023 OpenZeppelin
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 // Code from https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/math/Math.sol
-pragma solidity 0.8.33;
+pragma solidity 0.8.34;
 
 /**
  * @dev Standard math utilities missing in the Solidity language.
@@ -79,6 +79,7 @@ library Math {
     function log2(uint256 value, Rounding rounding) internal pure returns (uint256) {
         unchecked {
             uint256 result = log2(value);
+            // forge-lint: disable-next-line(incorrect-shift)
             return result + (unsignedRoundsUp(rounding) && 1 << result < value ? 1 : 0);
         }
     }
