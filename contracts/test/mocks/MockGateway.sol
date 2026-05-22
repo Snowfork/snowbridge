@@ -116,6 +116,11 @@ contract MockGateway is Gateway {
         HandlersV2.unlockNativeToken(executor, data);
     }
 
+    // Expose Functions.ensureNotAssetHubAgent for direct unit/fuzz testing.
+    function exposed_ensureNotAssetHubAgent(bytes32 agentID) external view returns (address) {
+        return Functions.ensureNotAssetHubAgent(agentID);
+    }
+
     // Expose internal helper for testing
     function exposed_v1_transactionBaseGas() external pure returns (uint256) {
         return v1_transactionBaseGas();
