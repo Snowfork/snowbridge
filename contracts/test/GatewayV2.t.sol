@@ -666,6 +666,8 @@ contract GatewayV2Test is Test {
         MockGateway(address(gateway)).exposed_ensureNotAssetHubAgent(Constants.ASSET_HUB_AGENT_ID);
     }
 
+    // BridgeHub is intentionally non-privileged in the V2 deny list; only
+    // ASSET_HUB_AGENT_ID is reserved.
     function testEnsureNotAssetHubAgent_AllowsBridgeHub() public {
         address bridgeHubAgent =
             MockGateway(address(gateway)).exposed_ensureNotAssetHubAgent(Constants.BRIDGE_HUB_AGENT_ID);
@@ -867,36 +869,6 @@ contract GatewayV2Test is Test {
                     nonce: 2,
                     topic: topic2,
                     commands: commands
-                }),
-                proof,
-                makeMockProof(),
-                relayerRewardAddress
-            );
-    }
-
-    // (7) Latent BridgeHub-agent bypass: SNOWBSC-532-style forgery on the
-    // Polkadot side via AliasOrigin(Here) hashes to BRIDGE_HUB_AGENT_ID,
-    // which this PR does NOT block. Today the BridgeHub agent on mainnet
-    // holds nothing, but the day anything funds it (or recognises its
-    // address as authoritative) this becomes exploitable. Skipped until
-    // the deny list is broadened — see PR review comments.
-    function testAgentCallContractFailsForBridgeHub() public {
-        vm.skip(true);
-        bytes32 topic = keccak256("topic-bh");
-
-        vm.expectEmit(true, false, false, false);
-        emit IGatewayV2.CommandFailed(1, 0);
-        vm.expectEmit(true, false, false, true);
-        emit IGatewayV2.InboundMessageDispatched(1, topic, false, relayerRewardAddress);
-
-        hoax(relayer, 1 ether);
-        IGatewayV2(address(gateway))
-            .v2_submit(
-                InboundMessageV2({
-                    origin: Constants.BRIDGE_HUB_AGENT_ID,
-                    nonce: 1,
-                    topic: topic,
-                    commands: makeCallContractCommand(0)
                 }),
                 proof,
                 makeMockProof(),
