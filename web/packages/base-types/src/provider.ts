@@ -114,6 +114,7 @@ export interface EthereumProvider<T extends EthereumProviderTypes> {
     method: string,
     args: readonly unknown[],
   ): string;
+  encodeAbiParameters(types: string[], values: readonly unknown[]): string;
   decodeFunctionResult<U = unknown>(
     abi: T["Abi"],
     method: string,

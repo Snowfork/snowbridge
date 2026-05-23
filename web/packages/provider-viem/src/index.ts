@@ -422,6 +422,10 @@ export class ViemEthereumProvider
     } as never);
   }
 
+  encodeAbiParameters(types: string[], values: readonly unknown[]): Hex {
+    return encodeAbiParameters(parseAbiParameters(types.join(",")), [...values]);
+  }
+
   decodeFunctionResult<T = unknown>(
     abi: Abi | readonly [string, ...string[]],
     method: string,

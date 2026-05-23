@@ -237,7 +237,7 @@ export class ERC20FromAH<T extends EthereumProviderTypes> implements TransferInt
             input: {
                 registry,
                 sourceAccount,
-                beneficiaryAccount,
+                beneficiaryAccount: l1ReceiverAddress,
                 tokenAddress,
                 amount,
                 fee,

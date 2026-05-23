@@ -271,6 +271,10 @@ export class EthersEthereumProvider
     return new Interface(abi).encodeFunctionData(method, args);
   }
 
+  encodeAbiParameters(types: string[], values: readonly unknown[]): string {
+    return AbiCoder.defaultAbiCoder().encode(types, values);
+  }
+
   decodeFunctionResult<T = unknown>(
     abi: InterfaceAbi,
     method: string,
