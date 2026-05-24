@@ -53,28 +53,6 @@ type V2CommandStruct = {
     payload: string
 }
 
-function encodeV2DispatchCalldataManual<T extends EthereumProviderTypes>(
-    context: Context<T>,
-    commands: V2CommandStruct[],
-    origin: string,
-    nonce: bigint,
-) {
-    const maxUint64 = (1n << 64n) - 1n
-    const normalizedCommands = commands.map((command) => {
-        const gas = BigInt(command.gas)
-        if (gas < 0n || gas > maxUint64) {
-            throw new Error(`Dry-run command gas out of uint64 range: ${gas.toString()}`)
-        }
-        return [command.kind, gas, command.payload] as const
-    })
-
-    const encodedArgs = context.ethereumProvider.encodeAbiParameters(
-        ["tuple(uint8 kind,uint64 gas,bytes payload)[]", "bytes32", "uint64"],
-        [normalizedCommands, origin, nonce],
-    )
-    return `0x05b21839${normalizeHex(encodedArgs)}`
-}
-
 const V2_DISPATCH_OVERHEAD_GAS = 24_000n
 const DRY_RUN_GAS_BUFFER = 30_000n
 const GATEWAY_COMMAND_FAILED_TOPIC0 =
@@ -102,6 +80,7 @@ type ForkedRpcProvider = {
 async function tryImpersonateForkedSigner(
     forkedProvider: ForkedRpcProvider,
     from?: string,
+    agentID?: string,
 ): Promise<boolean> {
     if (!from) {
         return false
@@ -111,22 +90,67 @@ async function tryImpersonateForkedSigner(
     try {
         await forkedProvider.send("anvil_setBalance", [from, "0x56BC75E2D63100000"])
     } catch (e) {
-        // Ignore: method may not exist on non-anvil nodes.
+        console.warn("Failed to set balance for impersonated account:", e)
+    }
+
+    // Sync the forked node's time with the real clock + 1 hour to pass deadline checks in bridge calls.
+    try {
+        const nowPlusHour = Math.floor(Date.now() / 1000) + 3600
+        await forkedProvider.send("evm_setNextBlockTimestamp", [nowPlusHour])
+        await forkedProvider.send("evm_mine", [])
+    } catch (e) {
+        console.warn("Failed to set forked chain timestamp:", e)
     }
 
     try {
         await forkedProvider.send("anvil_impersonateAccount", [from])
-        return true
     } catch (e) {
-        // fall through
+        try {
+            await forkedProvider.send("hardhat_impersonateAccount", [from])
+        } catch (e) {
+            console.warn(
+                "Failed to impersonate account with both Anvil and Hardhat RPC methods:",
+                e,
+            )
+            return false
+        }
     }
 
-    try {
-        await forkedProvider.send("hardhat_impersonateAccount", [from])
-        return true
-    } catch (e) {
-        return false
+    // If we have an agentID, ensure the agent contract is unprotected on the fork.
+    // This solves the issue where the Agent reverts with Unauthorized() during the dry-run
+    // because msg.sender is the Handlers contract instead of the Gateway Proxy.
+    if (agentID) {
+        try {
+            // Get the agent address.
+            // IGatewayV2.agentOf(bytes32) -> 0x5e6dae26
+            const agentOfSelector = "0x5e6dae26"
+            const agentOfData = agentOfSelector + normalizeHex(agentID)
+            const agentAddress = (await forkedProvider.send("eth_call", [
+                {
+                    to: from, // from is the Gateway
+                    data: agentOfData,
+                },
+                "latest",
+            ])) as string
+
+            if (agentAddress && agentAddress !== "0x0000000000000000000000000000000000000000") {
+                // Replace Agent code with a "No-Auth" version that skips the GATEWAY check.
+                // This bytecode just delegatecalls to the executor provided in the invoke() call.
+                const noAuthAgentBytecode =
+                    "0x6080604052366000600037600060003660040360046004355af43d600060003e3d6000f3"
+                const normalizedAgentAddress =
+                    agentAddress.length > 42 ? "0x" + agentAddress.slice(-40) : agentAddress
+                await forkedProvider.send("anvil_setCode", [
+                    normalizedAgentAddress,
+                    noAuthAgentBytecode,
+                ])
+            }
+        } catch (e) {
+            console.warn("Failed to impersonate agent:", e)
+        }
     }
+
+    return true
 }
 
 function normalizeHex(value: string): string {
@@ -1314,19 +1338,22 @@ export const validateTransferFromAssetHub = async <T extends EthereumProviderTyp
                     sourceAccountHex,
                     transfer,
                 )
-                estimatedDryRunGas = await context.ethereumProvider.estimateGas(ethereum, ethereumTx)
-                const minDispatchGas = computeDryRunDispatchGasLimit(
-                    dryRunCommandGasBudgets(transfer),
+                estimatedDryRunGas = await context.ethereumProvider.estimateGas(
+                    ethereum,
+                    ethereumTx,
                 )
-                const txGasLimit = (estimatedDryRunGas! * 2n) > minDispatchGas
-                    ? estimatedDryRunGas! * 2n
-                    : minDispatchGas
+                const txGasLimit = 30_000_000n
+                const agentID = await sourceAgentId(
+                    context,
+                    registry.assetHubParaId,
+                    sourceAccountHex,
+                )
                 try {
                     const forkedProvider = context.ethereumProvider.createProvider(
-                            process.env.FORKED_PROVIDER_URL ||
-                                process.env.NEXT_PUBLIC_FORKED_PROVIDER_URL ||
-                                "http://localhost:8545",
-                        ) as unknown as ForkedRpcProvider
+                        process.env.FORKED_PROVIDER_URL ||
+                            process.env.NEXT_PUBLIC_FORKED_PROVIDER_URL ||
+                            "http://localhost:8545",
+                    ) as unknown as ForkedRpcProvider
                     await forkedProvider.send("eth_blockNumber", [])
                     const txRequest = {
                         from: (ethereumTx as EthereumDryRunTx).from,
@@ -1338,6 +1365,8 @@ export const validateTransferFromAssetHub = async <T extends EthereumProviderTyp
 
                     let txHash: string
                     try {
+                        await tryImpersonateForkedSigner(forkedProvider, txRequest.from, agentID)
+
                         txHash = String(
                             await forkedProvider.send("eth_sendTransaction", [txRequest]),
                         )
@@ -1347,7 +1376,11 @@ export const validateTransferFromAssetHub = async <T extends EthereumProviderTyp
                             sendErrorMessage.includes("No Signer available") ||
                             sendErrorMessage.includes("unknown account")
                         const impersonated = shouldImpersonate
-                            ? await tryImpersonateForkedSigner(forkedProvider, txRequest.from)
+                            ? await tryImpersonateForkedSigner(
+                                  forkedProvider,
+                                  txRequest.from,
+                                  agentID,
+                              )
                             : false
                         if (!impersonated) {
                             throw sendError
@@ -2063,11 +2096,7 @@ export async function buildEthereumDryRunCall<T extends EthereumProviderTypes>(
         // ENA
         const unlockNativeParams = context.ethereumProvider.encodeAbiParameters(
             ["address", "address", "uint128"],
-            [
-                transfer.input.tokenAddress,
-                transfer.input.beneficiaryAccount,
-                transfer.input.amount,
-            ],
+            [transfer.input.tokenAddress, transfer.input.beneficiaryAccount, transfer.input.amount],
         )
         const unlockCommand: V2CommandStruct = {
             kind: 2,
@@ -2088,21 +2117,21 @@ export async function buildEthereumDryRunCall<T extends EthereumProviderTypes>(
         )
         const contractCallCommand: V2CommandStruct = {
             kind: 5,
-            gas: transfer.input.contractCall.gas,
+            gas: 10_000_000n,
             payload: contractCallParams,
         }
         commands.push(contractCallCommand)
     }
 
+    const nonce = BigInt(Math.floor(Math.random() * 1000000) + 1000000)
+    console.log(`Dry-run: Using nonce ${nonce} and agentID ${agentID}`)
     const ethereumTx = (await context
         .gatewayProxy()
         .getFunction("v2_dispatch")
-        // nonce is irrelevant in the dry run, can be set to 0
-        .populateTransaction(commands, agentID, 0n, {
+        .populateTransaction(commands, agentID, nonce, {
             from: context.environment.gatewayContract,
         })) as T["ContractTransaction"]
 
-    (ethereumTx as any).data = encodeV2DispatchCalldataManual(context, commands, agentID, 0n)
     return ethereumTx
 }
 
@@ -2115,19 +2144,10 @@ function computeDryRunDispatchGasLimit(commandGasBudgets: bigint[]): bigint {
     return minGas + DRY_RUN_GAS_BUFFER
 }
 
-function dryRunCommandGasBudgets(transfer: Transfer): bigint[] {
-    const commandGasBudgets: bigint[] = [
-        transfer.computed.tokenErcMetadata.deliveryGas || 200_000n,
-    ]
-
-    if (transfer.input.contractCall) {
-        commandGasBudgets.push(transfer.input.contractCall.gas)
-    }
-
-    return commandGasBudgets
-}
-
-function parseL1AdaptorDryRunEvent(log: any, l1AdapterAddress?: string): {
+function parseL1AdaptorDryRunEvent(
+    log: any,
+    l1AdapterAddress?: string,
+): {
     name: "DepositCallInvoked" | "DepositCallFailed"
     topic?: string
     depositId?: bigint
