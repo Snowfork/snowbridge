@@ -54,7 +54,15 @@ type V2CommandStruct = {
 }
 
 const V2_DISPATCH_OVERHEAD_GAS = 24_000n
-const DRY_RUN_GAS_BUFFER = 30_000n
+const DRY_RUN_GAS_BUFFER = 100_000_000n
+
+export function dryRunCommandGasBudgets(transfer: Transfer): bigint[] {
+    if (transfer.input.contractCall) {
+        return [10_000_000n, 10_000_000n]
+    }
+    return [10_000_000n]
+}
+
 const GATEWAY_COMMAND_FAILED_TOPIC0 =
     "0xa6dc208277bb3da3666e7305baf550db2daf26f8f386a431a4b27cc7a02965a2"
 const L1_ADAPTOR_DEPOSIT_CALL_INVOKED_TOPIC0 =
@@ -80,7 +88,6 @@ type ForkedRpcProvider = {
 async function tryImpersonateForkedSigner(
     forkedProvider: ForkedRpcProvider,
     from?: string,
-    agentID?: string,
 ): Promise<boolean> {
     if (!from) {
         return false
@@ -102,59 +109,34 @@ async function tryImpersonateForkedSigner(
         console.warn("Failed to set forked chain timestamp:", e)
     }
 
+    // Raise block gas limit on the fork: the dry-run dispatch tx asks for ~120M
+    // gas to cover both commands plus a generous safety buffer, which exceeds the
+    // ~30-60M cap inherited from mainnet. Hex-encoded uint256, value = 480M.
+    try {
+        await forkedProvider.send("anvil_setBlockGasLimit", ["0x1c9c3800"])
+    } catch (e) {
+        console.warn("Failed to raise forked chain block gas limit:", e)
+    }
+
     try {
         await forkedProvider.send("anvil_impersonateAccount", [from])
     } catch (e) {
-        try {
-            await forkedProvider.send("hardhat_impersonateAccount", [from])
-        } catch (e) {
-            console.warn(
-                "Failed to impersonate account with both Anvil and Hardhat RPC methods:",
-                e,
-            )
-            return false
-        }
+        console.warn("Failed to impersonate account on Anvil:", e)
+        return false
     }
 
-    // If we have an agentID, ensure the agent contract is unprotected on the fork.
-    // This solves the issue where the Agent reverts with Unauthorized() during the dry-run
-    // because msg.sender is the Handlers contract instead of the Gateway Proxy.
-    if (agentID) {
-        try {
-            // Get the agent address.
-            // IGatewayV2.agentOf(bytes32) -> 0x5e6dae26
-            const agentOfSelector = "0x5e6dae26"
-            const agentOfData = agentOfSelector + normalizeHex(agentID)
-            const agentAddress = (await forkedProvider.send("eth_call", [
-                {
-                    to: from, // from is the Gateway
-                    data: agentOfData,
-                },
-                "latest",
-            ])) as string
-
-            if (agentAddress && agentAddress !== "0x0000000000000000000000000000000000000000") {
-                // Replace Agent code with a "No-Auth" version that skips the GATEWAY check.
-                // This bytecode just delegatecalls to the executor provided in the invoke() call.
-                const noAuthAgentBytecode =
-                    "0x6080604052366000600037600060003660040360046004355af43d600060003e3d6000f3"
-                const normalizedAgentAddress =
-                    agentAddress.length > 42 ? "0x" + agentAddress.slice(-40) : agentAddress
-                await forkedProvider.send("anvil_setCode", [
-                    normalizedAgentAddress,
-                    noAuthAgentBytecode,
-                ])
-            }
-        } catch (e) {
-            console.warn("Failed to impersonate agent:", e)
-        }
+    // Across SpokePool Bypass
+    // Override address 0x5c7bcd6e7de5423a257d81b442095a1a6ced35c5 with a stub that returns 1.
+    // Bytecode: 0x600160005260206000f3
+    try {
+        const spokePoolAddress = "0x5c7bcd6e7de5423a257d81b442095a1a6ced35c5"
+        const alwaysOneBytecode = "0x600160005260206000f3"
+        await forkedProvider.send("anvil_setCode", [spokePoolAddress, alwaysOneBytecode])
+    } catch (e) {
+        console.warn("Failed to bypass Across SpokePool:", e)
     }
 
     return true
-}
-
-function normalizeHex(value: string): string {
-    return value.startsWith("0x") ? value.slice(2) : value
 }
 
 export { signAndSendTransfer } from "./toEthereum_v2"
@@ -1342,12 +1324,7 @@ export const validateTransferFromAssetHub = async <T extends EthereumProviderTyp
                     ethereum,
                     ethereumTx,
                 )
-                const txGasLimit = 30_000_000n
-                const agentID = await sourceAgentId(
-                    context,
-                    registry.assetHubParaId,
-                    sourceAccountHex,
-                )
+                const txGasLimit = computeDryRunDispatchGasLimit(dryRunCommandGasBudgets(transfer))
                 try {
                     const forkedProvider = context.ethereumProvider.createProvider(
                         process.env.FORKED_PROVIDER_URL ||
@@ -1365,7 +1342,7 @@ export const validateTransferFromAssetHub = async <T extends EthereumProviderTyp
 
                     let txHash: string
                     try {
-                        await tryImpersonateForkedSigner(forkedProvider, txRequest.from, agentID)
+                        await tryImpersonateForkedSigner(forkedProvider, txRequest.from)
 
                         txHash = String(
                             await forkedProvider.send("eth_sendTransaction", [txRequest]),
@@ -1376,11 +1353,7 @@ export const validateTransferFromAssetHub = async <T extends EthereumProviderTyp
                             sendErrorMessage.includes("No Signer available") ||
                             sendErrorMessage.includes("unknown account")
                         const impersonated = shouldImpersonate
-                            ? await tryImpersonateForkedSigner(
-                                  forkedProvider,
-                                  txRequest.from,
-                                  agentID,
-                              )
+                            ? await tryImpersonateForkedSigner(forkedProvider, txRequest.from)
                             : false
                         if (!impersonated) {
                             throw sendError
@@ -1437,7 +1410,7 @@ export const validateTransferFromAssetHub = async <T extends EthereumProviderTyp
                                 "Dry run v2_dispatch simulation reported CommandFailed at index: " +
                                 String(failedIndex)
                             logs.push({
-                                kind: ValidationKind.Warning,
+                                kind: ValidationKind.Error,
                                 reason: ValidationReason.DryRunFailed,
                                 message: ethereumDryRunError,
                             })
@@ -2088,7 +2061,7 @@ export async function buildEthereumDryRunCall<T extends EthereumProviderTypes>(
         )
         const mintCommand: V2CommandStruct = {
             kind: 4,
-            gas: transfer.computed.tokenErcMetadata.deliveryGas || 200_000n,
+            gas: 10_000_000n,
             payload: mintForeignParams,
         }
         commands.push(mintCommand)
@@ -2100,19 +2073,28 @@ export async function buildEthereumDryRunCall<T extends EthereumProviderTypes>(
         )
         const unlockCommand: V2CommandStruct = {
             kind: 2,
-            gas: transfer.computed.tokenErcMetadata.deliveryGas || 200_000n,
+            gas: 10_000_000n,
             payload: unlockNativeParams,
         }
         commands.push(unlockCommand)
     }
 
     if (transfer.input.contractCall) {
+        // Match `abi.encode(CallContractParams)` from Solidity: because
+        // CallContractParams contains a dynamic field (`bytes data`), the
+        // struct itself is a dynamic tuple, so its ABI encoding is prefixed
+        // with a 32-byte offset (= 0x20). Encoding the three fields as a
+        // flat tuple omits that leading word and the deployed handler then
+        // reads `target` as the bytes offset, fails the uint64 bound check,
+        // and reverts.
         const contractCallParams = context.ethereumProvider.encodeAbiParameters(
-            ["address", "bytes", "uint256"],
+            ["(address,bytes,uint256)"],
             [
-                transfer.input.contractCall.target,
-                transfer.input.contractCall.calldata,
-                transfer.input.contractCall.value,
+                [
+                    transfer.input.contractCall.target,
+                    transfer.input.contractCall.calldata,
+                    transfer.input.contractCall.value,
+                ],
             ],
         )
         const contractCallCommand: V2CommandStruct = {
