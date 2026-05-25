@@ -1321,7 +1321,7 @@ export const validateTransferFromAssetHub = async <T extends EthereumProviderTyp
                     const forkedProvider = context.ethereumProvider.createProvider(
                         process.env.FORKED_PROVIDER_URL ||
                             process.env.NEXT_PUBLIC_FORKED_PROVIDER_URL ||
-                            "http://localhost:8545",
+                            "https://fork-mainnet.snowbridge.network",
                         forkedProviderApiKey
                             ? {
                                   headers: {
