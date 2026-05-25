@@ -125,17 +125,6 @@ async function tryImpersonateForkedSigner(
         return false
     }
 
-    // Across SpokePool Bypass
-    // Override address 0x5c7bcd6e7de5423a257d81b442095a1a6ced35c5 with a stub that returns 1.
-    // Bytecode: 0x600160005260206000f3
-    try {
-        const spokePoolAddress = "0x5c7bcd6e7de5423a257d81b442095a1a6ced35c5"
-        const alwaysOneBytecode = "0x600160005260206000f3"
-        await forkedProvider.send("anvil_setCode", [spokePoolAddress, alwaysOneBytecode])
-    } catch (e) {
-        console.warn("Failed to bypass Across SpokePool:", e)
-    }
-
     return true
 }
 
