@@ -1315,10 +1315,20 @@ export const validateTransferFromAssetHub = async <T extends EthereumProviderTyp
                 )
                 const txGasLimit = computeDryRunDispatchGasLimit(dryRunCommandGasBudgets(transfer))
                 try {
+                    const forkedProviderApiKey =
+                        process.env.FORKED_PROVIDER_API_KEY ||
+                        process.env.NEXT_PUBLIC_FORKED_PROVIDER_API_KEY
                     const forkedProvider = context.ethereumProvider.createProvider(
                         process.env.FORKED_PROVIDER_URL ||
                             process.env.NEXT_PUBLIC_FORKED_PROVIDER_URL ||
                             "http://localhost:8545",
+                        forkedProviderApiKey
+                            ? {
+                                  headers: {
+                                      "X-API-Key": forkedProviderApiKey,
+                                  },
+                              }
+                            : undefined,
                     ) as unknown as ForkedRpcProvider
                     await forkedProvider.send("eth_blockNumber", [])
                     const txRequest = {

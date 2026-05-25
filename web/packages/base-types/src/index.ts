@@ -241,6 +241,7 @@ export type AssetRegistry = {
 };
 
 export type {
+  EthereumProviderConnectionOptions,
   EthereumProvider,
   EthereumProviderTypes,
   FeeData,
