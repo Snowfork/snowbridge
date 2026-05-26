@@ -7,6 +7,7 @@ import type {
     Transfer,
     ValidatedTransfer,
 } from "../../types/toEthereum"
+import type { VolumeFeeParams } from "../../feeSchedule"
 
 export interface TransferInterface<T extends EthereumProviderTypes> {
     readonly context: Context<T>
@@ -20,6 +21,8 @@ export interface TransferInterface<T extends EthereumProviderTypes> {
             feeTokenLocation?: any
             claimerLocation?: any
             contractCall?: ContractCall
+            volumeFee?: VolumeFeeParams
+            accelerated?: boolean
         },
     ): Promise<DeliveryFee>
 
@@ -50,6 +53,7 @@ export interface TransferInterface<T extends EthereumProviderTypes> {
                 feeTokenLocation?: any
                 claimerLocation?: any
                 contractCall?: ContractCall
+                volumeFee?: VolumeFeeParams
             }
             tx?: {
                 claimerLocation?: any

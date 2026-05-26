@@ -1,11 +1,11 @@
-import { EthereumProviderTypes } from "@snowbridge/base-types"
+import { EthereumProviderTypes, L2MessageReceipt } from "@snowbridge/base-types"
 import { Context } from "../.."
 import type {
     DeliveryFee,
-    MessageReceipt,
     Transfer,
     ValidatedTransfer,
 } from "../../types/toPolkadotSnowbridgeV2"
+import type { VolumeFeeParams } from "../../feeSchedule"
 
 export interface TransferInterface<T extends EthereumProviderTypes> {
     readonly context: Context<T>
@@ -20,6 +20,7 @@ export interface TransferInterface<T extends EthereumProviderTypes> {
             overrideRelayerFee?: bigint
             l2PadFeeByPercentage?: bigint
             fillDeadlineBuffer?: bigint // Optional buffer added to the relay fill deadline for L2 calls.
+            volumeFee?: VolumeFeeParams
         },
     ): Promise<DeliveryFee>
 
@@ -50,6 +51,7 @@ export interface TransferInterface<T extends EthereumProviderTypes> {
                 overrideRelayerFee?: bigint
                 l2PadFeeByPercentage?: bigint
                 fillDeadlineBuffer?: bigint
+                volumeFee?: VolumeFeeParams
             }
             tx?: {
                 customXcm?: any[]
@@ -58,5 +60,5 @@ export interface TransferInterface<T extends EthereumProviderTypes> {
         },
     ): Promise<ValidatedTransfer<T>>
 
-    messageId(receipt: T["TransactionReceipt"]): Promise<MessageReceipt | null>
+    messageId(receipt: T["TransactionReceipt"]): Promise<L2MessageReceipt | null>
 }

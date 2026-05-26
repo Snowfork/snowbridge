@@ -105,10 +105,10 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
         parachains: {
             "1000": "wss://polkadot-asset-hub-rpc.polkadot.io",
             "1002": "wss://polkadot-bridge-hub-rpc.polkadot.io",
-            "3369": "wss://polkadot-mythos-rpc.polkadot.io",
+            "3369": "wss://mythos-rpc.dmarket.com",
             "2034": "wss://hydration-rpc.n.dwellir.com",
-            "2030": "wss://bifrost-polkadot.ibp.network",
-            "2004": "wss://moonbeam.ibp.network",
+            "2030": "wss://eu.bifrost-polkadot-rpc.liebi.com/ws",
+            "2004": "wss://wss.api.moonbeam.network",
             "2000": "wss://acala-rpc-0.aca-api.network",
             "2043": "wss://parachain-rpc.origin-trail.network",
             // TODO: Add back in jampton once we have an indexer in place.
@@ -118,7 +118,7 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
         beefyContract: "0x7cfc5c8b341991993080af67d940b6ad19a010e1",
         assetHubParaId: 1000,
         bridgeHubParaId: 1002,
-        v2_parachains: [1000],
+        v2_parachains: [1000, 2034],
         indexerGraphQlUrl: "https://subsquid.snowbridge.network/graphql",
         kusama: {
             assetHubParaId: 1000,
@@ -569,15 +569,18 @@ async function buildRegistry(environment: Environment): Promise<AssetRegistry> {
 
     let relayInfo: ChainProperties
     {
+        console.log("Connecting to relaychain:", relaychainUrl)
         let provider = await ApiPromise.create({
             noInitWarn: true,
             provider: relaychainUrl.startsWith("http")
                 ? new HttpProvider(relaychainUrl)
                 : new WsProvider(relaychainUrl),
         })
+        console.log("Connected to relaychain. Getting chain properties...")
         relayInfo = await (await paraImplementation(provider)).chainProperties()
-
+        console.log("Got relaychain properties.")
         await provider.disconnect()
+        console.log("Disconnected from relaychain.")
     }
 
     // Connect to all eth connections
@@ -589,10 +592,13 @@ async function buildRegistry(environment: Environment): Promise<AssetRegistry> {
         }
     } = {}
     {
+        console.log("Connecting to Ethereum chains:", ethereumChains)
         for (const result of await Promise.all(
             Object.keys(ethereumChains).map(async (ethChain) => {
+                console.log(`Connecting to Ethereum chain ${ethChain}: ${ethereumChains[ethChain]}`)
                 let provider = ethers.getDefaultProvider(ethereumChains[ethChain])
                 const network = await provider.getNetwork()
+                console.log(`Connected to Ethereum chain ${ethChain}, network:`, network)
                 return { chainId: Number(network.chainId), provider, name: network.name }
             }),
         )) {
@@ -601,6 +607,7 @@ async function buildRegistry(environment: Environment): Promise<AssetRegistry> {
         if (!(ethChainId.toString() in ethProviders)) {
             throw Error(`Cannot find ethereum chain ${ethChainId} in the list of ethereum chains.`)
         }
+        console.log("Connected to all Ethereum chains.")
     }
 
     let pnaAssets: PNAMap = {}
@@ -610,20 +617,24 @@ async function buildRegistry(environment: Environment): Promise<AssetRegistry> {
             throw Error(`Cannot find bridge hub ${bridgeHubParaId} in the list of parachains.`)
         }
         const bridgeHubUrl = parachains[bridgeHubParaId.toString()]
+        console.log("Connecting to Bridge Hub:", bridgeHubUrl)
         let provider = await ApiPromise.create({
             noInitWarn: true,
             provider: bridgeHubUrl.startsWith("http")
                 ? new HttpProvider(bridgeHubUrl)
                 : new WsProvider(bridgeHubUrl),
         })
+        console.log("Connected to Bridge Hub. Getting chain properties...")
         bridgeHubInfo = await (await paraImplementation(provider)).chainProperties()
+        console.log("Getting registered PNAs from Bridge Hub...")
         pnaAssets = await getRegisteredPnas(
             provider,
             ethProviders[ethChainId].provider,
             gatewayContract,
         )
-
+        console.log("Got registered PNAs from Bridge Hub.")
         await provider.disconnect()
+        console.log("Disconnected from Bridge Hub.")
     }
 
     // Connect to all substrate parachains.
@@ -631,16 +642,20 @@ async function buildRegistry(environment: Environment): Promise<AssetRegistry> {
         [paraIdKey: string]: { parachainId: number; accessor: ParachainBase }
     } = {}
     {
+        console.log("Connecting to all substrate parachains:", parachains)
         for (const { parachainId, accessor } of await Promise.all(
             Object.keys(parachains).map(async (parachainId) => {
                 const parachainUrl = parachains[parachainId]
+                console.log(`Connecting to parachain ${parachainId}: ${parachainUrl}`)
                 const provider = await ApiPromise.create({
                     noInitWarn: true,
                     provider: parachainUrl.startsWith("http")
                         ? new HttpProvider(parachainUrl)
                         : new WsProvider(parachainUrl),
                 })
+                console.log(`Connected to parachain ${parachainId}. Getting accessor...`)
                 const accessor = await paraImplementation(provider, new EthersEthereumProvider())
+                console.log(`Got accessor for parachain ${parachainId}.`)
                 return { parachainId: accessor.parachainId, accessor }
             }),
         )) {
@@ -651,6 +666,7 @@ async function buildRegistry(environment: Environment): Promise<AssetRegistry> {
                 `Could not resolve asset hub para id ${assetHubParaId} in the list of parachains provided.`,
             )
         }
+        console.log("Connected to all substrate parachains.")
     }
 
     // Index parachains
@@ -1013,7 +1029,10 @@ async function indexEthChain(
             name,
             assets,
             key: `ethereum_${networkChainId}`,
-            baseDeliveryGas: 120_000n,
+            baseVerificationGas: 120_000n,
+            baseDispatchGas: 80_000n,
+            twoPhaseSubmitGas: 1_000_000n,
+            submitFiatShamirGas: 2_000_000n,
         }
     } else if (networkChainId in l2Chains) {
         const assets: ERC20MetadataMap = {}
@@ -1187,7 +1206,7 @@ async function getRegisteredPnas(
 }
 
 ;(async () => {
-    let env = "local_e2e"
+    let env = "polkadot_mainnet"
     if (process.env.NODE_ENV !== undefined) {
         env = process.env.NODE_ENV
     }

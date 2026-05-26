@@ -1,4 +1,4 @@
-import { AssetMap, PNAMap } from "@snowbridge/base-types"
+import { AssetMap, FeeEstimateError, PNAMap } from "@snowbridge/base-types"
 import { ParachainBase } from "./parachainBase"
 import { getTokenFromLocation, ROCOCO_GENESIS, WESTEND_GENESIS } from "../xcmBuilder"
 import { DOT_LOCATION } from "../assets_v2"
@@ -197,11 +197,7 @@ export class AssetHubParachain extends ParachainBase {
         )
         const asset2Balance = result.toPrimitive() as any
         if (asset2Balance == null) {
-            throw Error(
-                `No pool set up in asset conversion pallet for '${JSON.stringify(
-                    asset1,
-                )}' and '${JSON.stringify(asset2)}'.`,
-            )
+            throw FeeEstimateError.couldNotSwap(asset1, asset2)
         }
         return BigInt(asset2Balance)
     }
@@ -219,13 +215,19 @@ export class AssetHubParachain extends ParachainBase {
         )
         const asset1Balance = result.toPrimitive() as any
         if (asset1Balance == null) {
-            throw Error(
-                `No pool set up in asset conversion pallet for '${JSON.stringify(
-                    asset1,
-                )}' and '${JSON.stringify(asset2)}'.`,
-            )
+            throw FeeEstimateError.couldNotSwap(asset1, asset2)
         }
         return BigInt(asset1Balance)
+    }
+
+    async getAssetHubPoolReserves(
+        asset1: any,
+        asset2: any,
+    ): Promise<{ reserve1: bigint; reserve2: bigint } | null> {
+        const result = await this.provider.call.assetConversionApi.getReserves(asset1, asset2)
+        const reserves = result.toPrimitive() as [string | number, string | number] | null
+        if (reserves == null) return null
+        return { reserve1: BigInt(reserves[0]), reserve2: BigInt(reserves[1]) }
     }
 }
 

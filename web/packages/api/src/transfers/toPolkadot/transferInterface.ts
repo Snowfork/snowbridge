@@ -7,6 +7,7 @@ import type {
     Transfer,
     ValidatedTransfer,
 } from "../../types/toPolkadotSnowbridgeV2"
+import type { VolumeFeeParams } from "../../feeSchedule"
 
 export type MessageReceipt = ToPolkadotV1MessageReceipt | ToPolkadotV2MessageReceipt
 
@@ -20,6 +21,7 @@ export interface TransferInterface<T extends EthereumProviderTypes> {
             feeAsset?: any
             customXcm?: any[] // Optional custom XCM instructions to append
             overrideRelayerFee?: bigint
+            volumeFee?: VolumeFeeParams
         },
     ): Promise<DeliveryFee>
 
@@ -45,6 +47,7 @@ export interface TransferInterface<T extends EthereumProviderTypes> {
                 feeAsset?: any
                 customXcm?: any[]
                 overrideRelayerFee?: bigint
+                volumeFee?: VolumeFeeParams
             }
             customXcm?: any[]
         },

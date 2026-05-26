@@ -29,12 +29,13 @@ import {
 import { Context } from "../.."
 import { TransferInterface } from "./transferInterface"
 import { ensureValidationSuccess } from "../../utils"
+import { VolumeFeeParams } from "../../feeSchedule"
 import {
     buildContractCallHex,
     buildL2Call,
     estimateFeesFromAssetHub,
-    MaxWeight,
     mockDeliveryFee,
+    queryXcmExecuteWeight,
     signAndSendTransfer,
     validateTransferFromAssetHub,
 } from "../../toEthereumSnowbridgeV2"
@@ -67,6 +68,7 @@ export class ERC20FromAH<T extends EthereumProviderTypes> implements TransferInt
             contractCall?: ContractCall
             l2PadFeeByPercentage?: bigint
             fillDeadlineBuffer?: bigint
+            volumeFee?: VolumeFeeParams
         },
     ): Promise<DeliveryFee> {
         const context = this.context
@@ -225,7 +227,10 @@ export class ERC20FromAH<T extends EthereumProviderTypes> implements TransferInt
             throw new Error(`Fee token as ${fee.feeLocation} is not supported yet.`)
         }
         let tx: SubmittableExtrinsic<"promise", ISubmittableResult> =
-            parachain.tx.polkadotXcm.execute(xcm, MaxWeight)
+            parachain.tx.polkadotXcm.execute(
+                xcm,
+                await queryXcmExecuteWeight(sourceParachainImpl, sourceParachain, xcm),
+            )
 
         return {
             kind: "polkadot->ethereum_l2",
@@ -267,6 +272,7 @@ export class ERC20FromAH<T extends EthereumProviderTypes> implements TransferInt
                 contractCall?: ContractCall
                 l2PadFeeByPercentage?: bigint
                 fillDeadlineBuffer?: bigint
+                volumeFee?: VolumeFeeParams
             }
             tx?: {
                 claimerLocation?: any

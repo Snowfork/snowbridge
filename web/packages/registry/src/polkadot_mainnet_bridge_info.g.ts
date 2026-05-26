@@ -15,17 +15,17 @@ const registry = {
             "1000": "wss://polkadot-asset-hub-rpc.polkadot.io",
             "1002": "wss://polkadot-bridge-hub-rpc.polkadot.io",
             "2000": "wss://acala-rpc-0.aca-api.network",
-            "2004": "wss://moonbeam.ibp.network",
-            "2030": "wss://bifrost-polkadot.ibp.network",
+            "2004": "wss://wss.api.moonbeam.network",
+            "2030": "wss://eu.bifrost-polkadot-rpc.liebi.com/ws",
             "2034": "wss://hydration-rpc.n.dwellir.com",
             "2043": "wss://parachain-rpc.origin-trail.network",
-            "3369": "wss://polkadot-mythos-rpc.polkadot.io",
+            "3369": "wss://mythos-rpc.dmarket.com",
         },
         gatewayContract: "0x27ca963c279c93801941e1eb8799c23f407d68e7",
         beefyContract: "0x7cfc5c8b341991993080af67d940b6ad19a010e1",
         assetHubParaId: 1000,
         bridgeHubParaId: 1002,
-        v2_parachains: [1000],
+        v2_parachains: [1000, 2034],
         indexerGraphQlUrl: "https://subsquid.snowbridge.network/graphql",
         kusama: {
             assetHubParaId: 1000,
@@ -124,6 +124,8 @@ const registry = {
                 "0x57e114b691db790c35207b2e685d4a43181e6061",
                 "0x8236a87084f8b84306f72007f36f2618a5634494",
                 "0x1abaea1f7c830bd89acc67ec4af516284b1bc33c",
+                "0xb62132e35a6c13ee1ee0f84dc5d40bad8d815206",
+                "0xd166337499e176bbc38a1fbd113ab144e5bd2df7",
                 "0x56072c95faa701256059aa122697b133aded9279",
                 "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
                 "0x0e186357c323c806c1efdad36d217f7a54b63d18",
@@ -171,6 +173,8 @@ const registry = {
                 "0x57e114b691db790c35207b2e685d4a43181e6061",
                 "0x8236a87084f8b84306f72007f36f2618a5634494",
                 "0x1abaea1f7c830bd89acc67ec4af516284b1bc33c",
+                "0xb62132e35a6c13ee1ee0f84dc5d40bad8d815206",
+                "0xd166337499e176bbc38a1fbd113ab144e5bd2df7",
                 "0x56072c95faa701256059aa122697b133aded9279",
                 "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
                 "0x0e186357c323c806c1efdad36d217f7a54b63d18",
@@ -559,7 +563,7 @@ const registry = {
         },
     ],
     registry: {
-        timestamp: "2026-04-16T22:04:17.732Z",
+        timestamp: "2026-05-05T21:57:00.463Z",
         environment: "polkadot_mainnet",
         ethChainId: 1,
         gatewayAddress: "0x27ca963c279c93801941e1eb8799c23f407d68e7",
@@ -573,7 +577,7 @@ const registry = {
             accountType: "AccountId32",
             name: "Polkadot",
             specName: "polkadot",
-            specVersion: 2001001,
+            specVersion: 2002001,
         },
         bridgeHub: {
             tokenSymbols: "DOT",
@@ -583,7 +587,7 @@ const registry = {
             accountType: "AccountId32",
             name: "Polkadot BridgeHub",
             specName: "bridge-hub-polkadot",
-            specVersion: 2001001,
+            specVersion: 2002001,
         },
         ethereumChains: {
             ethereum_1: {
@@ -666,6 +670,20 @@ const registry = {
                         name: "Euro Coin",
                         symbol: "EURC",
                         decimals: 6,
+                        deliveryGas: 80000n,
+                    },
+                    "0xb62132e35a6c13ee1ee0f84dc5d40bad8d815206": {
+                        token: "0xb62132e35a6c13ee1ee0f84dc5d40bad8d815206",
+                        name: "Nexo",
+                        symbol: "NEXO",
+                        decimals: 18,
+                        deliveryGas: 80000n,
+                    },
+                    "0xd166337499e176bbc38a1fbd113ab144e5bd2df7": {
+                        token: "0xd166337499e176bbc38a1fbd113ab144e5bd2df7",
+                        name: "Staked USDat",
+                        symbol: "sUSDat",
+                        decimals: 18,
                         deliveryGas: 80000n,
                     },
                     "0x56072c95faa701256059aa122697b133aded9279": {
@@ -874,7 +892,10 @@ const registry = {
                     },
                 },
                 key: "ethereum_1",
-                baseDeliveryGas: 120000n,
+                baseVerificationGas: 120000n,
+                baseDispatchGas: 80000n,
+                twoPhaseSubmitGas: 1000000n,
+                submitFiatShamirGas: 2000000n,
             },
             ethereum_l2_10: {
                 kind: "ethereum_l2",
@@ -1072,7 +1093,7 @@ const registry = {
                     accountType: "AccountId32",
                     name: "Polkadot Asset Hub",
                     specName: "statemint",
-                    specVersion: 2001001,
+                    specVersion: 2002001,
                 },
                 assets: {
                     "0x9d39a5de30e57443bff2a8307a4256c8797a3497": {
@@ -1161,6 +1182,22 @@ const registry = {
                         minimumBalance: 1n,
                         symbol: "EURC",
                         decimals: 6,
+                        isSufficient: false,
+                    },
+                    "0xb62132e35a6c13ee1ee0f84dc5d40bad8d815206": {
+                        token: "0xb62132e35a6c13ee1ee0f84dc5d40bad8d815206",
+                        name: "",
+                        minimumBalance: 1n,
+                        symbol: "",
+                        decimals: 0,
+                        isSufficient: false,
+                    },
+                    "0xd166337499e176bbc38a1fbd113ab144e5bd2df7": {
+                        token: "0xd166337499e176bbc38a1fbd113ab144e5bd2df7",
+                        name: "",
+                        minimumBalance: 1n,
+                        symbol: "",
+                        decimals: 0,
                         isSufficient: false,
                     },
                     "0x56072c95faa701256059aa122697b133aded9279": {
@@ -1781,7 +1818,7 @@ const registry = {
                     evmChainId: 1284,
                     name: "Moonbeam",
                     specName: "moonbeam",
-                    specVersion: 4202,
+                    specVersion: 4203,
                 },
                 xcDOT: "0xffffffff1fcacbd218edc0eba20fc2308c778080",
                 assets: {
@@ -1897,7 +1934,7 @@ const registry = {
                         isSufficient: false,
                     },
                 },
-                estimatedExecutionFeeDOT: 57320930n,
+                estimatedExecutionFeeDOT: 58945570n,
                 estimatedDeliveryFeeDOT: 307100000n,
             },
             polkadot_2034: {
@@ -1914,7 +1951,7 @@ const registry = {
                     hasXcmPaymentApi: true,
                     supportsAliasOrigin: true,
                     xcmVersion: "v5",
-                    supportsV2: false,
+                    supportsV2: true,
                 },
                 info: {
                     tokenSymbols: "HDX",
@@ -1925,7 +1962,7 @@ const registry = {
                     evmChainId: 222222,
                     name: "Hydration",
                     specName: "hydradx",
-                    specVersion: 405,
+                    specVersion: 411,
                 },
                 assets: {
                     "0x45804880de22913dafe09f4980848ece6ecbaf78": {
@@ -2081,7 +2118,7 @@ const registry = {
                         isSufficient: true,
                     },
                 },
-                estimatedExecutionFeeDOT: 1353931n,
+                estimatedExecutionFeeDOT: 2536089n,
                 estimatedDeliveryFeeDOT: 307100000n,
             },
             polkadot_2043: {
@@ -2189,7 +2226,7 @@ const registry = {
                         accountType: "AccountId32",
                         name: "Kusama Asset Hub",
                         specName: "statemine",
-                        specVersion: 2001000,
+                        specVersion: 2002000,
                     },
                     assets: {
                         "0x9d39a5de30e57443bff2a8307a4256c8797a3497": {

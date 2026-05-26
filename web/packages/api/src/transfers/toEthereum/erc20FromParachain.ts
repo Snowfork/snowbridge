@@ -1,4 +1,3 @@
-import { ApiPromise } from "@polkadot/api"
 import { AddressOrPair, SignerOptions, SubmittableExtrinsic } from "@polkadot/api/types"
 import { ISubmittableResult } from "@polkadot/types/types"
 import { isHex, u8aToHex } from "@polkadot/util"
@@ -32,11 +31,12 @@ import {
 import { Context } from "../.."
 import { TransferInterface } from "./transferInterface"
 import { ensureValidationSuccess } from "../../utils"
+import { VolumeFeeParams } from "../../feeSchedule"
 import {
     buildContractCallHex,
     estimateFeesFromParachains,
-    MaxWeight,
     mockDeliveryFee,
+    queryXcmExecuteWeight,
     signAndSendTransfer,
     validateTransferFromParachain,
 } from "../../toEthereumSnowbridgeV2"
@@ -67,6 +67,8 @@ export class ERC20FromParachain<T extends EthereumProviderTypes> implements Tran
             feeTokenLocation?: any
             claimerLocation?: any
             contractCall?: ContractCall
+            volumeFee?: VolumeFeeParams
+            accelerated?: boolean
         },
     ): Promise<DeliveryFee> {
         const assetHub = await this.context.assetHub()
@@ -237,6 +239,7 @@ export class ERC20FromParachain<T extends EthereumProviderTypes> implements Tran
                 ethChainId,
                 assetHubParaId,
                 sourceParachainImpl.parachainId,
+                sourceParachain.info.tokenSymbols,
                 sourceAccountHex,
                 beneficiaryAccount,
                 messageId,
@@ -250,7 +253,10 @@ export class ERC20FromParachain<T extends EthereumProviderTypes> implements Tran
             throw new Error(`Fee token as ${fee.feeLocation} is not supported yet.`)
         }
         let tx: SubmittableExtrinsic<"promise", ISubmittableResult> =
-            parachain.tx.polkadotXcm.execute(xcm, MaxWeight)
+            parachain.tx.polkadotXcm.execute(
+                xcm,
+                await queryXcmExecuteWeight(sourceParachainImpl, sourceParachain, xcm),
+            )
 
         return {
             kind: "polkadot->ethereum",
@@ -289,6 +295,7 @@ export class ERC20FromParachain<T extends EthereumProviderTypes> implements Tran
                 feeTokenLocation?: any
                 claimerLocation?: any
                 contractCall?: ContractCall
+                volumeFee?: VolumeFeeParams
             }
             tx?: {
                 claimerLocation?: any

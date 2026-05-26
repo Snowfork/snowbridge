@@ -1,8 +1,6 @@
 import { TransferInterface } from "./transfers/toPolkadot/transferInterface"
-import { TransferInterface as L2TransferInterface } from "./transfers/l2ToPolkadot/transferInterface"
+import { VolumeFeeParams } from "./feeSchedule"
 import { ERC20ToAH } from "./transfers/toPolkadot/erc20ToAH"
-import { ERC20ToAH as ERC20FromL2ToAH } from "./transfers/l2ToPolkadot/erc20ToAH"
-import { RegisterToken } from "./registration/toPolkadot/registerToken"
 import {
     AssetRegistry,
     ChainId,
@@ -18,7 +16,7 @@ import { PNAToParachain } from "./transfers/toPolkadot/pnaToParachain"
 import { hexToU8a, stringToU8a } from "@polkadot/util"
 import { blake2AsHex } from "@polkadot/util-crypto"
 import { ApiPromise } from "@polkadot/api"
-import { accountToLocation, erc20Location } from "./xcmBuilder"
+import { accountToLocationWithNetwork, erc20Location } from "./xcmBuilder"
 import { Codec } from "@polkadot/types/types"
 import { DOT_LOCATION, ETHER_TOKEN_ADDRESS } from "./assets_v2"
 import { ensureValidationSuccess, padFeeByPercentage } from "./utils"
@@ -122,6 +120,7 @@ export class TransferToPolkadot<T extends EthereumProviderTypes> implements Tran
             feeAsset?: any
             customXcm?: any[]
             overrideRelayerFee?: bigint
+            volumeFee?: VolumeFeeParams
         },
     ): Promise<DeliveryFee> {
         return this.#resolveByTokenAddress(tokenAddress).fee(tokenAddress, options)
@@ -156,6 +155,7 @@ export class TransferToPolkadot<T extends EthereumProviderTypes> implements Tran
                 feeAsset?: any
                 customXcm?: any[]
                 overrideRelayerFee?: bigint
+                volumeFee?: VolumeFeeParams
             }
             customXcm?: any[]
         },
@@ -211,10 +211,17 @@ export async function messageId<T extends EthereumProviderTypes>(
     return messageAccepted
 }
 
-export function claimerFromBeneficiary(assetHub: ApiPromise, beneficiaryAddressHex: string) {
-    let accountLocation = {
+export function claimerFromBeneficiary(
+    assetHub: ApiPromise,
+    beneficiaryAddressHex: string,
+    envName: string,
+) {
+    // The `network` field MUST match what AH's signed-origin converter produces
+    // (e.g. `Some(Polkadot)` on polkadot_mainnet) so a trapped-funds claim from
+    // the beneficiary's signed origin hashes to the same key as the trap entry.
+    const accountLocation = {
         parents: 0,
-        interior: { x1: [accountToLocation(beneficiaryAddressHex)] },
+        interior: { x1: [accountToLocationWithNetwork(beneficiaryAddressHex, envName)] },
     }
     return assetHub.registry.createType("StagingXcmV5Location", accountLocation)
 }
@@ -235,9 +242,12 @@ export async function inboundMessageExtrinsicFee(
     const extrinsicFeeDot = 250_000_000n
 
     const etherLocation = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
-    const extrinsicFeeEther = await assetHub.swapAsset1ForAsset2(
-        DOT_LOCATION,
+    // Quote in the runtime swap direction (ETH->DOT): the runtime swaps the
+    // user's ETH for DOT to pay weight, so charge the LP fee on the ETH input
+    // side (`quotePriceTokensForExactTokens`).
+    const extrinsicFeeEther = await assetHub.getAssetHubConversionPalletSwap(
         etherLocation,
+        DOT_LOCATION,
         extrinsicFeeDot,
     )
 

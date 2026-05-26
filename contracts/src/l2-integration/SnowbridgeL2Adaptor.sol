@@ -8,6 +8,33 @@ import {ISpokePool, IMessageHandler} from "./interfaces/ISpokePool.sol";
 import {IGatewayV2} from "../v2/IGateway.sol";
 import {DepositParams, Instructions, Call, SendParams, SwapParams} from "./Types.sol";
 
+/// @title L2 Across Adaptor for Snowbridge V2 inbound flows
+///
+/// @dev End users on the L2 call `sendTokenAndCall` and `sendEtherAndCall` directly to
+///      bridge ERC20 / native ETH back to Ethereum and onward to Polkadot. These
+///      functions pull funds from the caller in the same call — via
+///      `safeTransferFrom(msg.sender, address(this), inputAmount)` for ERC20 or
+///      `require(msg.value == inputAmount)` for native ETH — and forward the pulled
+///      amount straight to the SpokePool deposit. No function in this contract moves
+///      a pre-existing contract-held balance to a user-controlled destination: any
+///      assets accidentally sent to the adaptor (via `receive()` or stray ERC20
+///      transfers) are not reachable by any public entry point.
+///
+///      The public, unauthenticated entry points are therefore safe — the caller can
+///      only spend their own funds; pre-existing balances cannot be swept.
+///
+///      Recipient requirements: `recipient` is the fallback address used in two places.
+///      If the paired L1 `CallContract` fails on mainnet, any trapped funds are swept
+///      back to `recipient` on Ethereum. If the Across fees are not profitable and no
+///      relayer fills the deposit, the SpokePool refunds the assets to `recipient` on
+///      the originating L2. It is typically an EOA. If it is a contract, it MUST be
+///      able to receive the relevant assets (native ETH and/or the input ERC20) on
+///      BOTH the L2 and Ethereum mainnet, since the same address is used on both
+///      chains. Integrating UIs should surface this requirement to users.
+///
+///      Bug bounty note: reports claiming that "any EOA can call these functions and
+///      steal funds" are out of scope. The contract holds no balance on behalf of other
+///      users; each call transacts exclusively with `msg.sender`'s assets.
 contract SnowbridgeL2Adaptor {
     using SafeERC20 for IERC20;
 

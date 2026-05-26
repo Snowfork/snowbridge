@@ -1,3 +1,6 @@
+export { ETHER_TOKEN_ADDRESS } from "./assets_v2"
+export { ParachainBase, paraImplementation } from "./parachains"
+export { NeurowebParachain } from "./parachains/neuroweb"
 import type { ApiPromise, HttpProvider, WsProvider } from "@polkadot/api"
 import {
     BeefyClient,
@@ -58,6 +61,17 @@ export * as toEthereumV2 from "./types/toEthereum"
 export * as toEthereumFromEVMV2 from "./types/toEthereumEvm"
 export * as forInterParachain from "./types/forInterParachain"
 export * as forKusama from "./types/forKusama"
+export type { VolumeFeeParams } from "./feeSchedule"
+export type {
+    FeeAsset,
+    FeeItem,
+    ToPolkadotFeeKey,
+    L2ToPolkadotFeeKey,
+    ToEthereumFeeKey,
+    InterParachainFeeKey,
+    KusamaFeeKey,
+    V1ToPolkadotFeeKey,
+} from "./types/fee"
 export * as utils from "./utils"
 export * as status from "./status"
 export * as assetsV2 from "./assets_v2"
@@ -65,6 +79,7 @@ export * as history from "./history"
 export * as historyV2 from "./history_v2"
 export { TransferStatus } from "./history_v2"
 export * as subsquidV2 from "./subsquid_v2"
+export * as governance from "./governance/halt_bridge"
 
 export class Context<T extends EthereumProviderTypes> {
     readonly environment: Environment

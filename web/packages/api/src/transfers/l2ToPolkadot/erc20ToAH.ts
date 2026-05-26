@@ -19,7 +19,6 @@ import {
     claimerFromBeneficiary,
     claimerLocationToBytes,
     DeliveryFee,
-    messageId as getSharedMessageReceipt,
     ValidationKind,
 } from "../../toPolkadotSnowbridgeV2"
 import {
@@ -27,7 +26,11 @@ import {
     buildAssetHubERC20ReceivedXcm,
 } from "../../xcmbuilders/toPolkadot/erc20ToAH"
 import { accountId32Location, erc20Location } from "../../xcmBuilder"
-import { DOT_LOCATION, ETHER_TOKEN_ADDRESS } from "../../assets_v2"
+import {
+    DOT_LOCATION,
+    ETHER_TOKEN_ADDRESS,
+    getAssetHubEtherMinBalance,
+} from "../../assets_v2"
 import { ensureValidationSuccess, padFeeByPercentage } from "../../utils"
 import { resolveBeneficiary } from "../../crypto"
 import { FeeInfo, ValidationLog, ValidationReason } from "../../types/toPolkadot"
@@ -35,6 +38,9 @@ import { buildMessageId, Transfer, ValidatedTransfer } from "../../toPolkadotSno
 import { getOperatingStatus } from "../../status"
 import { hexToU8a } from "@polkadot/util"
 import { estimateFees } from "../../across/api"
+import { VolumeFeeParams, calculateVolumeTipInWei } from "../../feeSchedule"
+import { addBreakdown, computeTotals, findInBreakdown, findInBreakdownOrZero, findTotal } from "../../fees"
+import { checkDotEthPoolLiquidityForEthereumToPolkadot } from "../../poolReserves"
 
 export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInterface<T> {
     constructor(
@@ -63,8 +69,12 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             overrideRelayerFee?: bigint
             l2PadFeeByPercentage?: bigint
             fillDeadlineBuffer?: bigint
+            volumeFee?: VolumeFeeParams
         },
     ): Promise<DeliveryFee> {
+        if (options?.volumeFee && options?.overrideRelayerFee !== undefined) {
+            throw new Error("Cannot specify both volumeFee and overrideRelayerFee")
+        }
         const context = this.context
         const registry = this.registry
         const { assetHub, bridgeHub } = {
@@ -118,18 +128,39 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
         )
 
         const assetHubImpl = await this.context.paraImplementation(assetHub)
-        const deliveryFeeInEther = await assetHubImpl.swapAsset1ForAsset2(
-            DOT_LOCATION,
+        // Quote in the runtime swap direction (ETH->DOT) so the LP fee lands
+        // on the ETH input side, matching what AH's SwapFirstAssetTrader does.
+        const deliveryFeeInEther = await assetHubImpl.getAssetHubConversionPalletSwap(
             ether,
+            DOT_LOCATION,
             deliveryFeeInDOT,
         )
-        // AssetHub Execution fee
+        // AssetHub Execution fee. Always compute the DOT figure for the fee
+        // breakdown. Prefer AH's direct weight->ether quote when available,
+        // fall back to the manual ETH->DOT swap.
         let assetHubExecutionFeeDOT = await assetHubImpl.calculateXcmFee(assetHubXcm, DOT_LOCATION)
 
+        let assetHubExecutionFeeEtherRaw: bigint
+        try {
+            assetHubExecutionFeeEtherRaw = await assetHubImpl.calculateXcmFee(assetHubXcm, ether)
+        } catch {
+            assetHubExecutionFeeEtherRaw = await assetHubImpl.getAssetHubConversionPalletSwap(
+                ether,
+                DOT_LOCATION,
+                assetHubExecutionFeeDOT,
+            )
+        }
         let assetHubExecutionFeeEther = padFeeByPercentage(
-            await assetHubImpl.swapAsset1ForAsset2(DOT_LOCATION, ether, assetHubExecutionFeeDOT),
-            feePadPercentage ?? 33n,
+            assetHubExecutionFeeEtherRaw,
+            feePadPercentage ?? 50n,
         )
+        // For non-ether transfers, oversize executionFee by AH bridged-ether
+        // min_balance: the post-PayFees surplus then naturally lands at the
+        // recipient via RefundSurplus → DepositAsset, satisfying
+        // `Token::BelowMinimum` on a fresh asset account.
+        if (tokenAddress !== ETHER_TOKEN_ADDRESS) {
+            assetHubExecutionFeeEther += getAssetHubEtherMinBalance(registry)
+        }
 
         const { relayerFee, extrinsicFeeDot, extrinsicFeeEther } = await calculateRelayerFee(
             assetHubImpl,
@@ -138,10 +169,17 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             deliveryFeeInEther,
         )
 
+        let volumeTip: bigint | undefined
+        let finalRelayerFee = relayerFee
+        if (options?.volumeFee) {
+            volumeTip = calculateVolumeTipInWei(options.volumeFee)
+            finalRelayerFee += volumeTip
+        }
+
         // Calculate fee with Across SDK
         let bridgeFeeInL2Token = 0n,
             swapFeeInL1Token = 0n
-        let totalFeeInWei = assetHubExecutionFeeEther + relayerFee
+        let totalFeeInWei = assetHubExecutionFeeEther + finalRelayerFee
         const acrossApiUrl = context.environment.l2Bridge?.acrossAPIUrl
         const l2FeeTokenAddress =
             context.environment.l2Bridge?.l2Chains[this.from.id]?.feeTokenAddress
@@ -161,7 +199,7 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
                 l1FeeTokenAddress,
                 this.from.id,
                 registry.ethChainId,
-                assetHubExecutionFeeEther + relayerFee + amount,
+                assetHubExecutionFeeEther + finalRelayerFee + amount,
             )
             bridgeFeeInL2Token = padFeeByPercentage(
                 bridgeFeeInL2Token,
@@ -180,7 +218,7 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             let params: QuoteExactOutputSingleParamsStruct = {
                 tokenIn: tokenAddress,
                 tokenOut: l1FeeTokenAddress,
-                amount: assetHubExecutionFeeEther + relayerFee,
+                amount: assetHubExecutionFeeEther + finalRelayerFee,
                 fee: swapFee ?? 500, // 0.05% pool fee
                 sqrtPriceLimitX96: 0, // no price limit
             }
@@ -204,19 +242,74 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             )
         }
 
+        const l2TokenMeta =
+            registry.ethereumChains?.[`ethereum_l2_${this.from.id}`]?.assets[l2TokenAddress]
+        const l2FeeTokenMeta = l2FeeTokenAddress
+            ? registry.ethereumChains?.[`ethereum_l2_${this.from.id}`]?.assets[l2FeeTokenAddress]
+            : undefined
+        const l2FeeSymbol = l2FeeTokenMeta?.symbol ?? l2FeeTokenAddress ?? "L2_FEE"
+        const l1TokenMeta = l2TokenMeta?.swapTokenAddress
+            ? registry.ethereumChains?.[`ethereum_${registry.ethChainId}`]?.assets[
+                  l2TokenMeta.swapTokenAddress.toLowerCase()
+              ]
+            : undefined
+        const l1TokenSymbol = l1TokenMeta?.symbol ?? "L1_TOKEN"
+
+        const breakdown: DeliveryFee["breakdown"] = {}
+        addBreakdown(breakdown, "assetHubDelivery", { amount: deliveryFeeInEther, symbol: "ETH" })
+        addBreakdown(breakdown, "assetHubDelivery", { amount: deliveryFeeInDOT, symbol: "DOT" })
+        addBreakdown(breakdown, "assetHubExecution", {
+            amount: assetHubExecutionFeeEther,
+            symbol: "ETH",
+        })
+        addBreakdown(breakdown, "assetHubExecution", {
+            amount: assetHubExecutionFeeDOT,
+            symbol: "DOT",
+        })
+        addBreakdown(breakdown, "relayer", { amount: finalRelayerFee, symbol: "ETH" })
+        addBreakdown(breakdown, "extrinsic", { amount: extrinsicFeeDot, symbol: "DOT" })
+        addBreakdown(breakdown, "extrinsic", { amount: extrinsicFeeEther, symbol: "ETH" })
+        if (bridgeFeeInL2Token > 0n) {
+            addBreakdown(breakdown, "l2Bridge", { amount: bridgeFeeInL2Token, symbol: l2FeeSymbol })
+        }
+        if (swapFeeInL1Token > 0n) {
+            addBreakdown(breakdown, "l1Swap", { amount: swapFeeInL1Token, symbol: l1TokenSymbol })
+        }
+
+        const summary: DeliveryFee["summary"] = [
+            {
+                description: "XCM execution fees",
+                amount: assetHubExecutionFeeEther,
+                symbol: "ETH",
+            },
+            { description: "Bridge fees", amount: deliveryFeeInEther, symbol: "ETH" },
+            {
+                description: "Relayer tip",
+                amount: finalRelayerFee - deliveryFeeInEther,
+                symbol: "ETH",
+            },
+        ]
+        if (bridgeFeeInL2Token > 0n) {
+            summary.push({
+                description: "Across fee",
+                amount: bridgeFeeInL2Token,
+                symbol: l2FeeSymbol,
+            })
+        }
+        if (swapFeeInL1Token > 0n) {
+            summary.push({
+                description: "Swap fee",
+                amount: swapFeeInL1Token,
+                symbol: l1TokenSymbol,
+            })
+        }
+
         return {
             kind: "ethereum_l2->polkadot",
-            assetHubDeliveryFeeEther: deliveryFeeInEther,
-            assetHubExecutionFeeEther: assetHubExecutionFeeEther,
-            destinationDeliveryFeeEther: 0n,
-            destinationExecutionFeeEther: 0n,
-            relayerFee: relayerFee,
-            extrinsicFeeDot: extrinsicFeeDot,
-            extrinsicFeeEther: extrinsicFeeEther,
-            totalFeeInWei: totalFeeInWei,
-            feeAsset: feeAsset,
-            swapFeeInL1Token,
-            bridgeFeeInL2Token,
+            feeAsset,
+            breakdown,
+            summary,
+            totals: computeTotals(summary),
         }
     }
 
@@ -293,15 +386,21 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             accountNonce,
         )
 
+        // For ether transfers there's only one asset in holding so no split is needed.
+        const userAssetLocation =
+            tokenAddress === ETHER_TOKEN_ADDRESS
+                ? undefined
+                : erc20Location(registry.ethChainId, tokenAddress)
         const xcm = hexToU8a(
             sendMessageXCM(
                 assetHub.registry,
                 beneficiaryAddressHex,
                 topic,
                 options?.customXcm,
+                userAssetLocation,
             ).toHex(),
         )
-        let claimer = claimerFromBeneficiary(assetHub, beneficiaryAddressHex)
+        let claimer = claimerFromBeneficiary(assetHub, beneficiaryAddressHex, registry.environment)
 
         let depositParams: DepositParamsStruct, tx: T["ContractTransaction"]
 
@@ -309,8 +408,8 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             xcm: xcm,
             assets: assets,
             claimer: claimerLocationToBytes(claimer),
-            executionFee: fee.assetHubExecutionFeeEther,
-            relayerFee: fee.relayerFee,
+            executionFee: findInBreakdown(fee.breakdown, "assetHubExecution", "ETH"),
+            relayerFee: findInBreakdown(fee.breakdown, "relayer", "ETH"),
         }
         const l2FeeTokenAddress =
             context.environment.l2Bridge?.l2Chains[this.from.id]?.feeTokenAddress
@@ -318,11 +417,16 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
         if (!l2FeeTokenAddress || !l1SwapRouterAddress) {
             throw new Error("L2 chain configuration is missing.")
         }
+        const totalFeeInWei = findTotal(fee, "ETH")
+        const bridgeFeeInL2Token = (fee.breakdown.l2Bridge ?? []).reduce((s, a) => s + a.amount, 0n)
+        const swapFeeInL1Token = (fee.breakdown.l1Swap ?? []).reduce((s, a) => s + a.amount, 0n)
         if (l2TokenAddress === ETHER_TOKEN_ADDRESS || l2TokenAddress === l2FeeTokenAddress) {
-            value = fee.totalFeeInWei + amount
-            inputAmount =
-                amount +
-                (l2TokenAddress === l2FeeTokenAddress ? (fee.bridgeFeeInL2Token ?? 0n) : 0n)
+            // bridgeFeeInL2Token is denominated in the L2 fee token (WETH on
+            // OP/Base/Arbitrum), which is 1:1 with ETH wei but lives in its own
+            // symbol bucket in fee.totals. Add it explicitly so msg.value /
+            // depositParams.inputAmount cover the Across leg.
+            value = totalFeeInWei + amount + bridgeFeeInL2Token
+            inputAmount = amount + (l2TokenAddress === l2FeeTokenAddress ? bridgeFeeInL2Token : 0n)
             depositParams = {
                 inputToken: l2TokenAddress,
                 outputToken: tokenAddress,
@@ -342,8 +446,8 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
                 l2TokenAddress === ETHER_TOKEN_ADDRESS ? value : undefined,
             )
         } else {
-            value = fee.totalFeeInWei
-            inputAmount = amount + fee.bridgeFeeInL2Token! + fee.swapFeeInL1Token!
+            value = totalFeeInWei
+            inputAmount = amount + bridgeFeeInL2Token + swapFeeInL1Token
             assets = [context.ethereumProvider.encodeNativeAsset(tokenAddress, amount)]
             sendParams.assets = assets
             depositParams = {
@@ -359,11 +463,12 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
                 registry,
                 this.from.id,
                 l2TokenAddress,
-                fee.assetHubExecutionFeeEther + fee.relayerFee,
-                fee.swapFeeInL1Token!,
+                findInBreakdown(fee.breakdown, "assetHubExecution", "ETH") +
+                    findInBreakdown(fee.breakdown, "relayer", "ETH"),
+                swapFeeInL1Token,
             )
             let swapParams: SwapParamsStruct = {
-                inputAmount: fee.swapFeeInL1Token!,
+                inputAmount: swapFeeInL1Token,
                 router: l1SwapRouterAddress,
                 callData: swapCalldata,
             }
@@ -426,6 +531,7 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
                 overrideRelayerFee?: bigint
                 l2PadFeeByPercentage?: bigint
                 fillDeadlineBuffer?: bigint
+                volumeFee?: VolumeFeeParams
             }
             tx?: {
                 customXcm?: any[]
@@ -566,6 +672,27 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
 
         const assetHubImpl = await this.context.paraImplementation(assetHub)
 
+        const requiredDotOut =
+            findInBreakdownOrZero(transfer.input.fee.breakdown, "assetHubDelivery", "DOT") +
+            findInBreakdownOrZero(transfer.input.fee.breakdown, "assetHubExecution", "DOT")
+        if (requiredDotOut > 0n) {
+            const reserveCheck = await checkDotEthPoolLiquidityForEthereumToPolkadot(
+                assetHubImpl,
+                registry.ethChainId,
+                requiredDotOut,
+            )
+            if (!reserveCheck.ok) {
+                logs.push({
+                    kind: ValidationKind.Error,
+                    reason: ValidationReason.InsufficientPoolReserves,
+                    message:
+                        reserveCheck.reason === "pool-missing"
+                            ? `${reserveCheck.pool} pool does not exist on Asset Hub.`
+                            : `${reserveCheck.pool} pool on Asset Hub has insufficient liquidity (need ${reserveCheck.requiredOut}, have ${reserveCheck.reserveOut}).`,
+                })
+            }
+        }
+
         // Check if asset can be received on asset hub (dry run)
         const ahParachain = registry.parachains[`polkadot_${registry.assetHubParaId}`]
         let dryRunAhSuccess, assetHubDryRunError
@@ -578,15 +705,19 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             })
         } else {
             // build asset hub packet and dryRun
-            const assetHubFee =
-                transfer.input.fee.assetHubDeliveryFeeEther +
-                transfer.input.fee.assetHubExecutionFeeEther
+            const executionFee = findInBreakdown(
+                transfer.input.fee.breakdown,
+                "assetHubExecution",
+                "ETH",
+            )
+            const relayerFee = findInBreakdown(transfer.input.fee.breakdown, "relayer", "ETH")
+            const payloadValue = transfer.computed.totalValue - executionFee - relayerFee
             const xcm = buildAssetHubERC20ReceivedXcm(
                 assetHub.registry,
                 registry.ethChainId,
                 tokenAddress,
-                transfer.computed.totalValue - assetHubFee,
-                assetHubFee,
+                payloadValue,
+                executionFee,
                 amount,
                 claimer,
                 transfer.input.sourceAccount,
@@ -650,6 +781,6 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
     }
 
     async messageId(receipt: T["TransactionReceipt"]) {
-        return getSharedMessageReceipt(this.context.ethereumProvider, receipt)
+        return this.context.ethereumProvider.scanL2WrapperDepositCallInvoked(receipt)
     }
 }

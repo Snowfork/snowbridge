@@ -40,8 +40,14 @@ export type EthereumChain = ChainId & {
   precompile?: `0x${string}`;
   xcDOT?: string;
   xcTokenMap?: XC20TokenMap;
-  // The gas cost of v2_submit excludes command execution, mainly covers the verification.
-  baseDeliveryGas?: bigint;
+  // Gas cost of `v2_submit`, excluding command execution; primarily covers verification.
+  baseVerificationGas?: bigint;
+  // Gas cost of `v2_submit`, including dispatch overhead such as multicall and internal command dispatch.
+  baseDispatchGas?: bigint;
+  // Gas cost of the two-phase submit flow (`submitInitial` + `commitPrevRandao` + `submitFinal`)
+  twoPhaseSubmitGas?: bigint;
+  // Gas cost of `submitFiatShamir`
+  submitFiatShamirGas?: bigint;
 };
 
 export type ChainProperties = {
@@ -243,6 +249,7 @@ export type {
   L1AdapterDepositParams,
   L1LegacySwapRouterExactOutputSingleParams,
   L1SwapRouterExactOutputSingleParams,
+  L2MessageReceipt,
   MultiAddressStruct,
 } from "./provider";
 
@@ -288,9 +295,11 @@ export type L2ForwardMetadata = {
   swapRoutes: readonly AssetSwapRoute[];
 };
 
+export type FeeEstimateErrorCode = "AMOUNT_TOO_LOW" | "AMOUNT_TOO_HIGH" | "COULD_NOT_SWAP"
+
 export type FeeEstimateErrorDetails = {
   type: string;
-  code: string;
+  code: FeeEstimateErrorCode | string;
   status: number;
   message: string;
   id: string;
@@ -300,6 +309,15 @@ export class FeeEstimateError extends Error {
   constructor(details: FeeEstimateErrorDetails) {
     super(details.message);
     this.details = details;
+  }
+  static couldNotSwap(asset1: unknown, asset2: unknown): FeeEstimateError {
+    return new FeeEstimateError({
+      type: "AssetConversion",
+      code: "COULD_NOT_SWAP",
+      status: 0,
+      message: `Could not estimate swap for '${JSON.stringify(asset1)}' -> '${JSON.stringify(asset2)}'`,
+      id: "could-not-swap",
+    })
   }
 }
 

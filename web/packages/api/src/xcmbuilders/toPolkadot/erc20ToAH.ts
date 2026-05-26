@@ -1,5 +1,10 @@
 import { Registry } from "@polkadot/types/types"
-import { erc20Location, ethereumNetwork, accountToLocation } from "../../xcmBuilder"
+import {
+    accountToLocation,
+    buildSplitDepositAsset,
+    erc20Location,
+    ethereumNetwork,
+} from "../../xcmBuilder"
 import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
 
 export function buildAssetHubERC20ReceivedXcm(
@@ -89,20 +94,19 @@ export function buildAssetHubERC20ReceivedXcm(
                     ],
                 },
             },
+            // Mirror the user-side `sendMessageXCM` tail exactly: RefundSurplus
+            // returns unused PayFees ether to holding so the subsequent
+            // DepositAsset attempts to settle ether dust + tokens together.
+            // Without this, the dry-run misses ether-dust BelowMinimum traps.
+            { refundSurplus: null },
             ...(customXcm || []), // Insert custom XCM instructions if provided
-            {
-                depositAsset: {
-                    assets: {
-                        wild: {
-                            allCounted: 2,
-                        },
-                    },
-                    beneficiary: {
-                        parents: 0,
-                        interior: { x1: [beneficiaryLocation] },
-                    },
-                },
-            },
+            ...buildSplitDepositAsset(
+                beneficiaryLocation,
+                tokenAddress === ETHER_TOKEN_ADDRESS
+                    ? undefined
+                    : erc20Location(ethChainId, tokenAddress),
+                2,
+            ),
             {
                 setTopic: topic,
             },
@@ -115,6 +119,7 @@ export function sendMessageXCM(
     beneficiary: string,
     topic: string,
     customXcm?: any[],
+    userAssetLocation?: any,
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     return registry.createType("XcmVersionedXcm", {
@@ -123,19 +128,7 @@ export function sendMessageXCM(
                 refundSurplus: null,
             },
             ...(customXcm || []), // Insert custom XCM instructions if provided
-            {
-                depositAsset: {
-                    assets: {
-                        wild: {
-                            allCounted: 2,
-                        },
-                    },
-                    beneficiary: {
-                        parents: 0,
-                        interior: { x1: [beneficiaryLocation] },
-                    },
-                },
-            },
+            ...buildSplitDepositAsset(beneficiaryLocation, userAssetLocation, 2),
             {
                 setTopic: topic,
             },

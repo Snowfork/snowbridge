@@ -30,6 +30,7 @@ import {
 } from "./transfers/toEthereumEvm/transferInterface"
 import { ensureValidationSuccess } from "./utils"
 import { DOT_LOCATION } from "./assets_v2"
+import { findInBreakdownOrZero, findTotal, findTotalOrUndefined } from "./fees"
 import {
     DeliveryFee,
     FeeInfo,
@@ -207,7 +208,7 @@ export class V1ToEthereumEvmAdapter<T extends EthereumProviderTypes>
             tokenAddress,
             messageId,
             sourceParachainImpl.parachainId,
-            fee.returnToSenderExecutionFeeDOT,
+            findInBreakdownOrZero(fee.breakdown, "returnToSenderExecution", "DOT"),
             DOT_LOCATION, // TODO: Support Native fee for EVM chains
         )
 
@@ -218,7 +219,7 @@ export class V1ToEthereumEvmAdapter<T extends EthereumProviderTypes>
                 sourceAccountHex,
                 [1, ["0x00" + numberToHex(assetHubParaId, 32).slice(2)]],
                 [
-                    [ethChain.xcDOT, fee.totalFeeInDot],
+                    [ethChain.xcDOT, findTotal(fee, "DOT")],
                     [xcTokenAddress, amount],
                 ],
                 2,
@@ -320,11 +321,12 @@ export class V1ToEthereumEvmAdapter<T extends EthereumProviderTypes>
             ),
         ])
 
+        const evmParaTotalNative = findTotalOrUndefined(fee, source.info.tokenSymbols)
         let nativeBalanceCheckFailed = false
         if (
             isNativeBalanceTransfer &&
-            fee.totalFeeInNative &&
-            amount + fee.totalFeeInNative > tokenBalance
+            evmParaTotalNative !== undefined &&
+            amount + evmParaTotalNative > tokenBalance
         ) {
             nativeBalanceCheckFailed = true
             logs.push({
@@ -348,11 +350,11 @@ export class V1ToEthereumEvmAdapter<T extends EthereumProviderTypes>
             tokenAddress,
             beneficiaryAccount,
             amount,
-            fee.totalFeeInDot,
+            findTotal(fee, "DOT"),
             messageId,
             sourceParaId,
-            fee.returnToSenderExecutionFeeDOT,
-            fee.totalFeeInNative !== undefined,
+            findInBreakdownOrZero(fee.breakdown, "returnToSenderExecution", "DOT"),
+            evmParaTotalNative !== undefined,
         )
 
         let sourceDryRunError
@@ -417,10 +419,10 @@ export class V1ToEthereumEvmAdapter<T extends EthereumProviderTypes>
                         tokenAddress,
                         "0x0000000000000000000000000000000000000000000000000000000000000000",
                         amount,
-                        fee.totalFeeInDot,
-                        fee.assetHubExecutionFeeDOT,
+                        findTotal(fee, "DOT"),
+                        findInBreakdownOrZero(fee.breakdown, "assetHubExecution", "DOT"),
                         sourceParaId,
-                        fee.returnToSenderExecutionFeeDOT,
+                        findInBreakdownOrZero(fee.breakdown, "returnToSenderExecution", "DOT"),
                         DOT_LOCATION, // TODO: Support native fee for EVM
                         DOT_LOCATION,
                         false,
@@ -443,7 +445,7 @@ export class V1ToEthereumEvmAdapter<T extends EthereumProviderTypes>
                 reason: ValidationReason.InsufficientDotFee,
                 message: "Could not determine the DOT balance",
             })
-        } else if (fee.totalFeeInDot > dotBalance) {
+        } else if (findTotal(fee, "DOT") > dotBalance) {
             logs.push({
                 kind: ValidationKind.Error,
                 reason: ValidationReason.InsufficientDotFee,
@@ -484,8 +486,8 @@ export class V1ToEthereumEvmAdapter<T extends EthereumProviderTypes>
         if (
             !nativeBalanceCheckFailed &&
             isNativeBalanceTransfer &&
-            fee.totalFeeInNative &&
-            amount + fee.totalFeeInNative + (feeInfo?.totalTxCost ?? 0n) > tokenBalance
+            evmParaTotalNative !== undefined &&
+            amount + evmParaTotalNative + (feeInfo?.totalTxCost ?? 0n) > tokenBalance
         ) {
             logs.push({
                 kind: ValidationKind.Error,

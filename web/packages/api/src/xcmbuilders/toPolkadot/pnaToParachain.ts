@@ -1,6 +1,7 @@
 import { Registry } from "@polkadot/types/types"
 import {
     accountToLocation,
+    buildSplitDepositAsset,
     erc20Location,
     ethereumNetwork,
     parachainLocation,
@@ -11,7 +12,6 @@ export function buildAssetHubPNAReceivedXcm(
     registry: Registry,
     ethChainId: number,
     tokenLocation: any,
-    etherAmount: bigint,
     totalAssetHubFeeInEther: bigint,
     remoteExecutionFee: bigint,
     value: bigint,
@@ -56,16 +56,6 @@ export function buildAssetHubPNAReceivedXcm(
                         },
                     },
                 },
-            },
-            {
-                reserveAssetDeposited: [
-                    {
-                        id: ether,
-                        fun: {
-                            Fungible: etherAmount,
-                        },
-                    },
-                ],
             },
             {
                 withdrawAsset: [
@@ -124,19 +114,7 @@ export function buildAssetHubPNAReceivedXcm(
                             refundSurplus: null,
                         },
                         ...(customXcm || []), // Insert custom XCM instructions if provided
-                        {
-                            depositAsset: {
-                                assets: {
-                                    wild: {
-                                        allCounted: 3,
-                                    },
-                                },
-                                beneficiary: {
-                                    parents: 0,
-                                    interior: { x1: [beneficiaryLocation] },
-                                },
-                            },
-                        },
+                        ...buildSplitDepositAsset(beneficiaryLocation, tokenLocation, 3),
                         {
                             setTopic: topic,
                         },
@@ -212,20 +190,12 @@ export function buildParachainPNAReceivedXcmOnDestination(
                 ],
             },
             { clearOrigin: null },
+            // Mirror the user-side `sendMessageXCM` remoteXcm tail: RefundSurplus
+            // returns unused BuyExecution surplus to holding so the dry-run sees
+            // the same dust deposit attempt that production performs.
+            { refundSurplus: null },
             ...(customXcm || []), // Insert custom XCM instructions if provided
-            {
-                depositAsset: {
-                    assets: {
-                        wild: {
-                            allCounted: 2,
-                        },
-                    },
-                    beneficiary: {
-                        parents: 0,
-                        interior: { x1: [beneficiaryLocation] },
-                    },
-                },
-            },
+            ...buildSplitDepositAsset(beneficiaryLocation, assetLocation, 2),
             { setTopic: topic },
         ],
     })
@@ -281,19 +251,7 @@ export function sendMessageXCM(
                             refundSurplus: null,
                         },
                         ...(customXcm || []), // Insert custom XCM instructions if provided
-                        {
-                            depositAsset: {
-                                assets: {
-                                    wild: {
-                                        allCounted: 3,
-                                    },
-                                },
-                                beneficiary: {
-                                    parents: 0,
-                                    interior: { x1: [beneficiaryLocation] },
-                                },
-                            },
-                        },
+                        ...buildSplitDepositAsset(beneficiaryLocation, tokenLocation, 3),
                         {
                             setTopic: topic,
                         },
@@ -369,19 +327,7 @@ export function buildParachainPNAReceivedXcmOnDestinationWithDOTFee(
             { clearOrigin: null },
             { refundSurplus: null },
             ...(customXcm || []),
-            {
-                depositAsset: {
-                    assets: {
-                        wild: {
-                            allCounted: 2,
-                        },
-                    },
-                    beneficiary: {
-                        parents: 0,
-                        interior: { x1: [beneficiaryLocation] },
-                    },
-                },
-            },
+            ...buildSplitDepositAsset(beneficiaryLocation, assetLocation, 2),
             { setTopic: topic },
         ],
     })
@@ -391,7 +337,6 @@ export function buildAssetHubPNAReceivedXcmWithDOTFee(
     registry: Registry,
     ethChainId: number,
     tokenLocation: any,
-    etherAmount: bigint,
     totalAssetHubFeeInEther: bigint,
     remoteEtherFeeAmount: bigint,
     remoteDotFeeAmount: bigint,
@@ -437,16 +382,6 @@ export function buildAssetHubPNAReceivedXcmWithDOTFee(
                         },
                     },
                 },
-            },
-            {
-                reserveAssetDeposited: [
-                    {
-                        id: ether,
-                        fun: {
-                            Fungible: etherAmount,
-                        },
-                    },
-                ],
             },
             {
                 withdrawAsset: [
@@ -528,25 +463,15 @@ export function buildAssetHubPNAReceivedXcmWithDOTFee(
                         {
                             refundSurplus: null,
                         },
-                        {
-                            depositAsset: {
-                                assets: {
-                                    wild: {
-                                        allCounted: 3,
-                                    },
-                                },
-                                beneficiary: {
-                                    parents: 0,
-                                    interior: { x1: [beneficiaryLocation] },
-                                },
-                            },
-                        },
+                        ...buildSplitDepositAsset(beneficiaryLocation, tokenLocation, 3),
                         {
                             setTopic: topic,
                         },
                     ],
                 },
             },
+            // Mirror the user-side `sendMessageXCMWithDOTDestFee` AH-side tail.
+            { refundSurplus: null },
             {
                 depositAsset: {
                     assets: {
@@ -641,19 +566,7 @@ export function sendMessageXCMWithDOTDestFee(
                             refundSurplus: null,
                         },
                         ...(customXcm || []),
-                        {
-                            depositAsset: {
-                                assets: {
-                                    wild: {
-                                        allCounted: 3,
-                                    },
-                                },
-                                beneficiary: {
-                                    parents: 0,
-                                    interior: { x1: [beneficiaryLocation] },
-                                },
-                            },
-                        },
+                        ...buildSplitDepositAsset(beneficiaryLocation, tokenLocation, 3),
                         {
                             setTopic: topic,
                         },

@@ -10,6 +10,7 @@ import {
 import { DOT_LOCATION } from "../../assets_v2"
 import { Asset } from "@snowbridge/base-types"
 import { DeliveryFee } from "../../toEthereum_v2"
+import { findInBreakdownOrZero, findTotal } from "../../fees"
 
 export function buildResultXcmAssetHubPNATransferFromParachain(
     registry: Registry,
@@ -345,11 +346,11 @@ export function buildTransferXcmFromParachain(
     let tokenLocation = asset.location
 
     let localDOTFeeAmount: bigint =
-        (fee.localExecutionFeeDOT ?? 0n) +
-        (fee.localDeliveryFeeDOT ?? 0n) +
-        fee.returnToSenderExecutionFeeDOT
-    let totalDOTFeeAmount: bigint = fee.totalFeeInDot!
-    let remoteEtherFeeAmount: bigint = fee.ethereumExecutionFee!
+        findInBreakdownOrZero(fee.breakdown, "localExecution", "DOT") +
+        findInBreakdownOrZero(fee.breakdown, "localDelivery", "DOT") +
+        findInBreakdownOrZero(fee.breakdown, "returnToSenderExecution", "DOT")
+    let totalDOTFeeAmount: bigint = findTotal(fee, "DOT")
+    let remoteEtherFeeAmount: bigint = findInBreakdownOrZero(fee.breakdown, "ethereumExecution", "ETH")
 
     let assets = []
     assets.push({

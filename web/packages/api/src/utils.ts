@@ -58,11 +58,32 @@ export const getEventIndex = (id: string) => {
     return `${blockNumber}-${eventIndex}`
 }
 
+// Pad a fee estimate by `padPercent` percent. For E->P fees computed by
+// quoting an ETH->DOT swap on AssetConversion, the padding also absorbs AMM
+// pool drift between estimation time and AH execution, slippage is rolled
+// into the same buffer rather than applied separately.
 export function padFeeByPercentage(fee: bigint, padPercent: bigint) {
     if (padPercent < 0 || padPercent > 100) {
         throw Error(`padPercent ${padPercent} not in range of 0 to 100.`)
     }
     return (fee * (100n + padPercent)) / 100n
+}
+
+// Quadratic decay: pad = staticPad * max(0, 1 - r)^2 where r = tip / rawCost.
+// Returns the scaled pad in the same percentage units (0..staticPad).
+// When the volume tip already meets or exceeds the raw cost it is meant to
+// protect (r >= 1), the pad collapses to zero — the tip itself is the buffer.
+export function scaledPadPercentage(
+    staticPadPercent: bigint,
+    tip: bigint,
+    rawCost: bigint,
+): bigint {
+    if (staticPadPercent <= 0n) return 0n
+    if (rawCost <= 0n) return staticPadPercent
+    if (tip <= 0n) return staticPadPercent
+    if (tip >= rawCost) return 0n
+    const remaining = rawCost - tip
+    return (remaining * remaining * staticPadPercent) / (rawCost * rawCost)
 }
 
 export class ValidationError<

@@ -5,6 +5,7 @@ import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { formatEther, Wallet } from "ethers"
 import { bridgeInfoFor } from "@snowbridge/registry"
 import { WETH9__factory } from "@snowbridge/contract-types"
+import { findFeeBreakdownTotal, findFeeTotal } from "./fee"
 
 export const transferToPolkadot = async (
     destParaId: number,
@@ -36,7 +37,10 @@ export const transferToPolkadot = async (
     )
     const ETHEREUM_ACCOUNT_PUBLIC = await ETHEREUM_ACCOUNT.getAddress()
     const POLKADOT_ACCOUNT = polkadot_keyring.addFromUri(process.env.SUBSTRATE_KEY ?? "//Ferdie")
-    const POLKADOT_ACCOUNT_PUBLIC = POLKADOT_ACCOUNT.address
+    // Optional override: send to a specific beneficiary instead of the signer's
+    // own account. Used to reproduce a known trap scenario by targeting the
+    // exact AH account that failed in production.
+    const POLKADOT_ACCOUNT_PUBLIC = process.env.SUBSTRATE_BENEFICIARY ?? POLKADOT_ACCOUNT.address
 
     console.log("eth", ETHEREUM_ACCOUNT_PUBLIC, "sub", POLKADOT_ACCOUNT_PUBLIC)
 
@@ -92,9 +96,15 @@ export const transferToPolkadot = async (
         const validation = await transferImpl.validate(transfer)
         console.log("validation result", validation)
 
-        // Step 4. Check validation logs for errors
+        // Step 4. Check validation logs for errors. SKIP_VALIDATION=true lets
+        // trap-test scripts proceed even when the dry-run correctly fails (e.g.
+        // intentionally sending USDT below min_balance to trigger an asset trap).
         if (!validation.success) {
-            throw Error(`validation has one of more errors.`)
+            if (process.env.SKIP_VALIDATION === "true") {
+                console.warn("validation failed; proceeding anyway (SKIP_VALIDATION=true)")
+            } else {
+                throw Error(`validation has one of more errors.`)
+            }
         }
 
         // Step 5. Estimate the cost of the execution cost of the transaction
@@ -105,14 +115,16 @@ export const transferToPolkadot = async (
         const estimatedGas = await context.ethereumProvider.estimateGas(context.ethereum(), tx)
         const feeData = await context.ethereumProvider.getFeeData(context.ethereum())
         const executionFee = (feeData.gasPrice ?? 0n) * estimatedGas
+        const relayerFee = findFeeBreakdownTotal(fee, "relayer", "ETH")
+        const deliveryFee = findFeeTotal(fee, "ETH")
 
         console.log("tx:", tx)
         console.log("feeData:", feeData)
         console.log("gas:", estimatedGas)
-        console.log("relayer fee:", formatEther(fee.relayerFee))
+        console.log("relayer fee:", formatEther(relayerFee))
         console.log("execution cost:", formatEther(executionFee))
-        console.log("total cost:", formatEther(fee.totalFeeInWei + executionFee))
-        console.log("ether sent:", formatEther(totalValue - fee.totalFeeInWei))
+        console.log("total cost:", formatEther(deliveryFee + executionFee))
+        console.log("ether sent:", formatEther(totalValue - deliveryFee))
         console.log("dry run:", await context.ethereum().call(tx))
 
         if (process.env["DRY_RUN"] != "true") {

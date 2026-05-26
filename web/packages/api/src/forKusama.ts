@@ -35,6 +35,11 @@ import {
 import { CallDryRunEffects, XcmDryRunApiError, XcmDryRunEffects } from "@polkadot/types/interfaces"
 import { Result } from "@polkadot/types"
 import { ensureValidationSuccess, padFeeByPercentage, u32ToLeBytes } from "./utils"
+import { addBreakdown, computeTotals, findInBreakdown, findInBreakdownOrZero, findTotal } from "./fees"
+import {
+    checkDotKsmPoolLiquidityForKusamaToPolkadot,
+    checkKsmDotPoolLiquidityForPolkadotToKusama,
+} from "./poolReserves"
 import { resolveBeneficiary } from "./crypto"
 import { TransferInterface as KusamaTransferInterface } from "./transfers/forKusama/transferInterface"
 import { Context } from "."
@@ -264,13 +269,33 @@ export class KusamaTransfer<T extends EthereumProviderTypes> implements KusamaTr
         totalXcmBridgeFee = padFeeByPercentage(totalXcmBridgeFee, 33n)
 
         let totalFee = totalXcmBridgeFee + bridgeHubDeliveryFee + destinationFee
+        const sourceSymbol = this.#direction() === Direction.ToPolkadot ? "KSM" : "DOT"
+        // destNativeSymbol is the asset coming OUT of the destination AH swap
+        // (DOT for kusama→polkadot, KSM for polkadot→kusama).
+        const destNativeSymbol = this.#direction() === Direction.ToPolkadot ? "DOT" : "KSM"
+
+        const breakdown: DeliveryFee["breakdown"] = {}
+        addBreakdown(breakdown, "xcmBridge", { amount: totalXcmBridgeFee, symbol: sourceSymbol })
+        addBreakdown(breakdown, "bridgeHubDelivery", {
+            amount: bridgeHubDeliveryFee,
+            symbol: sourceSymbol,
+        })
+        addBreakdown(breakdown, "destinationExecution", {
+            amount: destinationFee,
+            symbol: sourceSymbol,
+        })
+        addBreakdown(breakdown, "destinationExecution", {
+            amount: destinationFeeInDestNative,
+            symbol: destNativeSymbol,
+        })
+
+        const summary = [{ description: "Bridge fee", amount: totalFee, symbol: sourceSymbol }]
 
         return {
             kind: this.from.kind === "kusama" ? "kusama->polkadot" : "polkadot->kusama",
-            xcmBridgeFee: totalXcmBridgeFee,
-            destinationFee,
-            bridgeHubDeliveryFee,
-            totalFeeInNative: totalFee,
+            breakdown,
+            summary,
+            totals: computeTotals(summary),
         }
     }
 
@@ -327,7 +352,11 @@ export class KusamaTransfer<T extends EthereumProviderTypes> implements KusamaTr
                 tokenLocationOnSource,
                 beneficiaryAddressHex,
                 amount,
-                fee.destinationFee,
+                findInBreakdown(
+                    fee.breakdown,
+                    "destinationExecution",
+                    fee.kind === "kusama->polkadot" ? "KSM" : "DOT",
+                ),
                 messageId,
             )
         } else {
@@ -337,7 +366,11 @@ export class KusamaTransfer<T extends EthereumProviderTypes> implements KusamaTr
                 tokenLocationOnSource,
                 beneficiaryAddressHex,
                 amount,
-                fee.destinationFee,
+                findInBreakdown(
+                    fee.breakdown,
+                    "destinationExecution",
+                    fee.kind === "kusama->polkadot" ? "KSM" : "DOT",
+                ),
                 messageId,
             )
         }
@@ -440,7 +473,10 @@ export class KusamaTransfer<T extends EthereumProviderTypes> implements KusamaTr
         const paymentInfo = await tx.paymentInfo(sourceAccountHex)
         const sourceExecutionFee = paymentInfo["partialFee"].toBigInt()
 
-        if (sourceExecutionFee + fee.totalFeeInNative > nativeBalance) {
+        if (
+            sourceExecutionFee + findTotal(fee, fee.kind === "kusama->polkadot" ? "KSM" : "DOT") >
+            nativeBalance
+        ) {
             logs.push({
                 kind: ValidationKind.Error,
                 reason: ValidationReason.InsufficientFee,
@@ -455,7 +491,11 @@ export class KusamaTransfer<T extends EthereumProviderTypes> implements KusamaTr
         if (this.#direction() == Direction.ToPolkadot) {
             destAssetHubXCM = buildKusamaToPolkadotDestAssetHubXCM(
                 destAssetHub.registry,
-                fee.destinationFee,
+                findInBreakdown(
+                    fee.breakdown,
+                    "destinationExecution",
+                    fee.kind === "kusama->polkadot" ? "KSM" : "DOT",
+                ),
                 registry.assetHubParaId,
                 tokenLocation,
                 transfer.input.amount,
@@ -465,7 +505,11 @@ export class KusamaTransfer<T extends EthereumProviderTypes> implements KusamaTr
         } else {
             destAssetHubXCM = buildPolkadotToKusamaDestAssetHubXCM(
                 destAssetHub.registry,
-                fee.destinationFee,
+                findInBreakdown(
+                    fee.breakdown,
+                    "destinationExecution",
+                    fee.kind === "kusama->polkadot" ? "KSM" : "DOT",
+                ),
                 registry.assetHubParaId,
                 tokenLocation,
                 transfer.input.amount,
@@ -509,6 +553,53 @@ export class KusamaTransfer<T extends EthereumProviderTypes> implements KusamaTr
                     reason: ValidationReason.AccountDoesNotExist,
                     message: "Beneficiary account does not exist on the destination chain.",
                 })
+            }
+        }
+
+        const destAssetHubImpl = await this.context.paraImplementation(destAssetHub)
+        if (this.#direction() === Direction.ToPolkadot) {
+            const requiredDotOut = findInBreakdownOrZero(
+                fee.breakdown,
+                "destinationExecution",
+                "DOT",
+            )
+            if (requiredDotOut > 0n) {
+                const reserveCheck = await checkDotKsmPoolLiquidityForKusamaToPolkadot(
+                    destAssetHubImpl,
+                    requiredDotOut,
+                )
+                if (!reserveCheck.ok) {
+                    logs.push({
+                        kind: ValidationKind.Error,
+                        reason: ValidationReason.InsufficientPoolReserves,
+                        message:
+                            reserveCheck.reason === "pool-missing"
+                                ? `${reserveCheck.pool} pool does not exist on Asset Hub.`
+                                : `${reserveCheck.pool} pool on Asset Hub has insufficient liquidity (need ${reserveCheck.requiredOut}, have ${reserveCheck.reserveOut}).`,
+                    })
+                }
+            }
+        } else {
+            const requiredKsmOut = findInBreakdownOrZero(
+                fee.breakdown,
+                "destinationExecution",
+                "KSM",
+            )
+            if (requiredKsmOut > 0n) {
+                const reserveCheck = await checkKsmDotPoolLiquidityForPolkadotToKusama(
+                    destAssetHubImpl,
+                    requiredKsmOut,
+                )
+                if (!reserveCheck.ok) {
+                    logs.push({
+                        kind: ValidationKind.Error,
+                        reason: ValidationReason.InsufficientPoolReserves,
+                        message:
+                            reserveCheck.reason === "pool-missing"
+                                ? `${reserveCheck.pool} pool does not exist on Asset Hub.`
+                                : `${reserveCheck.pool} pool on Asset Hub has insufficient liquidity (need ${reserveCheck.requiredOut}, have ${reserveCheck.reserveOut}).`,
+                    })
+                }
             }
         }
 

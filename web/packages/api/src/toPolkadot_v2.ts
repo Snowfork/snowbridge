@@ -1,4 +1,5 @@
 import { ensureValidationSuccess, padFeeByPercentage } from "./utils"
+import { addBreakdown, computeTotals, findInBreakdownOrZero, findTotal } from "./fees"
 import { resolveBeneficiary } from "./crypto"
 import { DOT_LOCATION, ETHER_TOKEN_ADDRESS } from "./assets_v2"
 import {
@@ -39,40 +40,55 @@ import { ValidationKind, ValidationReason } from "./types/toPolkadot"
 import type { ValidationLog } from "./types/toPolkadot"
 
 function toV2DeliveryFee(fee: DeliveryFee): ToPolkadotV2DeliveryFee {
+    const breakdown: ToPolkadotV2DeliveryFee["breakdown"] = {}
+    addBreakdown(breakdown, "destinationDelivery", {
+        amount: fee.destinationDeliveryFeeDOT,
+        symbol: "DOT",
+    })
+    addBreakdown(breakdown, "destinationExecution", {
+        amount: fee.destinationExecutionFeeDOT,
+        symbol: "DOT",
+    })
+    const summary = [{ description: "Bridge fee", amount: fee.totalFeeInWei, symbol: "ETH" }]
     return {
-        ...fee,
+        kind: "ethereum->polkadot",
         feeAsset: null,
-        assetHubDeliveryFeeEther: 0n,
-        assetHubExecutionFeeEther: 0n,
-        destinationDeliveryFeeEther: 0n,
-        destinationExecutionFeeEther: 0n,
-        destinationExecutionFeeDOT: fee.destinationExecutionFeeDOT,
-        relayerFee: 0n,
-        extrinsicFeeDot: 0n,
-        extrinsicFeeEther: 0n,
+        breakdown,
+        summary,
+        totals: computeTotals(summary),
     }
 }
 
 function toV1DeliveryFee(fee: ToPolkadotV2DeliveryFee): DeliveryFee {
-    const v1Fee = fee as unknown as {
-        destinationDeliveryFeeDOT?: bigint
-        destinationExecutionFeeDOT?: bigint
-        totalFeeInWei?: bigint
-    }
-    if (
-        typeof v1Fee.destinationDeliveryFeeDOT !== "bigint" ||
-        typeof v1Fee.destinationExecutionFeeDOT !== "bigint" ||
-        typeof v1Fee.totalFeeInWei !== "bigint"
-    ) {
-        throw new Error(
-            "Unsupported fee object for v1 toPolkadot adapter. Expected destinationDeliveryFeeDOT, destinationExecutionFeeDOT, and totalFeeInWei.",
-        )
-    }
+    const destinationDeliveryFeeDOT = findInBreakdownOrZero(
+        fee.breakdown,
+        "destinationDelivery",
+        "DOT",
+    )
+    const destinationExecutionFeeDOT = findInBreakdownOrZero(
+        fee.breakdown,
+        "destinationExecution",
+        "DOT",
+    )
+    const totalFeeInWei = findTotal(fee, "ETH")
+    const breakdown: DeliveryFee["breakdown"] = {}
+    addBreakdown(breakdown, "destinationDelivery", {
+        amount: destinationDeliveryFeeDOT,
+        symbol: "DOT",
+    })
+    addBreakdown(breakdown, "destinationExecution", {
+        amount: destinationExecutionFeeDOT,
+        symbol: "DOT",
+    })
+    const summary = [{ description: "Bridge fee", amount: totalFeeInWei, symbol: "ETH" }]
     return {
         kind: "ethereum->polkadot",
-        destinationDeliveryFeeDOT: v1Fee.destinationDeliveryFeeDOT,
-        destinationExecutionFeeDOT: v1Fee.destinationExecutionFeeDOT,
-        totalFeeInWei: v1Fee.totalFeeInWei,
+        destinationDeliveryFeeDOT,
+        destinationExecutionFeeDOT,
+        totalFeeInWei,
+        breakdown,
+        summary,
+        totals: computeTotals(summary),
     }
 }
 
@@ -204,11 +220,32 @@ export class V1ToPolkadotAdapter<T extends EthereumProviderTypes>
             )
         }
         const totalFeeInDOT = destinationExecutionFeeDOT + destinationDeliveryFeeDOT
+        const totalFeeInWei = await gateway.quoteSendTokenFee(
+            tokenAddress,
+            this.to.id,
+            totalFeeInDOT,
+        )
+
+        const breakdown: DeliveryFee["breakdown"] = {}
+        addBreakdown(breakdown, "destinationDelivery", {
+            amount: destinationDeliveryFeeDOT,
+            symbol: "DOT",
+        })
+        addBreakdown(breakdown, "destinationExecution", {
+            amount: destinationExecutionFeeDOT,
+            symbol: "DOT",
+        })
+
+        const summary = [{ description: "Bridge fee", amount: totalFeeInWei, symbol: "ETH" }]
+
         return toV2DeliveryFee({
             kind: "ethereum->polkadot",
             destinationExecutionFeeDOT,
             destinationDeliveryFeeDOT,
-            totalFeeInWei: await gateway.quoteSendTokenFee(tokenAddress, this.to.id, totalFeeInDOT),
+            totalFeeInWei,
+            breakdown,
+            summary,
+            totals: computeTotals(summary),
         })
     }
 
