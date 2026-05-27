@@ -4,11 +4,11 @@ On-call runbook. Halt mechanics are at the top so they're easy to reach under pr
 
 Halt is technically reversible but the halt referendum on Polkassembly is public. See [Decision authority](#decision-authority) for when solo action vs team confirmation applies.
 
-## Producing a halt-bridge preimage
+## Producing the preimage and submission links
 
-Get the preimage from [app.snowbridge.network/governance](https://app.snowbridge.network/governance). Select the halt scope (see [Halt scopes reference](#halt-scopes-reference)), copy the hash and bytes, and feed bytes into `opengov-cli` (see [Submitting the preimage](#submitting-the-preimage)).
+The governance page at [app.snowbridge.network/governance](https://app.snowbridge.network/governance) is the single source of truth during an incident. Select the halt scope (see [Halt scopes reference](#halt-scopes-reference)) and the page emits both the preimage **and** the two ready-to-submit papi.how links. Take the links straight to [Submitting](#submitting).
 
-**Fallback (UI down only)**: call `buildHaltBridgePreimage` from `@snowbridge/api` with a `HaltBridgeOptions` matching the same scopes.
+**Fallback (UI down only)**: call `buildHaltBridgePreimage` then `buildHaltBridgeSubmissionUrls` from `@snowbridge/api`. Produces the same preimage + URLs the UI shows.
 
 ## Halt scopes reference
 
@@ -39,9 +39,20 @@ Pick the narrowest scope that covers the failure mode. Governance page form fiel
 
 When uncertain: **All**. To block both directions immediately: **Gateway** + **AssetHub max fee**.
 
-## Submitting the preimage
+## Submitting
 
-Goes through OpenGov **Whitelisted Caller** track. Requires Polkadot Fellowship to whitelist the call first. Use [opengov-cli](https://github.com/joepetrowski/opengov-cli):
+Submission goes through OpenGov's **Whitelisted Caller** track, which requires the Polkadot Fellowship to whitelist the call first. From the governance page's result panel, two papi.how links handle this end-to-end:
+
+1. **Asset Hub batch** Click **Open**. Notes the preimage and opens the public Whitelisted Caller referendum on Asset Hub. Anyone on the team can submit. Sign in papi.how.
+2. **Fellowship whitelist** Click **Copy** and share the link in the Parity Element channel (see [Comms](#comms-during-an-incident)). Must be submitted by a Fellow of rank 3 or higher. Bottleneck of the flow.
+
+Enactment defaults to `After(10)` blocks (matches opengov-cli's default).
+
+**Wall-clock: hours, not minutes.** Run Parity escalation in parallel with the Asset Hub submission.
+
+### Fallback: opengov-cli
+
+If the governance page is unreachable, construct the same submission locally with [opengov-cli](https://github.com/joepetrowski/opengov-cli) and the preimage bytes (which the SDK fallback in [Producing](#producing-the-preimage-and-submission-links) can still generate offline):
 
 {% code overflow="wrap" %}
 ```
@@ -53,14 +64,7 @@ opengov-cli submit-referendum \
 ```
 {% endcode %}
 
-Outputs two pre-built batches as papi.how links:
-
-1. **Polkadot Asset Hub batch** Preimage note + public Whitelisted Caller referendum. Anyone on the team can submit.
-2. **Polkadot Collectives Chain batch** Opens Fellowship whitelist referendum. **Requires rank-3+ Fellow.** Coordinate with Parity (Adrian, Bastian, Oliver) in Element. Bottleneck of the flow.
-
-Enactment defaults to `After(10)` blocks. Override with `--at <block>` or `--after <blocks>`.
-
-**Wall-clock: hours, not minutes.** Run Parity escalation in parallel with submission (see [Comms](#comms-during-an-incident)).
+Emits the same two papi.how URLs the UI shows. Use only when the UI is down; the UI is the single source of truth the team drives from during an incident.
 
 ## Verifying the halt
 
@@ -106,7 +110,7 @@ A halt referendum on Polkassembly is public, so solo authority is reserved for c
 Each step assumes the previous one has happened.
 
 1. **Slack** `#snowbridge-security` Post the signal (link to explorer, alert, bounty report). Non-visible signals: wait for at least one teammate to confirm before halting. Visible exploit: skip ahead.
-2. **Halt** See [Producing](#producing-a-halt-bridge-preimage) + [Submitting](#submitting-the-preimage). For visible exploits, run in parallel with steps 3 and 4.
+2. **Halt** See [Producing](#producing-the-preimage-and-submission-links) + [Submitting](#submitting). For visible exploits, run in parallel with steps 3 and 4.
 3. **Internal confirmation** 2+ members agree it's a real incident. Retroactive for solo-halt cases.
 4. **Element with Parity** New room, invite Adrian, Bastian, Oliver. Fellowship coordination happens here.
 5. **Integrators** Telegram. Hydration first, then others. Tell them what's halted + expected resume timing.
@@ -114,9 +118,9 @@ Each step assumes the previous one has happened.
 
 ## Resuming the bridge
 
-Get the resume preimage from [app.snowbridge.network/governance](https://app.snowbridge.network/governance). Select scopes matching what was halted. Submission: same `opengov-cli` + Fellowship Whitelist flow as [Submitting the preimage](#submitting-the-preimage).
+Same flow as halting: the governance page emits the resume preimage and the two submission links. Select scopes matching what was halted, then proceed via [Submitting](#submitting).
 
-Fallback: `buildResumeBridgePreimage` in `@snowbridge/api`.
+Fallback: `buildResumeBridgePreimage` + `buildResumeBridgeSubmissionUrls` in `@snowbridge/api`.
 
 Before submitting, confirm:
 
