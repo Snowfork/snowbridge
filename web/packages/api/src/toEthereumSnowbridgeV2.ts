@@ -383,7 +383,7 @@ export async function dryRunAssetHub(
     let sourceParachainForwarded
     let bridgeHubForwarded
     if (!success) {
-        console.error("Error during dry run on asset hub:", xcm.toHuman(), result.toHuman())
+        console.error("Error during dry run on asset hub:", result.toHuman())
     } else {
         bridgeHubForwarded = result.asOk.forwardedXcms.find((x) => {
             return (
@@ -810,6 +810,8 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
         volumeFee?: VolumeFeeParams
         accelerated?: boolean
     },
+    l2ChainId?: number,
+    tokenAmount?: bigint,
 ): Promise<DeliveryFee> => {
     const sourceParachain = registry.parachains[`polkadot_${sourceParaId}`]
     const sourceParachainImpl = await context.paraImplementation(
@@ -856,10 +858,11 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
         )
     }
 
-    assetHubExecutionFeeDOT = padFeeByPercentage(
-        await assetHubImpl.calculateXcmFee(deliveryXcm.forwardXcmToAH, DOT_LOCATION),
-        feePadPercentage,
+    const rawAssetHubExecutionFeeDOT = await assetHubImpl.calculateXcmFee(
+        deliveryXcm.forwardXcmToAH!,
+        DOT_LOCATION,
     )
+    assetHubExecutionFeeDOT = padFeeByPercentage(rawAssetHubExecutionFeeDOT, feePadPercentage)
 
     bridgeHubDeliveryFeeDOT = padFeeByPercentage(
         await assetHubImpl.calculateDeliveryFeeInDOT(
@@ -870,6 +873,16 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
     )
 
     snowbridgeDeliveryFeeDOT = await getSnowbridgeDeliveryFee(assetHub, options?.defaultFee)
+
+    // Floor: ensure enough DOT is available for PayFees on AssetHub.
+    // Without this floor, the API underestimates and PayFees fails with
+    // FailedToTransactAsset. Excess is refunded via SetAppendix→RefundSurplus.
+    const MIN_DOT_FOR_PAYFEES = 1_800_000_000n // ~0.18 DOT
+    const dotForPayFees =
+        snowbridgeDeliveryFeeDOT + assetHubExecutionFeeDOT + bridgeHubDeliveryFeeDOT
+    if (dotForPayFees < MIN_DOT_FOR_PAYFEES) {
+        assetHubExecutionFeeDOT += MIN_DOT_FOR_PAYFEES - dotForPayFees
+    }
 
     let totalFeeInDot =
         localExecutionFeeDOT +
@@ -1171,13 +1184,212 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
         }
     }
 
+    // Calculate L2 bridge fee
+    let l2BridgeFeeInL1Token: bigint = 0n
+    if (l2ChainId) {
+        let callInfo = await buildL2Call(
+            context,
+            registry,
+            tokenAddress,
+            l2ChainId,
+            tokenAmount!,
+            "0x0000000000000000000000000000000000000000",
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
+            options as any,
+        )
+        options = options || {}
+        options.contractCall = options.contractCall || callInfo.l2Call
+        l2BridgeFeeInL1Token = callInfo.fee
+        addBreakdown(breakdown, "l2Bridge", { amount: l2BridgeFeeInL1Token, symbol: "ETH" })
+    }
+    if (l2BridgeFeeInL1Token > 0n) {
+        summary.push({ description: "Across fee", amount: l2BridgeFeeInL1Token, symbol: "ETH" })
+    }
+
     return {
-        kind: "polkadot->ethereum",
+        kind: l2ChainId ? "polkadot->ethereum_l2" : "polkadot->ethereum",
         feeLocation,
         breakdown,
         summary,
         totals: computeTotals(summary),
     }
+}
+
+async function runEthereumDryRun<T extends EthereumProviderTypes>(
+    context: Context<T>,
+    sourceParaId: number,
+    sourceAccountHex: string,
+    transfer: Transfer,
+    logs: ValidationLog[],
+): Promise<{ ethereumDryRunError?: string; estimatedDryRunGas?: bigint }> {
+    let ethereumDryRunError: string | undefined
+    let estimatedDryRunGas: bigint | undefined
+    const ethereum = context.ethereum()
+
+    try {
+        const ethereumTx = await buildEthereumDryRunCall(
+            context,
+            sourceParaId,
+            sourceAccountHex,
+            transfer,
+        )
+        estimatedDryRunGas = await context.ethereumProvider.estimateGas(ethereum, ethereumTx)
+        const txGasLimit = computeDryRunDispatchGasLimit(dryRunCommandGasBudgets(transfer))
+        try {
+            const forkedProviderApiKey =
+                process.env.FORKED_PROVIDER_API_KEY ||
+                process.env.NEXT_PUBLIC_FORKED_PROVIDER_API_KEY
+            const forkedProvider = context.ethereumProvider.createProvider(
+                process.env.FORKED_PROVIDER_URL ||
+                    process.env.NEXT_PUBLIC_FORKED_PROVIDER_URL ||
+                    "https://fork-mainnet.snowbridge.network",
+                forkedProviderApiKey
+                    ? { headers: { "X-API-Key": forkedProviderApiKey } }
+                    : undefined,
+            ) as unknown as ForkedRpcProvider
+            await forkedProvider.send("eth_blockNumber", [])
+            const txRequest = {
+                from: (ethereumTx as EthereumDryRunTx).from,
+                to: (ethereumTx as EthereumDryRunTx).to,
+                data: (ethereumTx as EthereumDryRunTx).data,
+                value: (ethereumTx as EthereumDryRunTx).value ?? "0x0",
+                gas: "0x" + txGasLimit.toString(16),
+            }
+
+            let txHash: string
+            try {
+                await tryImpersonateForkedSigner(forkedProvider, txRequest.from)
+                txHash = String(await forkedProvider.send("eth_sendTransaction", [txRequest]))
+            } catch (sendError) {
+                const sendErrorMessage = String((sendError as Error).message || sendError)
+                const shouldImpersonate =
+                    sendErrorMessage.includes("No Signer available") ||
+                    sendErrorMessage.includes("unknown account")
+                const impersonated = shouldImpersonate
+                    ? await tryImpersonateForkedSigner(forkedProvider, txRequest.from)
+                    : false
+                if (!impersonated) {
+                    throw sendError
+                }
+                txHash = String(await forkedProvider.send("eth_sendTransaction", [txRequest]))
+            }
+
+            console.log("Tx hash:", txHash)
+
+            const receipt = await forkedProvider.waitForTransaction(txHash)
+            if (!receipt) {
+                ethereumDryRunError =
+                    "Dry run transaction simulation on forked Ethereum did not return a receipt (node may be unavailable/out of sync)."
+                logs.push({
+                    kind: ValidationKind.Warning,
+                    reason: ValidationReason.DryRunFailed,
+                    message: ethereumDryRunError,
+                })
+            } else {
+                const receiptStatus = receipt.status
+                const isRevertedReceipt =
+                    receiptStatus === 0 ||
+                    receiptStatus === 0n ||
+                    receiptStatus === "0x0" ||
+                    receiptStatus === "0"
+                if (isRevertedReceipt) {
+                    ethereumDryRunError =
+                        "Dry run transaction simulation reverted on Ethereum (receipt status 0)."
+                    logs.push({
+                        kind: ValidationKind.Error,
+                        reason: ValidationReason.DryRunFailed,
+                        message: ethereumDryRunError,
+                    })
+                }
+
+                console.log("Logs:", receipt.logs)
+                const parsedLogs = receipt.logs
+                    .map((log: any) => {
+                        try {
+                            return context.gatewayProxy().interface.parseLog(log)
+                        } catch (e) {
+                            return null
+                        }
+                    })
+                    .filter((log: any) => log !== null)
+                const errorLogs = parsedLogs.filter((log: any) => log.name === "CommandFailed")
+                if (errorLogs.length > 0) {
+                    const failedIndex = errorLogs[0]?.args?.index
+                    ethereumDryRunError =
+                        "Dry run v2_dispatch simulation reported CommandFailed at index: " +
+                        String(failedIndex)
+                    logs.push({
+                        kind: ValidationKind.Error,
+                        reason: ValidationReason.DryRunFailed,
+                        message: ethereumDryRunError,
+                    })
+                }
+
+                const l1AdapterAddress = context.environment.l2Bridge?.l1AdapterAddress
+                const adaptorEvents = receipt.logs
+                    .map((log: any) => parseL1AdaptorDryRunEvent(log, l1AdapterAddress))
+                    .filter(
+                        (
+                            event,
+                        ): event is {
+                            name: "DepositCallInvoked" | "DepositCallFailed"
+                            topic?: string
+                            depositId?: bigint
+                        } => event !== null,
+                    )
+                const depositCallFailed = adaptorEvents.filter(
+                    (event) => event.name === "DepositCallFailed",
+                )
+                if (depositCallFailed.length > 0) {
+                    const topic = depositCallFailed[0]?.topic
+                    ethereumDryRunError =
+                        "Dry run failed on Ethereum: L1 adaptor emitted DepositCallFailed" +
+                        (topic ? ` (topic: ${topic})` : "")
+                    logs.push({
+                        kind: ValidationKind.Error,
+                        reason: ValidationReason.DryRunFailed,
+                        message: ethereumDryRunError,
+                    })
+                }
+
+                const depositCallInvoked = adaptorEvents.find(
+                    (event) => event.name === "DepositCallInvoked",
+                )
+                if (depositCallInvoked) {
+                    console.log("L1 adaptor event:", {
+                        name: depositCallInvoked.name,
+                        topic: depositCallInvoked.topic,
+                        depositId: depositCallInvoked.depositId?.toString(),
+                    })
+                } else if (errorLogs.length > 0 && adaptorEvents.length === 0) {
+                    logs.push({
+                        kind: ValidationKind.Warning,
+                        reason: ValidationReason.DryRunFailed,
+                        message:
+                            "Synthetic v2_dispatch dry run reported upstream failure before adaptor events; this may diverge from proof-based production execution.",
+                    })
+                }
+            }
+        } catch (forkUnavailableError) {
+            ethereumDryRunError =
+                "Skipping Ethereum dry-run transaction simulation because the forked RPC node is unavailable: " +
+                String((forkUnavailableError as Error).message || forkUnavailableError)
+            logs.push({
+                kind: ValidationKind.Warning,
+                reason: ValidationReason.DryRunFailed,
+                message: ethereumDryRunError,
+            })
+        }
+    } catch (e) {
+        ethereumDryRunError = "Could not estimate gas on Ethereum." + (e as Error).message
+        logs.push({
+            kind: ValidationKind.Error,
+            reason: ValidationReason.FeeEstimationError,
+            message: ethereumDryRunError,
+        })
+    }
+
+    return { ethereumDryRunError, estimatedDryRunGas }
 }
 
 export const validateTransferFromAssetHub = async <T extends EthereumProviderTypes>(
@@ -1285,7 +1497,7 @@ export const validateTransferFromAssetHub = async <T extends EthereumProviderTyp
     let sourceDryRunError
     let assetHubDryRunError
     let bridgeHubDryRunError
-    let ethereumDryRunError
+    let ethereumDryRunError: string | undefined
     let estimatedDryRunGas: bigint | undefined
     // do the dry run, get the forwarded xcm and dry run that
     const dryRunResultAssetHub = await dryRunOnSourceParachain(
@@ -1302,182 +1514,15 @@ export const validateTransferFromAssetHub = async <T extends EthereumProviderTyp
             dryRunResultAssetHub.bridgeHubForwarded[1][0],
         )
         if (dryRunResultBridgeHub.success) {
-            try {
-                const ethereumTx = await buildEthereumDryRunCall(
-                    context,
-                    registry.assetHubParaId,
-                    sourceAccountHex,
-                    transfer,
-                )
-                estimatedDryRunGas = await context.ethereumProvider.estimateGas(
-                    ethereum,
-                    ethereumTx,
-                )
-                const txGasLimit = computeDryRunDispatchGasLimit(dryRunCommandGasBudgets(transfer))
-                try {
-                    const forkedProviderApiKey =
-                        process.env.FORKED_PROVIDER_API_KEY ||
-                        process.env.NEXT_PUBLIC_FORKED_PROVIDER_API_KEY
-                    const forkedProvider = context.ethereumProvider.createProvider(
-                        process.env.FORKED_PROVIDER_URL ||
-                            process.env.NEXT_PUBLIC_FORKED_PROVIDER_URL ||
-                            "https://fork-mainnet.snowbridge.network",
-                        forkedProviderApiKey
-                            ? {
-                                  headers: {
-                                      "X-API-Key": forkedProviderApiKey,
-                                  },
-                              }
-                            : undefined,
-                    ) as unknown as ForkedRpcProvider
-                    await forkedProvider.send("eth_blockNumber", [])
-                    const txRequest = {
-                        from: (ethereumTx as EthereumDryRunTx).from,
-                        to: (ethereumTx as EthereumDryRunTx).to,
-                        data: (ethereumTx as EthereumDryRunTx).data,
-                        value: (ethereumTx as EthereumDryRunTx).value ?? "0x0",
-                        gas: "0x" + txGasLimit.toString(16),
-                    }
-
-                    let txHash: string
-                    try {
-                        await tryImpersonateForkedSigner(forkedProvider, txRequest.from)
-
-                        txHash = String(
-                            await forkedProvider.send("eth_sendTransaction", [txRequest]),
-                        )
-                    } catch (sendError) {
-                        const sendErrorMessage = String((sendError as Error).message || sendError)
-                        const shouldImpersonate =
-                            sendErrorMessage.includes("No Signer available") ||
-                            sendErrorMessage.includes("unknown account")
-                        const impersonated = shouldImpersonate
-                            ? await tryImpersonateForkedSigner(forkedProvider, txRequest.from)
-                            : false
-                        if (!impersonated) {
-                            throw sendError
-                        }
-                        txHash = String(
-                            await forkedProvider.send("eth_sendTransaction", [txRequest]),
-                        )
-                    }
-
-                    console.log("Tx hash:", txHash)
-
-                    const receipt = await forkedProvider.waitForTransaction(txHash)
-                    if (!receipt) {
-                        ethereumDryRunError =
-                            "Dry run transaction simulation on forked Ethereum did not return a receipt (node may be unavailable/out of sync)."
-                        logs.push({
-                            kind: ValidationKind.Warning,
-                            reason: ValidationReason.DryRunFailed,
-                            message: ethereumDryRunError,
-                        })
-                    } else {
-                        const receiptStatus = receipt.status
-                        const isRevertedReceipt =
-                            receiptStatus === 0 ||
-                            receiptStatus === 0n ||
-                            receiptStatus === "0x0" ||
-                            receiptStatus === "0"
-                        if (isRevertedReceipt) {
-                            ethereumDryRunError =
-                                "Dry run transaction simulation reverted on Ethereum (receipt status 0)."
-                            logs.push({
-                                kind: ValidationKind.Error,
-                                reason: ValidationReason.DryRunFailed,
-                                message: ethereumDryRunError,
-                            })
-                        }
-
-                        console.log("Logs:", receipt.logs)
-                        const parsedLogs = receipt.logs
-                            .map((log: any) => {
-                                try {
-                                    return context.gatewayProxy().interface.parseLog(log)
-                                } catch (e) {
-                                    return null
-                                }
-                            })
-                            .filter((log: any) => log !== null)
-                        const errorLogs = parsedLogs.filter((log: any) => {
-                            return log.name === "CommandFailed"
-                        })
-                        if (errorLogs.length > 0) {
-                            const failedIndex = errorLogs[0]?.args?.index
-                            ethereumDryRunError =
-                                "Dry run v2_dispatch simulation reported CommandFailed at index: " +
-                                String(failedIndex)
-                            logs.push({
-                                kind: ValidationKind.Error,
-                                reason: ValidationReason.DryRunFailed,
-                                message: ethereumDryRunError,
-                            })
-                        }
-
-                        const l1AdapterAddress = context.environment.l2Bridge?.l1AdapterAddress
-                        const adaptorEvents = receipt.logs
-                            .map((log: any) => parseL1AdaptorDryRunEvent(log, l1AdapterAddress))
-                            .filter(
-                                (
-                                    event,
-                                ): event is {
-                                    name: "DepositCallInvoked" | "DepositCallFailed"
-                                    topic?: string
-                                    depositId?: bigint
-                                } => event !== null,
-                            )
-                        const depositCallFailed = adaptorEvents.filter((event) => {
-                            return event.name === "DepositCallFailed"
-                        })
-                        if (depositCallFailed.length > 0) {
-                            const topic = depositCallFailed[0]?.topic
-                            ethereumDryRunError =
-                                "Dry run failed on Ethereum: L1 adaptor emitted DepositCallFailed" +
-                                (topic ? ` (topic: ${topic})` : "")
-                            logs.push({
-                                kind: ValidationKind.Error,
-                                reason: ValidationReason.DryRunFailed,
-                                message: ethereumDryRunError,
-                            })
-                        }
-
-                        const depositCallInvoked = adaptorEvents.find((event) => {
-                            return event.name === "DepositCallInvoked"
-                        })
-                        if (depositCallInvoked) {
-                            console.log("L1 adaptor event:", {
-                                name: depositCallInvoked.name,
-                                topic: depositCallInvoked.topic,
-                                depositId: depositCallInvoked.depositId?.toString(),
-                            })
-                        } else if (errorLogs.length > 0 && adaptorEvents.length === 0) {
-                            logs.push({
-                                kind: ValidationKind.Warning,
-                                reason: ValidationReason.DryRunFailed,
-                                message:
-                                    "Synthetic v2_dispatch dry run reported upstream failure before adaptor events; this may diverge from proof-based production execution.",
-                            })
-                        }
-                    }
-                } catch (forkUnavailableError) {
-                    ethereumDryRunError =
-                        "Skipping Ethereum dry-run transaction simulation because the forked RPC node is unavailable: " +
-                        String((forkUnavailableError as Error).message || forkUnavailableError)
-                    logs.push({
-                        kind: ValidationKind.Warning,
-                        reason: ValidationReason.DryRunFailed,
-                        message: ethereumDryRunError,
-                    })
-                }
-            } catch (e) {
-                ethereumDryRunError = "Could not estimate gas on Ethereum." + (e as Error).message
-                logs.push({
-                    kind: ValidationKind.Error,
-                    reason: ValidationReason.FeeEstimationError,
-                    message: ethereumDryRunError,
-                })
-            }
+            const ethResult = await runEthereumDryRun(
+                context,
+                registry.assetHubParaId,
+                sourceAccountHex,
+                transfer,
+                logs,
+            )
+            ethereumDryRunError = ethResult.ethereumDryRunError
+            estimatedDryRunGas = ethResult.estimatedDryRunGas
         } else {
             logs.push({
                 kind: ValidationKind.Error,
@@ -1735,6 +1780,7 @@ export const validateTransferFromParachain = async <T extends EthereumProviderTy
     let sourceDryRunError
     let assetHubDryRunError
     let bridgeHubDryRunError
+    let ethereumDryRunError: string | undefined
     if (source.features.hasDryRunApi) {
         // do the dry run, get the forwarded xcm and dry run that
         const dryRunSource = await dryRunOnSourceParachain(
@@ -1780,6 +1826,15 @@ export const validateTransferFromParachain = async <T extends EthereumProviderTy
                             message: "Dry run failed on Bridge Hub.",
                         })
                         bridgeHubDryRunError = dryRunResultBridgeHub.errorMessage
+                    } else {
+                        const ethResult = await runEthereumDryRun(
+                            context,
+                            sourceParaId,
+                            sourceAccountHex,
+                            transfer,
+                            logs,
+                        )
+                        ethereumDryRunError = ethResult.ethereumDryRunError
                     }
                 } else {
                     logs.push({
@@ -1873,6 +1928,7 @@ export const validateTransferFromParachain = async <T extends EthereumProviderTy
             sourceDryRunError,
             assetHubDryRunError,
             bridgeHubDryRunError,
+            ethereumDryRunError,
         },
         ...transfer,
     }

@@ -461,7 +461,8 @@ function buildTransferLocations(
 
     // L2 paths
     if (environment.l2Bridge) {
-        // Do asset hub only, in future we can loop through all v2 enabled parachains.
+        const assetHubAssets = Object.keys(assetHub.assets)
+        const v2ParachainIds = environment.v2_parachains ?? [registry.assetHubParaId]
         for (const l2ChainKey of Object.keys(environment.l2Bridge.l2Chains)) {
             const l2ChainId = Number(l2ChainKey)
             const l2Chain = environment.l2Bridge.l2Chains[l2ChainId]
@@ -470,35 +471,42 @@ function buildTransferLocations(
                 console.warn(`Could not find ethereum l2 chain ${l2ChainId}. Skipping...`)
                 continue
             }
-            const assetHubAssets = Object.keys(assetHub.assets)
             const destinationAssets = Object.values(ethChain.assets)
                 .map((a) => a.swapTokenAddress?.toLowerCase())
                 .filter((a) => a !== undefined)
 
-            // The asset exists on ethereum, parachain and asset hub
-            const commonAssets = new Set(
-                ethAssets.filter(
-                    (sa) =>
-                        assetHubAssets.find((da) => da === sa) &&
-                        destinationAssets.find((da) => da === sa),
-                ),
-            )
-            for (const asset of commonAssets) {
-                const p1: Path = {
-                    source: { kind: assetHub.kind, id: assetHub.id },
-                    destination: { kind: ethChain.kind, id: ethChain.id },
-                    asset,
-                }
-                if (pathFilter(p1)) {
-                    locations.push(p1)
-                }
-                const p2: Path = {
-                    source: p1.destination, // L2 Chain
-                    destination: p1.source, // Asset Hub
-                    asset,
-                }
-                if (pathFilter(p2)) {
-                    locations.push(p2)
+            for (const paraId of v2ParachainIds) {
+                const sourceParachain = registry.parachains[`polkadot_${paraId}`]
+                if (!sourceParachain) continue
+
+                const parachainAssets = Object.keys(sourceParachain.assets)
+
+                // The asset must exist on ethereum L1, the source parachain, asset hub, and the L2 chain.
+                const commonAssets = new Set(
+                    ethAssets.filter(
+                        (sa) =>
+                            parachainAssets.find((da) => da === sa) &&
+                            assetHubAssets.find((da) => da === sa) &&
+                            destinationAssets.find((da) => da === sa),
+                    ),
+                )
+                for (const asset of commonAssets) {
+                    const p1: Path = {
+                        source: { kind: sourceParachain.kind, id: sourceParachain.id },
+                        destination: { kind: ethChain.kind, id: ethChain.id },
+                        asset,
+                    }
+                    if (pathFilter(p1)) {
+                        locations.push(p1)
+                    }
+                    const p2: Path = {
+                        source: p1.destination, // L2 Chain
+                        destination: p1.source, // Parachain
+                        asset,
+                    }
+                    if (pathFilter(p2)) {
+                        locations.push(p2)
+                    }
                 }
             }
         }

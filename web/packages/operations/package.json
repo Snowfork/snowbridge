@@ -94,6 +94,7 @@
     "transferWethFromAHToBase-mainnet": "npx ts-node src/transfer_from_polkadot_to_l2_wrapper.ts 1000 8453 WETH 1000000000000000",
     "transferUSDCFromBaseToAH-mainnet": "npx ts-node src/transfer_from_l2_to_polkadot_wrapper.ts 8453 1000 USDC 1100000",
     "transferUSDCFromAHToBase-mainnet": "npx ts-node src/transfer_from_polkadot_to_l2_wrapper.ts 1000 8453 USDC 550000",
+    "transferUSDCFromHydrationToBase-mainnet": "npx ts-node src/transfer_from_polkadot_to_l2_wrapper.ts 2034 8453 USDC 1100000",
     "transferEtherFromArbitrumToAH-mainnet": "npx ts-node src/transfer_from_l2_to_polkadot_wrapper.ts 42161 1000 Eth 1000000000000000",
     "transferEtherFromAHToArbitrum-mainnet": "npx ts-node src/transfer_from_polkadot_to_l2_wrapper.ts 1000 42161 Eth 1000000000000000",
     "transferUSDCFromArbitrumToAH-mainnet": "npx ts-node src/transfer_from_l2_to_polkadot_wrapper.ts 42161 1000 USDC 1100000",
