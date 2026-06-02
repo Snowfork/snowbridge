@@ -134,9 +134,32 @@ pub async fn query_weight_asset_hub(
     Ok((call_info.weight.ref_time, call_info.weight.proof_size))
 }
 
-pub fn utility_force_batch(calls: Vec<AssetHubRuntimeCall>) -> AssetHubRuntimeCall {
+/// Emits `pallet_utility::Call::batch_all`, which rolls back every call if any one
+/// fails. The default for governance batches that must commit atomically.
+pub fn utility_batch_all(calls: Vec<AssetHubRuntimeCall>) -> AssetHubRuntimeCall {
     AssetHubRuntimeCall::Utility(
         crate::asset_hub_runtime::runtime_types::pallet_utility::pallet::Call::batch_all { calls },
+    )
+}
+
+/// Emits `pallet_utility::Call::batch`, which short-circuits on the first failing call
+/// but commits all preceding calls.
+#[allow(dead_code)]
+pub fn utility_batch(calls: Vec<AssetHubRuntimeCall>) -> AssetHubRuntimeCall {
+    AssetHubRuntimeCall::Utility(
+        crate::asset_hub_runtime::runtime_types::pallet_utility::pallet::Call::batch { calls },
+    )
+}
+
+/// Emits `pallet_utility::Call::force_batch`, which attempts every call regardless of
+/// failures and reports per-call results via `ItemFailed` events. Use when each call
+/// must fire independently — e.g. the halt-bridge preimage, where one stuck lever
+/// (e.g. HRMP transport failure for the BH XCM) should not skip the rest.
+pub fn utility_force_batch(calls: Vec<AssetHubRuntimeCall>) -> AssetHubRuntimeCall {
+    AssetHubRuntimeCall::Utility(
+        crate::asset_hub_runtime::runtime_types::pallet_utility::pallet::Call::force_batch {
+            calls,
+        },
     )
 }
 

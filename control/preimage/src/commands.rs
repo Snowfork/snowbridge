@@ -24,9 +24,15 @@ use crate::bridge_hub_runtime::runtime_types::{
     },
     snowbridge_outbound_queue_primitives::{v1::message::Initializer, OperatingMode},
     snowbridge_pallet_ethereum_client, snowbridge_pallet_inbound_queue,
-    snowbridge_pallet_outbound_queue, snowbridge_pallet_system,
+    snowbridge_pallet_inbound_queue_v2, snowbridge_pallet_outbound_queue,
+    snowbridge_pallet_system, snowbridge_pallet_system_v2,
 };
 use crate::bridge_hub_runtime::RuntimeCall as BridgeHubRuntimeCall;
+
+use crate::asset_hub_runtime::runtime_types::{
+    snowbridge_core::operating_mode::BasicOperatingMode as AssetHubBasicOperatingMode,
+    snowbridge_pallet_system_frontend,
+};
 
 #[cfg(feature = "polkadot")]
 pub mod asset_hub_polkadot_types {
@@ -147,6 +153,51 @@ pub fn outbound_queue_operating_mode(param: &OperatingModeEnum) -> BridgeHubRunt
     };
     BridgeHubRuntimeCall::EthereumOutboundQueue(
         snowbridge_pallet_outbound_queue::pallet::Call::set_operating_mode { mode },
+    )
+}
+
+// V2 variant: halts the inbound-queue-v2 pallet's `submit` extrinsic, blocking
+// processing of V2 Ethereum -> Polkadot messages on BridgeHub.
+pub fn inbound_queue_v2_operating_mode(param: &OperatingModeEnum) -> BridgeHubRuntimeCall {
+    let mode = match param {
+        OperatingModeEnum::Normal => BasicOperatingMode::Normal,
+        OperatingModeEnum::Halted => BasicOperatingMode::Halted,
+    };
+    BridgeHubRuntimeCall::EthereumInboundQueueV2(
+        snowbridge_pallet_inbound_queue_v2::pallet::Call::set_operating_mode { mode },
+    )
+}
+
+// V2 variant: sends `Command::SetOperatingMode` to the Gateway via the V2 outbound
+// queue. Sets the same Gateway `$.mode` storage as the V1 variant; both are kept
+// so governance can halt via whichever outbound path is live.
+pub fn gateway_operating_mode_v2(
+    operating_mode: &GatewayOperatingModeEnum,
+) -> BridgeHubRuntimeCall {
+    let mode = match operating_mode {
+        GatewayOperatingModeEnum::Normal => OperatingMode::Normal,
+        GatewayOperatingModeEnum::RejectingOutboundMessages => {
+            OperatingMode::RejectingOutboundMessages
+        }
+    };
+    BridgeHubRuntimeCall::EthereumSystemV2(
+        snowbridge_pallet_system_v2::pallet::Call::set_operating_mode { mode },
+    )
+}
+
+// AssetHub-side: halts the system-frontend pallet. The `PausableExporter` wrapping
+// the AssetHub->Ethereum XcmRouter consults `SnowbridgeSystemFrontend::is_paused()`
+// and returns `SendError::NotApplicable` when halted, short-circuiting every
+// AssetHub->Ethereum export (V1 and V2 share the same wrapper). This is the
+// primary outbound halt lever for V2 because `outbound-queue-v2` has no local
+// operating-mode storage.
+pub fn system_frontend_operating_mode(param: &OperatingModeEnum) -> AssetHubRuntimeCall {
+    let mode = match param {
+        OperatingModeEnum::Normal => AssetHubBasicOperatingMode::Normal,
+        OperatingModeEnum::Halted => AssetHubBasicOperatingMode::Halted,
+    };
+    AssetHubRuntimeCall::SnowbridgeSystemFrontend(
+        snowbridge_pallet_system_frontend::pallet::Call::set_operating_mode { mode },
     )
 }
 

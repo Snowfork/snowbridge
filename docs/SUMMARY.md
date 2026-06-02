@@ -41,6 +41,7 @@
 * [Processes for keeping track of dependency changes](resources/processes-for-keeping-track-of-dependency-changes.md)
 * [Contributing to Snowbridge](resources/updating-snowbridge-pallets-bridgehub-and-assethub-runtimes.md)
 * [Governance and Operational Processes](resources/governance-and-operational-processes.md)
+* [Emergency Procedures](resources/emergency-procedures.md)
 * [General Governance Updates](resources/governance-updates.md)
 * [Test Runtime Upgrades](resources/test-runtime-upgrades.md)
 * [Run Relayers](resources/run-relayers.md)
