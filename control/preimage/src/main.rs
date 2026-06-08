@@ -79,6 +79,8 @@ pub enum Command {
     /// Upgrade to FiatShamir on Polkadot
     #[command(alias = "upgrade-202603")]
     Upgrade202603,
+    /// Rebalance sovereign fee accounts
+    RebalanceSovereignFeeAccounts(RebalanceSovereignFeeAccountsArgs),
 }
 
 #[derive(Debug, Args)]
@@ -300,6 +302,16 @@ pub struct RegisterEtherArgs {
 }
 
 #[derive(Debug, Args)]
+pub struct RebalanceSovereignFeeAccountsArgs {
+    /// DOT amount to deliver to the Asset Hub sovereign account on Bridge Hub.
+    #[arg(long, value_name = POLKADOT_SYMBOL, value_parser = parse_units_polkadot)]
+    pub dot_amount: U128,
+    /// ETH amount to deliver to the GatewayProxy address.
+    #[arg(long, value_name = "ETHER", value_parser = parse_units_eth)]
+    pub eth_amount: U256,
+}
+
+#[derive(Debug, Args)]
 pub struct ApiEndpoints {
     #[arg(long, value_name = "URL")]
     bridge_hub_api: Option<String>,
@@ -357,8 +369,22 @@ pub enum Format {
 
 struct Context {
     bridge_hub_api: Box<OnlineClient<PolkadotConfig>>,
-    _asset_hub_api: Box<OnlineClient<PolkadotConfig>>,
+    asset_hub_api: Box<OnlineClient<PolkadotConfig>>,
     _relay_api: Box<OnlineClient<PolkadotConfig>>,
+}
+
+enum PreimageCall {
+    AssetHub(asset_hub_runtime::RuntimeCall),
+    Relay(relay_runtime::RuntimeCall),
+}
+
+impl PreimageCall {
+    fn encode(&self) -> Vec<u8> {
+        match self {
+            PreimageCall::AssetHub(call) => call.encode(),
+            PreimageCall::Relay(call) => call.encode(),
+        }
+    }
 }
 
 #[tokio::main]
@@ -390,14 +416,14 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     let context = Context {
         bridge_hub_api: Box::new(bridge_hub_api),
-        _asset_hub_api: Box::new(asset_hub_api),
+        asset_hub_api: Box::new(asset_hub_api),
         _relay_api: Box::new(relay_api),
     };
 
     let call = match &cli.command {
         Command::ForceCheckpoint(params) => {
             let call = commands::force_checkpoint(params);
-            send_xcm_bridge_hub(&context, vec![call]).await?
+            PreimageCall::AssetHub(send_xcm_bridge_hub(&context, vec![call]).await?)
         }
         Command::Initialize(params) => {
             let (set_pricing_parameters, set_ethereum_fee) =
@@ -426,9 +452,9 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
                 ],
             )
             .await?;
-            utility_batch_all(vec![bridge_hub_call, asset_hub_call])
+            PreimageCall::AssetHub(utility_batch_all(vec![bridge_hub_call, asset_hub_call]))
         }
-        Command::UpdateAsset(params) => {
+        Command::UpdateAsset(params) => PreimageCall::AssetHub(
             send_xcm_asset_hub(
                 &context,
                 vec![
@@ -436,15 +462,15 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
                     commands::force_set_metadata(params),
                 ],
             )
-            .await?
-        }
+            .await?,
+        ),
         Command::GatewayOperatingMode(params) => {
             let call = commands::gateway_operating_mode(&params.gateway_operating_mode);
-            send_xcm_bridge_hub(&context, vec![call]).await?
+            PreimageCall::AssetHub(send_xcm_bridge_hub(&context, vec![call]).await?)
         }
         Command::Upgrade(params) => {
             let call = commands::upgrade(params);
-            send_xcm_bridge_hub(&context, vec![call]).await?
+            PreimageCall::AssetHub(send_xcm_bridge_hub(&context, vec![call]).await?)
         }
         Command::PricingParameters(params) => {
             let (set_pricing_parameters, set_ethereum_fee) =
@@ -452,7 +478,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             let bridge_hub_call =
                 send_xcm_bridge_hub(&context, vec![set_pricing_parameters]).await?;
             let asset_hub_call = send_xcm_asset_hub(&context, vec![set_ethereum_fee]).await?;
-            utility_batch_all(vec![bridge_hub_call, asset_hub_call])
+            PreimageCall::AssetHub(utility_batch_all(vec![bridge_hub_call, asset_hub_call]))
         }
         Command::HaltBridge(params) => {
             let mut bh_calls = vec![];
@@ -544,21 +570,26 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
                 None
             };
             if bh_calls.len() > 0 && ah_call.is_none() {
-                send_xcm_bridge_hub(&context, bh_calls).await?
+                PreimageCall::AssetHub(send_xcm_bridge_hub(&context, bh_calls).await?)
             } else if ah_call.is_some() && bh_calls.len() == 0 {
-                ah_call.unwrap()
+                PreimageCall::AssetHub(ah_call.unwrap())
             } else {
                 let bh_xcm_send = send_xcm_bridge_hub(&context, bh_calls).await?;
                 // BH XCM-send is the first call so the V2 Gateway halt (the first
                 // Transact inside the XCM) is processed before any AH-side halt.
-                utility_force_batch(vec![bh_xcm_send, ah_call.unwrap()])
+                PreimageCall::AssetHub(utility_force_batch(vec![bh_xcm_send, ah_call.unwrap()]))
             }
         }
         Command::RegisterEther(params) => {
             let (register_ether_call, set_ether_metadata_call) = commands::register_ether(&params);
-            send_xcm_asset_hub(&context, vec![register_ether_call, set_ether_metadata_call]).await?
+            PreimageCall::AssetHub(
+                send_xcm_asset_hub(&context, vec![register_ether_call, set_ether_metadata_call])
+                    .await?,
+            )
         }
-        Command::TreasuryProposal2024(params) => treasury_commands::treasury_proposal(&params),
+        Command::TreasuryProposal2024(params) => {
+            PreimageCall::AssetHub(treasury_commands::treasury_proposal(&params))
+        }
         Command::GovUpdate202501(GovUpdate202501Args {
             pricing_parameters,
             register_ether,
@@ -577,11 +608,11 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
                 send_xcm_asset_hub(&context, vec![register_ether_call, set_ether_metadata_call])
                     .await?;
 
-            utility_batch_all(vec![
+            PreimageCall::AssetHub(utility_batch_all(vec![
                 bh_set_pricing_call,
                 ah_set_pricing_call,
                 ah_register_ether_call,
-            ])
+            ]))
         }
         Command::RegisterPnaBatch202503 => {
             #[cfg(not(feature = "polkadot"))]
@@ -589,9 +620,9 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
 
             #[cfg(feature = "polkadot")]
             {
-                let reg_call =
-                    send_xcm_bridge_hub(&context, commands::token_registrations()).await?;
-                reg_call
+                PreimageCall::AssetHub(
+                    send_xcm_bridge_hub(&context, commands::token_registrations()).await?,
+                )
             }
         }
         Command::RegisterErc20TokenMetadata => {
@@ -602,10 +633,10 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             {
                 let metadata_calls = commands::register_erc20_token_metadata();
                 let reg_call = commands::frequency_token_registrations();
-                utility_batch_all(vec![
+                PreimageCall::AssetHub(utility_batch_all(vec![
                     send_xcm_asset_hub(&context, metadata_calls).await?,
                     send_xcm_bridge_hub(&context, reg_call).await?,
-                ])
+                ]))
             }
         }
         Command::UpgradeV2 => {
@@ -629,16 +660,16 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
                 let outbound_fee_call = commands::set_assethub_fee_v2(1_000_000_000);
                 let ah_xcm_call = send_xcm_asset_hub(&context, vec![outbound_fee_call]).await?;
 
-                utility_batch_all(vec![bh_xcm_call, ah_xcm_call])
+                PreimageCall::AssetHub(utility_batch_all(vec![bh_xcm_call, ah_xcm_call]))
             }
         }
         Command::ReplaySep2025 => {
             let asset_hub_call = commands::replay_sep_2025_xcm();
-            send_xcm_asset_hub(&context, vec![asset_hub_call]).await?
+            PreimageCall::AssetHub(send_xcm_asset_hub(&context, vec![asset_hub_call]).await?)
         }
         Command::MintFeb2026 => {
             let bridge_hub_call = commands::mint_feb_2026_xcm();
-            send_xcm_bridge_hub(&context, vec![bridge_hub_call]).await?
+            PreimageCall::AssetHub(send_xcm_bridge_hub(&context, vec![bridge_hub_call]).await?)
         }
         Command::SetPaseoFeeV2 => {
             #[cfg(not(feature = "paseo"))]
@@ -648,7 +679,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             {
                 // Set bound fee to 0.1 DOT (same as Polkadot V2) on AH
                 let outbound_fee_call = commands::set_assethub_fee_v2(1_000_000_000);
-                send_xcm_asset_hub(&context, vec![outbound_fee_call]).await?
+                PreimageCall::AssetHub(send_xcm_asset_hub(&context, vec![outbound_fee_call]).await?)
             }
         }
         Command::Upgrade202603 => {
@@ -666,17 +697,24 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
                     initializer_params: Default::default(),
                     initializer_gas: 100000,
                 });
-                send_xcm_bridge_hub(&context, vec![upgrade_call]).await?
+                PreimageCall::AssetHub(send_xcm_bridge_hub(&context, vec![upgrade_call]).await?)
             }
+        }
+        Command::RebalanceSovereignFeeAccounts(params) => {
+            PreimageCall::Relay(commands::rebalance_sovereign_fee_accounts(&context, params).await?)
         }
     };
 
     #[cfg(any(feature = "westend", feature = "paseo"))]
-    let final_call = if cli.sudo { sudo(Box::new(call)) } else { call };
+    let preimage = match call {
+        PreimageCall::AssetHub(call) => {
+            let final_call = if cli.sudo { sudo(Box::new(call)) } else { call };
+            final_call.encode()
+        }
+        PreimageCall::Relay(call) => call.encode(),
+    };
     #[cfg(not(any(feature = "westend", feature = "paseo")))]
-    let final_call = call;
-
-    let preimage = final_call.encode();
+    let preimage = call.encode();
 
     generate_chopsticks_script(&preimage, "chopsticks-execute-upgrade.js".into())?;
 

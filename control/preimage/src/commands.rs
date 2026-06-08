@@ -1,7 +1,8 @@
 use crate::helpers::calculate_delivery_fee;
 use crate::{
     constants::*, Context, ForceCheckpointArgs, GatewayAddressArgs, GatewayOperatingModeEnum,
-    OperatingModeEnum, PricingParametersArgs, RegisterEtherArgs, UpdateAssetArgs, UpgradeArgs,
+    OperatingModeEnum, PricingParametersArgs, RebalanceSovereignFeeAccountsArgs, RegisterEtherArgs,
+    UpdateAssetArgs, UpgradeArgs,
 };
 use alloy_primitives::{utils::format_units, U256};
 use codec::Encode;
@@ -33,6 +34,7 @@ use crate::asset_hub_runtime::runtime_types::{
     snowbridge_core::operating_mode::BasicOperatingMode as AssetHubBasicOperatingMode,
     snowbridge_pallet_system_frontend,
 };
+use crate::relay_runtime::RuntimeCall as RelayRuntimeCall;
 
 #[cfg(feature = "polkadot")]
 pub mod asset_hub_polkadot_types {
@@ -362,6 +364,185 @@ pub fn set_gateway_address(params: &GatewayAddressArgs) -> BridgeHubRuntimeCall 
             items: vec![(storage_key, storage_value)],
         },
     )
+}
+
+#[cfg(feature = "polkadot")]
+pub async fn rebalance_sovereign_fee_accounts(
+    context: &Context,
+    params: &RebalanceSovereignFeeAccountsArgs,
+) -> Result<RelayRuntimeCall, Box<dyn std::error::Error>> {
+    use crate::relay_runtime::runtime_types::{
+        bounded_collections::bounded_vec::BoundedVec,
+        pallet_xcm,
+        staging_xcm::v5::{
+            asset::{
+                Asset, AssetFilter, AssetId, AssetTransferFilter, Assets, Fungibility, WildAsset,
+                WildFungibility,
+            },
+            junction::{Junction, NetworkId},
+            junctions::Junctions,
+            location::Location,
+            Instruction::*,
+            Xcm,
+        },
+        xcm::{VersionedLocation, VersionedXcm},
+    };
+
+    const GATEWAY_PROXY: [u8; 20] = hex_literal::hex!("27ca963c279c93801941e1eb8799c23f407d68e7");
+    const TREASURY_ACCOUNT: [u8; 32] =
+        hex_literal::hex!("6d6f646c706f7374616b65000000000000000000000000000000000000000000");
+
+    let eth_amount = params.eth_amount.try_into().map_err(|_| {
+        format!(
+            "--eth-amount {} exceeds the u128 amount supported by XCM fungible assets",
+            params.eth_amount
+        )
+    })?;
+    let dot_amount = params.dot_amount.to::<u128>();
+
+    let dot_location_for_quote =
+        crate::asset_hub_runtime::runtime_types::staging_xcm::v5::location::Location {
+            parents: 1,
+            interior:
+                crate::asset_hub_runtime::runtime_types::staging_xcm::v5::junctions::Junctions::Here,
+        };
+    let eth_location_for_quote = crate::commands::asset_hub_polkadot_types::get_ether_id(
+        crate::bridge_hub_runtime::CHAIN_ID,
+    );
+
+    let swap_dot_amount = context
+        .asset_hub_api
+        .runtime_api()
+        .at_latest()
+        .await?
+        .call(
+            crate::asset_hub_runtime::apis()
+                .asset_conversion_api()
+                .quote_price_tokens_for_exact_tokens(
+                    dot_location_for_quote,
+                    eth_location_for_quote,
+                    eth_amount,
+                    true,
+                ),
+        )
+        .await?
+        .ok_or("AssetConversionApi returned no DOT quote for the requested ETH amount")?;
+    let withdraw_dot_amount = dot_amount
+        .checked_add(swap_dot_amount)
+        .ok_or("DOT withdraw amount overflowed u128")?;
+
+    eprintln!("DOT to Bridge Hub sovereign: {} PLANCK", dot_amount);
+    eprintln!("ETH to GatewayProxy: {} WEI", eth_amount);
+    eprintln!("Quoted DOT for ETH swap: {} PLANCK", swap_dot_amount);
+    eprintln!(
+        "Total DOT withdrawn from treasury: {} PLANCK",
+        withdraw_dot_amount
+    );
+
+    let dot_location = Location {
+        parents: 1,
+        interior: Junctions::Here,
+    };
+    let eth_location = Location {
+        parents: 2,
+        interior: Junctions::X1([Junction::GlobalConsensus(NetworkId::Ethereum {
+            chain_id: crate::bridge_hub_runtime::CHAIN_ID,
+        })]),
+    };
+
+    let dot_for_withdraw = asset(dot_location.clone(), withdraw_dot_amount);
+    let dot_for_swap = asset(dot_location.clone(), swap_dot_amount);
+    let dot_for_bridge_hub = asset(dot_location.clone(), dot_amount);
+    let eth_for_gateway = asset(eth_location.clone(), eth_amount);
+
+    let message = Xcm(vec![
+        UnpaidExecution {
+            weight_limit: crate::relay_runtime::runtime_types::xcm::v3::WeightLimit::Unlimited,
+            check_origin: None,
+        },
+        AliasOrigin(Location {
+            parents: 0,
+            interior: Junctions::X1([Junction::AccountId32 {
+                network: None,
+                id: TREASURY_ACCOUNT,
+            }]),
+        }),
+        WithdrawAsset(Assets(vec![dot_for_withdraw])),
+        ExchangeAsset {
+            give: AssetFilter::Definite(Assets(vec![dot_for_swap])),
+            want: Assets(vec![eth_for_gateway.clone()]),
+            maximal: true,
+        },
+        InitiateTransfer {
+            destination: Location {
+                parents: 1,
+                interior: Junctions::X1([Junction::Parachain(BRIDGE_HUB_ID)]),
+            },
+            remote_fees: None,
+            preserve_origin: true,
+            assets: BoundedVec(vec![AssetTransferFilter::ReserveWithdraw(
+                AssetFilter::Definite(Assets(vec![dot_for_bridge_hub.clone()])),
+            )]),
+            remote_xcm: Xcm(vec![DepositAsset {
+                assets: AssetFilter::Definite(Assets(vec![dot_for_bridge_hub])),
+                beneficiary: Location {
+                    parents: 1,
+                    interior: Junctions::X1([Junction::Parachain(ASSET_HUB_ID)]),
+                },
+            }]),
+        },
+        InitiateTransfer {
+            destination: Location {
+                parents: 2,
+                interior: Junctions::X1([Junction::GlobalConsensus(NetworkId::Ethereum {
+                    chain_id: crate::bridge_hub_runtime::CHAIN_ID,
+                })]),
+            },
+            remote_fees: None,
+            preserve_origin: true,
+            assets: BoundedVec(vec![AssetTransferFilter::ReserveWithdraw(
+                AssetFilter::Definite(Assets(vec![eth_for_gateway.clone()])),
+            )]),
+            remote_xcm: Xcm(vec![DepositAsset {
+                assets: AssetFilter::Wild(WildAsset::AllOf {
+                    id: AssetId(eth_location),
+                    fun: WildFungibility::Fungible,
+                }),
+                beneficiary: Location {
+                    parents: 0,
+                    interior: Junctions::X1([Junction::AccountKey20 {
+                        network: None,
+                        key: GATEWAY_PROXY,
+                    }]),
+                },
+            }]),
+        },
+    ]);
+
+    fn asset(id: Location, amount: u128) -> Asset {
+        Asset {
+            id: AssetId(id),
+            fun: Fungibility::Fungible(amount),
+        }
+    }
+
+    Ok(RelayRuntimeCall::XcmPallet(
+        pallet_xcm::pallet::Call::send {
+            dest: Box::new(VersionedLocation::V5(Location {
+                parents: 0,
+                interior: Junctions::X1([Junction::Parachain(ASSET_HUB_ID)]),
+            })),
+            message: Box::new(VersionedXcm::V5(message)),
+        },
+    ))
+}
+
+#[cfg(not(feature = "polkadot"))]
+pub async fn rebalance_sovereign_fee_accounts(
+    _context: &Context,
+    _params: &RebalanceSovereignFeeAccountsArgs,
+) -> Result<RelayRuntimeCall, Box<dyn std::error::Error>> {
+    panic!("RebalanceSovereignFeeAccounts only for polkadot runtime.");
 }
 
 pub fn make_asset_sufficient(params: &UpdateAssetArgs) -> AssetHubRuntimeCall {
