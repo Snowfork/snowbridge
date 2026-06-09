@@ -94,11 +94,13 @@ export const transferToEthereumL2 = async (
 
         // Step 4. Validate the transaction.
         const validation = await transferImpl.validate(transfer)
-        // Suppress verbose nested objects: registry and sourceParachain
+        // Suppress verbose nested objects: registry, sourceParachain, and the
+        // SubmittableExtrinsic tx (which prints a huge nested structure).
         const compact = {
             ...validation,
             input: { ...validation.input, registry: "<suppressed>" },
             computed: { ...validation.computed, sourceParachain: "<suppressed>" },
+            tx: "<suppressed>",
         }
         console.log("validation result", util.inspect(compact, { depth: null, colors: false }))
 

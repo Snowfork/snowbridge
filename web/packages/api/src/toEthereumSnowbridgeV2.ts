@@ -303,7 +303,7 @@ export async function dryRunAssetHub(
     let sourceParachainForwarded
     let bridgeHubForwarded
     if (!success) {
-        console.error("Error during dry run on asset hub:", result.toHuman())
+        console.error("Error during dry run on asset hub:", xcm.toHuman(), result.toHuman())
     } else {
         bridgeHubForwarded = result.asOk.forwardedXcms.find((x) => {
             return (
@@ -736,12 +736,18 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
         defaultFee?: bigint
         feeTokenLocation?: any
         contractCall?: ContractCall
+        l2PadFeeByPercentage?: bigint
+        l2TransferGasLimit?: bigint
+        fillDeadlineBuffer?: bigint
         volumeFee?: VolumeFeeParams
         accelerated?: boolean
     },
     l2ChainId?: number,
     tokenAmount?: bigint,
 ): Promise<DeliveryFee> => {
+    if (!deliveryXcm.forwardXcmToAH) {
+        throw new Error("estimateFeesFromParachains requires deliveryXcm.forwardXcmToAH")
+    }
     const sourceParachain = registry.parachains[`polkadot_${sourceParaId}`]
     const sourceParachainImpl = await context.paraImplementation(
         await context.parachain(sourceParaId),
@@ -788,7 +794,7 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
     }
 
     const rawAssetHubExecutionFeeDOT = await assetHubImpl.calculateXcmFee(
-        deliveryXcm.forwardXcmToAH!,
+        deliveryXcm.forwardXcmToAH,
         DOT_LOCATION,
     )
     assetHubExecutionFeeDOT = padFeeByPercentage(rawAssetHubExecutionFeeDOT, feePadPercentage)
@@ -1119,7 +1125,7 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
             tokenAmount,
             "0x0000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000000000000000000000000000",
-            options as any,
+            options,
         )
         options = options || {}
         options.contractCall = options.contractCall || callInfo.l2Call
