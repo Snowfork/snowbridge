@@ -482,11 +482,9 @@ function buildTransferLocations(
                 const parachainAssets = Object.keys(sourceParachain.assets)
 
                 // The asset must exist on ethereum L1, the source parachain, asset hub, and the L2 chain.
-                // Exclude apyUSD (0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a) from L2 transfer routes.
                 const commonAssets = new Set(
                     ethAssets.filter(
                         (sa) =>
-                            sa.toLowerCase() !== "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a" &&
                             parachainAssets.find((da) => da === sa) &&
                             assetHubAssets.find((da) => da === sa) &&
                             destinationAssets.find((da) => da === sa),

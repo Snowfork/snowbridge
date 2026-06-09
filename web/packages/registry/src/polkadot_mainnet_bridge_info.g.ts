@@ -663,7 +663,7 @@ const registry = {
         },
     ],
     registry: {
-        timestamp: "2026-06-09T05:36:45.378Z",
+        timestamp: "2026-06-09T07:00:19.203Z",
         environment: "polkadot_mainnet",
         ethChainId: 1,
         gatewayAddress: "0x27ca963c279c93801941e1eb8799c23f407d68e7",
@@ -2049,7 +2049,7 @@ const registry = {
                         isSufficient: false,
                     },
                 },
-                estimatedExecutionFeeDOT: 54588775n,
+                estimatedExecutionFeeDOT: 54548356n,
                 estimatedDeliveryFeeDOT: 307100000n,
             },
             polkadot_2034: {
@@ -2249,7 +2249,7 @@ const registry = {
                         isSufficient: true,
                     },
                 },
-                estimatedExecutionFeeDOT: 3006753n,
+                estimatedExecutionFeeDOT: 3010674n,
                 estimatedDeliveryFeeDOT: 307100000n,
             },
             polkadot_2043: {
