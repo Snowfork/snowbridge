@@ -47,6 +47,7 @@ import {
 } from "./poolReserves"
 import { ParachainBase } from "./parachains/parachainBase"
 
+
 export { signAndSendTransfer } from "./toEthereum_v2"
 export { ValidationKind } from "./types/toEthereum"
 
@@ -302,7 +303,7 @@ export async function dryRunAssetHub(
     let sourceParachainForwarded
     let bridgeHubForwarded
     if (!success) {
-        console.error("Error during dry run on asset hub:", xcm.toHuman(), result.toHuman())
+        console.error("Error during dry run on asset hub:", result.toHuman())
     } else {
         bridgeHubForwarded = result.asOk.forwardedXcms.find((x) => {
             return (
@@ -506,7 +507,10 @@ export const estimateFeesFromAssetHub = async <T extends EthereumProviderTypes>(
         feePadPercentage,
     )
 
-    snowbridgeDeliveryFeeDOT = await getSnowbridgeDeliveryFee(assetHub, options?.defaultFee)
+    snowbridgeDeliveryFeeDOT = padFeeByPercentage(
+        await getSnowbridgeDeliveryFee(assetHub, options?.defaultFee),
+        feePadPercentage,
+    )
 
     let totalFeeInDot =
         localExecutionFeeDOT +
@@ -518,13 +522,15 @@ export const estimateFeesFromAssetHub = async <T extends EthereumProviderTypes>(
 
     // Calculate L2 bridge fee
     let l2BridgeFeeInL1Token: bigint = 0n
+    let l2TokenSymbol = "ETH"
     if (l2ChainId) {
+        if (!tokenAmount) throw new Error("tokenAmount is required for L2 transfers")
         let callInfo = await buildL2Call(
             context,
             registry,
             tokenAddress,
             l2ChainId,
-            tokenAmount!,
+            tokenAmount,
             "0x0000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             options,
@@ -532,6 +538,10 @@ export const estimateFeesFromAssetHub = async <T extends EthereumProviderTypes>(
         options = options || {}
         options.contractCall = options.contractCall || callInfo.l2Call
         l2BridgeFeeInL1Token = callInfo.fee
+        l2TokenSymbol =
+            registry.ethereumChains[`ethereum_${registry.ethChainId}`].assets[
+                tokenAddress.toLowerCase()
+            ]?.symbol ?? "ETH"
     }
     const ethereumExecutionFees = await estimateEthereumExecutionFees(
         context,
@@ -632,7 +642,7 @@ export const estimateFeesFromAssetHub = async <T extends EthereumProviderTypes>(
         })
     }
     if (l2BridgeFeeInL1Token > 0n) {
-        addBreakdown(breakdown, "l2Bridge", { amount: l2BridgeFeeInL1Token, symbol: "ETH" })
+        addBreakdown(breakdown, "l2Bridge", { amount: l2BridgeFeeInL1Token, symbol: l2TokenSymbol })
     }
 
     const xcmExecDOT =
@@ -702,7 +712,7 @@ export const estimateFeesFromAssetHub = async <T extends EthereumProviderTypes>(
         }
     }
     if (l2BridgeFeeInL1Token > 0n) {
-        summary.push({ description: "Across fee", amount: l2BridgeFeeInL1Token, symbol: "ETH" })
+        summary.push({ description: "Across fee", amount: l2BridgeFeeInL1Token, symbol: l2TokenSymbol })
     }
 
     return {
@@ -729,6 +739,8 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
         volumeFee?: VolumeFeeParams
         accelerated?: boolean
     },
+    l2ChainId?: number,
+    tokenAmount?: bigint,
 ): Promise<DeliveryFee> => {
     const sourceParachain = registry.parachains[`polkadot_${sourceParaId}`]
     const sourceParachainImpl = await context.paraImplementation(
@@ -775,10 +787,11 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
         )
     }
 
-    assetHubExecutionFeeDOT = padFeeByPercentage(
-        await assetHubImpl.calculateXcmFee(deliveryXcm.forwardXcmToAH, DOT_LOCATION),
-        feePadPercentage,
+    const rawAssetHubExecutionFeeDOT = await assetHubImpl.calculateXcmFee(
+        deliveryXcm.forwardXcmToAH!,
+        DOT_LOCATION,
     )
+    assetHubExecutionFeeDOT = padFeeByPercentage(rawAssetHubExecutionFeeDOT, feePadPercentage)
 
     bridgeHubDeliveryFeeDOT = padFeeByPercentage(
         await assetHubImpl.calculateDeliveryFeeInDOT(
@@ -788,7 +801,10 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
         feePadPercentage,
     )
 
-    snowbridgeDeliveryFeeDOT = await getSnowbridgeDeliveryFee(assetHub, options?.defaultFee)
+    snowbridgeDeliveryFeeDOT = padFeeByPercentage(
+        await getSnowbridgeDeliveryFee(assetHub, options?.defaultFee),
+        feePadPercentage,
+    )
 
     let totalFeeInDot =
         localExecutionFeeDOT +
@@ -1090,14 +1106,44 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
         }
     }
 
+    // Calculate L2 bridge fee
+    let l2BridgeFeeInL1Token: bigint = 0n
+    let l2TokenSymbol = "ETH"
+    if (l2ChainId) {
+        if (!tokenAmount) throw new Error("tokenAmount is required for L2 transfers")
+        let callInfo = await buildL2Call(
+            context,
+            registry,
+            tokenAddress,
+            l2ChainId,
+            tokenAmount,
+            "0x0000000000000000000000000000000000000000",
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
+            options as any,
+        )
+        options = options || {}
+        options.contractCall = options.contractCall || callInfo.l2Call
+        l2BridgeFeeInL1Token = callInfo.fee
+        l2TokenSymbol =
+            registry.ethereumChains[`ethereum_${registry.ethChainId}`].assets[
+                tokenAddress.toLowerCase()
+            ]?.symbol ?? "ETH"
+        addBreakdown(breakdown, "l2Bridge", { amount: l2BridgeFeeInL1Token, symbol: l2TokenSymbol })
+    }
+    if (l2BridgeFeeInL1Token > 0n) {
+        summary.push({ description: "Across fee", amount: l2BridgeFeeInL1Token, symbol: l2TokenSymbol })
+    }
+
     return {
-        kind: "polkadot->ethereum",
+        kind: l2ChainId ? "polkadot->ethereum_l2" : "polkadot->ethereum",
         feeLocation,
         breakdown,
         summary,
         totals: computeTotals(summary),
     }
 }
+
+
 
 export const validateTransferFromAssetHub = async <T extends EthereumProviderTypes>(
     context: Context<T>,
@@ -1187,7 +1233,7 @@ export const validateTransferFromAssetHub = async <T extends EthereumProviderTyp
             })
         }
         try {
-            let agentAddress = await sourceAgentAddress(context, sourceParaId, sourceAccountHex)
+            await sourceAgentAddress(context, sourceParaId, sourceAccountHex)
         } catch (error) {
             logs.push({
                 kind: ValidationKind.Error,
@@ -1467,6 +1513,19 @@ export const validateTransferFromParachain = async <T extends EthereumProviderTy
                 kind: ValidationKind.Error,
                 reason: ValidationReason.ContractCallInvalidTarget,
                 message: "Contract call with invalid target address: " + contractCall.target,
+            })
+        }
+        try {
+            await sourceAgentAddress(context, sourceParaId, sourceAccountHex)
+        } catch (error) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.ContractCallAgentNotRegistered,
+                message:
+                    "Contract call cannot be performed because no agent is registered for source account: " +
+                    sourceAccountHex +
+                    " error: " +
+                    String(error),
             })
         }
     }
@@ -1775,7 +1834,8 @@ export async function sourceAgentAddress<T extends EthereumProviderTypes>(
     sourceAccountHex: string,
 ): Promise<string> {
     const gateway = context.gateway()
-    let agentID = await sourceAgentId(context, parachainId, sourceAccountHex)
-    let agentAddress = await gateway.agentOf(agentID)
-    return agentAddress
+    const agentID = await sourceAgentId(context, parachainId, sourceAccountHex)
+    return gateway.agentOf(agentID)
 }
+
+

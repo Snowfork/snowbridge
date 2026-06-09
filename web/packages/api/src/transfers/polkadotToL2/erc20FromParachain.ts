@@ -13,7 +13,6 @@ import {
 import { buildTransferXcmFromParachainWithDOTAsFee } from "../../xcmbuilders/toEthereum/erc20FromParachainWithDotAsFee"
 import { buildTransferXcmFromParachainWithNativeAssetFee } from "../../xcmbuilders/toEthereum/erc20FromParachainWithNativeAsFee"
 import {
-    Asset,
     AssetRegistry,
     ChainId,
     ContractCall,
@@ -35,6 +34,7 @@ import { ensureValidationSuccess } from "../../utils"
 import { VolumeFeeParams } from "../../feeSchedule"
 import {
     buildContractCallHex,
+    buildL2Call,
     estimateFeesFromParachains,
     mockDeliveryFee,
     queryXcmExecuteWeight,
@@ -61,21 +61,24 @@ export class ERC20FromParachain<T extends EthereumProviderTypes> implements Tran
 
     async fee(
         tokenAddress: string,
+        amount: bigint,
         options?: {
             padFeeByPercentage?: bigint
             slippagePadPercentage?: bigint
             defaultFee?: bigint
             feeTokenLocation?: any
-            claimerLocation?: any
             contractCall?: ContractCall
+            l2PadFeeByPercentage?: bigint
+            fillDeadlineBuffer?: bigint
             volumeFee?: VolumeFeeParams
-            accelerated?: boolean
         },
     ): Promise<DeliveryFee> {
-        const assetHub = await this.context.assetHub()
-        const parachain = await this.context.parachain(this.from.id)
+        const context = this.context
+        const registry = this.registry
+        const assetHub = await context.assetHub()
+        const parachain = await context.parachain(this.from.id)
 
-        const sourceParachainImpl = await this.context.paraImplementation(parachain)
+        const sourceParachainImpl = await context.paraImplementation(parachain)
         const sourceAssetMetadata = this.source.assets[tokenAddress.toLowerCase()]
         if (!sourceAssetMetadata) {
             throw Error(
@@ -88,7 +91,7 @@ export class ERC20FromParachain<T extends EthereumProviderTypes> implements Tran
         if (this.source.features.supportsV2) {
             forwardXcmToAH = buildResultXcmAssetHubERC20TransferFromParachainV2(
                 assetHub.registry,
-                this.registry.ethChainId,
+                registry.ethChainId,
                 "0x0000000000000000000000000000000000000000000000000000000000000000",
                 "0x0000000000000000000000000000000000000000",
                 "0x0000000000000000000000000000000000000000",
@@ -104,7 +107,7 @@ export class ERC20FromParachain<T extends EthereumProviderTypes> implements Tran
         } else {
             forwardXcmToAH = buildResultXcmAssetHubERC20TransferFromParachain(
                 assetHub.registry,
-                this.registry.ethChainId,
+                registry.ethChainId,
                 "0x0000000000000000000000000000000000000000000000000000000000000000",
                 "0x0000000000000000000000000000000000000000",
                 "0x0000000000000000000000000000000000000000",
@@ -121,9 +124,9 @@ export class ERC20FromParachain<T extends EthereumProviderTypes> implements Tran
 
         localXcm = buildTransferXcmFromParachain(
             parachain.registry,
-            this.registry.environment,
-            this.registry.ethChainId,
-            this.registry.assetHubParaId,
+            registry.environment,
+            registry.ethChainId,
+            registry.assetHubParaId,
             sourceParachainImpl.parachainId,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000",
@@ -135,7 +138,7 @@ export class ERC20FromParachain<T extends EthereumProviderTypes> implements Tran
 
         forwardedXcmToBH = buildExportXcm(
             assetHub.registry,
-            this.registry.ethChainId,
+            registry.ethChainId,
             sourceAssetMetadata,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000",
@@ -145,9 +148,9 @@ export class ERC20FromParachain<T extends EthereumProviderTypes> implements Tran
         )
 
         const fees = await estimateFeesFromParachains(
-            this.context,
+            context,
             this.from.id,
-            this.registry,
+            registry,
             tokenAddress,
             {
                 localXcm,
@@ -155,6 +158,8 @@ export class ERC20FromParachain<T extends EthereumProviderTypes> implements Tran
                 forwardedXcmToBH,
             },
             options,
+            this.to.id,
+            amount,
         )
         return fees
     }
@@ -170,6 +175,7 @@ export class ERC20FromParachain<T extends EthereumProviderTypes> implements Tran
             contractCall?: ContractCall
         },
     ): Promise<Transfer> {
+        const context = this.context
         const registry = this.registry
         const { ethChainId, assetHubParaId, environment } = registry
 
@@ -177,9 +183,9 @@ export class ERC20FromParachain<T extends EthereumProviderTypes> implements Tran
         if (!isHex(sourceAccountHex)) {
             sourceAccountHex = u8aToHex(decodeAddress(sourceAccount))
         }
-        const parachain = await this.context.parachain(this.from.id)
+        const parachain = await context.parachain(this.from.id)
 
-        const sourceParachainImpl = await this.context.paraImplementation(parachain)
+        const sourceParachainImpl = await context.paraImplementation(parachain)
         const tokenErcMetadata =
             registry.ethereumChains[`ethereum_${registry.ethChainId}`].assets[
                 tokenAddress.toLowerCase()
@@ -213,10 +219,30 @@ export class ERC20FromParachain<T extends EthereumProviderTypes> implements Tran
             beneficiaryAccount,
             amount,
         )
+
+        let callInfo = await buildL2Call(
+            context,
+            registry,
+            tokenAddress,
+            this.to.id,
+            amount,
+            beneficiaryAccount,
+            messageId,
+        )
+        options = options || {}
+        options.contractCall = options.contractCall || callInfo.l2Call
+
+        const l1AdapterAddress = context.environment.l2Bridge?.l1AdapterAddress
+        if (!l1AdapterAddress) {
+            throw new Error("L2 bridge configuration is missing.")
+        }
+
+        let l1ReceiverAddress = l1AdapterAddress
+
         let claimerLocation = options?.claimerLocation
         let callHex: string | undefined
         if (options?.contractCall) {
-            callHex = await buildContractCallHex(this.context, options.contractCall)
+            callHex = await buildContractCallHex(context, options.contractCall)
         }
         let xcm: any
         if (!fee.feeLocation) {
@@ -227,7 +253,7 @@ export class ERC20FromParachain<T extends EthereumProviderTypes> implements Tran
                 assetHubParaId,
                 sourceParachainImpl.parachainId,
                 sourceAccountHex,
-                beneficiaryAccount,
+                l1ReceiverAddress,
                 messageId,
                 sourceAssetMetadata,
                 amount,
@@ -243,7 +269,7 @@ export class ERC20FromParachain<T extends EthereumProviderTypes> implements Tran
                 assetHubParaId,
                 sourceParachainImpl.parachainId,
                 sourceAccountHex,
-                beneficiaryAccount,
+                l1ReceiverAddress,
                 messageId,
                 sourceAssetMetadata,
                 amount,
@@ -260,7 +286,7 @@ export class ERC20FromParachain<T extends EthereumProviderTypes> implements Tran
                 sourceParachainImpl.parachainId,
                 sourceParachain.info.tokenSymbols,
                 sourceAccountHex,
-                beneficiaryAccount,
+                l1ReceiverAddress,
                 messageId,
                 sourceAssetMetadata,
                 amount,
@@ -278,11 +304,11 @@ export class ERC20FromParachain<T extends EthereumProviderTypes> implements Tran
             )
 
         return {
-            kind: "polkadot->ethereum",
+            kind: "polkadot->ethereum_l2",
             input: {
                 registry,
                 sourceAccount,
-                beneficiaryAccount,
+                beneficiaryAccount: l1ReceiverAddress,
                 tokenAddress,
                 amount,
                 fee,
@@ -296,6 +322,7 @@ export class ERC20FromParachain<T extends EthereumProviderTypes> implements Tran
                 ahAssetMetadata,
                 sourceAssetMetadata,
                 messageId,
+                contractCall: options?.contractCall,
             },
             tx,
         }
@@ -314,15 +341,18 @@ export class ERC20FromParachain<T extends EthereumProviderTypes> implements Tran
                 feeTokenLocation?: any
                 claimerLocation?: any
                 contractCall?: ContractCall
+                l2PadFeeByPercentage?: bigint
+                fillDeadlineBuffer?: bigint
                 volumeFee?: VolumeFeeParams
             }
             tx?: {
                 claimerLocation?: any
                 contractCall?: ContractCall
+                fillDeadlineBuffer?: bigint
             }
         },
     ): Promise<ValidatedTransfer> {
-        const fee = await this.fee(tokenAddress, options?.fee)
+        const fee = await this.fee(tokenAddress, amount, options?.fee)
         const transfer = await this.tx(
             sourceAccount,
             beneficiaryAccount,

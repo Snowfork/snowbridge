@@ -621,14 +621,26 @@ export class SnowbridgeApi<P extends EthereumProvider<any>> {
             case "polkadot->ethereum_l2": {
                 const sourceParachain = sourceChain as Parachain
                 const destinationEthChain = destinationChain as EthereumChain
-                const { ERC20FromAH } = require("./transfers/polkadotToL2/erc20ToL2")
-                const tIface: ToEthereumL2TransferInterface<ProviderTypesFor<P>> = new ERC20FromAH(
-                    this.context,
-                    this.info.registry,
-                    route,
-                    sourceParachain,
-                    destinationEthChain,
-                )
+                if (sourceParachain.id === this.info.registry.assetHubParaId) {
+                    const { ERC20FromAH } = require("./transfers/polkadotToL2/erc20FromAH")
+                    const tIface: ToEthereumL2TransferInterface<ProviderTypesFor<P>> = new ERC20FromAH(
+                        this.context,
+                        this.info.registry,
+                        route,
+                        sourceParachain,
+                        destinationEthChain,
+                    )
+                    return withKind(tIface, kind) as TransferFromTo<F, T, ProviderTypesFor<P>>
+                }
+                const { ERC20FromParachain } = require("./transfers/polkadotToL2/erc20FromParachain")
+                const tIface: ToEthereumL2TransferInterface<ProviderTypesFor<P>> =
+                    new ERC20FromParachain(
+                        this.context,
+                        this.info.registry,
+                        route,
+                        sourceParachain,
+                        destinationEthChain,
+                    )
                 return withKind(tIface, kind) as TransferFromTo<F, T, ProviderTypesFor<P>>
             }
             case "ethereum_l2->polkadot": {
