@@ -9,6 +9,7 @@ import {
     EthereumProviderTypes,
     Parachain,
     TransferRoute,
+    V2CommandStruct,
 } from "@snowbridge/base-types"
 import { CallDryRunEffects, XcmDryRunApiError, XcmDryRunEffects } from "@polkadot/types/interfaces"
 import { Result } from "@polkadot/types"
@@ -46,7 +47,7 @@ import {
     checkNativeDotPoolLiquidityForParachainToEthereum,
 } from "./poolReserves"
 import { ParachainBase } from "./parachains/parachainBase"
-
+import { runEthereumDryRun, dryRunCommandGasBudgets } from "./dryRunEthereum"
 
 export { signAndSendTransfer } from "./toEthereum_v2"
 export { ValidationKind } from "./types/toEthereum"
@@ -1256,6 +1257,7 @@ export const validateTransferFromAssetHub = async <T extends EthereumProviderTyp
     let sourceDryRunError
     let assetHubDryRunError
     let bridgeHubDryRunError
+    let ethereumDryRunError: string | undefined
     // do the dry run, get the forwarded xcm and dry run that
     const dryRunResultAssetHub = await dryRunOnSourceParachain(
         sourceParachain,
@@ -1270,7 +1272,16 @@ export const validateTransferFromAssetHub = async <T extends EthereumProviderTyp
             registry.assetHubParaId,
             dryRunResultAssetHub.bridgeHubForwarded[1][0],
         )
-        if (!dryRunResultBridgeHub.success) {
+        if (dryRunResultBridgeHub.success) {
+            const ethResult = await runEthereumDryRun(
+                context,
+                registry.assetHubParaId,
+                sourceAccountHex,
+                transfer,
+                logs,
+            )
+            ethereumDryRunError = ethResult.ethereumDryRunError
+        } else {
             logs.push({
                 kind: ValidationKind.Error,
                 reason: ValidationReason.DryRunFailed,
@@ -1355,6 +1366,7 @@ export const validateTransferFromAssetHub = async <T extends EthereumProviderTyp
             sourceDryRunError,
             assetHubDryRunError,
             bridgeHubDryRunError,
+            ethereumDryRunError,
         },
         ...transfer,
     }
@@ -1539,6 +1551,7 @@ export const validateTransferFromParachain = async <T extends EthereumProviderTy
     let sourceDryRunError
     let assetHubDryRunError
     let bridgeHubDryRunError
+    let ethereumDryRunError: string | undefined
     if (source.features.hasDryRunApi) {
         // do the dry run, get the forwarded xcm and dry run that
         const dryRunSource = await dryRunOnSourceParachain(
@@ -1584,6 +1597,15 @@ export const validateTransferFromParachain = async <T extends EthereumProviderTy
                             message: "Dry run failed on Bridge Hub.",
                         })
                         bridgeHubDryRunError = dryRunResultBridgeHub.errorMessage
+                    } else {
+                        const ethResult = await runEthereumDryRun(
+                            context,
+                            sourceParaId,
+                            sourceAccountHex,
+                            transfer,
+                            logs,
+                        )
+                        ethereumDryRunError = ethResult.ethereumDryRunError
                     }
                 } else {
                     logs.push({
@@ -1677,6 +1699,7 @@ export const validateTransferFromParachain = async <T extends EthereumProviderTy
             sourceDryRunError,
             assetHubDryRunError,
             bridgeHubDryRunError,
+            ethereumDryRunError,
         },
         ...transfer,
     }

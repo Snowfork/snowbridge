@@ -91,6 +91,7 @@ export class Context<T extends EthereumProviderTypes> {
     #gatewayV2?: T["Contract"] & IGatewayV2
     #beefyClient?: T["Contract"] & BeefyClient
     #l1SwapQuoter?: T["Contract"] & ISwapQuoter
+    #forkedProvider?: T["Connection"]
 
     // Substrate
     #polkadotParachains: Record<string, Promise<ApiPromise>>
@@ -335,6 +336,20 @@ export class Context<T extends EthereumProviderTypes> {
         return this.environment.indexerGraphQlUrl
     }
 
+    forkedProvider(): T["Connection"] {
+        if (this.#forkedProvider) {
+            return this.#forkedProvider
+        }
+        const apiKey =
+            process.env.FORKED_PROVIDER_API_KEY ||
+            process.env.NEXT_PUBLIC_FORKED_PROVIDER_API_KEY
+        this.#forkedProvider = this.ethereumProvider.createProvider(
+            this.environment.forkedProviderUrl || "https://fork-mainnet.snowbridge.network",
+            apiKey ? { headers: { "X-API-Key": apiKey } } : undefined,
+        )
+        return this.#forkedProvider
+    }
+
     async destroyContext(): Promise<void> {
         // clean up contract listeners
         if (this.#beefyClient) {
@@ -345,6 +360,9 @@ export class Context<T extends EthereumProviderTypes> {
         }
         if (this.#gatewayV2) {
             await this.ethereumProvider.destroyContract(this.gatewayV2())
+        }
+        if (this.#forkedProvider) {
+            this.ethereumProvider.destroyProvider(this.#forkedProvider)
         }
 
         // clean up ethereum

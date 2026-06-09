@@ -93,9 +93,13 @@ export interface EthereumProviderTypes {
   ContractTransaction: unknown;
 }
 
+export type EthereumProviderConnectionOptions = {
+  headers?: Record<string, string>;
+};
+
 export interface EthereumProvider<T extends EthereumProviderTypes> {
   readonly providerTypes: T;
-  createProvider(url: string): T["Connection"];
+  createProvider(url: string, options?: EthereumProviderConnectionOptions): T["Connection"];
   destroyProvider(provider: T["Connection"]): void;
   destroyContract(contract: T["Contract"]): Promise<void>;
   connectContract(
@@ -114,6 +118,7 @@ export interface EthereumProvider<T extends EthereumProviderTypes> {
     method: string,
     args: readonly unknown[],
   ): string;
+  encodeAbiParameters(types: string[], values: readonly unknown[]): string;
   decodeFunctionResult<U = unknown>(
     abi: T["Abi"],
     method: string,
