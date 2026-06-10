@@ -34,8 +34,6 @@ use crate::asset_hub_runtime::runtime_types::{
     snowbridge_core::operating_mode::BasicOperatingMode as AssetHubBasicOperatingMode,
     snowbridge_pallet_system_frontend,
 };
-use crate::relay_runtime::RuntimeCall as RelayRuntimeCall;
-
 #[cfg(feature = "polkadot")]
 pub mod asset_hub_polkadot_types {
     pub use crate::asset_hub_runtime::runtime_types::staging_xcm::v5::{
@@ -370,10 +368,11 @@ pub fn set_gateway_address(params: &GatewayAddressArgs) -> BridgeHubRuntimeCall 
 pub async fn rebalance_sovereign_fee_accounts(
     context: &Context,
     params: &RebalanceSovereignFeeAccountsArgs,
-) -> Result<RelayRuntimeCall, Box<dyn std::error::Error>> {
-    use crate::relay_runtime::runtime_types::{
+) -> Result<AssetHubRuntimeCall, Box<dyn std::error::Error>> {
+    use crate::asset_hub_runtime::runtime_types::{
         bounded_collections::bounded_vec::BoundedVec,
         pallet_xcm,
+        sp_weights::weight_v2::Weight,
         staging_xcm::v5::{
             asset::{
                 Asset, AssetFilter, AssetId, AssetTransferFilter, Assets, Fungibility, WildAsset,
@@ -385,7 +384,8 @@ pub async fn rebalance_sovereign_fee_accounts(
             Instruction::*,
             Xcm,
         },
-        xcm::{VersionedLocation, VersionedXcm},
+        xcm::v3::WeightLimit,
+        xcm::VersionedXcm,
     };
 
     const GATEWAY_PROXY: [u8; 20] = hex_literal::hex!("27ca963c279c93801941e1eb8799c23f407d68e7");
@@ -457,7 +457,7 @@ pub async fn rebalance_sovereign_fee_accounts(
 
     let message = Xcm(vec![
         UnpaidExecution {
-            weight_limit: crate::relay_runtime::runtime_types::xcm::v3::WeightLimit::Unlimited,
+            weight_limit: WeightLimit::Unlimited,
             check_origin: None,
         },
         AliasOrigin(Location {
@@ -471,7 +471,7 @@ pub async fn rebalance_sovereign_fee_accounts(
         ExchangeAsset {
             give: AssetFilter::Definite(Assets(vec![dot_for_swap])),
             want: Assets(vec![eth_for_gateway.clone()]),
-            maximal: true,
+            maximal: false,
         },
         InitiateTransfer {
             destination: Location {
@@ -517,6 +517,16 @@ pub async fn rebalance_sovereign_fee_accounts(
                 },
             }]),
         },
+        DepositAsset {
+            assets: AssetFilter::Wild(WildAsset::All),
+            beneficiary: Location {
+                parents: 0,
+                interior: Junctions::X1([Junction::AccountId32 {
+                    network: None,
+                    id: TREASURY_ACCOUNT,
+                }]),
+            },
+        },
     ]);
 
     fn asset(id: Location, amount: u128) -> Asset {
@@ -526,13 +536,13 @@ pub async fn rebalance_sovereign_fee_accounts(
         }
     }
 
-    Ok(RelayRuntimeCall::XcmPallet(
-        pallet_xcm::pallet::Call::send {
-            dest: Box::new(VersionedLocation::V5(Location {
-                parents: 0,
-                interior: Junctions::X1([Junction::Parachain(ASSET_HUB_ID)]),
-            })),
+    Ok(AssetHubRuntimeCall::PolkadotXcm(
+        pallet_xcm::pallet::Call::execute {
             message: Box::new(VersionedXcm::V5(message)),
+            max_weight: Weight {
+                ref_time: 500_000_000_000 - 1,
+                proof_size: 3 * 1024 * 1024 - 1,
+            },
         },
     ))
 }
@@ -541,7 +551,7 @@ pub async fn rebalance_sovereign_fee_accounts(
 pub async fn rebalance_sovereign_fee_accounts(
     _context: &Context,
     _params: &RebalanceSovereignFeeAccountsArgs,
-) -> Result<RelayRuntimeCall, Box<dyn std::error::Error>> {
+) -> Result<AssetHubRuntimeCall, Box<dyn std::error::Error>> {
     panic!("RebalanceSovereignFeeAccounts only for polkadot runtime.");
 }
 
