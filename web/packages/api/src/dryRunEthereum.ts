@@ -1,15 +1,16 @@
 import { Context } from "./index"
+import { Transfer, ValidationLog, ValidationKind, ValidationReason } from "./types/toEthereum"
 import {
-    Transfer,
-    ValidationLog,
-    ValidationKind,
-    ValidationReason,
-} from "./types/toEthereum"
-import { EthereumProviderTypes, V2CommandStruct } from "@snowbridge/base-types"
+    EthereumProviderTypes,
+    V2CommandStruct,
+    SNOWBRIDGE_L1_ADAPTOR_ABI,
+    SNOWBRIDGE_L2_ADAPTOR_ABI,
+    IGATEWAY_V2_ABI,
+} from "@snowbridge/base-types"
 import { sourceAgentId } from "./toEthereumSnowbridgeV2"
 
 const V2_DISPATCH_OVERHEAD_GAS = 24_000n
-const DRY_RUN_GAS_BUFFER = 100_000_000n
+const DRY_RUN_GAS_BUFFER = 1_000_000n
 const DEFAULT_FORK_RPC_CONNECT_TIMEOUT_MS = 15_000
 const DEFAULT_FORK_RPC_SEND_TIMEOUT_MS = 30_000
 
@@ -242,6 +243,55 @@ function parseL1AdaptorDryRunEvent(
     return null
 }
 
+const ERC20_EVENTS_ABI = [
+    {
+        type: "event",
+        name: "Transfer",
+        inputs: [
+            { indexed: true, name: "from", type: "address" },
+            { indexed: true, name: "to", type: "address" },
+            { indexed: false, name: "value", type: "uint256" },
+        ],
+    },
+    {
+        type: "event",
+        name: "Approval",
+        inputs: [
+            { indexed: true, name: "owner", type: "address" },
+            { indexed: true, name: "spender", type: "address" },
+            { indexed: false, name: "value", type: "uint256" },
+        ],
+    },
+] as const
+
+function tryParseLog<T extends EthereumProviderTypes>(
+    context: Context<T>,
+    log: any,
+): { name: string; args: any } | null {
+    const abis = [
+        IGATEWAY_V2_ABI,
+        ERC20_EVENTS_ABI,
+        SNOWBRIDGE_L1_ADAPTOR_ABI,
+        SNOWBRIDGE_L2_ADAPTOR_ABI,
+    ]
+    for (const abi of abis) {
+        try {
+            const contract = context.ethereumProvider.connectContract(
+                log.address,
+                abi as T["Abi"],
+                context.ethereum(),
+            )
+            const parsed = (contract as any).interface.parseLog(log)
+            if (parsed) {
+                return parsed
+            }
+        } catch (e) {
+            // ignore
+        }
+    }
+    return null
+}
+
 export async function runEthereumDryRun<T extends EthereumProviderTypes>(
     context: Context<T>,
     sourceParaId: number,
@@ -259,182 +309,159 @@ export async function runEthereumDryRun<T extends EthereumProviderTypes>(
             transfer,
         )
         const txGasLimit = computeDryRunDispatchGasLimit(dryRunCommandGasBudgets(transfer))
-        try {
-            const forkedProvider = context.forkedProvider() as unknown as ForkedRpcProvider
-            const connectTimeoutMs = forkRpcTimeoutMs(
-                "FORKED_PROVIDER_CONNECT_TIMEOUT_MS",
-                DEFAULT_FORK_RPC_CONNECT_TIMEOUT_MS,
-            )
-            const sendTimeoutMs = forkRpcTimeoutMs(
-                "FORKED_PROVIDER_SEND_TIMEOUT_MS",
-                DEFAULT_FORK_RPC_SEND_TIMEOUT_MS,
-            )
 
+        const forkedProvider = context.forkedProvider() as unknown as ForkedRpcProvider
+        const connectTimeoutMs = forkRpcTimeoutMs(
+            "FORKED_PROVIDER_CONNECT_TIMEOUT_MS",
+            DEFAULT_FORK_RPC_CONNECT_TIMEOUT_MS,
+        )
+        const sendTimeoutMs = forkRpcTimeoutMs(
+            "FORKED_PROVIDER_SEND_TIMEOUT_MS",
+            DEFAULT_FORK_RPC_SEND_TIMEOUT_MS,
+        )
+
+        await withTimeout(
+            forkedProvider.send("eth_blockNumber", []),
+            connectTimeoutMs,
+            "Forked RPC eth_blockNumber",
+        )
+        const txRequest = {
+            from: (ethereumTx as EthereumDryRunTx).from,
+            to: (ethereumTx as EthereumDryRunTx).to,
+            data: (ethereumTx as EthereumDryRunTx).data,
+            value: (ethereumTx as EthereumDryRunTx).value ?? "0x0",
+            gas: "0x" + txGasLimit.toString(16),
+        }
+
+        await tryImpersonateForkedSigner(forkedProvider, txRequest.from)
+        await context.ethereumProvider.estimateGas(forkedProvider, ethereumTx)
+        const txHash = String(
             await withTimeout(
-                forkedProvider.send("eth_blockNumber", []),
-                connectTimeoutMs,
-                "Forked RPC eth_blockNumber",
-            )
-            const txRequest = {
-                from: (ethereumTx as EthereumDryRunTx).from,
-                to: (ethereumTx as EthereumDryRunTx).to,
-                data: (ethereumTx as EthereumDryRunTx).data,
-                value: (ethereumTx as EthereumDryRunTx).value ?? "0x0",
-                gas: "0x" + txGasLimit.toString(16),
-            }
-
-            let txHash: string
-            try {
-                await tryImpersonateForkedSigner(forkedProvider, txRequest.from)
-                await context.ethereumProvider.estimateGas(forkedProvider, ethereumTx)
-                txHash = String(
-                    await withTimeout(
-                        forkedProvider.send("eth_sendTransaction", [txRequest]),
-                        sendTimeoutMs,
-                        "Forked RPC eth_sendTransaction",
-                    ),
-                )
-            } catch (sendError) {
-                const sendErrorMessage = String((sendError as Error).message || sendError)
-                const shouldImpersonate =
-                    sendErrorMessage.includes("No Signer available") ||
-                    sendErrorMessage.includes("unknown account")
-                const impersonated = shouldImpersonate
-                    ? await tryImpersonateForkedSigner(forkedProvider, txRequest.from)
-                    : false
-                if (!impersonated) {
-                    throw sendError
-                }
-                await context.ethereumProvider.estimateGas(forkedProvider, ethereumTx)
-                txHash = String(
-                    await withTimeout(
-                        forkedProvider.send("eth_sendTransaction", [txRequest]),
-                        sendTimeoutMs,
-                        "Forked RPC eth_sendTransaction",
-                    ),
-                )
-            }
-
-            console.log("Tx hash:", txHash)
-
-            const receipt = await withTimeout(
-                forkedProvider.waitForTransaction(txHash),
+                forkedProvider.send("eth_sendTransaction", [txRequest]),
                 sendTimeoutMs,
-                `Forked RPC waitForTransaction(${txHash})`,
-            )
-            if (!receipt) {
-                ethereumDryRunError =
-                    "Dry run transaction simulation on forked Ethereum did not return a receipt (node may be unavailable/out of sync)."
-                logs.push({
-                    kind: ValidationKind.Warning,
-                    reason: ValidationReason.DryRunFailed,
-                    message: ethereumDryRunError,
-                })
-            } else {
-                const receiptStatus = receipt.status
-                const isRevertedReceipt =
-                    receiptStatus === 0 ||
-                    receiptStatus === 0n ||
-                    receiptStatus === "0x0" ||
-                    receiptStatus === "0"
-                if (isRevertedReceipt) {
-                    ethereumDryRunError =
-                        "Dry run transaction simulation reverted on Ethereum (receipt status 0)."
-                    logs.push({
-                        kind: ValidationKind.Error,
-                        reason: ValidationReason.DryRunFailed,
-                        message: ethereumDryRunError,
-                    })
-                }
+                "Forked RPC eth_sendTransaction",
+            ),
+        )
 
-                console.log("Logs:", receipt.logs)
-                const parsedLogs = receipt.logs
-                    .map((log: any) => {
-                        try {
-                            return context.gatewayV2().interface.parseLog(log)
-                        } catch (e) {
-                            return null
-                        }
-                    })
-                    .filter((log: any) => log !== null)
-                const errorLogs = parsedLogs.filter((log: any) => log.name === "CommandFailed")
-                console.log("CommandFailed logs:", errorLogs)
-                if (errorLogs.length > 0) {
-                    const failedIndex = errorLogs[0]?.args?.index
-                    ethereumDryRunError =
-                        "Dry run v2_dispatch simulation reported CommandFailed at index: " +
-                        String(failedIndex)
-                    logs.push({
-                        kind: ValidationKind.Error,
-                        reason: ValidationReason.DryRunFailed,
-                        message: ethereumDryRunError,
-                    })
-                }
+        console.log("Tx hash:", txHash)
 
-                const l1AdapterAddress = context.environment.l2Bridge?.l1AdapterAddress
-                const adaptorEvents = receipt.logs
-                    .map((log: any) => parseL1AdaptorDryRunEvent(log, l1AdapterAddress))
-                    .filter(
-                        (
-                            event,
-                        ): event is {
-                            name: "DepositCallInvoked" | "DepositCallFailed"
-                            topic?: string
-                            depositId?: bigint
-                        } => event !== null,
-                    )
-                const depositCallFailed = adaptorEvents.filter(
-                    (event) => event.name === "DepositCallFailed",
-                )
-                if (depositCallFailed.length > 0) {
-                    const topic = depositCallFailed[0]?.topic
-                    ethereumDryRunError =
-                        "Dry run failed on Ethereum: L1 adaptor emitted DepositCallFailed" +
-                        (topic ? ` (topic: ${topic})` : "")
-                    logs.push({
-                        kind: ValidationKind.Error,
-                        reason: ValidationReason.DryRunFailed,
-                        message: ethereumDryRunError,
-                    })
-                }
-
-                const depositCallInvoked = adaptorEvents.find(
-                    (event) => event.name === "DepositCallInvoked",
-                )
-                if (depositCallInvoked) {
-                    console.log("L1 adaptor event:", {
-                        name: depositCallInvoked.name,
-                        topic: depositCallInvoked.topic,
-                        depositId: depositCallInvoked.depositId?.toString(),
-                    })
-                } else if (errorLogs.length > 0 && adaptorEvents.length === 0) {
-                    logs.push({
-                        kind: ValidationKind.Warning,
-                        reason: ValidationReason.DryRunFailed,
-                        message:
-                            "Synthetic v2_dispatch dry run reported upstream failure before adaptor events; this may diverge from proof-based production execution.",
-                    })
-                }
-            }
-        } catch (forkUnavailableError) {
-            console.error("Ethereum forked RPC dry-run failed:", forkUnavailableError)
+        const receipt = await withTimeout(
+            forkedProvider.waitForTransaction(txHash),
+            sendTimeoutMs,
+            `Forked RPC waitForTransaction(${txHash})`,
+        )
+        if (!receipt) {
             ethereumDryRunError =
-                "Skipping Ethereum dry-run transaction simulation because the forked RPC node is unavailable."
+                "Dry run transaction simulation on forked Ethereum did not return a receipt (node may be unavailable/out of sync)."
             logs.push({
                 kind: ValidationKind.Warning,
                 reason: ValidationReason.DryRunFailed,
                 message: ethereumDryRunError,
             })
+        } else {
+            const receiptStatus = receipt.status
+            const isRevertedReceipt =
+                receiptStatus === 0 ||
+                receiptStatus === 0n ||
+                receiptStatus === "0x0" ||
+                receiptStatus === "0"
+            if (isRevertedReceipt) {
+                ethereumDryRunError =
+                    "Dry run transaction simulation reverted on Ethereum (receipt status 0)."
+                logs.push({
+                    kind: ValidationKind.Error,
+                    reason: ValidationReason.DryRunFailed,
+                    message: ethereumDryRunError,
+                })
+                return { ethereumDryRunError }
+            }
+
+            console.log("Logs:")
+            const parsedLogs: any[] = []
+            for (const log of receipt.logs as any[]) {
+                const parsed = tryParseLog(context, log)
+                if (parsed) {
+                    console.log(`  - [${log.address}] ${parsed.name}:`, parsed.args)
+                    parsedLogs.push(parsed)
+                } else {
+                    console.log(
+                        `  - [${log.address}] Raw Log (topics:`,
+                        log.topics,
+                        `, data:`,
+                        log.data,
+                        `)`,
+                    )
+                }
+            }
+            const errorLogs = parsedLogs.filter((log: any) => log.name === "CommandFailed")
+            console.log("CommandFailed logs:", errorLogs)
+            if (errorLogs.length > 0) {
+                const failedIndex = errorLogs[0]?.args?.index
+                ethereumDryRunError =
+                    "Dry run v2_dispatch simulation reported CommandFailed at index: " +
+                    String(failedIndex)
+                logs.push({
+                    kind: ValidationKind.Error,
+                    reason: ValidationReason.DryRunFailed,
+                    message: ethereumDryRunError,
+                })
+            }
+
+            const l1AdapterAddress = context.environment.l2Bridge?.l1AdapterAddress
+            const adaptorEvents = receipt.logs
+                .map((log: any) => parseL1AdaptorDryRunEvent(log, l1AdapterAddress))
+                .filter(
+                    (
+                        event,
+                    ): event is {
+                        name: "DepositCallInvoked" | "DepositCallFailed"
+                        topic?: string
+                        depositId?: bigint
+                    } => event !== null,
+                )
+            const depositCallFailed = adaptorEvents.filter(
+                (event) => event.name === "DepositCallFailed",
+            )
+            if (depositCallFailed.length > 0) {
+                const topic = depositCallFailed[0]?.topic
+                ethereumDryRunError =
+                    "Dry run failed on Ethereum: L1 adaptor emitted DepositCallFailed" +
+                    (topic ? ` (topic: ${topic})` : "")
+                logs.push({
+                    kind: ValidationKind.Error,
+                    reason: ValidationReason.DryRunFailed,
+                    message: ethereumDryRunError,
+                })
+            }
+
+            const depositCallInvoked = adaptorEvents.find(
+                (event) => event.name === "DepositCallInvoked",
+            )
+            if (depositCallInvoked) {
+                console.log("L1 adaptor event:", {
+                    name: depositCallInvoked.name,
+                    topic: depositCallInvoked.topic,
+                    depositId: depositCallInvoked.depositId?.toString(),
+                })
+            } else if (errorLogs.length > 0 && adaptorEvents.length === 0) {
+                logs.push({
+                    kind: ValidationKind.Warning,
+                    reason: ValidationReason.DryRunFailed,
+                    message:
+                        "Synthetic v2_dispatch dry run reported upstream failure before adaptor events; this may diverge from proof-based production execution.",
+                })
+            }
         }
     } catch (e) {
-        console.error("Ethereum gas estimation failed:", e)
-        ethereumDryRunError = "Could not estimate gas on Ethereum."
+        console.error("Ethereum dry-run transaction simulation failed:", e)
+        ethereumDryRunError =
+            "Ethereum dry-run transaction simulation failed: " +
+            String((e as Error).message || e)
         logs.push({
-            kind: ValidationKind.Error,
-            reason: ValidationReason.FeeEstimationError,
+            kind: ValidationKind.Warning,
+            reason: ValidationReason.DryRunFailed,
             message: ethereumDryRunError,
         })
     }
-
     return { ethereumDryRunError }
 }

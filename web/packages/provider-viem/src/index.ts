@@ -156,6 +156,44 @@ function createReadOnlyContract(
         return address;
       },
       async removeAllListeners() {},
+      getFunction(name: string) {
+        return {
+          async populateTransaction(...args: unknown[]) {
+            const overrides = args[args.length - 1] as any;
+            const hasOverrides =
+              overrides &&
+              typeof overrides === "object" &&
+              !Array.isArray(overrides);
+            const value = hasOverrides ? (overrides.value ?? 0n) : 0n;
+            const from = hasOverrides ? overrides.from : undefined;
+            const abiArgs = hasOverrides ? args.slice(0, -1) : args;
+            const calldata = encodeFunctionData({
+              abi: normalizedAbi,
+              functionName: name,
+              args: abiArgs,
+            });
+            return {
+              to: address,
+              data: calldata,
+              value,
+              from,
+            };
+          },
+        };
+      },
+      interface: {
+        parseLog(log: { topics: string[]; data: string }) {
+          const decoded = decodeEventLog({
+            abi: normalizedAbi,
+            data: log.data as `0x${string}`,
+            topics: log.topics as any,
+          });
+          return {
+            name: decoded.eventName,
+            args: decoded.args,
+          };
+        },
+      },
     } as ViemContract,
     {
       get(target, prop, receiver) {
