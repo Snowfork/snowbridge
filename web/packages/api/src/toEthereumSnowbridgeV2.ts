@@ -562,6 +562,7 @@ export const estimateFeesFromAssetHub = async <T extends EthereumProviderTypes>(
         feeSlippagePadPercentage,
         tipForScaling,
         rawEthereumExecutionFee,
+        3n,
     )
     let ethereumExecutionFee =
         padFeeByPercentage(rawEthereumExecutionFee, scaledGasPad) + tipForScaling
@@ -823,6 +824,7 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
         feeSlippagePadPercentage,
         tipForScaling,
         rawEthereumExecutionFee,
+        3n,
     )
     let ethereumExecutionFee =
         padFeeByPercentage(rawEthereumExecutionFee, scaledGasPad) + tipForScaling

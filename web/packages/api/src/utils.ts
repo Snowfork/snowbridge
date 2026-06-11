@@ -70,21 +70,23 @@ export function padFeeByPercentage(fee: bigint, padPercent: bigint) {
 }
 
 // Quadratic decay: pad = staticPad * max(0, 1 - r/2)^2 where r = tip / rawCost.
-// Stretched to k=2 so the pad only collapses to 0 once tip >= 2×rawCost —
-// meaning the tip alone can absorb a 3× gas spike. At tip == rawCost the pad
-// is still ~8.25%, giving meaningful headroom through mid-volume bands.
+// Stretched to k=2 so the pad only collapses to its floor once tip >= 2×rawCost.
+// minPadPercent floors the result — required for slippage pads where the tip
+// does not buffer AMM drift (only gas), so the pad must never reach 0.
 export function scaledPadPercentage(
     staticPadPercent: bigint,
     tip: bigint,
     rawCost: bigint,
+    minPadPercent: bigint = 0n,
 ): bigint {
-    if (staticPadPercent <= 0n) return 0n
+    if (staticPadPercent <= 0n) return minPadPercent
     if (rawCost <= 0n) return staticPadPercent
     if (tip <= 0n) return staticPadPercent
     const stretched = rawCost * 2n
-    if (tip >= stretched) return 0n
+    if (tip >= stretched) return minPadPercent
     const remaining = stretched - tip
-    return (remaining * remaining * staticPadPercent) / (stretched * stretched)
+    const scaled = (remaining * remaining * staticPadPercent) / (stretched * stretched)
+    return scaled > minPadPercent ? scaled : minPadPercent
 }
 
 export class ValidationError<
