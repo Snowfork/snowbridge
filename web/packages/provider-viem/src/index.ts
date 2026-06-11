@@ -25,6 +25,7 @@ import type {
   BeefyClient,
   DepositParamsStruct,
   EthereumProvider,
+  EthereumProviderConnectionOptions,
   EthereumProviderTypes,
   FeeData,
   GatewayV1OutboundMessageAccepted,
@@ -195,9 +196,13 @@ export class ViemEthereumProvider
 {
   declare readonly providerTypes: ViemProviderTypes;
 
-  createProvider(url: string): PublicClient {
+  createProvider(url: string, options?: EthereumProviderConnectionOptions): PublicClient {
     return createPublicClient({
-      transport: url.startsWith("http") ? http(url) : webSocket(url),
+      transport: url.startsWith("http")
+        ? http(url, {
+            fetchOptions: options?.headers ? { headers: options.headers } : undefined,
+          })
+        : webSocket(url),
     });
   }
 
@@ -420,6 +425,10 @@ export class ViemEthereumProvider
       functionName: method,
       args: [...args],
     } as never);
+  }
+
+  encodeAbiParameters(types: string[], values: readonly unknown[]): Hex {
+    return encodeAbiParameters(parseAbiParameters(types.join(",")), [...values]);
   }
 
   decodeFunctionResult<T = unknown>(

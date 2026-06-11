@@ -27,6 +27,7 @@ const registry = {
         bridgeHubParaId: 1002,
         v2_parachains: [1000, 2034],
         indexerGraphQlUrl: "https://subsquid.snowbridge.network/graphql",
+        forkedProviderUrl: "https://fork-mainnet.snowbridge.network",
         kusama: {
             assetHubParaId: 1000,
             bridgeHubParaId: 1002,
@@ -573,7 +574,7 @@ const registry = {
         },
     ],
     registry: {
-        timestamp: "2026-06-11T08:10:26.142Z",
+        timestamp: "2026-06-11T08:55:00.280Z",
         environment: "polkadot_mainnet",
         ethChainId: 1,
         gatewayAddress: "0x27ca963c279c93801941e1eb8799c23f407d68e7",
@@ -1959,7 +1960,7 @@ const registry = {
                         isSufficient: false,
                     },
                 },
-                estimatedExecutionFeeDOT: 55438383n,
+                estimatedExecutionFeeDOT: 54967893n,
                 estimatedDeliveryFeeDOT: 307100000n,
             },
             polkadot_2034: {
@@ -2159,7 +2160,7 @@ const registry = {
                         isSufficient: true,
                     },
                 },
-                estimatedExecutionFeeDOT: 3125982n,
+                estimatedExecutionFeeDOT: 3119486n,
                 estimatedDeliveryFeeDOT: 307100000n,
             },
             polkadot_2043: {

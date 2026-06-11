@@ -84,6 +84,7 @@ export * as governance from "./governance"
 export class Context<T extends EthereumProviderTypes> {
     readonly environment: Environment
     readonly ethereumProvider: EthereumProvider<T>
+    readonly forkedProviderApiKey?: string
 
     // Ethereum
     #ethChains: Record<string, T["Connection"]>
@@ -91,6 +92,7 @@ export class Context<T extends EthereumProviderTypes> {
     #gatewayV2?: T["Contract"] & IGatewayV2
     #beefyClient?: T["Contract"] & BeefyClient
     #l1SwapQuoter?: T["Contract"] & ISwapQuoter
+    #forkedProvider?: T["Connection"]
 
     // Substrate
     #polkadotParachains: Record<string, Promise<ApiPromise>>
@@ -100,9 +102,14 @@ export class Context<T extends EthereumProviderTypes> {
     static #rpcInitTimeoutMs = 40_000
     static #wsRequestTimeoutMs = 30_000
 
-    constructor(environment: Environment, ethereumProvider: EthereumProvider<T>) {
+    constructor(
+        environment: Environment,
+        ethereumProvider: EthereumProvider<T>,
+        forkedProviderApiKey?: string,
+    ) {
         this.environment = environment
         this.ethereumProvider = ethereumProvider
+        this.forkedProviderApiKey = forkedProviderApiKey
         this.#polkadotParachains = {}
         this.#kusamaParachains = {}
         this.#ethChains = {}
@@ -335,6 +342,22 @@ export class Context<T extends EthereumProviderTypes> {
         return this.environment.indexerGraphQlUrl
     }
 
+    forkedProvider(): T["Connection"] {
+        if (this.#forkedProvider) {
+            return this.#forkedProvider
+        }
+        const apiKey =
+            this.forkedProviderApiKey ||
+            this.environment.forkedProviderApiKey ||
+            process.env.FORKED_PROVIDER_API_KEY ||
+            process.env.NEXT_PUBLIC_FORKED_PROVIDER_API_KEY
+        this.#forkedProvider = this.ethereumProvider.createProvider(
+            this.environment.forkedProviderUrl || "https://fork-mainnet.snowbridge.network",
+            apiKey ? { headers: { "X-API-Key": apiKey } } : undefined,
+        )
+        return this.#forkedProvider
+    }
+
     async destroyContext(): Promise<void> {
         // clean up contract listeners
         if (this.#beefyClient) {
@@ -345,6 +368,9 @@ export class Context<T extends EthereumProviderTypes> {
         }
         if (this.#gatewayV2) {
             await this.ethereumProvider.destroyContract(this.gatewayV2())
+        }
+        if (this.#forkedProvider) {
+            this.ethereumProvider.destroyProvider(this.#forkedProvider)
         }
 
         // clean up ethereum
@@ -388,6 +414,7 @@ export class Context<T extends EthereumProviderTypes> {
 export type ApiOptions<P extends EthereumProvider<any>> = {
     info: BridgeInfo
     ethereumProvider: P
+    forkedProviderApiKey?: string
 }
 
 export type TransferImplementation<T extends EthereumProviderTypes = EthereumProviderTypes> =
@@ -459,6 +486,7 @@ export class SnowbridgeApi<P extends EthereumProvider<any>> {
         this.context = new Context<ProviderTypesFor<P>>(
             options.info.environment,
             options.ethereumProvider as unknown as EthereumProvider<ProviderTypesFor<P>>,
+            options.forkedProviderApiKey,
         )
     }
     createAgent(): AgentCreationInterface<ProviderTypesFor<P>["ContractTransaction"]> {
