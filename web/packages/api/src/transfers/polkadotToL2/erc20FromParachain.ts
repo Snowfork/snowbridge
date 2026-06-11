@@ -173,6 +173,9 @@ export class ERC20FromParachain<T extends EthereumProviderTypes> implements Tran
         options?: {
             claimerLocation?: any
             contractCall?: ContractCall
+            l2PadFeeByPercentage?: bigint
+            l2TransferGasLimit?: bigint
+            fillDeadlineBuffer?: bigint
         },
     ): Promise<Transfer> {
         const context = this.context
@@ -228,6 +231,7 @@ export class ERC20FromParachain<T extends EthereumProviderTypes> implements Tran
             amount,
             beneficiaryAccount,
             messageId,
+            options,
         )
         options = options || {}
         options.contractCall = options.contractCall || callInfo.l2Call
