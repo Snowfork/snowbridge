@@ -21,6 +21,7 @@ export type SendParamsStruct = {
   claimer: Uint8Array;
   executionFee: bigint;
   relayerFee: bigint;
+  destinationExecutionFee: bigint;
 };
 
 export type SwapParamsStruct = {
@@ -529,6 +530,11 @@ export const SNOWBRIDGE_L2_ADAPTOR_ABI = [
           { name: "claimer", type: "bytes", internalType: "bytes" },
           { name: "executionFee", type: "uint128", internalType: "uint128" },
           { name: "relayerFee", type: "uint128", internalType: "uint128" },
+          {
+            name: "destinationExecutionFee",
+            type: "uint128",
+            internalType: "uint128",
+          },
         ],
       },
       { name: "recipient", type: "address", internalType: "address" },
@@ -582,6 +588,11 @@ export const SNOWBRIDGE_L2_ADAPTOR_ABI = [
           { name: "claimer", type: "bytes", internalType: "bytes" },
           { name: "executionFee", type: "uint128", internalType: "uint128" },
           { name: "relayerFee", type: "uint128", internalType: "uint128" },
+          {
+            name: "destinationExecutionFee",
+            type: "uint128",
+            internalType: "uint128",
+          },
         ],
       },
       { name: "recipient", type: "address", internalType: "address" },

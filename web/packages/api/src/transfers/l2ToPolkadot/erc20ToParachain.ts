@@ -24,11 +24,12 @@ import {
 import {
     sendMessageXCM,
     buildAssetHubERC20ReceivedXcm,
-} from "../../xcmbuilders/toPolkadot/erc20ToAH"
+    buildParachainERC20ReceivedXcmOnDestination,
+} from "../../xcmbuilders/toPolkadot/erc20ToParachain"
 import { accountId32Location, erc20Location } from "../../xcmBuilder"
 import { DOT_LOCATION, ETHER_TOKEN_ADDRESS, getAssetHubEtherMinBalance } from "../../assets_v2"
 import { ensureValidationSuccess, padFeeByPercentage } from "../../utils"
-import { resolveBeneficiary } from "../../crypto"
+import { paraIdToSovereignAccount, resolveBeneficiary } from "../../crypto"
 import { FeeInfo, ValidationLog, ValidationReason } from "../../types/toPolkadot"
 import { buildMessageId, Transfer, ValidatedTransfer } from "../../toPolkadotSnowbridgeV2"
 import { getOperatingStatus } from "../../status"
@@ -44,7 +45,10 @@ import {
 } from "../../fees"
 import { checkDotEthPoolLiquidityForEthereumToPolkadot } from "../../poolReserves"
 
-export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInterface<T> {
+// Delivers an L2 (Across) ERC20/ether transfer to a non-Asset-Hub parachain by
+// forwarding from Asset Hub. Mirrors `ERC20ToAH` for the L2/Across plumbing and
+// `toPolkadot/ERC20ToParachain` for the Asset-Hub -> destination forwarding leg.
+export class ERC20ToParachain<T extends EthereumProviderTypes> implements TransferInterface<T> {
     constructor(
         public readonly context: Context<T>,
         public readonly registry: AssetRegistry,
@@ -67,10 +71,12 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
     // the relayer gas does not depend on those, only on the message shape.
     private buildAcrossMessage(
         assetHub: any,
+        destination: any,
         tokenAddress: string,
         amount: bigint,
-        executionFee: bigint,
+        gatewayExecutionFee: bigint,
         relayerFee: bigint,
+        destExecutionFeeEther: bigint,
         customXcm?: any[],
         swap?: { router: string; inputAmount: bigint; callData: string },
     ): string {
@@ -80,17 +86,17 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
         if (!l1Weth) {
             throw new Error("L2 bridge configuration is missing.")
         }
-        const userAssetLocation =
-            tokenAddress === ETHER_TOKEN_ADDRESS
-                ? undefined
-                : erc20Location(registry.ethChainId, tokenAddress)
         const xcm = hexToU8a(
             sendMessageXCM(
-                assetHub.registry,
+                destination.registry,
+                registry.ethChainId,
+                this.to.id,
+                tokenAddress,
                 placeholder,
+                amount,
+                destExecutionFeeEther,
                 placeholder,
                 customXcm,
-                userAssetLocation,
             ).toHex(),
         )
         const claimer = claimerLocationToBytes(
@@ -107,9 +113,9 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             xcm,
             assets,
             claimer,
-            executionFee,
+            executionFee: gatewayExecutionFee,
             relayerFee,
-            destinationExecutionFee: 0n,
+            destinationExecutionFee: destExecutionFeeEther,
             outputAmount: amount,
             swap,
         })
@@ -137,6 +143,8 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             assetHub: await context.assetHub(),
             bridgeHub: await context.bridgeHub(),
         }
+        const destination = await context.parachain(this.to.id)
+        const destParachain = this.destination
         if (registry.ethereumChains?.[`ethereum_l2_${this.from.id}`] == undefined) {
             throw new Error(`L2 Chain ID ${this.from.id} is not supported in the provided registry`)
         }
@@ -154,6 +162,12 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
         if (!tokenAddress) {
             throw new Error("Token is not registered on Ethereum")
         }
+        const destAssetMetadata = destParachain.assets[tokenAddress.toLowerCase()]
+        if (!destAssetMetadata) {
+            throw Error(
+                `Token ${tokenAddress} not registered on destination parachain ${destParachain.id}.`,
+            )
+        }
         let assetHubXcm = buildAssetHubERC20ReceivedXcm(
             assetHub.registry,
             registry.ethChainId,
@@ -166,6 +180,8 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             ),
             "0x0000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000000000000000000000000000",
+            this.to.id,
+            1000000000000n,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
         )
         let ether = erc20Location(registry.ethChainId, ETHER_TOKEN_ADDRESS)
@@ -191,9 +207,7 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             DOT_LOCATION,
             deliveryFeeInDOT,
         )
-        // AssetHub Execution fee. Always compute the DOT figure for the fee
-        // breakdown. Prefer AH's direct weight->ether quote when available,
-        // fall back to the manual ETH->DOT swap.
+        // AssetHub Execution fee.
         let assetHubExecutionFeeDOT = await assetHubImpl.calculateXcmFee(assetHubXcm, DOT_LOCATION)
 
         let assetHubExecutionFeeEtherRaw: bigint
@@ -218,6 +232,35 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             assetHubExecutionFeeEther += getAssetHubEtherMinBalance(registry)
         }
 
+        // Destination (parachain) fees.
+        const destinationXcm = buildParachainERC20ReceivedXcmOnDestination(
+            destination.registry,
+            registry.ethChainId,
+            "0x0000000000000000000000000000000000000000",
+            3402823669209384634633746074317682114n,
+            3402823669209384634633746074317682114n,
+            destParachain.info.accountType === "AccountId32"
+                ? "0x0000000000000000000000000000000000000000000000000000000000000000"
+                : "0x0000000000000000000000000000000000000000",
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
+            options?.customXcm,
+        )
+        const destinationImpl = await this.context.paraImplementation(destination)
+        // Delivery fee AssetHub to Destination
+        const destinationDeliveryFeeDOT = await assetHubImpl.calculateDeliveryFeeInDOT(
+            this.to.id,
+            destinationXcm,
+        )
+        const destinationDeliveryFeeEther = await assetHubImpl.getAssetHubConversionPalletSwap(
+            ether,
+            DOT_LOCATION,
+            destinationDeliveryFeeDOT,
+        )
+        const destinationExecutionFeeEther = padFeeByPercentage(
+            await destinationImpl.calculateXcmFee(destinationXcm, ether),
+            feePadPercentage ?? 50n,
+        )
+
         const { relayerFee, extrinsicFeeDot, extrinsicFeeEther } = await calculateRelayerFee(
             assetHubImpl,
             registry.ethChainId,
@@ -232,10 +275,19 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             finalRelayerFee += volumeTip
         }
 
+        // Total ether that must arrive on Asset Hub to cover AH execution, the
+        // relayer (which already includes the BridgeHub->AH delivery), and the
+        // AH->destination delivery + destination execution legs.
+        const assetHubEtherToDeliver =
+            assetHubExecutionFeeEther +
+            destinationDeliveryFeeEther +
+            destinationExecutionFeeEther +
+            finalRelayerFee
+
         // Calculate fee with Across SDK
         let bridgeFeeInL2Token = 0n,
             swapFeeInL1Token = 0n
-        let totalFeeInWei = assetHubExecutionFeeEther + finalRelayerFee
+        let totalFeeInWei = assetHubEtherToDeliver
         const acrossApiUrl = context.environment.l2Bridge?.acrossAPIUrl
         const l2FeeTokenAddress =
             context.environment.l2Bridge?.l2Chains[this.from.id]?.feeTokenAddress
@@ -255,10 +307,12 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             }
             const message = this.buildAcrossMessage(
                 assetHub,
+                destination,
                 tokenAddress,
                 amount,
-                assetHubExecutionFeeEther,
+                assetHubExecutionFeeEther + destinationDeliveryFeeEther,
                 finalRelayerFee,
+                destinationExecutionFeeEther,
                 options?.customXcm,
             )
             bridgeFeeInL2Token = await estimateFees(
@@ -267,7 +321,7 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
                 l1FeeTokenAddress,
                 this.from.id,
                 registry.ethChainId,
-                assetHubExecutionFeeEther + finalRelayerFee + amount,
+                assetHubEtherToDeliver + amount,
                 { recipient: l1HandlerAddress, message },
             )
             bridgeFeeInL2Token = padFeeByPercentage(
@@ -287,7 +341,7 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             let params: QuoteExactOutputSingleParamsStruct = {
                 tokenIn: tokenAddress,
                 tokenOut: l1FeeTokenAddress,
-                amount: assetHubExecutionFeeEther + finalRelayerFee,
+                amount: assetHubEtherToDeliver,
                 fee: swapFee ?? 500, // 0.05% pool fee
                 sqrtPriceLimitX96: 0, // no price limit
             }
@@ -307,15 +361,17 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
                 registry,
                 this.from.id,
                 l2TokenAddress,
-                assetHubExecutionFeeEther + finalRelayerFee,
+                assetHubEtherToDeliver,
                 swapFeeInL1Token,
             )
             const message = this.buildAcrossMessage(
                 assetHub,
+                destination,
                 tokenAddress,
                 amount,
-                assetHubExecutionFeeEther,
+                assetHubExecutionFeeEther + destinationDeliveryFeeEther,
                 finalRelayerFee,
+                destinationExecutionFeeEther,
                 options?.customXcm,
                 {
                     router: l1SwapRouterAddress,
@@ -362,6 +418,18 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             amount: assetHubExecutionFeeDOT,
             symbol: "DOT",
         })
+        addBreakdown(breakdown, "destinationDelivery", {
+            amount: destinationDeliveryFeeEther,
+            symbol: "ETH",
+        })
+        addBreakdown(breakdown, "destinationDelivery", {
+            amount: destinationDeliveryFeeDOT,
+            symbol: "DOT",
+        })
+        addBreakdown(breakdown, "destinationExecution", {
+            amount: destinationExecutionFeeEther,
+            symbol: "ETH",
+        })
         addBreakdown(breakdown, "relayer", { amount: finalRelayerFee, symbol: "ETH" })
         addBreakdown(breakdown, "extrinsic", { amount: extrinsicFeeDot, symbol: "DOT" })
         addBreakdown(breakdown, "extrinsic", { amount: extrinsicFeeEther, symbol: "ETH" })
@@ -375,10 +443,14 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
         const summary: DeliveryFee["summary"] = [
             {
                 description: "XCM execution fees",
-                amount: assetHubExecutionFeeEther,
+                amount: assetHubExecutionFeeEther + destinationExecutionFeeEther,
                 symbol: "ETH",
             },
-            { description: "Bridge fees", amount: deliveryFeeInEther, symbol: "ETH" },
+            {
+                description: "Bridge fees",
+                amount: deliveryFeeInEther + destinationDeliveryFeeEther,
+                symbol: "ETH",
+            },
             {
                 description: "Relayer tip",
                 amount: finalRelayerFee - deliveryFeeInEther,
@@ -423,7 +495,12 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
         const context = this.context
         const registry = this.registry
         const assetHub = await context.assetHub()
+        const destination = await context.parachain(this.to.id)
         const l2Chain = context.ethChain(this.from.id)
+
+        if (!destination) {
+            throw Error(`Unable to connect to destination parachain with ID ${this.to.id}.`)
+        }
 
         let tokenAddress =
             registry.ethereumChains?.[`ethereum_l2_${this.from.id}`]?.assets[l2TokenAddress]
@@ -482,31 +559,35 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             accountNonce,
         )
 
-        // For ether transfers there's only one asset in holding so no split is needed.
-        const userAssetLocation =
-            tokenAddress === ETHER_TOKEN_ADDRESS
-                ? undefined
-                : erc20Location(registry.ethChainId, tokenAddress)
+        const destExecutionFeeEther = findInBreakdown(fee.breakdown, "destinationExecution", "ETH")
         const xcm = hexToU8a(
             sendMessageXCM(
-                assetHub.registry,
+                destination.registry,
+                registry.ethChainId,
+                this.to.id,
+                tokenAddress,
                 beneficiaryAddressHex,
+                amount,
+                destExecutionFeeEther,
                 topic,
                 options?.customXcm,
-                userAssetLocation,
             ).toHex(),
         )
         let claimer = claimerFromBeneficiary(assetHub, beneficiaryAddressHex, registry.environment)
 
         let depositParams: DepositParamsStruct, tx: T["ContractTransaction"]
 
+        const assetHubExecutionFee =
+            findInBreakdown(fee.breakdown, "assetHubExecution", "ETH") +
+            findInBreakdown(fee.breakdown, "destinationDelivery", "ETH")
+
         let sendParams: SendParamsStruct = {
             xcm: xcm,
             assets: assets,
             claimer: claimerLocationToBytes(claimer),
-            executionFee: findInBreakdown(fee.breakdown, "assetHubExecution", "ETH"),
+            executionFee: assetHubExecutionFee,
             relayerFee: findInBreakdown(fee.breakdown, "relayer", "ETH"),
-            destinationExecutionFee: 0n,
+            destinationExecutionFee: destExecutionFeeEther,
         }
         const l2FeeTokenAddress =
             context.environment.l2Bridge?.l2Chains[this.from.id]?.feeTokenAddress
@@ -560,8 +641,7 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
                 registry,
                 this.from.id,
                 l2TokenAddress,
-                findInBreakdown(fee.breakdown, "assetHubExecution", "ETH") +
-                    findInBreakdown(fee.breakdown, "relayer", "ETH"),
+                totalFeeInWei,
                 swapFeeInL1Token,
             )
             let swapParams: SwapParamsStruct = {
@@ -651,20 +731,30 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
     async validate(transfer: Transfer<T>): Promise<ValidatedTransfer<T>> {
         const context = this.context
         const { tx } = transfer
-        const { amount, sourceAccount, tokenAddress, registry, l2TokenAddress, sourceChainId } =
-            transfer.input
+        const {
+            amount,
+            sourceAccount,
+            tokenAddress,
+            registry,
+            l2TokenAddress,
+            sourceChainId,
+            destinationParaId,
+        } = transfer.input
         const { totalInputAmount } = transfer.computed
-        const { gateway, bridgeHub, assetHub, l2Chain } = {
+        const { gateway, bridgeHub, assetHub, l2Chain, destParachainApi } = {
             gateway: context.gateway(),
             bridgeHub: await context.bridgeHub(),
             assetHub: await context.assetHub(),
             l2Chain: context.ethChain(sourceChainId!),
+            destParachainApi: await context.parachain(destinationParaId),
         }
 
         const {
             totalValue,
             minimalBalance,
             ahAssetMetadata,
+            destAssetMetadata,
+            destParachain,
             beneficiaryAddressHex,
             claimer,
             l2AdapterAddress,
@@ -771,7 +861,9 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
 
         const requiredDotOut =
             findInBreakdownOrZero(transfer.input.fee.breakdown, "assetHubDelivery", "DOT") +
-            findInBreakdownOrZero(transfer.input.fee.breakdown, "assetHubExecution", "DOT")
+            findInBreakdownOrZero(transfer.input.fee.breakdown, "assetHubExecution", "DOT") +
+            findInBreakdownOrZero(transfer.input.fee.breakdown, "destinationDelivery", "DOT") +
+            findInBreakdownOrZero(transfer.input.fee.breakdown, "destinationExecution", "DOT")
         if (requiredDotOut > 0n) {
             const reserveCheck = await checkDotEthPoolLiquidityForEthereumToPolkadot(
                 assetHubImpl,
@@ -790,9 +882,9 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             }
         }
 
-        // Check if asset can be received on asset hub (dry run)
+        // Check if asset can be received on asset hub and forwarded (dry run)
         const ahParachain = registry.parachains[`polkadot_${registry.assetHubParaId}`]
-        let dryRunAhSuccess, assetHubDryRunError
+        let dryRunAhSuccess, forwardedDestination, assetHubDryRunError
         if (!ahParachain.features.hasDryRunApi) {
             logs.push({
                 kind: ValidationKind.Error,
@@ -801,31 +893,36 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
                     "Asset Hub does not support dry running of XCM. Transaction success cannot be confirmed.",
             })
         } else {
-            // build asset hub packet and dryRun
-            const executionFee = findInBreakdown(
-                transfer.input.fee.breakdown,
-                "assetHubExecution",
-                "ETH",
-            )
-            const relayerFee = findInBreakdown(transfer.input.fee.breakdown, "relayer", "ETH")
-            const payloadValue = transfer.computed.totalValue - executionFee - relayerFee
+            const inputFee = transfer.input.fee
+            const assetHubFee =
+                findInBreakdown(inputFee.breakdown, "assetHubExecution", "ETH") +
+                findInBreakdown(inputFee.breakdown, "destinationDelivery", "ETH")
+            const relayerFee = findInBreakdown(inputFee.breakdown, "relayer", "ETH")
+            const payloadValue = transfer.computed.totalValue - assetHubFee - relayerFee
             const xcm = buildAssetHubERC20ReceivedXcm(
                 assetHub.registry,
                 registry.ethChainId,
                 tokenAddress,
                 payloadValue,
-                executionFee,
+                assetHubFee,
                 amount,
                 claimer,
                 transfer.input.sourceAccount,
                 transfer.computed.beneficiaryAddressHex,
+                destinationParaId,
+                findInBreakdown(inputFee.breakdown, "destinationExecution", "ETH"),
                 "0x0000000000000000000000000000000000000000000000000000000000000000",
                 transfer.input.customXcm,
             )
 
-            let result = await assetHubImpl.dryRunXcm(registry.bridgeHubParaId, xcm)
+            let result = await assetHubImpl.dryRunXcm(
+                registry.bridgeHubParaId,
+                xcm,
+                destinationParaId,
+            )
             dryRunAhSuccess = result.success
             assetHubDryRunError = result.errorMessage
+            forwardedDestination = result.forwardedDestination
             if (!dryRunAhSuccess) {
                 logs.push({
                     kind: ValidationKind.Error,
@@ -835,27 +932,108 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             }
         }
 
+        let destinationParachainDryRunError: string | undefined
+        // Check the destination parachain sovereign account holds the token on AH.
         if (!ahAssetMetadata.isSufficient && !dryRunAhSuccess) {
+            const sovereignAccountId = paraIdToSovereignAccount("sibl", destinationParaId)
             const { accountMaxConsumers, accountExists } = await assetHubImpl.validateAccount(
-                beneficiaryAddressHex,
+                sovereignAccountId,
                 registry.ethChainId,
                 tokenAddress,
                 ahAssetMetadata,
             )
 
+            if (!accountExists) {
+                logs.push({
+                    kind: ValidationKind.Error,
+                    reason: ValidationReason.MaxConsumersReached,
+                    message: "Sovereign account does not exist on Asset Hub.",
+                })
+            }
             if (accountMaxConsumers) {
                 logs.push({
                     kind: ValidationKind.Error,
                     reason: ValidationReason.MaxConsumersReached,
-                    message: "Beneficiary account has reached the max consumer limit on Asset Hub.",
+                    message:
+                        "Sovereign account for destination parachain has reached the max consumer limit on Asset Hub.",
                 })
             }
-            if (!accountExists) {
+        }
+        if (!destParachainApi) {
+            logs.push({
+                kind: ValidationKind.Warning,
+                reason: ValidationReason.NoDestinationParachainConnection,
+                message:
+                    "The destination parachain connection was not supplied. Transaction success cannot be confirmed.",
+            })
+        } else {
+            if (destParachain.features.hasDryRunApi) {
+                if (!forwardedDestination) {
+                    logs.push({
+                        kind: ValidationKind.Error,
+                        reason: ValidationReason.DryRunFailed,
+                        message:
+                            "Dry run on Asset Hub did not produce an XCM to be forwarded to the destination parachain.",
+                    })
+                } else {
+                    const xcm = forwardedDestination[1]
+                    if (xcm.length !== 1) {
+                        logs.push({
+                            kind: ValidationKind.Error,
+                            reason: ValidationReason.DryRunFailed,
+                            message:
+                                "Dry run on Asset Hub did not produce an XCM to be forwarded to the destination parachain.",
+                        })
+                    }
+                    const destParachainImpl =
+                        await this.context.paraImplementation(destParachainApi)
+                    const { success: dryRunDestinationSuccess, errorMessage: destMessage } =
+                        await destParachainImpl.dryRunXcm(registry.assetHubParaId, xcm[0])
+                    if (!dryRunDestinationSuccess) {
+                        logs.push({
+                            kind: ValidationKind.Error,
+                            reason: ValidationReason.DryRunFailed,
+                            message: "Dry run on destination parachain failed.",
+                        })
+                    }
+                    destinationParachainDryRunError = destMessage
+                }
+            } else {
                 logs.push({
-                    kind: ValidationKind.Error,
-                    reason: ValidationReason.AccountDoesNotExist,
-                    message: "Beneficiary account does not exist on Asset Hub.",
+                    kind: ValidationKind.Warning,
+                    reason: ValidationReason.DryRunNotSupportedOnDestination,
+                    message:
+                        "The destination parachain does not support dry running of XCM. Transaction success cannot be confirmed.",
                 })
+            }
+            if (
+                !destAssetMetadata.isSufficient &&
+                ((destParachain.features.hasDryRunApi && destinationParachainDryRunError) ||
+                    !destParachain.features.hasDryRunApi)
+            ) {
+                const destParachainImpl = await this.context.paraImplementation(destParachainApi)
+                const { accountMaxConsumers, accountExists } =
+                    await destParachainImpl.validateAccount(
+                        beneficiaryAddressHex,
+                        registry.ethChainId,
+                        tokenAddress,
+                        destAssetMetadata,
+                    )
+                if (accountMaxConsumers) {
+                    logs.push({
+                        kind: ValidationKind.Error,
+                        reason: ValidationReason.MaxConsumersReached,
+                        message:
+                            "Beneficiary account has reached the max consumer limit on the destination chain.",
+                    })
+                }
+                if (!accountExists) {
+                    logs.push({
+                        kind: ValidationKind.Error,
+                        reason: ValidationReason.AccountDoesNotExist,
+                        message: "Beneficiary account does not exist on the destination chain.",
+                    })
+                }
             }
         }
 
@@ -871,6 +1049,7 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
                 feeInfo,
                 bridgeStatus,
                 assetHubDryRunError,
+                destinationParachainDryRunError,
                 l2BridgeDryRunError,
             },
             ...transfer,
