@@ -462,7 +462,8 @@ function buildTransferLocations(
     // L2 paths
     if (environment.l2Bridge) {
         const assetHubAssets = Object.keys(assetHub.assets)
-        const v2ParachainIds = environment.v2_parachains ?? [registry.assetHubParaId]
+        // L2 bridging is only supported for Asset Hub today.
+        const l2ParachainIds = [registry.assetHubParaId]
         for (const l2ChainKey of Object.keys(environment.l2Bridge.l2Chains)) {
             const l2ChainId = Number(l2ChainKey)
             const l2Chain = environment.l2Bridge.l2Chains[l2ChainId]
@@ -475,7 +476,7 @@ function buildTransferLocations(
                 .map((a) => a.swapTokenAddress?.toLowerCase())
                 .filter((a) => a !== undefined)
 
-            for (const paraId of v2ParachainIds) {
+            for (const paraId of l2ParachainIds) {
                 const sourceParachain = registry.parachains[`polkadot_${paraId}`]
                 if (!sourceParachain) continue
 

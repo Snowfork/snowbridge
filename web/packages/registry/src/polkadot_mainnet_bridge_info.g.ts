@@ -514,36 +514,6 @@ const registry = {
         {
             from: {
                 kind: "polkadot",
-                id: 2034,
-            },
-            to: {
-                kind: "ethereum_l2",
-                id: 10,
-            },
-            assets: [
-                "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
-                "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-                "0x0000000000000000000000000000000000000000",
-            ],
-        },
-        {
-            from: {
-                kind: "ethereum_l2",
-                id: 10,
-            },
-            to: {
-                kind: "polkadot",
-                id: 2034,
-            },
-            assets: [
-                "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
-                "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-                "0x0000000000000000000000000000000000000000",
-            ],
-        },
-        {
-            from: {
-                kind: "polkadot",
                 id: 1000,
             },
             to: {
@@ -574,36 +544,6 @@ const registry = {
         {
             from: {
                 kind: "polkadot",
-                id: 2034,
-            },
-            to: {
-                kind: "ethereum_l2",
-                id: 8453,
-            },
-            assets: [
-                "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
-                "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-                "0x0000000000000000000000000000000000000000",
-            ],
-        },
-        {
-            from: {
-                kind: "ethereum_l2",
-                id: 8453,
-            },
-            to: {
-                kind: "polkadot",
-                id: 2034,
-            },
-            assets: [
-                "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
-                "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-                "0x0000000000000000000000000000000000000000",
-            ],
-        },
-        {
-            from: {
-                kind: "polkadot",
                 id: 1000,
             },
             to: {
@@ -624,36 +564,6 @@ const registry = {
             to: {
                 kind: "polkadot",
                 id: 1000,
-            },
-            assets: [
-                "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
-                "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-                "0x0000000000000000000000000000000000000000",
-            ],
-        },
-        {
-            from: {
-                kind: "polkadot",
-                id: 2034,
-            },
-            to: {
-                kind: "ethereum_l2",
-                id: 42161,
-            },
-            assets: [
-                "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
-                "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-                "0x0000000000000000000000000000000000000000",
-            ],
-        },
-        {
-            from: {
-                kind: "ethereum_l2",
-                id: 42161,
-            },
-            to: {
-                kind: "polkadot",
-                id: 2034,
             },
             assets: [
                 "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
@@ -663,7 +573,7 @@ const registry = {
         },
     ],
     registry: {
-        timestamp: "2026-06-09T07:00:19.203Z",
+        timestamp: "2026-06-11T08:10:26.142Z",
         environment: "polkadot_mainnet",
         ethChainId: 1,
         gatewayAddress: "0x27ca963c279c93801941e1eb8799c23f407d68e7",
@@ -2049,7 +1959,7 @@ const registry = {
                         isSufficient: false,
                     },
                 },
-                estimatedExecutionFeeDOT: 54548356n,
+                estimatedExecutionFeeDOT: 55438383n,
                 estimatedDeliveryFeeDOT: 307100000n,
             },
             polkadot_2034: {
@@ -2249,7 +2159,7 @@ const registry = {
                         isSufficient: true,
                     },
                 },
-                estimatedExecutionFeeDOT: 3010674n,
+                estimatedExecutionFeeDOT: 3125982n,
                 estimatedDeliveryFeeDOT: 307100000n,
             },
             polkadot_2043: {
