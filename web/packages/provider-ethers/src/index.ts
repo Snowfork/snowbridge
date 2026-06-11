@@ -4,6 +4,7 @@ import {
   Contract,
   ContractTransaction,
   FeeData as EthersFeeData,
+  FetchRequest,
   Interface,
   InterfaceAbi,
   JsonRpcProvider,
@@ -15,6 +16,7 @@ import type {
   BeefyClient,
   DepositParamsStruct,
   EthereumProvider,
+  EthereumProviderConnectionOptions,
   EthereumProviderTypes,
   FeeData,
   GatewayV1OutboundMessageAccepted,
@@ -58,8 +60,15 @@ export class EthersEthereumProvider
   static gatewayV2Interface = new Interface(IGATEWAY_V2_ABI);
   static l2AdaptorInterface = new Interface(SNOWBRIDGE_L2_ADAPTOR_ABI);
 
-  createProvider(url: string): AbstractProvider {
+  createProvider(url: string, options?: EthereumProviderConnectionOptions): AbstractProvider {
     if (url.startsWith("http")) {
+      if (options?.headers && Object.keys(options.headers).length > 0) {
+        const request = new FetchRequest(url);
+        for (const [key, value] of Object.entries(options.headers) as [string, string][]) {
+          request.setHeader(key, value);
+        }
+        return new JsonRpcProvider(request);
+      }
       return new JsonRpcProvider(url);
     }
     return new WebSocketProvider(url);
@@ -269,6 +278,10 @@ export class EthersEthereumProvider
     args: readonly unknown[],
   ): string {
     return new Interface(abi).encodeFunctionData(method, args);
+  }
+
+  encodeAbiParameters(types: string[], values: readonly unknown[]): string {
+    return AbiCoder.defaultAbiCoder().encode(types, values);
   }
 
   decodeFunctionResult<T = unknown>(

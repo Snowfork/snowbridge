@@ -29,6 +29,12 @@ export type SwapParamsStruct = {
   callData: string;
 };
 
+export type V2CommandStruct = {
+  kind: number;
+  gas: bigint;
+  payload: string;
+};
+
 export type IGatewayV1 = {
   quoteSendTokenFee(
     token: string,
@@ -46,6 +52,17 @@ export type IGatewayV2 = {
   v2_outboundNonce(): Promise<bigint>;
   isTokenRegistered(token: string): Promise<boolean>;
   agentOf(agentID: string): Promise<string>;
+  getFunction(name: "v2_dispatch"): {
+    populateTransaction(
+      commands: V2CommandStruct[],
+      origin: string,
+      nonce: bigint,
+      overrides?: { from?: string },
+    ): Promise<any>;
+  };
+  interface: {
+    parseLog(log: any): { name: string; args: any };
+  };
 };
 
 export type BeefyClient = {
@@ -201,6 +218,29 @@ export const IGATEWAY_V2_ABI = [
   },
   {
     type: "function",
+    name: "v2_dispatch",
+    inputs: [
+      {
+        name: "commands",
+        type: "tuple[]",
+        internalType: "struct CommandV2[]",
+        components: [
+          { name: "kind", type: "uint8", internalType: "enum CommandKind" },
+          { name: "gas", type: "uint64", internalType: "uint64" },
+          { name: "payload", type: "bytes", internalType: "bytes" },
+        ],
+      },
+      { name: "origin", type: "bytes32", internalType: "bytes32" },
+      { name: "nonce", type: "uint64", internalType: "uint64" },
+    ],
+    outputs: [
+      { name: "insufficientGasLimit", type: "bool", internalType: "bool" },
+      { name: "success", type: "bool", internalType: "bool" },
+    ],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
     name: "v2_outboundNonce",
     inputs: [],
     outputs: [{ name: "", type: "uint64", internalType: "uint64" }],
@@ -230,6 +270,25 @@ export const IGATEWAY_V2_ABI = [
     ],
     outputs: [],
     stateMutability: "payable",
+  },
+  {
+    type: "event",
+    name: "CommandFailed",
+    inputs: [
+      {
+        name: "nonce",
+        type: "uint64",
+        indexed: true,
+        internalType: "uint64",
+      },
+      {
+        name: "index",
+        type: "uint256",
+        indexed: false,
+        internalType: "uint256",
+      },
+    ],
+    anonymous: false,
   },
   {
     type: "event",
