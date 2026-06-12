@@ -1,7 +1,7 @@
 /**
- * Generate the canonical halt / resume preimage reference committed to
- * polkadot-ecosystem-tests. Prints the JSON to stdout (and decode links to
- * stderr); `--write` also writes it locally. Env: ASSET_HUB_WS, BRIDGE_HUB_WS.
+ * Generate the canonical halt / resume preimage reference (to be committed to
+ * polkadot-ecosystem-tests). Writes the JSON file and prints the hashes + decode
+ * links to paste into the PET PR. Env: ASSET_HUB_WS, BRIDGE_HUB_WS.
  */
 
 import { ApiPromise, WsProvider } from "@polkadot/api"
@@ -44,10 +44,8 @@ function runtimeInfo(api: ApiPromise): RuntimeInfo {
 }
 
 async function main() {
-    const write = process.argv.includes("--write")
-
-    console.error(`Connecting to AssetHub:  ${ASSET_HUB_WS}`)
-    console.error(`Connecting to BridgeHub: ${BRIDGE_HUB_WS}`)
+    console.log(`Connecting to AssetHub:  ${ASSET_HUB_WS}`)
+    console.log(`Connecting to BridgeHub: ${BRIDGE_HUB_WS}`)
     const [assetHub, bridgeHub] = await Promise.all([
         ApiPromise.create({ provider: new WsProvider(ASSET_HUB_WS) }),
         ApiPromise.create({ provider: new WsProvider(BRIDGE_HUB_WS) }),
@@ -99,21 +97,16 @@ async function main() {
             },
         }
 
-        const json = JSON.stringify(reference, null, 2) + "\n"
-        process.stdout.write(json)
+        mkdirSync(dirname(OUTPUT_PATH), { recursive: true })
+        writeFileSync(OUTPUT_PATH, JSON.stringify(reference, null, 2) + "\n")
 
-        // Decode links to stderr so the JSON on stdout stays clean.
-        console.error("")
-        console.error("Decode (audit) links:")
-        console.error(`  halt:   ${halt.decodeUrl}`)
-        console.error(`  resume: ${resume.decodeUrl}`)
-
-        if (write) {
-            mkdirSync(dirname(OUTPUT_PATH), { recursive: true })
-            writeFileSync(OUTPUT_PATH, json)
-            console.error("")
-            console.error(`Wrote ${OUTPUT_PATH}`)
-        }
+        console.log(`\nWrote ${OUTPUT_PATH}`)
+        console.log(`  halt   ${halt.hash}`)
+        console.log(`  resume ${resume.hash}`)
+        // Decode links to paste into the PET PR for reviewers to audit.
+        console.log("\nDecode (audit) links:")
+        console.log(`  halt:   ${halt.decodeUrl}`)
+        console.log(`  resume: ${resume.decodeUrl}`)
     } finally {
         await Promise.all([assetHub.disconnect(), bridgeHub.disconnect()])
     }
