@@ -6,21 +6,8 @@ import { u8aToHex, hexToU8a } from "@polkadot/util"
 // Polkadot BridgeHub para ID. Hardcoded to Polkadot per scope.
 const BRIDGE_HUB_POLKADOT_ID = 1002
 
-// Constant fallback_max_weight applied to every BridgeHub Transact. We
-// deliberately do NOT query live call weights: `fallback_max_weight` is only
-// consulted when the destination cannot reweigh the Transact'd call itself
-// (modern BridgeHub always can), so the value only needs to comfortably exceed
-// any setOperatingMode call. Using a constant makes the halt/resume preimage
-// byte-deterministic across BridgeHub runtime upgrades, a re-benchmark of
-// setOperatingMode no longer shifts the bytes, which is what lets us pin a
-// canonical preimage in version control (polkadot-ecosystem-tests) and compare
-// a freshly-generated one against it byte-for-byte during an incident.
-//
-// NOTE: this diverges from control/preimage/src/helpers.rs::increase_weight
-// (which embeds 2x the live-queried weight), so the preimage bytes are no
-// longer identical to the Rust CLI's. The TS SDK is the canonical halt source
-// (app.snowbridge.network/governance, with the SDK as the documented
-// emergency-procedures fallback).
+// Constant fallback_max_weight (not a live query) so the preimage is byte-deterministic
+// across runtime upgrades; it only needs to exceed any setOperatingMode call.
 const FALLBACK_REF_TIME = 60_000_000_000n
 const FALLBACK_PROOF_SIZE = 1_048_576n
 
@@ -41,15 +28,7 @@ export interface HaltBridgeOptions {
     all?: boolean
 }
 
-/**
- * Canonical "halt everything" option set. This is the preimage that gets pinned
- * in version control (polkadot-ecosystem-tests) and compared against during an
- * incident, so the frontend's full-halt default and the reference generator
- * MUST both build from this exact symbol to stay byte-identical.
- *
- * `{ all: true }` and `{}` both imply halt-all today (see {@link isHaltAllImplied}),
- * but referencing a named constant makes the shared contract explicit.
- */
+/** Canonical "halt everything" set; shared by the frontend default and the reference generator. */
 export const FULL_HALT_OPTIONS: HaltBridgeOptions = { all: true }
 
 export interface StorageWrite {
@@ -88,12 +67,8 @@ const FEE_SOURCE_URL =
 /**
  * Build a preimage for halting parts of the Snowbridge V1/V2 stack on Polkadot.
  *
- * Mirrors the structure of `control/preimage/src/main.rs::HaltBridge` (using
- * `pallet_utility::force_batch` so every lever fires independently,see
- * `commands.rs` for the rationale). The encoded bytes are deterministic for a
- * given runtime: the BridgeHub Transacts carry a constant fallback weight rather
- * than a live-queried one, so the output diverges from the Rust CLI only in the
- * fallback-weight field (see {@link FALLBACK_REF_TIME}).
+ * Uses `pallet_utility::force_batch` so every lever fires independently. The
+ * encoded bytes are deterministic for a given runtime (see {@link FALLBACK_REF_TIME}).
  *
  * @param assetHub  Connected ApiPromise for AssetHub-Polkadot.
  * @param bridgeHub Connected ApiPromise for BridgeHub-Polkadot.
@@ -199,10 +174,7 @@ export async function buildHaltBridgePreimage(
                 ? ahCalls[0]
                 : assetHub.tx.utility.forceBatch(ahCalls)
 
-    // Wrap BH calls into a single AH-side `polkadotXcm.send` call. Each BH Transact
-    // carries a constant fallback weight and is followed by
-    // ExpectTransactStatus(Success) (matching the instruction shape of
-    // control/preimage/src/helpers.rs::send_xcm_bridge_hub).
+    // Wrap BH calls into a single AH-side `polkadotXcm.send`.
     const bhXcmSend = bhCalls.length === 0
         ? null
         : wrapBridgeHubCallsInXcmSend(assetHub, bhCalls)
@@ -286,12 +258,7 @@ export interface ResumeBridgeOptions {
     all?: boolean
 }
 
-/**
- * Canonical "resume everything" option set, mirror of {@link FULL_HALT_OPTIONS}.
- * Restores base fees to {@link PROD_BASE_FEE_V1} / {@link PROD_BASE_FEE_V2}. The
- * frontend's full-resume default and the reference generator MUST both build
- * from this exact symbol to stay byte-identical.
- */
+/** Canonical "resume everything" set, mirror of {@link FULL_HALT_OPTIONS}. */
 export const FULL_RESUME_OPTIONS: ResumeBridgeOptions = { all: true }
 
 /**
@@ -299,11 +266,8 @@ export const FULL_RESUME_OPTIONS: ResumeBridgeOptions = { all: true }
  * Polkadot. Inverse of `buildHaltBridgePreimage`: queues `setOperatingMode`
  * calls back to `Normal` / `RejectingOutboundMessages` -> `Normal`, and
  * restores the AssetHub base fees from u128::MAX to their pre-halt prod
- * values (see {@link PROD_BASE_FEE_V1} / {@link PROD_BASE_FEE_V2}).
- *
- * The structure (force_batch, polkadotXcm.send wrapping BH Transacts, constant
- * fallback weight, ExpectTransactStatus(Success) after each Transact) is
- * identical to the halt preimage.
+ * values (see {@link PROD_BASE_FEE_V1} / {@link PROD_BASE_FEE_V2}). Same structure
+ * as the halt preimage.
  *
  * @param assetHub  Connected ApiPromise for AssetHub-Polkadot.
  * @param bridgeHub Connected ApiPromise for BridgeHub-Polkadot.
@@ -503,11 +467,8 @@ function setAssetHubFeeCallWithWrite(
 }
 
 /**
- * Wrap a list of BH calls into a single AH `pallet_xcm::send` call. Each BH call
- * becomes a `Transact { OriginKind: Superuser, fallbackMaxWeight: constant }`
- * with `ExpectTransactStatus(Success)` after it. The fallback weight is a
- * constant (see {@link FALLBACK_REF_TIME}) rather than a live query, so the
- * encoded preimage is deterministic across BridgeHub runtime upgrades.
+ * Wrap a list of BH calls into a single AH `pallet_xcm::send`. Each BH call becomes a
+ * `Transact { OriginKind: Superuser, fallbackMaxWeight: constant }` + `ExpectTransactStatus(Success)`.
  */
 function wrapBridgeHubCallsInXcmSend(
     assetHub: ApiPromise,

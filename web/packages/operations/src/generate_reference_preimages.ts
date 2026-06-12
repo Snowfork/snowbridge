@@ -1,28 +1,7 @@
 /**
- * Generate the canonical halt / resume preimage reference.
- *
- * This is the trust anchor for the "verify the preimage" flow discussed with the
- * Polkadot Fellowship: the JSON it emits is committed to
- * polkadot-ecosystem-tests (PET), where a Chopsticks test executes the exact
- * committed `callData` against forked live Asset Hub + Bridge Hub every ~6 hours
- * and asserts the bridge actually halts. During an incident, an operator (or a
- * whitelisting Fellow) compares the `hash` shown by the governance tool against
- * the `hash` in PET `master`, a single string comparison instead of decoding
- * SCALE bytes under pressure.
- *
- * The preimage is built from `governance.FULL_HALT_OPTIONS` /
- * `governance.FULL_RESUME_OPTIONS`, the same canonical "everything" option sets
- * the frontend's full-halt / full-resume default uses, so the committed bytes
- * are byte-identical to what an operator generates. The BridgeHub Transacts now
- * carry a constant fallback weight (no live weight query), so the bytes are
- * deterministic for a given runtime and only change on a genuine semantic change
- * (pallet index, call encoding, XCM version, or the prod resume fees).
- *
- * Usage:
- *   npx ts-node src/generate_reference_preimages.ts            # print JSON to stdout
- *   npx ts-node src/generate_reference_preimages.ts --write    # also write the file below
- *
- * Env overrides: ASSET_HUB_WS, BRIDGE_HUB_WS.
+ * Generate the canonical halt / resume preimage reference committed to
+ * polkadot-ecosystem-tests. Prints the JSON to stdout (and decode links to
+ * stderr); `--write` also writes it locally. Env: ASSET_HUB_WS, BRIDGE_HUB_WS.
  */
 
 import { ApiPromise, WsProvider } from "@polkadot/api"
@@ -34,9 +13,7 @@ import { dirname, join } from "path"
 const ASSET_HUB_WS = process.env.ASSET_HUB_WS ?? "wss://polkadot-asset-hub-rpc.polkadot.io"
 const BRIDGE_HUB_WS = process.env.BRIDGE_HUB_WS ?? "wss://polkadot-bridge-hub-rpc.polkadot.io"
 
-// Transient (gitignored) output path. This file is NOT committed: PET owns the
-// canonical reference. Copy this JSON (and the decode links printed to stderr)
-// into the PET PR at packages/shared/src/snowbridge/referencePreimages.json.
+// Transient (gitignored) output; PET owns the canonical copy.
 const OUTPUT_PATH = join(__dirname, "..", "reference", "halt_reference_preimages.json")
 
 interface RuntimeInfo {
@@ -51,7 +28,6 @@ interface PreimageEntry {
 }
 
 interface ReferenceFile {
-    /** Human note: this file is the canonical, Fellowship-reviewed preimage set. */
     description: string
     generatedAt: string
     assetHubRuntime: RuntimeInfo
@@ -89,8 +65,7 @@ async function main() {
             governance.FULL_RESUME_OPTIONS,
         )
 
-        // Self-check: the committed hash must match the committed bytes, so a
-        // hand-edit of the file can never slip a mismatched pair through review.
+        // Self-check: hash must match bytes.
         for (const [name, p] of [
             ["halt", halt],
             ["resume", resume],
@@ -127,8 +102,7 @@ async function main() {
         const json = JSON.stringify(reference, null, 2) + "\n"
         process.stdout.write(json)
 
-        // Decode links to stderr so a reviewer can audit the decoded calls (the
-        // actual audit), without polluting the JSON on stdout.
+        // Decode links to stderr so the JSON on stdout stays clean.
         console.error("")
         console.error("Decode (audit) links:")
         console.error(`  halt:   ${halt.decodeUrl}`)
