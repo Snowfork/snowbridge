@@ -6,3 +6,6 @@ config
 !.env.example
 *.registry.json
 checkpoint.json
+
+# Transient reference-preimage generator output (PET owns the canonical copy)
+/reference/

@@ -34,10 +34,9 @@ import { dirname, join } from "path"
 const ASSET_HUB_WS = process.env.ASSET_HUB_WS ?? "wss://polkadot-asset-hub-rpc.polkadot.io"
 const BRIDGE_HUB_WS = process.env.BRIDGE_HUB_WS ?? "wss://polkadot-bridge-hub-rpc.polkadot.io"
 
-// Local committed copy of the reference. The PET pull request copies this file
-// into packages/shared/src/snowbridge/referencePreimages.json; the drift check
-// (pet_reference_check.ts) reads it back to detect when a runtime change has
-// moved the canonical bytes.
+// Transient (gitignored) output path. This file is NOT committed: PET owns the
+// canonical reference. Copy this JSON (and the decode links printed to stderr)
+// into the PET PR at packages/shared/src/snowbridge/referencePreimages.json.
 const OUTPUT_PATH = join(__dirname, "..", "reference", "halt_reference_preimages.json")
 
 interface RuntimeInfo {
@@ -54,7 +53,6 @@ interface PreimageEntry {
 interface ReferenceFile {
     /** Human note: this file is the canonical, Fellowship-reviewed preimage set. */
     description: string
-    generatedWith: string
     generatedAt: string
     assetHubRuntime: RuntimeInfo
     bridgeHubRuntime: RuntimeInfo
@@ -66,16 +64,6 @@ function runtimeInfo(api: ApiPromise): RuntimeInfo {
     return {
         specName: api.runtimeVersion.specName.toString(),
         specVersion: api.runtimeVersion.specVersion.toNumber(),
-    }
-}
-
-function apiVersion(): string {
-    try {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const pkg = require("@snowbridge/api/package.json")
-        return `@snowbridge/api ${pkg.version}`
-    } catch {
-        return "@snowbridge/api (version unknown)"
     }
 }
 
@@ -121,7 +109,6 @@ async function main() {
                 "Reviewed by the Polkadot Fellowship and executed against forked live " +
                 "chains by polkadot-ecosystem-tests. Verify an operator-generated " +
                 "preimage by comparing its hash against the matching hash here.",
-            generatedWith: apiVersion(),
             generatedAt: new Date().toISOString().slice(0, 10),
             assetHubRuntime: runtimeInfo(assetHub),
             bridgeHubRuntime: runtimeInfo(bridgeHub),
