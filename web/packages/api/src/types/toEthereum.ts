@@ -89,6 +89,7 @@ export type ValidatedTransfer = Transfer & {
         sourceDryRunError: any
         assetHubDryRunError: any
         bridgeHubDryRunError?: any
+        ethereumDryRunError?: any
     }
 }
 

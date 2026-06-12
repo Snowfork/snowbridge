@@ -141,6 +141,9 @@ export type Environment = {
   };
   // Indexer
   indexerGraphQlUrl: string;
+  // Dry-run forked Ethereum node
+  forkedProviderUrl?: string;
+  forkedProviderApiKey?: string;
   kusama?: {
     assetHubParaId: number;
     bridgeHubParaId: number;
@@ -242,6 +245,7 @@ export type AssetRegistry = {
 
 export type {
   AcrossDepositMessageParams,
+  EthereumProviderConnectionOptions,
   EthereumProvider,
   EthereumProviderTypes,
   FeeData,
