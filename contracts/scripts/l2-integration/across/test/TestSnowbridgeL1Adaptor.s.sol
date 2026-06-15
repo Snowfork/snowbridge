@@ -42,7 +42,7 @@ contract TestSnowbridgeL1Adaptor is Script {
 
         if (
             keccak256(bytes(vm.envString("L1_NETWORK"))) == keccak256(bytes("mainnet"))
-                && keccak256(bytes(vm.envString("L2_NETWORK"))) == keccak256(bytes("base-mainnet"))
+                && keccak256(bytes(vm.envString("L2_NETWORK"))) == keccak256(bytes("base"))
         ) {
             USDC_ADDRESS = MAINNET_USDC;
             L2_USDC_ADDRESS = MAINNET_BASE_USDC;
