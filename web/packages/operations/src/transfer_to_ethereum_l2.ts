@@ -1,9 +1,12 @@
 import { Keyring } from "@polkadot/keyring"
-import { Context, toEthereumSnowbridgeV2, toEthereumV2 } from "@snowbridge/api"
+import { createApi } from "@snowbridge/api"
+import { findTotalOrZero } from "@snowbridge/api/dist/fees"
+import { EthersEthereumProvider } from "@snowbridge/provider-ethers"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { formatUnits, Wallet } from "ethers"
 import { bridgeInfoFor } from "@snowbridge/registry"
 import { ContractCall } from "../../base-types/dist"
+import util from "util"
 
 export const transferToEthereumL2 = async (
     sourceParaId: number,
@@ -23,8 +26,10 @@ export const transferToEthereumL2 = async (
     }
     console.log(`Using environment '${env}'`)
 
-    const { registry, environment } = bridgeInfoFor(env)
-    const context = new Context(environment)
+    const info = bridgeInfoFor(env)
+    const { registry } = info
+    const api = createApi({ info, ethereumProvider: new EthersEthereumProvider() })
+    const context = api.context
 
     const polkadot_keyring = new Keyring({ type: "sr25519" })
 
@@ -50,29 +55,19 @@ export const transferToEthereumL2 = async (
     console.log("Asset Hub to Ethereum")
     {
         // Step 0. Create a transfer implementation
-        const transferImpl = toEthereumSnowbridgeV2.createL2TransferImplementation(
-            sourceParaId,
-            registry,
-            TOKEN_CONTRACT,
+        const transferImpl = api.sender(
+            { kind: "polkadot", id: sourceParaId },
+            { kind: "ethereum_l2", id: l2ChainId },
         )
         // Step 1. Get the delivery fee for the transaction
-        let fee: toEthereumV2.DeliveryFee = await transferImpl.getDeliveryFee(
-            context,
-            registry,
-            l2ChainId,
-            TOKEN_CONTRACT,
-            amount,
-        )
+        let fee = await transferImpl.fee(TOKEN_CONTRACT, amount)
 
         // Step 2. Create a transfer tx
-        const transfer = await transferImpl.createTransfer(
-            context,
-            registry,
-            l2ChainId,
-            TOKEN_CONTRACT,
-            amount,
+        const transfer = await transferImpl.tx(
             POLKADOT_ACCOUNT_PUBLIC,
             ETHEREUM_ACCOUNT_PUBLIC,
+            TOKEN_CONTRACT,
+            amount,
             fee,
             options,
         )
@@ -91,27 +86,33 @@ export const transferToEthereumL2 = async (
         )
         console.log(
             `delivery fee (${registry.parachains[`polkadot_${registry.assetHubParaId}`].info.tokenSymbols}): `,
-            formatUnits(fee.totalFeeInDot, transfer.computed.sourceParachain.info.tokenDecimals),
+            formatUnits(
+                findTotalOrZero(fee, "DOT"),
+                transfer.computed.sourceParachain.info.tokenDecimals,
+            ),
         )
 
         // Step 4. Validate the transaction.
-        const validation = await transferImpl.validateTransfer(context, transfer)
-        console.log("validation result", validation)
+        const validation = await transferImpl.validate(transfer)
+        // Suppress verbose nested objects: registry, sourceParachain, and the
+        // SubmittableExtrinsic tx (which prints a huge nested structure).
+        const compact = {
+            ...validation,
+            input: { ...validation.input, registry: "<suppressed>" },
+            computed: { ...validation.computed, sourceParachain: "<suppressed>" },
+            tx: "<suppressed>",
+        }
+        console.log("validation result", util.inspect(compact, { depth: null, colors: false }))
 
         // Step 5. Check validation logs for errors
-        if (validation.logs.find((l) => l.kind == toEthereumSnowbridgeV2.ValidationKind.Error)) {
+        if (!validation.success) {
             throw Error(`validation has one of more errors.`)
         }
         if (process.env["DRY_RUN"] != "true") {
             // Step 6. Submit transaction and get receipt for tracking
-            const response = await toEthereumSnowbridgeV2.signAndSend(
-                context,
-                transfer,
-                POLKADOT_ACCOUNT,
-                {
-                    withSignedTransaction: true,
-                },
-            )
+            const response = await transferImpl.signAndSend(transfer, POLKADOT_ACCOUNT, {
+                withSignedTransaction: true,
+            })
             if (!response) {
                 throw Error(`Transaction ${response} not included.`)
             }

@@ -129,14 +129,7 @@ func (b *BeaconCache) pruneOldCheckpoints() {
 }
 
 func (b *BeaconCache) addSlot(slot uint64) {
-	addedAlready := false
-	for _, i := range b.Finalized.Checkpoints.Slots {
-		if i == slot {
-			addedAlready = true
-			break
-		}
-	}
-	if !addedAlready {
+	if !slices.Contains(b.Finalized.Checkpoints.Slots, slot) {
 		b.Finalized.Checkpoints.Slots = append(b.Finalized.Checkpoints.Slots, slot)
 	}
 	slices.Sort(b.Finalized.Checkpoints.Slots)

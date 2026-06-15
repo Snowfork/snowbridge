@@ -1,5 +1,6 @@
 import "dotenv/config"
-import { Context } from "@snowbridge/api"
+import { createApi } from "@snowbridge/api"
+import { EthersEthereumProvider } from "@snowbridge/provider-ethers"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { SnowbridgeL1Adaptor, SnowbridgeL1Adaptor__factory } from "@snowbridge/contract-types"
 import { Wallet } from "ethers"
@@ -19,8 +20,8 @@ const run = async (
     }
     console.log(`Using environment '${env}'`)
 
-    const { environment } = bridgeInfoFor(env)
-    const context = new Context(environment)
+    const info = bridgeInfoFor(env)
+    const context = createApi({ info, ethereumProvider: new EthersEthereumProvider() }).context
 
     const ETHEREUM_ACCOUNT = new Wallet(
         process.env.ETHEREUM_KEY ?? "Your Key Goes Here",

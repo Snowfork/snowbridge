@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.33;
+pragma solidity 0.8.34;
 
 import {Test} from "forge-std/Test.sol";
-import {console} from "forge-std/console.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 
 import {MMRProof} from "../src/utils/MMRProof.sol";
@@ -39,7 +38,7 @@ contract MMRProofTest is Test {
         return abi.decode(fixtureData, (Fixture));
     }
 
-    function testVerifyLeafProof() public {
+    function testVerifyLeafProof() public view {
         Fixture memory fix = fixture();
 
         for (uint256 i = 0; i < fix.leaves.length; i++) {

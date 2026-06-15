@@ -45,6 +45,7 @@ export function buildAssetHubRegisterTokenXcm(
     executionFee: bigint,
     assetDepositDOT: bigint,
     bridgeOwner: string,
+    envName: string,
 ) {
     const registry = assetHub.registry
     const ether = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
@@ -67,6 +68,16 @@ export function buildAssetHubRegisterTokenXcm(
     )
 
     const callData = createCall.method.toU8a()
+    const reserveData = {
+        reserve: bridgeLocation(ethChainId),
+        teleportable: false,
+    }
+    const setReservesCall = assetHub.tx.foreignAssets.setReserves(
+        assetIdLocationTyped,
+        [reserveData],
+    )
+    const setReservesCallData = setReservesCall.method.toU8a()
+
     let bridgeOwnerLocation = accountToLocation(bridgeOwner)
 
     const instructions: any[] = [
@@ -89,7 +100,11 @@ export function buildAssetHubRegisterTokenXcm(
         {
             SetHints: {
                 hints: [
-                    { AssetClaimer: { location: claimerFromBeneficiary(assetHub, bridgeOwner) } },
+                    {
+                        AssetClaimer: {
+                            location: claimerFromBeneficiary(assetHub, bridgeOwner, envName),
+                        },
+                    },
                 ],
             },
         },
@@ -166,6 +181,15 @@ export function buildAssetHubRegisterTokenXcm(
                 fallbackMaxWeight: null,
                 call: {
                     encoded: u8aToHex(callData),
+                },
+            },
+        },
+        {
+            Transact: {
+                originKind: "Xcm",
+                fallbackMaxWeight: null,
+                call: {
+                    encoded: u8aToHex(setReservesCallData),
                 },
             },
         },

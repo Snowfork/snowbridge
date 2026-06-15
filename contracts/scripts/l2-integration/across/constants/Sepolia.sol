@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.33;
+pragma solidity 0.8.34;
 
 // Sepolia addresses
 address constant SPOKE_POOL = 0x5ef6C01E11889d86803e0B23e3cB3F9E9d97B662;
@@ -17,6 +17,13 @@ address constant BASE_MULTI_CALL_HANDLER = 0x0F7Ae28dE1C8532170AD4ee566B5801485c
 address constant BASE_USDC = 0x036CbD53842c5426634e7929541eC2318f3dCF7e;
 uint32 constant BASE_CHAIN_ID = 84_532;
 address constant BASE_WETH9 = 0x4200000000000000000000000000000000000006;
+
+// Arbitrum Sepholia addresses
+address constant ARBITRUM_SPOKE_POOL = 0x7E63A5f1a8F0B4d0934B2f2327DAED3F6bb2ee75;
+address constant ARBITRUM_MULTI_CALL_HANDLER = 0x0F7Ae28dE1C8532170AD4ee566B5801485c13a0E;
+address constant ARBITRUM_USDC = 0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d;
+uint32 constant ARBITRUM_CHAIN_ID = 421_614;
+address constant ARBITRUM_WETH9 = 0x980B62Da83eFf3D4576C647993b0c1D7faf17c73;
 
 uint32 constant WESTEND_CHAIN_ID = 420_420_421;
 address constant XCM_PRECOMPILE = address(0xA0000);

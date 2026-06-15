@@ -335,6 +335,9 @@ func (co *Connection) FetchParasHeads(blockHash types.Hash) ([]ParaHead, error) 
 	return heads, nil
 }
 
+// BeefyWhitelistedParathreads are parathreads that are not parachains but are whitelisted by BEEFY to be included in the MMR.
+var BeefyWhitelistedParathreads = []uint32{3367}
+
 // Filters para heads to parachains only.
 func (conn *Connection) FilterParachainHeads(paraHeads []ParaHead, relayChainBlockHash types.Hash) ([]ParaHead, error) {
 
@@ -351,12 +354,30 @@ func (conn *Connection) FilterParachainHeads(paraHeads []ParaHead, relayChainBlo
 	}
 
 	// create a set of parachains
-	parachains := make(map[uint32]struct{}, len(paraHeads))
+	parachains := make(map[uint32]struct{}, len(parachainIDs))
 	for _, parachain := range parachainIDs {
 		parachains[parachain] = struct{}{}
 	}
 
-	// filter to return parachains
+	// Get the runtime spec version for the current block
+	runtimeVersion, err := conn.API().RPC.State.GetRuntimeVersion(relayChainBlockHash)
+	if err != nil {
+		return nil, err
+	}
+
+	// If the runtime version is v2.0.7 use the whitelisted parathreads
+	// TODO: remove after enacted: https://polkadot.subsquare.io/referenda/1840
+	if runtimeVersion.SpecName == "polkadot" && runtimeVersion.SpecVersion >= 2_000_007 {
+		// add whitelisted parathreads (deduplicating automatically via map)
+		for _, whitelistedID := range BeefyWhitelistedParathreads {
+			parachains[whitelistedID] = struct{}{}
+		}
+	}
+
+	// paraHeads is a superset that includes both parachains and parathreads. Filtering paraHeads will
+	// include only parachains and the whitelisted parathreads. This is necessary to mirror the logic in https://github.com/polkadot-fellows/runtimes/pull/1073
+	// Meanwhile, whitelisted parathreads that are not present in Paras.Heads will be filtered out.
+	// As a result, the hard-coded whitelisted parathreads intended for mainnet will be effectively filtered out on testnet.
 	heads := make([]ParaHead, 0, len(paraHeads))
 	for _, head := range paraHeads {
 		if _, ok := parachains[head.ParaID]; ok {

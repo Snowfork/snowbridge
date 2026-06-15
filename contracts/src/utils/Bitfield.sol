@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.33;
+pragma solidity 0.8.34;
 
 import {Bits} from "./Bits.sol";
 
@@ -178,16 +178,19 @@ library Bitfield {
 
     function isSet(uint256[] memory self, uint256 index) internal pure returns (bool) {
         uint256 element = index >> 8;
+        // forge-lint: disable-next-line(unsafe-typecast)
         return self[element].bit(uint8(index)) == 1;
     }
 
     function set(uint256[] memory self, uint256 index) internal pure {
         uint256 element = index >> 8;
+        // forge-lint: disable-next-line(unsafe-typecast)
         self[element] = self[element].setBit(uint8(index));
     }
 
     function unset(uint256[] memory self, uint256 index) internal pure {
         uint256 element = index >> 8;
+        // forge-lint: disable-next-line(unsafe-typecast)
         self[element] = self[element].clearBit(uint8(index));
     }
 

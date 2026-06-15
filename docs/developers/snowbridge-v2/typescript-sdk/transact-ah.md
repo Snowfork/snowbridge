@@ -4,7 +4,7 @@ description: A guide on using the Snowbridge TypeScript SDK for integration.
 
 # Transact on AssetHub & Parachain
 
-Uses the `@snowbridge/api`  [toPolkadotSnowbridgeV2](../../../../web/packages/api/src/toPolkadotSnowbridgeV2.ts) module to send the transaction. Please ensure you've completed [Setup Steps](setup-steps.md) before proceeding with this guide.
+Uses the `@snowbridge/api` SDK.
 
 #### Transact On AssetHub
 
@@ -41,66 +41,33 @@ This XCM uses the `system.remarkWithEvent` extrinsic, wrapped in a `Transact` XC
 To execute the XCM program on AssetHub, the SDK integration is identical to the token transfer steps, with the extra `customXcm` parameter:
 
 ```typescript
-const transferImpl = toPolkadotSnowbridgeV2.createTransferImplementation(
-    ASSET_HUB_PARA_ID,
-    registry,
-    ETHER_TOKEN_ADDRESS // If you just want to send fees to cover the transact call
-)
+import { createApi } from "@snowbridge/api"
+import { EthersEthereumProvider } from "@snowbridge/provider-ethers"
+import { polkadot_mainnet } from "@snowbridge/registry"
 
-let fee = await transferImpl.getDeliveryFee(
-    context,
-    registry,
-    ETHER_TOKEN_ADDRESS,
-    ASSET_HUB_PARA_ID,
-    relayerFee,
+const {
+    chains: { ethereum, assetHub },
+} = polkadot_mainnet
+const api = createApi({ info: polkadot_mainnet, ethereumProvider: new EthersEthereumProvider() })
+
+const sender = api.sender(ethereum, assetHub)
+
+const transfer = await sender.build(
+    "0x...", // source Ethereum account
+    "5...", // beneficiary Polkadot account
+    "0x0000000000000000000000000000000000000000", // Ether address
+    15_000_000_000_000n, // amount: 0.000015 ETH
     {
-        customXcm: customXcm, // specify custom XCM here
-    }
+        customXcm,
+    },
 )
-
-const transfer = await transferImpl.createTransfer(
-    context,
-    registry,
-    ASSET_HUB_PARA_ID,
-    ETHEREUM_ACCOUNT_PUBLIC,
-    POLKADOT_ACCOUNT_PUBLIC,
-    ETHER_TOKEN_ADDRESS,
-    amount,
-    fee,
-    customXcm // specify custom XCM here
-)
-
-const validation = await transferImpl.validateTransfer(context, transfer)
-
-console.log("Validation result:")
-validation.logs.forEach((log) => {
-    console.log(`  [${log.kind}] ${log.message}`)
-})
-if (!validation.success) {
-    throw Error("Validation failed")
-}
-
-const response = await ETHEREUM_ACCOUNT.sendTransaction(tx)
-const receipt = await response.wait(1)
-if (!receipt) {
-    throw Error(`Transaction ${response.hash} not included.`)
-}
-
-const message = await toPolkadotSnowbridgeV2.getMessageReceipt(receipt)
-if (!message) {
-    throw Error(`Transaction ${receipt.hash} did not emit a message.`)
-}
-console.log(
-    `Success message with nonce: ${message.nonce}
-    block number: ${message.blockNumber}
-    tx hash: ${message.txHash}`
-)
-
 ```
+
+The returned `transfer.tx` can then be submitted to the wallet by your application.
 
 ### Transact on Parachain
 
-To transact on another parachain, like Hydration or NeuroWeb, use the same steps as above, replacing the `ASSET_HUB_PARA_ID` constant with the parachain ID you would like to transact to.
+To transact on another parachain, like Hydration or NeuroWeb, use the same steps as above with concrete destructuring such as `const { chains: { ethereum, hydration } } = polkadot_mainnet`.
 
 Your custom XCM program will be appended to the `InitiateTransfer` instruction that is built up in the SDK.
 

@@ -2,6 +2,10 @@
 
 set -eux
 
+### This script demonstrates how to use Across's API to estimate fees for cross-chain transfers and swaps.
+
+# From Sepolia to Base
+
 # Estimate fees for transferring 1 USDC from Sepolia to Base via Across
 # Input token: Sepolia USDC (0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238)
 # Output token: Base USDC (0x036CbD53842c5426634e7929541eC2318f3dCF7e)
@@ -35,4 +39,12 @@ curl -L \
   'https://testnet.across.to/api/swap/approval?tradeType=minOutput&inputToken=0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238&outputToken=0x036CbD53842c5426634e7929541eC2318f3dCF7e&originChainId=11155111&destinationChainId=84532&amount=1000000&&depositor=0x302f0b71b8ad3cf6dd90adb668e49b2168d652fd' | jq .
 
 
+# From Sepolia to Arbitrum 
 
+# WETH transfer
+curl -L \
+  'https://testnet.across.to/api/suggested-fees?inputToken=0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14&outputToken=0x980B62Da83eFf3D4576C647993b0c1D7faf17c73&originChainId=11155111&destinationChainId=421614&amount=1000000000000000' | jq .
+
+# USDC transfer
+ curl -L \
+  'https://testnet.across.to/api/suggested-fees?inputToken=0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238&outputToken=0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d&originChainId=11155111&destinationChainId=421614&amount=1000000' | jq .

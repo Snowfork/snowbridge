@@ -1,12 +1,12 @@
 import { Registry } from "@polkadot/types/types"
 import {
     accountToLocation,
+    buildSplitDepositAsset,
     erc20Location,
     ethereumNetwork,
     parachainLocation,
-    DOT_LOCATION,
 } from "../../xcmBuilder"
-import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
+import { DOT_LOCATION, ETHER_TOKEN_ADDRESS } from "../../assets_v2"
 
 export function buildAssetHubERC20ReceivedXcm(
     registry: Registry,
@@ -131,24 +131,19 @@ export function buildAssetHubERC20ReceivedXcm(
                         {
                             refundSurplus: null,
                         },
-                        {
-                            depositAsset: {
-                                assets: {
-                                    wild: {
-                                        allCounted: 3,
-                                    },
-                                },
-                                beneficiary: {
-                                    parents: 0,
-                                    interior: { x1: [beneficiaryLocation] },
-                                },
-                            },
-                        },
+                        ...buildSplitDepositAsset(
+                            beneficiaryLocation,
+                            erc20Location(ethChainId, tokenAddress),
+                            3,
+                        ),
                         {
                             setTopic: topic,
                         },
                     ],
                 },
+            },
+            {
+                refundSurplus: null,
             },
             {
                 depositAsset: {
@@ -219,20 +214,18 @@ export function buildParachainERC20ReceivedXcmOnDestination(
                 ],
             },
             { clearOrigin: null },
+            // Mirror the user-side `sendMessageXCM` remoteXcm tail: RefundSurplus
+            // returns unused PayFees ether to holding so the dry-run sees the
+            // same dust deposit attempt that would happen in production.
+            { refundSurplus: null },
             ...(customXcm || []), // Insert custom XCM instructions if provided
-            {
-                depositAsset: {
-                    assets: {
-                        wild: {
-                            allCounted: 3,
-                        },
-                    },
-                    beneficiary: {
-                        parents: 0,
-                        interior: { x1: [beneficiaryLocation] },
-                    },
-                },
-            },
+            ...buildSplitDepositAsset(
+                beneficiaryLocation,
+                tokenAddress === ETHER_TOKEN_ADDRESS
+                    ? undefined
+                    : erc20Location(ethChainId, tokenAddress),
+                3,
+            ),
             {
                 setTopic: topic,
             },
@@ -291,19 +284,13 @@ export function buildParachainERC20ReceivedXcmOnDestinationWithDOTFee(
             { clearOrigin: null },
             { refundSurplus: null },
             ...(customXcm || []), // Insert custom XCM instructions if provided
-            {
-                depositAsset: {
-                    assets: {
-                        wild: {
-                            allCounted: 3,
-                        },
-                    },
-                    beneficiary: {
-                        parents: 0,
-                        interior: { x1: [beneficiaryLocation] },
-                    },
-                },
-            },
+            ...buildSplitDepositAsset(
+                beneficiaryLocation,
+                tokenAddress === ETHER_TOKEN_ADDRESS
+                    ? undefined
+                    : erc20Location(ethChainId, tokenAddress),
+                3,
+            ),
             {
                 setTopic: topic,
             },
@@ -330,19 +317,7 @@ export function sendMessageXCM(
             refundSurplus: null,
         },
         ...(customXcm || []), // Insert custom XCM here if provided
-        {
-            depositAsset: {
-                assets: {
-                    wild: {
-                        allCounted: 3,
-                    },
-                },
-                beneficiary: {
-                    parents: 0,
-                    interior: { x1: [beneficiaryLocation] },
-                },
-            },
-        },
+        ...buildSplitDepositAsset(beneficiaryLocation, erc20Location(ethChainId, tokenAddress), 3),
         {
             setTopic: topic,
         },
@@ -365,7 +340,7 @@ export function sendMessageXCM(
                             ],
                         },
                     },
-                    preserveOrigin: true,
+                    preserveOrigin: false,
                     assets: [
                         {
                             reserveDeposit: {
@@ -503,7 +478,7 @@ export function buildParachainERC20ReceivedXcmOnDestWithDOTFee(
                             {
                                 id: ether,
                                 fun: {
-                                    Fungible: remoteDotFeeAmount,
+                                    Fungible: remoteEtherFeeAmount,
                                 },
                             },
                         ],
@@ -534,7 +509,7 @@ export function buildParachainERC20ReceivedXcmOnDestWithDOTFee(
                             ],
                         },
                     },
-                    preserveOrigin: true,
+                    preserveOrigin: false,
                     assets: [
                         {
                             reserveDeposit: {
@@ -554,25 +529,21 @@ export function buildParachainERC20ReceivedXcmOnDestWithDOTFee(
                         {
                             refundSurplus: null,
                         },
-                        {
-                            depositAsset: {
-                                assets: {
-                                    wild: {
-                                        allCounted: 3,
-                                    },
-                                },
-                                beneficiary: {
-                                    parents: 0,
-                                    interior: { x1: [beneficiaryLocation] },
-                                },
-                            },
-                        },
+                        ...buildSplitDepositAsset(
+                            beneficiaryLocation,
+                            tokenAddress === ETHER_TOKEN_ADDRESS
+                                ? undefined
+                                : erc20Location(ethChainId, tokenAddress),
+                            3,
+                        ),
                         {
                             setTopic: topic,
                         },
                     ],
                 },
             },
+            // Mirror the user-side `sendMessageXCMWithDOTDestFee` AH-side tail.
+            { refundSurplus: null },
             {
                 depositAsset: {
                     assets: {
@@ -646,7 +617,7 @@ export function sendMessageXCMWithDOTDestFee(
                             ],
                         },
                     },
-                    preserveOrigin: true,
+                    preserveOrigin: false,
                     assets: [
                         {
                             reserveDeposit: {
@@ -665,19 +636,11 @@ export function sendMessageXCMWithDOTDestFee(
                         {
                             refundSurplus: null,
                         },
-                        {
-                            depositAsset: {
-                                assets: {
-                                    wild: {
-                                        allCounted: 3,
-                                    },
-                                },
-                                beneficiary: {
-                                    parents: 0,
-                                    interior: { x1: [beneficiaryLocation] },
-                                },
-                            },
-                        },
+                        ...buildSplitDepositAsset(
+                            beneficiaryLocation,
+                            erc20Location(ethChainId, tokenAddress),
+                            3,
+                        ),
                         {
                             setTopic: topic,
                         },

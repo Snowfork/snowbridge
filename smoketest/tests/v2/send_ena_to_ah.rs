@@ -36,7 +36,7 @@ async fn send_ena_to_ah() {
 	let weth_addr: Address = (*WETH_CONTRACT).into();
 	let weth = weth9::WETH9::new(weth_addr, ethereum_client.clone());
 
-	// Register WETH token  (Weth is already pre-registered in the Westend genesis config,
+	// Register WETH token (Weth is already pre-registered in the Westend genesis config,
 	// but it is not registered on Ethereum).
 	let register_receipt = gateway
 		.v2_registerToken(*weth.address(), 0, 1_500_000_000_000u128, 1_500_000_000_000u128)

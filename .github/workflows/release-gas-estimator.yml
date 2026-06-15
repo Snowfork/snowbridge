@@ -38,41 +38,26 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential
 
+      - name: Install subxt-cli
+        run: cargo install subxt-cli --version 0.42.1
+
+      - name: Fetch runtime metadata
+        working-directory: gas-estimator
+        run: |
+          subxt metadata -f bytes --url wss://asset-hub-polkadot-rpc.n.dwellir.com > runtimes/asset-hub-polkadot/asset-hub-metadata.bin
+          subxt metadata -f bytes --url wss://bridge-hub-polkadot-rpc.n.dwellir.com > runtimes/bridge-hub-polkadot/bridge-hub-metadata.bin
+
       - name: Build gas estimator (polkadot)
         working-directory: gas-estimator
         run: |
           cargo build --release --features polkadot
           cp target/release/snowbridge-gas-estimator snowbridge-gas-estimator-polkadot
 
-      - name: Build gas estimator (paseo)
-        working-directory: gas-estimator
-        run: |
-          cargo build --release --features paseo
-          cp target/release/snowbridge-gas-estimator snowbridge-gas-estimator-paseo
-
-      - name: Build gas estimator (westend)
-        working-directory: gas-estimator
-        run: |
-          cargo build --release --features westend
-          cp target/release/snowbridge-gas-estimator snowbridge-gas-estimator-westend
-
       - name: Upload polkadot artifact
         uses: actions/upload-artifact@v4
         with:
           name: snowbridge-gas-estimator-polkadot
           path: gas-estimator/snowbridge-gas-estimator-polkadot
-
-      - name: Upload paseo artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: snowbridge-gas-estimator-paseo
-          path: gas-estimator/snowbridge-gas-estimator-paseo
-
-      - name: Upload westend artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: snowbridge-gas-estimator-westend
-          path: gas-estimator/snowbridge-gas-estimator-westend
 
   release:
     needs: build

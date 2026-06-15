@@ -1,10 +1,12 @@
-import { ApiPromise } from "@polkadot/api"
-import { AssetRegistry } from "@snowbridge/base-types"
-import { Connections, TransferInterface } from "./transferInterface"
 import {
-    IGatewayV2__factory as IGateway__factory,
-    IGatewayV2 as IGateway,
-} from "@snowbridge/contract-types"
+    AssetRegistry,
+    ChainId,
+    EthereumChain,
+    EthereumProviderTypes,
+    Parachain,
+    TransferRoute,
+} from "@snowbridge/base-types"
+import { TransferInterface } from "./transferInterface"
 import { Context } from "../../index"
 import {
     buildMessageId,
@@ -12,48 +14,57 @@ import {
     claimerFromBeneficiary,
     claimerLocationToBytes,
     DeliveryFee,
-    encodeNativeAsset,
+    messageId as getSharedMessageReceipt,
     Transfer,
     ValidationKind,
-    ValidationResult,
+    ValidatedTransfer,
 } from "../../toPolkadotSnowbridgeV2"
-import { accountId32Location, DOT_LOCATION, erc20Location } from "../../xcmBuilder"
-import { paraImplementation } from "../../parachains"
-import { erc20Balance, ETHER_TOKEN_ADDRESS } from "../../assets_v2"
-import { beneficiaryMultiAddress, padFeeByPercentage } from "../../utils"
-import { FeeInfo, resolveInputs, ValidationLog, ValidationReason } from "../../toPolkadot_v2"
-import { AbstractProvider, Contract } from "ethers"
+import { accountId32Location, erc20Location } from "../../xcmBuilder"
+import { DOT_LOCATION, ETHER_TOKEN_ADDRESS, getAssetHubEtherMinBalance } from "../../assets_v2"
+import { ensureValidationSuccess, padFeeByPercentage } from "../../utils"
+import { resolveBeneficiary } from "../../crypto"
+import { FeeInfo, ValidationLog, ValidationReason } from "../../types/toPolkadot"
 import { buildAssetHubPNAReceivedXcm, sendMessageXCM } from "../../xcmbuilders/toPolkadot/pnaToAH"
 import { getOperatingStatus } from "../../status"
 import { hexToU8a } from "@polkadot/util"
+import { VolumeFeeParams, calculateVolumeTipInWei } from "../../feeSchedule"
+import { addBreakdown, computeTotals, findInBreakdown, findInBreakdownOrZero, findTotal } from "../../fees"
+import { checkDotEthPoolLiquidityForEthereumToPolkadot } from "../../poolReserves"
 
-export class PNAToAH implements TransferInterface {
-    async getDeliveryFee(
-        context:
-            | Context
-            | {
-                  gateway: IGateway
-                  assetHub: ApiPromise
-                  bridgeHub: ApiPromise
-                  destination: ApiPromise
-              },
-        registry: AssetRegistry,
+export class PNAToAH<T extends EthereumProviderTypes> implements TransferInterface<T> {
+    constructor(
+        public readonly context: Context<T>,
+        public readonly registry: AssetRegistry,
+        public readonly route: TransferRoute,
+        public readonly source: EthereumChain,
+        public readonly destination: Parachain,
+    ) {}
+
+    get from(): ChainId {
+        return this.route.from
+    }
+
+    get to(): ChainId {
+        return this.route.to
+    }
+
+    async fee(
         tokenAddress: string,
-        _destinationParaId: number,
         options?: {
-            paddFeeByPercentage?: bigint
+            padFeeByPercentage?: bigint
             feeAsset?: any
             customXcm?: any[]
             overrideRelayerFee?: bigint
+            volumeFee?: VolumeFeeParams
         },
     ): Promise<DeliveryFee> {
-        const { assetHub, bridgeHub } =
-            context instanceof Context
-                ? {
-                      assetHub: await context.assetHub(),
-                      bridgeHub: await context.bridgeHub(),
-                  }
-                : context
+        if (options?.volumeFee && options?.overrideRelayerFee !== undefined) {
+            throw new Error("Cannot specify both volumeFee and overrideRelayerFee")
+        }
+        const context = this.context
+        const registry = this.registry
+        const assetHub = await context.assetHub()
+        const bridgeHub = await context.bridgeHub()
 
         const ahAssetMetadata =
             registry.parachains[`polkadot_${registry.assetHubParaId}`].assets[
@@ -67,7 +78,6 @@ export class PNAToAH implements TransferInterface {
             assetHub.registry,
             registry.ethChainId,
             ahAssetMetadata.location,
-            3000000000000n,
             1000000000000n,
             1000000000000n,
             accountId32Location(
@@ -78,7 +88,7 @@ export class PNAToAH implements TransferInterface {
             "0x0000000000000000000000000000000000000000000000000000000000000000",
         )
         let ether = erc20Location(registry.ethChainId, ETHER_TOKEN_ADDRESS)
-        const paddFeeByPercentage = options?.paddFeeByPercentage
+        const feePadPercentage = options?.padFeeByPercentage
         const feeAsset = options?.feeAsset || ether
 
         if (feeAsset !== ether) {
@@ -86,25 +96,35 @@ export class PNAToAH implements TransferInterface {
         }
 
         // Delivery fee BridgeHub to AssetHub
-        const bridgeHubImpl = await paraImplementation(bridgeHub)
+        const bridgeHubImpl = await this.context.paraImplementation(bridgeHub)
         const deliveryFeeInDOT = await bridgeHubImpl.calculateDeliveryFeeInDOT(
             registry.assetHubParaId,
             assetHubXcm,
         )
 
-        const assetHubImpl = await paraImplementation(assetHub)
-        const deliveryFeeInEther = await assetHubImpl.swapAsset1ForAsset2(
-            DOT_LOCATION,
+        const assetHubImpl = await this.context.paraImplementation(assetHub)
+        // Runtime direction (ETH->DOT).
+        const deliveryFeeInEther = await assetHubImpl.getAssetHubConversionPalletSwap(
             ether,
+            DOT_LOCATION,
             deliveryFeeInDOT,
         )
         // AssetHub Execution fee
         let assetHubExecutionFeeDOT = await assetHubImpl.calculateXcmFee(assetHubXcm, DOT_LOCATION)
 
-        let assetHubExecutionFeeEther = padFeeByPercentage(
-            await assetHubImpl.swapAsset1ForAsset2(DOT_LOCATION, ether, assetHubExecutionFeeDOT),
-            paddFeeByPercentage ?? 33n,
-        )
+        let assetHubExecutionFeeEther =
+            padFeeByPercentage(
+                await assetHubImpl.getAssetHubConversionPalletSwap(
+                    ether,
+                    DOT_LOCATION,
+                    assetHubExecutionFeeDOT,
+                ),
+                feePadPercentage ?? 50n,
+            ) +
+            // PNAs never carry ether themselves, so the post-PayFees surplus
+            // must alone cover the recipient's bridged-ether min_balance —
+            // otherwise the dust below min_balance traps the entire DepositAsset.
+            getAssetHubEtherMinBalance(registry)
 
         const { relayerFee, extrinsicFeeDot, extrinsicFeeEther } = await calculateRelayerFee(
             assetHubImpl,
@@ -113,66 +133,109 @@ export class PNAToAH implements TransferInterface {
             deliveryFeeInEther,
         )
 
-        const totalFeeInWei = assetHubExecutionFeeEther + relayerFee
+        let volumeTip: bigint | undefined
+        let finalRelayerFee = relayerFee
+        if (options?.volumeFee) {
+            volumeTip = calculateVolumeTipInWei(options.volumeFee)
+            finalRelayerFee += volumeTip
+        }
+
+        const totalFeeInWei = assetHubExecutionFeeEther + finalRelayerFee
+
+        const breakdown: DeliveryFee["breakdown"] = {}
+        addBreakdown(breakdown, "assetHubDelivery", { amount: deliveryFeeInEther, symbol: "ETH" })
+        addBreakdown(breakdown, "assetHubDelivery", { amount: deliveryFeeInDOT, symbol: "DOT" })
+        addBreakdown(breakdown, "assetHubExecution", {
+            amount: assetHubExecutionFeeEther,
+            symbol: "ETH",
+        })
+        addBreakdown(breakdown, "assetHubExecution", {
+            amount: assetHubExecutionFeeDOT,
+            symbol: "DOT",
+        })
+        addBreakdown(breakdown, "relayer", { amount: finalRelayerFee, symbol: "ETH" })
+        addBreakdown(breakdown, "extrinsic", { amount: extrinsicFeeDot, symbol: "DOT" })
+        addBreakdown(breakdown, "extrinsic", { amount: extrinsicFeeEther, symbol: "ETH" })
+
+        const summary = [
+            {
+                description: "XCM execution fees",
+                amount: assetHubExecutionFeeEther,
+                symbol: "ETH",
+            },
+            { description: "Bridge fees", amount: deliveryFeeInEther, symbol: "ETH" },
+            {
+                description: "Relayer tip",
+                amount: finalRelayerFee - deliveryFeeInEther,
+                symbol: "ETH",
+            },
+        ]
+
         return {
-            assetHubDeliveryFeeEther: deliveryFeeInEther,
-            assetHubExecutionFeeEther: assetHubExecutionFeeEther,
-            destinationDeliveryFeeEther: 0n,
-            destinationExecutionFeeEther: 0n,
-            relayerFee: relayerFee,
-            extrinsicFeeDot: extrinsicFeeDot,
-            extrinsicFeeEther: extrinsicFeeEther,
-            totalFeeInWei: totalFeeInWei,
-            feeAsset: feeAsset,
+            kind: "ethereum->polkadot",
+            feeAsset,
+            breakdown,
+            summary,
+            totals: computeTotals(summary),
         }
     }
 
-    async createTransfer(
-        context:
-            | Context
-            | {
-                  ethereum: AbstractProvider
-                  assetHub: ApiPromise
-                  destination: ApiPromise
-              },
-        registry: AssetRegistry,
-        destinationParaId: number,
+    async tx(
         sourceAccount: string,
         beneficiaryAccount: string,
         tokenAddress: string,
         amount: bigint,
         fee: DeliveryFee,
         customXcm?: any[],
-    ): Promise<Transfer> {
-        const { ethereum, assetHub } =
-            context instanceof Context
-                ? {
-                      ethereum: context.ethereum(),
-                      assetHub: await context.assetHub(),
-                  }
-                : context
+    ): Promise<Transfer<T>> {
+        const context = this.context
+        const registry = this.registry
+        const ethereum = context.ethereum()
+        const assetHub = await context.assetHub()
 
-        const { tokenErcMetadata, destParachain, ahAssetMetadata, destAssetMetadata } =
-            resolveInputs(registry, tokenAddress, destinationParaId)
+        const tokenErcMetadata =
+            registry.ethereumChains[`ethereum_${registry.ethChainId}`].assets[
+                tokenAddress.toLowerCase()
+            ]
+        if (!tokenErcMetadata) {
+            throw Error(
+                `No token ${tokenAddress} registered on ethereum chain ${registry.ethChainId}.`,
+            )
+        }
+        const ahAssetMetadata =
+            registry.parachains[`polkadot_${registry.assetHubParaId}`].assets[
+                tokenAddress.toLowerCase()
+            ]
+        if (!ahAssetMetadata) {
+            throw Error(`Token ${tokenAddress} not registered on asset hub.`)
+        }
+        const destParachain = this.destination
+        const destAssetMetadata = destParachain.assets[tokenAddress.toLowerCase()]
+        if (!destAssetMetadata) {
+            throw Error(
+                `Token ${tokenAddress} not registered on destination parachain ${destParachain.id}.`,
+            )
+        }
         const minimalBalance =
             ahAssetMetadata.minimumBalance > destAssetMetadata.minimumBalance
                 ? ahAssetMetadata.minimumBalance
                 : destAssetMetadata.minimumBalance
 
-        let { address: beneficiary, hexAddress: beneficiaryAddressHex } =
-            beneficiaryMultiAddress(beneficiaryAccount)
-        let value = fee.assetHubExecutionFeeEther + fee.assetHubDeliveryFeeEther + fee.relayerFee
-
-        const ifce = IGateway__factory.createInterface()
-        const con = new Contract(registry.gatewayAddress, ifce)
+        const { hexAddress: beneficiaryAddressHex } = resolveBeneficiary(beneficiaryAccount)
+        const beneficiary = context.ethereumProvider.beneficiaryMultiAddress(beneficiaryAddressHex)
+        let value = findTotal(fee, "ETH")
 
         if (!ahAssetMetadata.foreignId) {
             throw Error("asset foreign ID not set in metadata")
         }
 
-        const accountNonce = await ethereum.getTransactionCount(sourceAccount, "pending")
+        const accountNonce = await context.ethereumProvider.getTransactionCount(
+            ethereum,
+            sourceAccount,
+            "pending",
+        )
         const topic = buildMessageId(
-            destinationParaId,
+            this.to.id,
             sourceAccount,
             tokenAddress,
             beneficiaryAddressHex,
@@ -181,32 +244,37 @@ export class PNAToAH implements TransferInterface {
         )
 
         const xcm = hexToU8a(
-            sendMessageXCM(assetHub.registry, beneficiaryAddressHex, topic, customXcm).toHex(),
+            sendMessageXCM(
+                assetHub.registry,
+                beneficiaryAddressHex,
+                topic,
+                customXcm,
+                ahAssetMetadata.location,
+            ).toHex(),
         )
-        let assets = [encodeNativeAsset(tokenAddress, amount)]
-        let claimer = claimerFromBeneficiary(assetHub, beneficiaryAddressHex)
+        let assets = [context.ethereumProvider.encodeNativeAsset(tokenAddress, amount)]
+        let claimer = claimerFromBeneficiary(assetHub, beneficiaryAddressHex, registry.environment)
 
-        const tx = await con
-            .getFunction("v2_sendMessage")
-            .populateTransaction(
-                xcm,
-                assets,
-                claimerLocationToBytes(claimer),
-                fee.assetHubExecutionFeeEther,
-                fee.relayerFee,
-                {
-                    value,
-                    from: sourceAccount,
-                },
-            )
+        const tx = await context.ethereumProvider.gatewayV2SendMessage(
+            context.ethereum(),
+            context.environment.gatewayContract,
+            sourceAccount,
+            xcm,
+            assets,
+            claimerLocationToBytes(claimer),
+            findInBreakdown(fee.breakdown, "assetHubExecution", "ETH"),
+            findInBreakdown(fee.breakdown, "relayer", "ETH"),
+            value,
+        )
 
         return {
+            kind: "ethereum->polkadot",
             input: {
                 registry,
                 sourceAccount,
                 beneficiaryAccount,
                 tokenAddress,
-                destinationParaId,
+                destinationParaId: this.to.id,
                 amount,
                 fee,
                 customXcm,
@@ -223,26 +291,48 @@ export class PNAToAH implements TransferInterface {
                 destParachain,
                 claimer,
                 topic,
+                totalInputAmount: amount,
             },
             tx,
         }
     }
 
-    async validateTransfer(
-        context: Context | Connections,
-        transfer: Transfer,
-    ): Promise<ValidationResult> {
+    async build(
+        sourceAccount: string,
+        beneficiaryAccount: string,
+        tokenAddress: string,
+        amount: bigint,
+        options?: {
+            fee?: {
+                padFeeByPercentage?: bigint
+                feeAsset?: any
+                customXcm?: any[]
+                overrideRelayerFee?: bigint
+                volumeFee?: VolumeFeeParams
+            }
+            customXcm?: any[]
+        },
+    ): Promise<ValidatedTransfer<T>> {
+        const fee = await this.fee(tokenAddress, options?.fee)
+        const transfer = await this.tx(
+            sourceAccount,
+            beneficiaryAccount,
+            tokenAddress,
+            amount,
+            fee,
+            options?.customXcm,
+        )
+        return ensureValidationSuccess(await this.validate(transfer))
+    }
+
+    async validate(transfer: Transfer<T>): Promise<ValidatedTransfer<T>> {
+        const context = this.context
         const { tx } = transfer
         const { amount, sourceAccount, tokenAddress, registry } = transfer.input
-        const { ethereum, gateway, bridgeHub, assetHub } =
-            context instanceof Context
-                ? {
-                      ethereum: context.ethereum(),
-                      gateway: context.gateway(),
-                      bridgeHub: await context.bridgeHub(),
-                      assetHub: await context.assetHub(),
-                  }
-                : context
+        const ethereum = context.ethereum()
+        const gateway = context.gateway()
+        const bridgeHub = await context.bridgeHub()
+        const assetHub = await context.assetHub()
 
         const { totalValue, minimalBalance, ahAssetMetadata, beneficiaryAddressHex, claimer } =
             transfer.computed
@@ -255,11 +345,11 @@ export class PNAToAH implements TransferInterface {
                 message: "The amount transferred is less than the minimum amount.",
             })
         }
-        const etherBalance = await ethereum.getBalance(sourceAccount)
+        const etherBalance = await context.ethereumProvider.getBalance(ethereum, sourceAccount)
 
         let tokenBalance: { balance: bigint; gatewayAllowance: bigint }
         if (tokenAddress !== ETHER_TOKEN_ADDRESS) {
-            tokenBalance = await erc20Balance(
+            tokenBalance = await context.ethereumProvider.erc20Balance(
                 ethereum,
                 tokenAddress,
                 sourceAccount,
@@ -273,6 +363,14 @@ export class PNAToAH implements TransferInterface {
             }
         }
 
+        if (tokenBalance.gatewayAllowance < amount) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.GatewaySpenderLimitReached,
+                message:
+                    "The Snowbridge gateway contract needs to approved as a spender for this token and amount.",
+            })
+        }
         if (tokenBalance.balance < amount) {
             logs.push({
                 kind: ValidationKind.Error,
@@ -283,8 +381,8 @@ export class PNAToAH implements TransferInterface {
         let feeInfo: FeeInfo | undefined
         if (logs.length === 0) {
             const [estimatedGas, feeData] = await Promise.all([
-                ethereum.estimateGas(tx),
-                ethereum.getFeeData(),
+                context.ethereumProvider.estimateGas(ethereum, tx),
+                context.ethereumProvider.getFeeData(ethereum),
             ])
             const executionFee = (feeData.gasPrice ?? 0n) * estimatedGas
             if (executionFee === 0n) {
@@ -309,7 +407,11 @@ export class PNAToAH implements TransferInterface {
                 totalTxCost,
             }
         }
-        const bridgeStatus = await getOperatingStatus({ gateway, bridgeHub })
+        const bridgeStatus = await getOperatingStatus({
+            ethereumProvider: context.ethereumProvider,
+            gateway,
+            bridgeHub,
+        })
         if (
             bridgeStatus.toPolkadot.outbound !== "Normal" ||
             bridgeStatus.toPolkadot.beacon !== "Normal"
@@ -321,9 +423,31 @@ export class PNAToAH implements TransferInterface {
             })
         }
 
+        const assetHubImpl = await this.context.paraImplementation(assetHub)
+
+        const requiredDotOut =
+            findInBreakdownOrZero(transfer.input.fee.breakdown, "assetHubDelivery", "DOT") +
+            findInBreakdownOrZero(transfer.input.fee.breakdown, "assetHubExecution", "DOT")
+        if (requiredDotOut > 0n) {
+            const reserveCheck = await checkDotEthPoolLiquidityForEthereumToPolkadot(
+                assetHubImpl,
+                registry.ethChainId,
+                requiredDotOut,
+            )
+            if (!reserveCheck.ok) {
+                logs.push({
+                    kind: ValidationKind.Error,
+                    reason: ValidationReason.InsufficientPoolReserves,
+                    message:
+                        reserveCheck.reason === "pool-missing"
+                            ? `${reserveCheck.pool} pool does not exist on Asset Hub.`
+                            : `${reserveCheck.pool} pool on Asset Hub has insufficient liquidity (need ${reserveCheck.requiredOut}, have ${reserveCheck.reserveOut}).`,
+                })
+            }
+        }
+
         // Check if asset can be received on asset hub (dry run)
         const ahParachain = registry.parachains[`polkadot_${registry.assetHubParaId}`]
-        const assetHubImpl = await paraImplementation(assetHub)
         let dryRunAhSuccess, assetHubDryRunError
         if (!ahParachain.features.hasDryRunApi) {
             logs.push({
@@ -333,15 +457,16 @@ export class PNAToAH implements TransferInterface {
                     "Asset Hub does not support dry running of XCM. Transaction success cannot be confirmed.",
             })
         } else {
-            const assetHubFee =
-                transfer.input.fee.assetHubDeliveryFeeEther +
-                transfer.input.fee.assetHubExecutionFeeEther
+            const executionFee = findInBreakdown(
+                transfer.input.fee.breakdown,
+                "assetHubExecution",
+                "ETH",
+            )
             const xcm = buildAssetHubPNAReceivedXcm(
                 assetHub.registry,
                 registry.ethChainId,
                 ahAssetMetadata.location,
-                transfer.computed.totalValue - assetHubFee,
-                assetHubFee,
+                executionFee,
                 amount,
                 claimer,
                 transfer.input.sourceAccount,
@@ -398,7 +523,11 @@ export class PNAToAH implements TransferInterface {
                 bridgeStatus,
                 assetHubDryRunError,
             },
-            transfer,
+            ...transfer,
         }
+    }
+
+    async messageId(receipt: T["TransactionReceipt"]) {
+        return getSharedMessageReceipt(this.context.ethereumProvider, receipt)
     }
 }

@@ -1,17 +1,44 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.33;
+pragma solidity 0.8.34;
 
 import {IERC20} from "openzeppelin/token/ERC20/IERC20.sol";
 import {SafeERC20} from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
 import {WETH9} from "canonical-weth/WETH9.sol";
-import {ISpokePool, IMessageHandler} from "./interfaces/ISpokePool.sol";
-import {DepositParams, Instructions, Call} from "./Types.sol";
+import {ISpokePool} from "./interfaces/ISpokePool.sol";
+import {DepositParams} from "./Types.sol";
 
+/// @title L1 Across Adaptor for Snowbridge V2 outbound flows
+///
+/// @dev This contract is invoked as the `target` of a V2 `CallContract` command inside
+///      the same `Gateway.v2_submit` transaction that issues the preceding
+///      `UnlockNativeToken(recipient = L1Adaptor, amount = X)` command. The paired
+///      unlock funds this contract; the paired CallContract consumes the funds and
+///      sweeps any residual back to the BEEFY-verified `recipient`. Both commands execute
+///      atomically in the same EVM transaction inside `v2_submit`'s `commands[]` loop —
+///      the adaptor is never prefunded across transaction boundaries in production.
+///
+///      `depositToken`, `depositNativeEther`, and `receive()` are deliberately public
+///      and unauthenticated. An EOA that calls them directly when the adaptor has a
+///      zero balance simply loses their own funds to the SpokePool — there is no
+///      residual balance outside the atomic flow for any caller to steal.
+///
+///      Recipient requirements: `recipient` is the address any residual funds (input
+///      token or native ETH) are swept back to if the SpokePool deposit fails. It is
+///      typically an EOA. If it is a contract, it MUST be able to receive native ETH
+///      (i.e. implement a payable `receive()` / `fallback()`) for the `depositNativeEther`
+///      path — otherwise the sweep reverts and the ETH becomes trapped in this adaptor,
+///      where it is reachable by the first caller of `depositNativeEther` / `receive()`.
+///      Integrating UIs should surface this requirement to users.
+///
+///      Bug bounty note: reports claiming that "any EOA can call these functions and
+///      drain the contract" rely on a prefunding-across-transactions assumption that
+///      does not occur in the production flow and are out of scope. This class is also
+///      captured by the program's "vulnerabilities exploitable through front-run
+///      attacks only" exclusion.
 contract SnowbridgeL1Adaptor {
     using SafeERC20 for IERC20;
     ISpokePool public immutable SPOKE_POOL;
     WETH9 public immutable L1_WETH9;
-    WETH9 public immutable L2_WETH9;
 
     /**************************************
      *              EVENTS                *
@@ -20,10 +47,9 @@ contract SnowbridgeL1Adaptor {
     event DepositCallInvoked(bytes32 topic, uint256 depositId);
     event DepositCallFailed(bytes32 topic);
 
-    constructor(address _spokePool, address _l1weth9, address _l2weth9) {
+    constructor(address _spokePool, address _l1weth9) {
         SPOKE_POOL = ISpokePool(_spokePool);
         L1_WETH9 = WETH9(payable(_l1weth9));
-        L2_WETH9 = WETH9(payable(_l2weth9));
     }
 
     // Send ERC20 token on L1 to L2, the fee (params.inputAmount - params.outputAmount) should be calculated off-chain
@@ -125,7 +151,7 @@ contract SnowbridgeL1Adaptor {
             bytes32(uint256(uint160(recipient))),
             bytes32(uint256(uint160(address(recipient)))),
             bytes32(uint256(uint160(address(L1_WETH9)))),
-            bytes32(uint256(uint160(address(L2_WETH9)))),
+            bytes32(uint256(uint160(params.outputToken))),
             params.inputAmount,
             params.outputAmount,
             params.destinationChainId,

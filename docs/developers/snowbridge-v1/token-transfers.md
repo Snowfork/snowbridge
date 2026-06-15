@@ -14,20 +14,6 @@ A token transfer can be initiated with a single transaction to our [Gateway](../
 
 Sending tokens is usually a single step for the user. However, a preliminary registration step is required for tokens which have not previously been bridged before.
 
-### Token Registration
-
-First, the ERC20 token needs to be registered on AssetHub in the `ForeignAssets` pallet.
-
-This can initiated by sending the following transaction to the Gateway.
-
-```solidity
-/// @dev Send a message to the AssetHub parachain to register a new fungible asset
-///      in the `ForeignAssets` pallet.
-function registerToken(address token) external payable;
-```
-
-This function will charge a fee in Ether that can be retrieved ahead of time by calling `quoteRegisterTokenFee`.
-
 ### Token Sending
 
 To send a previously registered token to a destination parachain, send this transaction to the Gateway:

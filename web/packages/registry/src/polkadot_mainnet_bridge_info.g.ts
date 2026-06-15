@@ -5,27 +5,29 @@ const registry = {
         beaconApiUrl: "https://lodestar-mainnet.chainsafe.io",
         ethereumChains: {
             "1": "https://ethereum-rpc.publicnode.com",
+            "10": "https://optimism-rpc.publicnode.com",
             "1284": "https://rpc.api.moonbeam.network",
             "8453": "https://base-rpc.publicnode.com",
+            "42161": "https://arbitrum-one-rpc.publicnode.com",
         },
         relaychainUrl: "https://polkadot-rpc.n.dwellir.com",
         parachains: {
-            "1000": "wss://asset-hub-polkadot-rpc.n.dwellir.com",
-            "1002": "https://bridge-hub-polkadot-rpc.n.dwellir.com",
+            "1000": "wss://polkadot-asset-hub-rpc.polkadot.io",
+            "1002": "wss://polkadot-bridge-hub-rpc.polkadot.io",
             "2000": "wss://acala-rpc-0.aca-api.network",
-            "2004": "wss://moonbeam.ibp.network",
-            "2030": "wss://bifrost-polkadot.ibp.network",
+            "2004": "wss://wss.api.moonbeam.network",
+            "2030": "wss://eu.bifrost-polkadot-rpc.liebi.com/ws",
             "2034": "wss://hydration-rpc.n.dwellir.com",
             "2043": "wss://parachain-rpc.origin-trail.network",
-            "3369": "wss://polkadot-mythos-rpc.polkadot.io",
+            "3369": "wss://mythos-rpc.dmarket.com",
         },
         gatewayContract: "0x27ca963c279c93801941e1eb8799c23f407d68e7",
-        beefyContract: "0x1817874feAb3ce053d0F40AbC23870DB35C2AFfc",
+        beefyContract: "0x7cfc5c8b341991993080af67d940b6ad19a010e1",
         assetHubParaId: 1000,
         bridgeHubParaId: 1002,
-        v2_parachains: [1000],
-        indexerGraphQlUrl:
-            "https://snowbridge.squids.live/snowbridge-subsquid-polkadot@v2/api/graphql",
+        v2_parachains: [1000, 2034],
+        indexerGraphQlUrl: "https://subsquid.snowbridge.network/graphql",
+        forkedProviderUrl: "https://fork-mainnet.snowbridge.network",
         kusama: {
             assetHubParaId: 1000,
             bridgeHubParaId: 1002,
@@ -44,14 +46,14 @@ const registry = {
         },
         l2Bridge: {
             acrossAPIUrl: "https://app.across.to/api",
-            l1AdapterAddress: "0x313E8c9Fb47613f2B1A436bE978c2BB75727fcC5",
-            l1HandlerAddress: "0x924a9f036260DdD5808007E1AA95f08eD08aA569",
+            l1AdapterAddress: "0xd3b11c36404b092645522b682832fcdee07d2668",
+            l1HandlerAddress: "0x924a9f036260ddd5808007e1aa95f08ed08aa569",
             l1FeeTokenAddress: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
-            l1SwapQuoterAddress: "0x61fFE014bA17989E743c5F6cB21bF9697530B21e",
-            l1SwapRouterAddress: "0xE592427A0AEce92De3Edee1F18E0157C05861564",
+            l1SwapQuoterAddress: "0x61ffe014ba17989e743c5f6cb21bf9697530b21e",
+            l1SwapRouterAddress: "0xe592427a0aece92de3edee1f18e0157c05861564",
             l2Chains: {
-                "8453": {
-                    adapterAddress: "0xCd5d2c665E3AC84bF5c67FE7a0C48748dA40db2F",
+                "10": {
+                    adapterAddress: "0x836895ad176235dfe9c59b3df56c7579d90ea338",
                     feeTokenAddress: "0x4200000000000000000000000000000000000006",
                     swapRoutes: [
                         {
@@ -60,8 +62,40 @@ const registry = {
                             swapFee: 0,
                         },
                         {
-                            inputToken: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-                            outputToken: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+                            inputToken: "0x0b2c639c533813f4aa9d7837caf62653d097ff85",
+                            outputToken: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                            swapFee: 500,
+                        },
+                    ],
+                },
+                "8453": {
+                    adapterAddress: "0x07fe4e7340976fc873b74bafe3c3e5b0e01f3665",
+                    feeTokenAddress: "0x4200000000000000000000000000000000000006",
+                    swapRoutes: [
+                        {
+                            inputToken: "0x4200000000000000000000000000000000000006",
+                            outputToken: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                            swapFee: 0,
+                        },
+                        {
+                            inputToken: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+                            outputToken: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                            swapFee: 500,
+                        },
+                    ],
+                },
+                "42161": {
+                    adapterAddress: "0x836895ad176235dfe9c59b3df56c7579d90ea338",
+                    feeTokenAddress: "0x82af49447d8a07e3bd95bd0d56f35241523fbab1",
+                    swapRoutes: [
+                        {
+                            inputToken: "0x82af49447d8a07e3bd95bd0d56f35241523fbab1",
+                            outputToken: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                            swapFee: 0,
+                        },
+                        {
+                            inputToken: "0xaf88d065e77c8cc2239327c5edb3a432268e5831",
+                            outputToken: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
                             swapFee: 500,
                         },
                     ],
@@ -90,7 +124,10 @@ const registry = {
                 "0x163f8c2467924be0ae7b5347228cabf260318753",
                 "0x57e114b691db790c35207b2e685d4a43181e6061",
                 "0x8236a87084f8b84306f72007f36f2618a5634494",
+                "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a",
                 "0x1abaea1f7c830bd89acc67ec4af516284b1bc33c",
+                "0xb62132e35a6c13ee1ee0f84dc5d40bad8d815206",
+                "0xd166337499e176bbc38a1fbd113ab144e5bd2df7",
                 "0x56072c95faa701256059aa122697b133aded9279",
                 "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
                 "0x0e186357c323c806c1efdad36d217f7a54b63d18",
@@ -100,7 +137,6 @@ const registry = {
                 "0x582d872a1b094fc48f5de31d3b73f2d9be47def1",
                 "0x6b175474e89094c44da98b954eedeac495271d0f",
                 "0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce",
-                "0x7de91b204c1c737bcee6f000aaa6569cf7061cb7",
                 "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
                 "0x8daebade922df735c38c80c7ebd708af50815faa",
                 "0x0000000000000000000000000000000000000000",
@@ -114,6 +150,7 @@ const registry = {
                 "0x5fdcd48f09fb67de3d202cd854b372aec1100ed5",
                 "0xa37b046782518a80e2e69056009fbd0431d36e50",
                 "0x769916a66fdac0e3d57363129caac59386ea622b",
+                "0x1f752250f518e419f2f03804e25728c5c6dff73f",
                 "0x92262680a8d6636bba9bffdf484c274ca2de6400",
             ],
         },
@@ -137,7 +174,10 @@ const registry = {
                 "0x163f8c2467924be0ae7b5347228cabf260318753",
                 "0x57e114b691db790c35207b2e685d4a43181e6061",
                 "0x8236a87084f8b84306f72007f36f2618a5634494",
+                "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a",
                 "0x1abaea1f7c830bd89acc67ec4af516284b1bc33c",
+                "0xb62132e35a6c13ee1ee0f84dc5d40bad8d815206",
+                "0xd166337499e176bbc38a1fbd113ab144e5bd2df7",
                 "0x56072c95faa701256059aa122697b133aded9279",
                 "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
                 "0x0e186357c323c806c1efdad36d217f7a54b63d18",
@@ -147,7 +187,6 @@ const registry = {
                 "0x582d872a1b094fc48f5de31d3b73f2d9be47def1",
                 "0x6b175474e89094c44da98b954eedeac495271d0f",
                 "0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce",
-                "0x7de91b204c1c737bcee6f000aaa6569cf7061cb7",
                 "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
                 "0x8daebade922df735c38c80c7ebd708af50815faa",
                 "0x0000000000000000000000000000000000000000",
@@ -161,6 +200,7 @@ const registry = {
                 "0x5fdcd48f09fb67de3d202cd854b372aec1100ed5",
                 "0xa37b046782518a80e2e69056009fbd0431d36e50",
                 "0x769916a66fdac0e3d57363129caac59386ea622b",
+                "0x1f752250f518e419f2f03804e25728c5c6dff73f",
                 "0x92262680a8d6636bba9bffdf484c274ca2de6400",
             ],
         },
@@ -289,6 +329,8 @@ const registry = {
                 "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
                 "0x57e114b691db790c35207b2e685d4a43181e6061",
                 "0x8236a87084f8b84306f72007f36f2618a5634494",
+                "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a",
+                "0xd166337499e176bbc38a1fbd113ab144e5bd2df7",
                 "0x56072c95faa701256059aa122697b133aded9279",
                 "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
                 "0xaa7a9ca87d3694b5755f213b5d04094b8d0f0a6f",
@@ -318,6 +360,8 @@ const registry = {
                 "0xcccccccccc33d538dbc2ee4feab0a7a1ff4e8a94",
                 "0x57e114b691db790c35207b2e685d4a43181e6061",
                 "0x8236a87084f8b84306f72007f36f2618a5634494",
+                "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a",
+                "0xd166337499e176bbc38a1fbd113ab144e5bd2df7",
                 "0x56072c95faa701256059aa122697b133aded9279",
                 "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
                 "0xaa7a9ca87d3694b5755f213b5d04094b8d0f0a6f",
@@ -393,6 +437,8 @@ const registry = {
                 "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
                 "0x57e114b691db790c35207b2e685d4a43181e6061",
                 "0x8236a87084f8b84306f72007f36f2618a5634494",
+                "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a",
+                "0xd166337499e176bbc38a1fbd113ab144e5bd2df7",
                 "0x56072c95faa701256059aa122697b133aded9279",
                 "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
                 "0xaa7a9ca87d3694b5755f213b5d04094b8d0f0a6f",
@@ -422,6 +468,8 @@ const registry = {
                 "0xcccccccccc33d538dbc2ee4feab0a7a1ff4e8a94",
                 "0x57e114b691db790c35207b2e685d4a43181e6061",
                 "0x8236a87084f8b84306f72007f36f2618a5634494",
+                "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a",
+                "0xd166337499e176bbc38a1fbd113ab144e5bd2df7",
                 "0x56072c95faa701256059aa122697b133aded9279",
                 "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
                 "0x18084fba666a33d37592fa2633fd49a74dd93a88",
@@ -434,9 +482,99 @@ const registry = {
                 "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
             ],
         },
+        {
+            from: {
+                kind: "polkadot",
+                id: 1000,
+            },
+            to: {
+                kind: "ethereum_l2",
+                id: 10,
+            },
+            assets: [
+                "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                "0x0000000000000000000000000000000000000000",
+            ],
+        },
+        {
+            from: {
+                kind: "ethereum_l2",
+                id: 10,
+            },
+            to: {
+                kind: "polkadot",
+                id: 1000,
+            },
+            assets: [
+                "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                "0x0000000000000000000000000000000000000000",
+            ],
+        },
+        {
+            from: {
+                kind: "polkadot",
+                id: 1000,
+            },
+            to: {
+                kind: "ethereum_l2",
+                id: 8453,
+            },
+            assets: [
+                "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                "0x0000000000000000000000000000000000000000",
+            ],
+        },
+        {
+            from: {
+                kind: "ethereum_l2",
+                id: 8453,
+            },
+            to: {
+                kind: "polkadot",
+                id: 1000,
+            },
+            assets: [
+                "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                "0x0000000000000000000000000000000000000000",
+            ],
+        },
+        {
+            from: {
+                kind: "polkadot",
+                id: 1000,
+            },
+            to: {
+                kind: "ethereum_l2",
+                id: 42161,
+            },
+            assets: [
+                "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                "0x0000000000000000000000000000000000000000",
+            ],
+        },
+        {
+            from: {
+                kind: "ethereum_l2",
+                id: 42161,
+            },
+            to: {
+                kind: "polkadot",
+                id: 1000,
+            },
+            assets: [
+                "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                "0x0000000000000000000000000000000000000000",
+            ],
+        },
     ],
     registry: {
-        timestamp: "2026-02-03T21:35:14.732Z",
+        timestamp: "2026-06-11T08:55:00.280Z",
         environment: "polkadot_mainnet",
         ethChainId: 1,
         gatewayAddress: "0x27ca963c279c93801941e1eb8799c23f407d68e7",
@@ -450,7 +588,7 @@ const registry = {
             accountType: "AccountId32",
             name: "Polkadot",
             specName: "polkadot",
-            specVersion: 2000005,
+            specVersion: 2002001,
         },
         bridgeHub: {
             tokenSymbols: "DOT",
@@ -460,12 +598,13 @@ const registry = {
             accountType: "AccountId32",
             name: "Polkadot BridgeHub",
             specName: "bridge-hub-polkadot",
-            specVersion: 2000005,
+            specVersion: 2002001,
         },
         ethereumChains: {
             ethereum_1: {
                 kind: "ethereum",
                 id: 1,
+                name: "mainnet",
                 assets: {
                     "0x9d39a5de30e57443bff2a8307a4256c8797a3497": {
                         token: "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
@@ -537,11 +676,32 @@ const registry = {
                         decimals: 8,
                         deliveryGas: 80000n,
                     },
+                    "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a": {
+                        token: "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a",
+                        name: "apyUSD",
+                        symbol: "apyUSD",
+                        decimals: 18,
+                        deliveryGas: 80000n,
+                    },
                     "0x1abaea1f7c830bd89acc67ec4af516284b1bc33c": {
                         token: "0x1abaea1f7c830bd89acc67ec4af516284b1bc33c",
                         name: "Euro Coin",
                         symbol: "EURC",
                         decimals: 6,
+                        deliveryGas: 80000n,
+                    },
+                    "0xb62132e35a6c13ee1ee0f84dc5d40bad8d815206": {
+                        token: "0xb62132e35a6c13ee1ee0f84dc5d40bad8d815206",
+                        name: "Nexo",
+                        symbol: "NEXO",
+                        decimals: 18,
+                        deliveryGas: 80000n,
+                    },
+                    "0xd166337499e176bbc38a1fbd113ab144e5bd2df7": {
+                        token: "0xd166337499e176bbc38a1fbd113ab144e5bd2df7",
+                        name: "Staked USDat",
+                        symbol: "sUSDat",
+                        decimals: 18,
                         deliveryGas: 80000n,
                     },
                     "0x56072c95faa701256059aa122697b133aded9279": {
@@ -730,6 +890,15 @@ const registry = {
                             "0x3b7f577715347bdcde4739a1bf1a7f1dec71e8ff4dbe23a6a49348ebf920c658",
                         deliveryGas: 80000n,
                     },
+                    "0x1f752250f518e419f2f03804e25728c5c6dff73f": {
+                        token: "0x1f752250f518e419f2f03804e25728c5c6dff73f",
+                        name: "Robonomics",
+                        symbol: "XRT",
+                        decimals: 9,
+                        foreignId:
+                            "0x3572e2b3281d738a7579848b023666ec5cb13a63a5372a6de7e74f16acfab7b8",
+                        deliveryGas: 80000n,
+                    },
                     "0x92262680a8d6636bba9bffdf484c274ca2de6400": {
                         token: "0x92262680a8d6636bba9bffdf484c274ca2de6400",
                         name: "DED",
@@ -741,7 +910,42 @@ const registry = {
                     },
                 },
                 key: "ethereum_1",
-                baseDeliveryGas: 120000n,
+                baseVerificationGas: 120000n,
+                baseDispatchGas: 80000n,
+                twoPhaseSubmitGas: 1000000n,
+                submitFiatShamirGas: 2000000n,
+            },
+            ethereum_l2_10: {
+                kind: "ethereum_l2",
+                id: 10,
+                name: "optimism",
+                assets: {
+                    "0x4200000000000000000000000000000000000006": {
+                        token: "0x4200000000000000000000000000000000000006",
+                        name: "Wrapped Ether",
+                        symbol: "WETH",
+                        decimals: 18,
+                        swapTokenAddress: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                        swapFee: 0,
+                    },
+                    "0x0b2c639c533813f4aa9d7837caf62653d097ff85": {
+                        token: "0x0b2c639c533813f4aa9d7837caf62653d097ff85",
+                        name: "USD Coin",
+                        symbol: "USDC",
+                        decimals: 6,
+                        swapTokenAddress: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                        swapFee: 500,
+                    },
+                    "0x0000000000000000000000000000000000000000": {
+                        token: "0x0000000000000000000000000000000000000000",
+                        name: "Ether",
+                        symbol: "Ether",
+                        decimals: 18,
+                        swapTokenAddress: "0x0000000000000000000000000000000000000000",
+                        swapFee: 0,
+                    },
+                },
+                key: "ethereum_l2_10",
             },
             ethereum_1284: {
                 kind: "ethereum",
@@ -820,6 +1024,7 @@ const registry = {
             ethereum_l2_8453: {
                 kind: "ethereum_l2",
                 id: 8453,
+                name: "base",
                 assets: {
                     "0x4200000000000000000000000000000000000006": {
                         token: "0x4200000000000000000000000000000000000006",
@@ -829,12 +1034,12 @@ const registry = {
                         swapTokenAddress: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
                         swapFee: 0,
                     },
-                    "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913": {
-                        token: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+                    "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913": {
+                        token: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
                         name: "USD Coin",
                         symbol: "USDC",
                         decimals: 6,
-                        swapTokenAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+                        swapTokenAddress: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
                         swapFee: 500,
                     },
                     "0x0000000000000000000000000000000000000000": {
@@ -847,6 +1052,38 @@ const registry = {
                     },
                 },
                 key: "ethereum_l2_8453",
+            },
+            ethereum_l2_42161: {
+                kind: "ethereum_l2",
+                id: 42161,
+                name: "arbitrum",
+                assets: {
+                    "0x82af49447d8a07e3bd95bd0d56f35241523fbab1": {
+                        token: "0x82af49447d8a07e3bd95bd0d56f35241523fbab1",
+                        name: "Wrapped Ether",
+                        symbol: "WETH",
+                        decimals: 18,
+                        swapTokenAddress: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                        swapFee: 0,
+                    },
+                    "0xaf88d065e77c8cc2239327c5edb3a432268e5831": {
+                        token: "0xaf88d065e77c8cc2239327c5edb3a432268e5831",
+                        name: "USD Coin",
+                        symbol: "USDC",
+                        decimals: 6,
+                        swapTokenAddress: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                        swapFee: 500,
+                    },
+                    "0x0000000000000000000000000000000000000000": {
+                        token: "0x0000000000000000000000000000000000000000",
+                        name: "Ether",
+                        symbol: "Ether",
+                        decimals: 18,
+                        swapTokenAddress: "0x0000000000000000000000000000000000000000",
+                        swapFee: 0,
+                    },
+                },
+                key: "ethereum_l2_42161",
             },
         },
         parachains: {
@@ -874,7 +1111,7 @@ const registry = {
                     accountType: "AccountId32",
                     name: "Polkadot Asset Hub",
                     specName: "statemint",
-                    specVersion: 2000005,
+                    specVersion: 2002001,
                 },
                 assets: {
                     "0x9d39a5de30e57443bff2a8307a4256c8797a3497": {
@@ -957,12 +1194,36 @@ const registry = {
                         decimals: 8,
                         isSufficient: false,
                     },
+                    "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a": {
+                        token: "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a",
+                        name: "",
+                        minimumBalance: 1n,
+                        symbol: "",
+                        decimals: 0,
+                        isSufficient: false,
+                    },
                     "0x1abaea1f7c830bd89acc67ec4af516284b1bc33c": {
                         token: "0x1abaea1f7c830bd89acc67ec4af516284b1bc33c",
                         name: "Euro Coin",
                         minimumBalance: 1n,
                         symbol: "EURC",
                         decimals: 6,
+                        isSufficient: false,
+                    },
+                    "0xb62132e35a6c13ee1ee0f84dc5d40bad8d815206": {
+                        token: "0xb62132e35a6c13ee1ee0f84dc5d40bad8d815206",
+                        name: "",
+                        minimumBalance: 1n,
+                        symbol: "",
+                        decimals: 0,
+                        isSufficient: false,
+                    },
+                    "0xd166337499e176bbc38a1fbd113ab144e5bd2df7": {
+                        token: "0xd166337499e176bbc38a1fbd113ab144e5bd2df7",
+                        name: "",
+                        minimumBalance: 1n,
+                        symbol: "",
+                        decimals: 0,
                         isSufficient: false,
                     },
                     "0x56072c95faa701256059aa122697b133aded9279": {
@@ -1412,6 +1673,51 @@ const registry = {
                         minimumBalance: 1000000000n,
                         isSufficient: false,
                     },
+                    "0x1f752250f518e419f2f03804e25728c5c6dff73f": {
+                        token: "0x1f752250f518e419f2f03804e25728c5c6dff73f",
+                        name: "Robonomics",
+                        symbol: "XRT",
+                        decimals: 9,
+                        locationOnEthereum: {
+                            parents: 1,
+                            interior: {
+                                x2: [
+                                    {
+                                        globalConsensus: {
+                                            polkadot: null,
+                                        },
+                                    },
+                                    {
+                                        parachain: 3388,
+                                    },
+                                ],
+                            },
+                        },
+                        location: {
+                            parents: 1,
+                            interior: {
+                                x1: [
+                                    {
+                                        parachain: 3388,
+                                    },
+                                ],
+                            },
+                        },
+                        locationOnAH: {
+                            parents: 1,
+                            interior: {
+                                x1: [
+                                    {
+                                        parachain: 3388,
+                                    },
+                                ],
+                            },
+                        },
+                        foreignId:
+                            "0x3572e2b3281d738a7579848b023666ec5cb13a63a5372a6de7e74f16acfab7b8",
+                        minimumBalance: 1000n,
+                        isSufficient: false,
+                    },
                     "0x92262680a8d6636bba9bffdf484c274ca2de6400": {
                         token: "0x92262680a8d6636bba9bffdf484c274ca2de6400",
                         name: "DED",
@@ -1498,7 +1804,7 @@ const registry = {
                     accountType: "AccountId32",
                     name: "Acala",
                     specName: "acala",
-                    specVersion: 2330,
+                    specVersion: 2350,
                 },
                 assets: {
                     "0x0000000000000000000000000000000000000000": {
@@ -1510,7 +1816,7 @@ const registry = {
                         isSufficient: false,
                     },
                 },
-                estimatedExecutionFeeDOT: 300000000n,
+                estimatedExecutionFeeDOT: 484934n,
                 estimatedDeliveryFeeDOT: 307100000n,
             },
             polkadot_2004: {
@@ -1538,7 +1844,7 @@ const registry = {
                     evmChainId: 1284,
                     name: "Moonbeam",
                     specName: "moonbeam",
-                    specVersion: 4102,
+                    specVersion: 4303,
                 },
                 xcDOT: "0xffffffff1fcacbd218edc0eba20fc2308c778080",
                 assets: {
@@ -1606,7 +1912,7 @@ const registry = {
                         xc20: "0xffffffff7bc304425217b49e9598415c514ae81b",
                     },
                 },
-                estimatedExecutionFeeDOT: 105696134n,
+                estimatedExecutionFeeDOT: 49192809n,
                 estimatedDeliveryFeeDOT: 306500000n,
             },
             polkadot_2030: {
@@ -1634,7 +1940,7 @@ const registry = {
                     evmChainId: 996,
                     name: "Bifrost Polkadot",
                     specName: "bifrost_polkadot",
-                    specVersion: 23001,
+                    specVersion: 24002,
                 },
                 assets: {
                     "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2": {
@@ -1654,7 +1960,7 @@ const registry = {
                         isSufficient: false,
                     },
                 },
-                estimatedExecutionFeeDOT: 82505857n,
+                estimatedExecutionFeeDOT: 54967893n,
                 estimatedDeliveryFeeDOT: 307100000n,
             },
             polkadot_2034: {
@@ -1667,11 +1973,11 @@ const registry = {
                     hasTxPaymentApi: true,
                     hasDryRunRpc: true,
                     hasDotBalance: true,
-                    hasEthBalance: false,
+                    hasEthBalance: true,
                     hasXcmPaymentApi: true,
-                    supportsAliasOrigin: false,
-                    xcmVersion: "v4",
-                    supportsV2: false,
+                    supportsAliasOrigin: true,
+                    xcmVersion: "v5",
+                    supportsV2: true,
                 },
                 info: {
                     tokenSymbols: "HDX",
@@ -1682,7 +1988,7 @@ const registry = {
                     evmChainId: 222222,
                     name: "Hydration",
                     specName: "hydradx",
-                    specVersion: 379,
+                    specVersion: 419,
                 },
                 assets: {
                     "0x45804880de22913dafe09f4980848ece6ecbaf78": {
@@ -1698,6 +2004,14 @@ const registry = {
                         name: "Ethena",
                         minimumBalance: 17337031900138700n,
                         symbol: "ENA",
+                        decimals: 18,
+                        isSufficient: true,
+                    },
+                    "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a": {
+                        token: "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a",
+                        name: "Apyx apyUSD",
+                        minimumBalance: 14705882352941200n,
+                        symbol: "apyUSD",
                         decimals: 18,
                         isSufficient: true,
                     },
@@ -1797,6 +2111,14 @@ const registry = {
                         decimals: 18,
                         isSufficient: true,
                     },
+                    "0xd166337499e176bbc38a1fbd113ab144e5bd2df7": {
+                        token: "0xd166337499e176bbc38a1fbd113ab144e5bd2df7",
+                        name: "Saturn sUSDat",
+                        minimumBalance: 20012007204322600n,
+                        symbol: "sUSDat",
+                        decimals: 18,
+                        isSufficient: true,
+                    },
                     "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0": {
                         token: "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
                         name: "Wrapped staked ETH",
@@ -1838,7 +2160,7 @@ const registry = {
                         isSufficient: true,
                     },
                 },
-                estimatedExecutionFeeDOT: 1478898n,
+                estimatedExecutionFeeDOT: 3119486n,
                 estimatedDeliveryFeeDOT: 307100000n,
             },
             polkadot_2043: {
@@ -1891,9 +2213,9 @@ const registry = {
                     hasDryRunRpc: true,
                     hasDotBalance: false,
                     hasEthBalance: false,
-                    hasXcmPaymentApi: false,
-                    supportsAliasOrigin: false,
-                    xcmVersion: "v4",
+                    hasXcmPaymentApi: true,
+                    supportsAliasOrigin: true,
+                    xcmVersion: "v5",
                     supportsV2: false,
                 },
                 info: {
@@ -1904,7 +2226,7 @@ const registry = {
                     accountType: "AccountId20",
                     name: "Mythos",
                     specName: "mythos",
-                    specVersion: 1016,
+                    specVersion: 1021,
                 },
                 assets: {
                     "0xba41ddf06b7ffd89d1267b5a93bfef2424eb2003": {
@@ -1946,7 +2268,7 @@ const registry = {
                         accountType: "AccountId32",
                         name: "Kusama Asset Hub",
                         specName: "statemine",
-                        specVersion: 2000004,
+                        specVersion: 2002000,
                     },
                     assets: {
                         "0x9d39a5de30e57443bff2a8307a4256c8797a3497": {
@@ -2281,6 +2603,73 @@ const registry = {
             },
             assetHubParaId: 1000,
             bridgeHubParaId: 1002,
+        },
+    },
+    chains: {
+        ethereum: {
+            key: "ethereum_1",
+            kind: "ethereum",
+            id: 1,
+        },
+        optimism: {
+            key: "ethereum_l2_10",
+            kind: "ethereum_l2",
+            id: 10,
+        },
+        moonbeam: {
+            key: "ethereum_1284",
+            kind: "ethereum",
+            id: 1284,
+        },
+        base: {
+            key: "ethereum_l2_8453",
+            kind: "ethereum_l2",
+            id: 8453,
+        },
+        arbitrum: {
+            key: "ethereum_l2_42161",
+            kind: "ethereum_l2",
+            id: 42161,
+        },
+        assetHub: {
+            key: "polkadot_1000",
+            kind: "polkadot",
+            id: 1000,
+        },
+        acala: {
+            key: "polkadot_2000",
+            kind: "polkadot",
+            id: 2000,
+        },
+        moonbeamSubstrate: {
+            key: "polkadot_2004",
+            kind: "polkadot",
+            id: 2004,
+        },
+        bifrostPolkadot: {
+            key: "polkadot_2030",
+            kind: "polkadot",
+            id: 2030,
+        },
+        hydration: {
+            key: "polkadot_2034",
+            kind: "polkadot",
+            id: 2034,
+        },
+        neuroWeb: {
+            key: "polkadot_2043",
+            kind: "polkadot",
+            id: 2043,
+        },
+        mythos: {
+            key: "polkadot_3369",
+            kind: "polkadot",
+            id: 3369,
+        },
+        kusamaAssetHub: {
+            key: "kusama_1000",
+            kind: "kusama",
+            id: 1000,
         },
     },
 } as const

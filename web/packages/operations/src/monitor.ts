@@ -1,192 +1,17 @@
 import { u8aToHex } from "@polkadot/util"
 import { blake2AsU8a } from "@polkadot/util-crypto"
-import { Context, status, utils, subsquidV2 } from "@snowbridge/api"
+import { Context, createApi } from "@snowbridge/api"
+import * as status from "@snowbridge/api/dist/status"
+import * as subsquidV2 from "@snowbridge/api/dist/subsquid_v2"
+import * as utils from "@snowbridge/api/dist/crypto"
+import * as xcmBuilder from "@snowbridge/api/dist/xcmBuilder"
+import * as assetsV2 from "@snowbridge/api/dist/assets_v2"
+import { EthersEthereumProvider, EthersProviderTypes } from "@snowbridge/provider-ethers"
 import { sendMetrics } from "./alarm"
+import { AllMetrics, LiquidityPoolMetrics } from "./metrics"
+import { monitorParams } from "./monitorConfig"
 import { Environment } from "../../base-types/dist"
 import { bridgeInfoFor } from "@snowbridge/registry"
-
-export const monitorParams: {
-    [id: string]: {
-        PRIMARY_GOVERNANCE_CHANNEL_ID: string
-        SECONDARY_GOVERNANCE_CHANNEL_ID: string
-        RELAYERS: {
-            name: string
-            account: string
-            type: "substrate" | "ethereum"
-            balance?: bigint
-        }[]
-        TO_MONITOR_PARACHAINS?: number[]
-    }
-} = {
-    local_e2e: {
-        PRIMARY_GOVERNANCE_CHANNEL_ID:
-            "0x0000000000000000000000000000000000000000000000000000000000000001",
-        SECONDARY_GOVERNANCE_CHANNEL_ID:
-            "0x0000000000000000000000000000000000000000000000000000000000000002",
-        RELAYERS: [
-            {
-                name: "beacon",
-                account: "5GWFwdZb6JyU46e6ZiLxjGxogAHe8SenX76btfq8vGNAaq8c",
-                type: "substrate",
-            },
-            {
-                name: "beefy",
-                account: "0x87D987206180B8f3807Dd90455606eEa85cdB87a",
-                type: "ethereum",
-            },
-            {
-                name: "parachain-primary-gov",
-                account: "0xeEBFA6B9242A19f91a0463291A937a20e3355681",
-                type: "ethereum",
-            },
-            {
-                name: "parachain-secondary-gov",
-                account: "0x13e16C4e5787f878f98a610EB321170512b134D4",
-                type: "ethereum",
-            },
-            {
-                name: "execution-assethub",
-                account: "5DF6KbMTBPGQN6ScjqXzdB2ngk5wi3wXvubpQVUZezNfM6aV",
-                type: "substrate",
-            },
-            {
-                name: "parachain-assethub",
-                account: "0x8b66D5499F52D6F1857084A61743dFCB9a712859",
-                type: "ethereum",
-            },
-            {
-                name: "execution-penpal",
-                account: "5HgmfVcc8xBUcReNJsUaJMhFWGkdYpEw4RiCX4SeZPdKXR6H",
-                type: "substrate",
-            },
-            {
-                name: "parachain-penpal",
-                account: "0x01F6749035e02205768f97e6f1d394Fb6769EC20",
-                type: "ethereum",
-            },
-        ],
-    },
-    paseo_sepolia: {
-        PRIMARY_GOVERNANCE_CHANNEL_ID:
-            "0x0000000000000000000000000000000000000000000000000000000000000001",
-        SECONDARY_GOVERNANCE_CHANNEL_ID:
-            "0x0000000000000000000000000000000000000000000000000000000000000002",
-        RELAYERS: [
-            {
-                name: "beacon",
-                account: "5E4Hf7LzHE4W3jabjLWSP8p8RzEa9ednwRivFEwYAprzpgwc",
-                type: "substrate",
-            },
-            {
-                name: "beefy",
-                account: "0xc189De708158e75E5C88C0ABfA5F9a26C71F54D1",
-                type: "ethereum",
-            },
-            {
-                name: "parachain-primary-gov",
-                account: "0x4BBa8c0e87242897521Ba598d327bE8280032609",
-                type: "ethereum",
-            },
-            {
-                name: "parachain-secondary-gov",
-                account: "0x4BBa8c0e87242897521Ba598d327bE8280032609",
-                type: "ethereum",
-            },
-            {
-                name: "execution-assethub",
-                account: "5HT2ysqEg6SXghQ3NGXp1VWT22hhj48Um8UAwk6Udg8ZCEv8",
-                type: "substrate",
-            },
-            {
-                name: "parachain-assethub",
-                account: "0x4BBa8c0e87242897521Ba598d327bE8280032609",
-                type: "ethereum",
-            },
-        ],
-    },
-    polkadot_mainnet: {
-        PRIMARY_GOVERNANCE_CHANNEL_ID:
-            "0x0000000000000000000000000000000000000000000000000000000000000001",
-        SECONDARY_GOVERNANCE_CHANNEL_ID:
-            "0x0000000000000000000000000000000000000000000000000000000000000002",
-        RELAYERS: [
-            {
-                name: "beacon",
-                account: "16DWunYRv2q29SMxqgrPGhob5az332hhLggSj2Rysk3g1rvk",
-                type: "substrate",
-            },
-            {
-                name: "beefy",
-                account: "0xB8124B07467E46dE73eb5c73a7b1E03863F18062",
-                type: "ethereum",
-            },
-            {
-                name: "beefy-on-demand",
-                account: "0xF3D021D51a725F5DBDCE253248E826A8644Be3c1",
-                type: "ethereum",
-            },
-            {
-                name: "parachain-primary-gov",
-                account: "0x0f51678Ac675C1abf2BeC1DAC9cA701cFcfFF5E2",
-                type: "ethereum",
-            },
-            {
-                name: "parachain-secondary-gov",
-                account: "0x0f51678Ac675C1abf2BeC1DAC9cA701cFcfFF5E2",
-                type: "ethereum",
-            },
-            {
-                name: "execution-assethub",
-                account: "13Dbqvh6nLCRckyfsBr8wEJzxbi34KELwdYQFKKchN4NedGh",
-                type: "substrate",
-            },
-            {
-                name: "parachain-assethub",
-                account: "0x1F1819C3C68F9533adbB8E51C8E8428a818D693E",
-                type: "ethereum",
-            },
-        ],
-        TO_MONITOR_PARACHAINS: [2034, 2043, 3369], // Hydration, OriginTrail, Mythos
-    },
-    westend_sepolia: {
-        PRIMARY_GOVERNANCE_CHANNEL_ID:
-            "0x0000000000000000000000000000000000000000000000000000000000000001",
-        SECONDARY_GOVERNANCE_CHANNEL_ID:
-            "0x0000000000000000000000000000000000000000000000000000000000000002",
-        RELAYERS: [
-            {
-                name: "beacon",
-                account: "5E4Hf7LzHE4W3jabjLWSP8p8RzEa9ednwRivFEwYAprzpgwc",
-                type: "substrate",
-            },
-            {
-                name: "beefy",
-                account: "0x302f0b71b8ad3cf6dd90adb668e49b2168d652fd",
-                type: "ethereum",
-            },
-            {
-                name: "parachain-primary-gov",
-                account: "0x302f0b71b8ad3cf6dd90adb668e49b2168d652fd",
-                type: "ethereum",
-            },
-            {
-                name: "parachain-secondary-gov",
-                account: "0x302f0b71b8ad3cf6dd90adb668e49b2168d652fd",
-                type: "ethereum",
-            },
-            {
-                name: "execution-assethub",
-                account: "5E4Hf7LzHE4W3jabjLWSP8p8RzEa9ednwRivFEwYAprzpgwc",
-                type: "substrate",
-            },
-            {
-                name: "parachain-assethub",
-                account: "0x302f0b71b8ad3cf6dd90adb668e49b2168d652fd",
-                type: "ethereum",
-            },
-        ],
-    },
-}
 
 function contextConfigOverrides(input: Environment): Environment {
     let config = { ...input }
@@ -230,19 +55,26 @@ function contextConfigOverrides(input: Environment): Environment {
     return config
 }
 
-export const monitor = async (): Promise<status.AllMetrics> => {
+export const monitor = async (): Promise<AllMetrics> => {
     let env = "local_e2e"
     if (process.env.NODE_ENV !== undefined) {
         env = process.env.NODE_ENV
     }
-    const { environment: snowbridgeEnv } = bridgeInfoFor(env)
+    const info = bridgeInfoFor(env)
+    const { environment: snowbridgeEnv } = info
     if (snowbridgeEnv === undefined) {
         throw Error(`Unknown environment '${env}'`)
     }
 
     const { name } = snowbridgeEnv
 
-    const context = new Context(contextConfigOverrides(snowbridgeEnv))
+    const context = createApi({
+        info: {
+            ...info,
+            environment: contextConfigOverrides(snowbridgeEnv),
+        },
+        ethereumProvider: new EthersEthereumProvider(),
+    }).context
 
     const bridgeStatus = await status.bridgeStatusInfo(context, {
         polkadotBlockTimeInSeconds: 6,
@@ -253,15 +85,23 @@ export const monitor = async (): Promise<status.AllMetrics> => {
 
     const { relayers, sovereigns } = await fetchBalances(context, snowbridgeEnv)
 
-    let indexerStatus = await fetchIndexerStatus(context, snowbridgeEnv)
+    const liquidityPools = await fetchLiquidityPools(context, snowbridgeEnv)
 
-    const allMetrics: status.AllMetrics = {
+    let indexerStatus: status.IndexerServiceStatusInfo[] = []
+    try {
+        indexerStatus = await fetchIndexerStatus(context, snowbridgeEnv)
+    } catch (e) {
+        console.error("Failed to fetch indexer status, continuing without it:", e)
+    }
+
+    const allMetrics: AllMetrics = {
         name,
         bridgeStatus,
         channels,
         relayers,
         sovereigns,
         indexerStatus,
+        liquidityPools,
     }
     console.log(
         "All metrics:",
@@ -284,7 +124,7 @@ export const monitor = async (): Promise<status.AllMetrics> => {
     return allMetrics
 }
 
-const fetchChannelStatus = async (context: Context, env: Environment) => {
+const fetchChannelStatus = async (context: Context<EthersProviderTypes>, env: Environment) => {
     let assethubChannelStatus = await status.channelStatusInfo(
         context,
         utils.paraIdToChannelId(env.assetHubParaId),
@@ -306,7 +146,7 @@ const fetchChannelStatus = async (context: Context, env: Environment) => {
     return [assethubChannelStatus, primaryGov, secondaryGov]
 }
 
-const fetchBalances = async (context: Context, env: Environment) => {
+const fetchBalances = async (context: Context<EthersProviderTypes>, env: Environment) => {
     const [bridgeHub, ethereum] = await Promise.all([context.bridgeHub(), context.ethereum()])
 
     let relayers = []
@@ -337,19 +177,6 @@ const fetchBalances = async (context: Context, env: Environment) => {
         ).data.free,
     )
 
-    let assetHubAgentBalance = await context
-        .ethereum()
-        .getBalance(
-            await context
-                .gateway()
-                .agentOf(utils.paraIdToAgentId(bridgeHub.registry, env.assetHubParaId)),
-        )
-
-    const bridgeHubAgentId = u8aToHex(blake2AsU8a("0x00", 256))
-    let bridgeHubAgentBalance = await context
-        .ethereum()
-        .getBalance(await context.gateway().agentOf(bridgeHubAgentId))
-
     let sovereigns: status.Sovereign[] = [
         {
             name: "AssetHub",
@@ -357,68 +184,122 @@ const fetchBalances = async (context: Context, env: Environment) => {
             balance: assetHubSovereignBalance,
             type: "substrate",
         },
-        {
-            name: "AssetHubAgent",
-            account: utils.paraIdToAgentId(bridgeHub.registry, env.assetHubParaId),
-            balance: assetHubAgentBalance,
-            type: "ethereum",
-        },
-        {
-            name: "BridgeHubAgent",
-            account: u8aToHex(blake2AsU8a("0x00", 256)),
-            balance: bridgeHubAgentBalance,
-            type: "ethereum",
-        },
     ]
     return { relayers, sovereigns }
 }
 
-export const fetchIndexerStatus = async (context: Context, env: Environment) => {
-    const [assetHub, bridgeHub, ethereum] = await Promise.all([
-        context.assetHub(),
-        context.bridgeHub(),
-        context.ethereum(),
-    ])
-
+export const fetchIndexerStatus = async (
+    context: Context<EthersProviderTypes>,
+    env: Environment,
+) => {
     let indexerInfos: status.IndexerServiceStatusInfo[] = []
-    const latestBlockOfAH = (await assetHub.query.system.number()).toPrimitive() as number
-    const latestBlockOfBH = (await bridgeHub.query.system.number()).toPrimitive() as number
-    const latestBlockOfEth = await ethereum.getBlockNumber()
-
-    const chains = await subsquidV2.fetchLatestBlocksSynced(
-        context.graphqlApiUrl(),
-        env.name == "polkadot_mainnet",
-    )
-    for (let chain of chains) {
-        let info: status.IndexerServiceStatusInfo = {
-            chain: chain.name,
-            latency: 0,
-        }
-        if (chain.name == "assethub") {
-            info.latency = latestBlockOfAH - chain.height
-        } else if (chain.name == "bridgehub") {
-            info.latency = latestBlockOfBH - chain.height
-        } else if (chain.name == "ethereum") {
-            info.latency = latestBlockOfEth - chain.height
-        }
-        indexerInfos.push(info)
-    }
-    let monitorChains = monitorParams[env.name].TO_MONITOR_PARACHAINS
+    // Allow runtime override of monitored parachains without changing defaults.
+    let monitorChains = monitorParams[env.name].TO_MONITOR_CHAINS
     if (monitorChains && monitorChains.length) {
-        for (const paraid of monitorChains) {
-            let chain = await context.parachain(paraid)
-            let latestBlock = (await chain.query.system.number()).toPrimitive() as number
-            let status = await subsquidV2.fetchSyncStatusOfParachain(
-                context.graphqlApiUrl(),
-                paraid,
-            )
-            let info: status.IndexerServiceStatusInfo = {
-                chain: status.name,
-                paraid: status.paraid,
-                latency: latestBlock - status.height,
+        for (const chain of monitorChains) {
+            try {
+                let latestBlock = 0
+                if (chain.type === "substrate") {
+                    if (chain.id.toString().startsWith("kusama")) {
+                        latestBlock = (
+                            await (
+                                await context.kusamaParachain(Number(chain.id.split("_")[1]))
+                            ).query.system.number()
+                        ).toPrimitive() as number
+                    } else {
+                        latestBlock = (
+                            await (await context.parachain(Number(chain.id))).query.system.number()
+                        ).toPrimitive() as number
+                    }
+                } else if (chain.type === "ethereum") {
+                    latestBlock = await context.ethChain(Number(chain.id)).getBlockNumber()
+                }
+                const status = await subsquidV2.fetchLatestBlockFromIndexer(
+                    context.graphqlApiUrl(),
+                    chain.id.toString(),
+                )
+                const info: status.IndexerServiceStatusInfo = {
+                    chain: status.name,
+                    id: status.paraid,
+                    latency: latestBlock - status.height,
+                }
+                indexerInfos.push(info)
+            } catch (e) {
+                console.error(`Failed to fetch indexer status for chain ${chain.id}:`, e)
             }
-            indexerInfos.push(info)
         }
     }
     return indexerInfos
+}
+
+const fetchLiquidityPools = async (
+    context: Context<EthersProviderTypes>,
+    env: Environment,
+): Promise<LiquidityPoolMetrics[]> => {
+    const assetHub = await context.assetHub()
+    const assetConversion = (assetHub.query as any).assetConversion
+    const poolQuery = assetConversion?.pools
+    if (typeof poolQuery !== "function") {
+        return []
+    }
+
+    const etherLocation = xcmBuilder.erc20Location(env.ethChainId, assetsV2.ETHER_TOKEN_ADDRESS)
+    const dotEthPoolKey = [assetsV2.DOT_LOCATION, etherLocation]
+    const ethDotPoolKey = [etherLocation, assetsV2.DOT_LOCATION]
+    let selectedPoolKey = dotEthPoolKey
+
+    let poolInfo: any
+    try {
+        poolInfo = await poolQuery(dotEthPoolKey)
+    } catch {
+        try {
+            poolInfo = await poolQuery(ethDotPoolKey)
+            selectedPoolKey = ethDotPoolKey
+        } catch (error) {
+            console.error("Failed to query Asset Hub ETH-DOT pool:", error)
+            return []
+        }
+    }
+
+    const poolAccount = deriveAssetConversionPoolAccount(assetHub, selectedPoolKey)
+
+    const dotAccount = (await assetHub.query.system.account(poolAccount)).toPrimitive() as any
+    const etherAssetAccount = (
+        await (assetHub.query as any).foreignAssets.account(etherLocation, poolAccount)
+    ).toPrimitive() as any
+
+    const dotBalance = BigInt(dotAccount?.data?.free ?? 0)
+    const etherBalance = BigInt(etherAssetAccount?.balance ?? 0)
+
+    return [
+        {
+            name: "EthDot",
+            chain: "AssetHub",
+            dotBalance,
+            etherBalance,
+        },
+    ]
+}
+
+const deriveAssetConversionPoolAccount = (
+    assetHub: Awaited<ReturnType<Context<EthersProviderTypes>["assetHub"]>>,
+    poolKey: any[],
+): string | undefined => {
+    try {
+        const poolId = assetHub.registry.createType(
+            "(StagingXcmV5Location,StagingXcmV5Location)",
+            poolKey,
+        )
+        const encodedSeed = assetHub.registry
+            .createType("(PalletId,(StagingXcmV5Location,StagingXcmV5Location))", [
+                assetHub.consts.assetConversion.palletId,
+                poolId,
+            ])
+            .toU8a()
+
+        return assetHub.registry.createType("AccountId32", blake2AsU8a(encodedSeed, 256)).toString()
+    } catch (error) {
+        console.error("Failed to derive Asset Hub pool account:", error)
+        return undefined
+    }
 }

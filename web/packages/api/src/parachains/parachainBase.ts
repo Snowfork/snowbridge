@@ -2,7 +2,10 @@ import { ApiPromise } from "@polkadot/api"
 import { Asset, AssetMap, ChainProperties, PNAMap, SubstrateAccount } from "@snowbridge/base-types"
 import { Result } from "@polkadot/types"
 import { XcmDryRunApiError, XcmDryRunEffects } from "@polkadot/types/interfaces"
-import { DOT_LOCATION, erc20Location, HERE_LOCATION, parachainLocation } from "../xcmBuilder"
+import { Codec } from "@polkadot/types/types"
+import { BN } from "@polkadot/util"
+import { erc20Location, HERE_LOCATION, parachainLocation } from "../xcmBuilder"
+import { DOT_LOCATION } from "../assets_v2"
 
 export abstract class ParachainBase {
     provider: ApiPromise
@@ -61,22 +64,45 @@ export abstract class ParachainBase {
 
     async getNativeAccount(account: string): Promise<SubstrateAccount> {
         const accountData = (await this.provider.query.system.account(account)).toPrimitive() as any
+        const free = BigInt(accountData.data.free)
+        const frozen = BigInt(accountData.data.frozen)
+        const reserved = BigInt(accountData.data.reserved)
+        const transferable = free - frozen
+        const total = free + reserved
         return {
             nonce: BigInt(accountData.nonce),
             consumers: BigInt(accountData.consumers),
             providers: BigInt(accountData.providers),
             sufficients: BigInt(accountData.sufficients),
             data: {
-                free: BigInt(accountData.data.free),
-                reserved: BigInt(accountData.data.reserved),
-                frozen: BigInt(accountData.data.frozen),
+                free,
+                reserved,
+                frozen,
+                transferable,
+                total,
             },
         }
     }
 
-    async getNativeBalance(account: string): Promise<bigint> {
+    async getNativeBalance(account: string, transferable?: boolean): Promise<bigint> {
         const acc = await this.getNativeAccount(account)
+        if (transferable === true) {
+            return acc.data.transferable
+        }
         return acc.data.free
+    }
+
+    async accountNonce(account: string): Promise<number> {
+        const accountNextId = await this.provider.rpc.system.accountNextIndex(account)
+        return accountNextId.toNumber()
+    }
+
+    async getDeliveryFeeFromStorage(feeKeyHex: string): Promise<bigint> {
+        const feeStorageItem = await this.provider.rpc.state.getStorage(feeKeyHex)
+        if (!feeStorageItem) return 0n
+
+        const leFee = new BN((feeStorageItem as Codec).toHex().replace("0x", ""), "hex", "le")
+        return leFee.eqn(0) ? 0n : BigInt(leFee.toString())
     }
 
     getNativeBalanceLocation(relativeTo: "here" | "sibling"): any {
@@ -86,6 +112,13 @@ export abstract class ParachainBase {
             case "here":
                 return HERE_LOCATION
         }
+    }
+
+    // Upper bound for the max_weight argument passed to pallet_xcm::execute on
+    // this chain. Used to cap the value queried from xcmPaymentApi and as the
+    // default when the query is unavailable or returns 0 for a field.
+    getMaxWeight(): { refTime: bigint; proofSize: bigint } {
+        return { refTime: 30_000_000_000n, proofSize: 1_000_000n }
     }
 
     getTokenBalance(
@@ -287,4 +320,10 @@ export abstract class ParachainBase {
         asset2: any,
         exactAsset2Balance: bigint,
     ): Promise<bigint>
+    getAssetHubPoolReserves(
+        _asset1: any,
+        _asset2: any,
+    ): Promise<{ reserve1: bigint; reserve2: bigint } | null> {
+        return Promise.resolve(null)
+    }
 }

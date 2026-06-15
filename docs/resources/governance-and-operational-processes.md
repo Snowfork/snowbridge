@@ -28,51 +28,7 @@ We expect to need non-emergency governance calls once every few months as we imp
 
 ## Emergency Situations
 
-For emergency situations, there are two possible scenarios:
-
-### 1. Emergency Pause
-
-In case of an emergency, a call to halt the bridge needs to be executed as soon as possible. Deploying the fix and resuming the bridge can happen afterwards with less time pressure and sensitivity, similar to a normal upgrade.
-
-The processes to do so is:
-
-{% code overflow="wrap" %}
-```
-git clone https://github.com/Snowfork/snowbridge.git
-cd snowbridge/control
-
-cargo run --bin snowbridge-preimage -- \
-    --bridge-hub-api wss://polkadot-bridge-hub-rpc.polkadot.io \
-    --asset-hub-api wss://polkadot-asset-hub-rpc.polkadot.io \
-    halt-bridge \
-    --all
-```
-{% endcode %}
-
-The command will product a preimage hash, to be submitted to the **Whitelisted Caller Track**:
-
-```
-Preimage Hash: 0xc2569b432fba3b01df7da3c90bb546158480067064d4d5bc88c351fcba4355dd
-Preimage Size: 129
-0x1a0408630003000100a90f03242f00000602b28d0b9859460c530101200006028217b42..
-```
-
-The halt-bridge command has the following flags:
-
-* `--all` Halt all the bridge components at once.
-* `--ethereum-client` Halt the Ethereum client, blocking consensus updates.
-* `--inbound-queue` Halt the Inbound Queue, blocking messages from BridgeHub to AssetHub.
-* `--outbound-queue` Halt the Outbound Queue, blocking messages from AssetHub to BridgeHub.
-* `--gateway` Halt messages from Ethereum to AssetHub.
-* `--assethub-max-fee` Set the AssetHub to Ethereum to the maximum fee, so that users effectively cannot send messages from AssetHub to Ethereum.
-
-Based on the nature of the emergency, the bridge might need to be halted in its entirety, or partially.
-
-In case of emergency where there is uncertainty of the cause of a problem, it is best to block the bridge in its entirety using `halt-bridge --all`. To block both transfer directions at the earliest point possible, use `halt-bridge --gateway --assethub-max-fee`.
-
-### 2. Emergency Upgrade
-
-Although unlikely, there may be scenarios where the emergency can only be resolved through an upgrade rather than just a pause. In this case, the code for the upgrade may be sensitive, and we would want to avoid overly publicising it until the fix has been executed.
+Emergency response (halt-bridge and emergency-upgrade procedures) is documented in [Emergency Procedures](emergency-procedures.md). On-call operators should read that page directly.
 
 ## Fallback governance
 

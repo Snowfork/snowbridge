@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.33;
+pragma solidity 0.8.34;
 
 /// @title An agent contract that acts on behalf of a consensus system on Polkadot
 /// @dev Instances of this contract act as an agents for arbitrary consensus systems on Polkadot.
-///      These consensus systems can include toplevel parachains as as well as nested consensus
+///      These consensus systems can include toplevel parachains as well as nested consensus
 ///      systems within a parachain.
 contract Agent {
     error Unauthorized();

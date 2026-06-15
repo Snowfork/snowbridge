@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-pragma solidity 0.8.33;
+pragma solidity 0.8.34;
 
 import {ScaleCodec} from "./utils/ScaleCodec.sol";
 import {ParaID} from "./v1/Types.sol";
@@ -32,21 +32,6 @@ library SubstrateTypes {
     // solhint-disable-next-line func-name-mixedcase
     function None() internal pure returns (bytes memory) {
         return hex"00";
-    }
-
-    /**
-     * @dev SCALE-encodes `router_primitives::inbound::VersionedMessage` containing payload
-     * `NativeTokensMessage::Create`
-     */
-    // solhint-disable-next-line func-name-mixedcase
-    function RegisterToken(address token, uint128 fee) internal view returns (bytes memory) {
-        return bytes.concat(
-            bytes1(0x00),
-            ScaleCodec.encodeU64(uint64(block.chainid)),
-            bytes1(0x00),
-            SubstrateTypes.H160(token),
-            ScaleCodec.encodeU128(fee)
-        );
     }
 
     /**

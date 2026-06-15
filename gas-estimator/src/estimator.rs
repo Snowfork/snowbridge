@@ -300,9 +300,19 @@ async fn calculate_delivery_fee_in_dot(
     };
 
     #[cfg(any(feature = "paseo", feature = "polkadot"))]
-    let runtime_api_call = bridge_hub_runtime::apis()
-        .xcm_payment_api()
-        .query_delivery_fees(versioned_destination, bridge_hub_xcm);
+    let runtime_api_call = {
+        let dot_asset = BridgeHubLocation {
+            parents: 1,
+            interior: BridgeHubJunctions::Here,
+        };
+        bridge_hub_runtime::apis()
+            .xcm_payment_api()
+            .query_delivery_fees(
+                versioned_destination,
+                bridge_hub_xcm,
+                VersionedAssetId::V5(BridgeHubAssetId(dot_asset)),
+            )
+    };
 
     let fees_result = clients
         .bridge_hub_client

@@ -1,0 +1,37 @@
+{
+  "beacon": {
+    "endpoint": "${BEACON_ENDPOINT}",
+    "spec": {
+      "syncCommitteeSize": 512,
+      "slotsInEpoch": 32,
+      "epochsPerSyncCommitteePeriod": 256,
+      "forkVersions": {
+        "deneb": ${FORK_DENEB},
+        "electra": ${FORK_ELECTRA},
+        "fulu": ${FORK_FULU}
+      }
+    },
+    "datastore": {
+      "location": "/data/beacon-state",
+      "maxEntries": 100
+    }
+  },
+  "http": {
+    "port": 8080,
+    "readTimeout": "30s",
+    "writeTimeout": "60s"
+  },
+  "cache": {
+    "maxProofs": 1000,
+    "proofTTLSeconds": 3600
+  },
+  "persist": {
+    "enabled": true,
+    "saveIntervalHours": 12,
+    "maxEntries": 10
+  },
+  "watch": {
+    "enabled": true,
+    "pollIntervalSeconds": 12
+  }
+}
