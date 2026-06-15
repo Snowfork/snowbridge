@@ -187,14 +187,10 @@ struct CallContractParams {
     uint256 value;
 }
 
-// Payload for CallContracts command. Reverts on first call failure; optional sweep when calls fail.
+// Payload for CallContracts command. Reverts on first call failure.
 struct CallContractsParams {
     // Sub-calls to execute (reverts on first failure)
     CallContractParams[] calls;
-    // Recipient for sweep when calls fail; address(0) = no sweep
-    address sweepRecipient;
-    // Tokens to sweep full balance to sweepRecipient; address(0) = sweep ETH
-    address[] tokensToSweep;
 }
 
 enum Network {
