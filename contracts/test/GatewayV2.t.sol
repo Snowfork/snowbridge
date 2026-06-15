@@ -1082,7 +1082,8 @@ contract GatewayV2Test is Test {
         CallContractParams[] memory params = new CallContractParams[](1);
         params[0] =
             CallContractParams({target: address(0xdead), data: "", value: uint256(0)});
-        bytes memory payload = abi.encode(params);
+        CallContractsParams memory p = CallContractsParams({calls: params});
+        bytes memory payload = abi.encode(p);
 
         CommandV2 memory cmd =
             CommandV2({kind: CommandKind.CallContracts, gas: uint64(200_000), payload: payload});
