@@ -1846,7 +1846,7 @@ export function buildAppendixInstructions(
 export function buildEthereumInstructions(
     beneficiaryLocation: any,
     topic: string,
-    callHex?: string,
+    callHex?: string | string[],
 ) {
     let remoteXcm: any[] = [
         {
@@ -1864,15 +1864,18 @@ export function buildEthereumInstructions(
         },
     ]
     if (callHex) {
-        remoteXcm.push({
-            transact: {
-                originKind: "SovereignAccount",
-                fallbackMaxWeight: null,
-                call: {
-                    encoded: callHex,
+        const calls = Array.isArray(callHex) ? callHex : [callHex]
+        for (const call of calls) {
+            remoteXcm.push({
+                transact: {
+                    originKind: "SovereignAccount",
+                    fallbackMaxWeight: null,
+                    call: {
+                        encoded: call,
+                    },
                 },
-            },
-        })
+            })
+        }
     }
     remoteXcm.push({
         setTopic: topic,

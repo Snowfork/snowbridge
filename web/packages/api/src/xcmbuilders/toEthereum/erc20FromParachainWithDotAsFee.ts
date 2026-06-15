@@ -25,7 +25,7 @@ export function buildTransferXcmFromParachainWithDOTAsFee(
     tokenAmount: bigint,
     fee: DeliveryFee,
     claimerLocation?: any,
-    callHex?: string,
+    callHex?: string | string[],
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     let sourceLocation = accountToLocation(sourceAccount)

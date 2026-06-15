@@ -54,10 +54,10 @@ contract SnowbridgeL1Adaptor {
 
     // Send ERC20 token on L1 to L2, the fee (params.inputAmount - params.outputAmount) should be calculated off-chain
     // following https://docs.across.to/reference/api-reference#get-swap-approval
-    // The call requires pre-funding of the contract with the input tokens.
     function depositToken(DepositParams calldata params, address recipient, bytes32 topic) public {
         require(params.inputToken != address(0), "Input token cannot be zero address");
         checkInputs(params, recipient);
+        IERC20(params.inputToken).safeTransferFrom(msg.sender, address(this), params.inputAmount);
         IERC20(params.inputToken).forceApprove(address(SPOKE_POOL), params.inputAmount);
 
         // Build payload and perform low-level call
@@ -79,14 +79,15 @@ contract SnowbridgeL1Adaptor {
     }
 
     // Send native Ether on L1 to L2. Native ETH is sent with the transaction via msg.value;
-    // The call requires pre-funding of the contract with native Ether.
     function depositNativeEther(DepositParams calldata params, address recipient, bytes32 topic)
         public
+        payable
     {
         require(
             params.inputToken == address(0),
             "Input token must be zero address for native ETH deposits"
         );
+        require(msg.value >= params.inputAmount, "Insufficient native Ether sent");
         checkInputs(params, recipient);
 
         bytes memory payloadNative = _encodeDepositNativePayload(params, recipient);

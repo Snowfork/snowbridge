@@ -98,12 +98,8 @@ contract TestSnowbridgeL1AdaptorNativeEther is Script {
             revert("Unsupported L1 network");
         }
 
-        // Prefund the adaptor with native Ether for the outgoing deposit
-        (bool prefunded,) = l1SnowbridgeAdaptor.call{value: params.inputAmount}("");
-        require(prefunded, "Failed to prefund adaptor with ETH");
-
         SnowbridgeL1Adaptor(l1SnowbridgeAdaptor)
-            .depositNativeEther(params, recipient, keccak256("TestNativeEtherDeposit"));
+            .depositNativeEther{value: params.inputAmount}(params, recipient, keccak256("TestNativeEtherDeposit"));
 
         return;
     }

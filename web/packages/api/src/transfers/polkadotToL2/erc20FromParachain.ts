@@ -3,7 +3,7 @@ import { ISubmittableResult } from "@polkadot/types/types"
 import { isHex, u8aToHex } from "@polkadot/util"
 import { decodeAddress } from "@polkadot/util-crypto"
 import { isRelaychainLocation, isParachainNative } from "../../xcmBuilder"
-import { DOT_LOCATION } from "../../assets_v2"
+import { DOT_LOCATION, ETHER_TOKEN_ADDRESS } from "../../assets_v2"
 import { buildExportXcm } from "../../xcmbuilders/toEthereum/erc20FromAH"
 import {
     buildResultXcmAssetHubERC20TransferFromParachain,
@@ -39,6 +39,7 @@ import {
     mockDeliveryFee,
     queryXcmExecuteWeight,
     signAndSendTransfer,
+    sourceAgentAddress,
     validateTransferFromParachain,
 } from "../../toEthereumSnowbridgeV2"
 
@@ -241,12 +242,46 @@ export class ERC20FromParachain<T extends EthereumProviderTypes> implements Tran
             throw new Error("L2 bridge configuration is missing.")
         }
 
-        let l1ReceiverAddress = l1AdapterAddress
+        const userAgentAddress = await sourceAgentAddress(
+            context,
+            sourceParachainImpl.parachainId,
+            sourceAccountHex,
+        )
+        let l1ReceiverAddress = userAgentAddress
 
         let claimerLocation = options?.claimerLocation
-        let callHex: string | undefined
+        let callHex: string | string[] | undefined
         if (options?.contractCall) {
-            callHex = await buildContractCallHex(context, options.contractCall)
+            if (tokenAddress.toLowerCase() === ETHER_TOKEN_ADDRESS.toLowerCase()) {
+                callHex = await buildContractCallHex(context, options.contractCall)
+            } else {
+                const approveZeroCalldata = context.ethereumProvider.encodeFunctionData(
+                    ["function approve(address spender, uint256 amount) returns (bool)"],
+                    "approve",
+                    [l1AdapterAddress, 0n]
+                )
+                const approveZeroCall: ContractCall = {
+                    target: tokenAddress,
+                    value: 0n,
+                    gas: 100_000n,
+                    calldata: approveZeroCalldata,
+                }
+                const approveAmountCalldata = context.ethereumProvider.encodeFunctionData(
+                    ["function approve(address spender, uint256 amount) returns (bool)"],
+                    "approve",
+                    [l1AdapterAddress, amount]
+                )
+                const approveAmountCall: ContractCall = {
+                    target: tokenAddress,
+                    value: 0n,
+                    gas: 100_000n,
+                    calldata: approveAmountCalldata,
+                }
+                const approveZeroCallHex = await buildContractCallHex(context, approveZeroCall)
+                const approveAmountCallHex = await buildContractCallHex(context, approveAmountCall)
+                const depositCallHex = await buildContractCallHex(context, options.contractCall)
+                callHex = [approveZeroCallHex, approveAmountCallHex, depositCallHex]
+            }
         }
         let xcm: any
         if (!fee.feeLocation) {

@@ -19,7 +19,7 @@ export function buildTransferXcmFromAssetHubWithDOTAsFee(
     asset: Asset,
     tokenAmount: bigint,
     fee: DeliveryFee,
-    callHex?: string,
+    callHex?: string | string[],
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     let sourceLocation = accountToLocation(sourceAccount)

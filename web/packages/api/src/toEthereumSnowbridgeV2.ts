@@ -1804,7 +1804,7 @@ export async function buildL2Call<T extends EthereumProviderTypes>(
         )
         l2Call = {
             target: l1AdapterAddress,
-            value: 0n,
+            value: tokenAmount,
             gas: options?.l2TransferGasLimit || 500_000n,
             calldata,
         }
