@@ -27,10 +27,7 @@ contract AgentExecutor {
     function callContract(address target, bytes memory data, uint256 value) external {
         bool success = Call.safeCall(target, data, value);
         if (!success) {
-            assembly {
-                returndatacopy(0, 0, returndatasize())
-                revert(0, returndatasize())
-            }
+            Call.bubbleRevert();
         }
     }
 
@@ -40,10 +37,7 @@ contract AgentExecutor {
         for (uint256 i; i < len; ++i) {
             bool success = Call.safeCall(params[i].target, params[i].data, params[i].value);
             if (!success) {
-                assembly {
-                    returndatacopy(0, 0, returndatasize())
-                    revert(0, returndatasize())
-                }
+                Call.bubbleRevert();
             }
         }
     }

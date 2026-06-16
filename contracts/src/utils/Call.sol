@@ -33,6 +33,18 @@ library Call {
      * @param target   Address to call
      * @param data Calldata to pass to the call
      */
+    /**
+     * @notice Bubble up the revert reason from the most recent external call
+     * @dev Must be called immediately after the failed call so that returndata is still available
+     */
+    function bubbleRevert() internal pure {
+        /// @solidity memory-safe-assembly
+        assembly {
+            returndatacopy(0, 0, returndatasize())
+            revert(0, returndatasize())
+        }
+    }
+
     function safeCall(address target, bytes memory data, uint256 value) internal returns (bool) {
         bool success;
         assembly {

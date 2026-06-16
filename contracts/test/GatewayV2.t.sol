@@ -759,8 +759,6 @@ contract GatewayV2Test is Test {
             );
     }
 
-
-
     function testCreateAgent() public {
         bytes32 origin = bytes32(uint256(1));
         vm.expectEmit(true, false, false, false);
@@ -1355,7 +1353,7 @@ contract GatewayV2Test is Test {
 
     function testAgentExecutorCallContractBubblesRevertReason() public {
         bytes memory data = abi.encodeWithSignature("revertUnauthorized()");
-        
+
         vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
         executor.callContract(address(helloWorld), data, 0);
     }
