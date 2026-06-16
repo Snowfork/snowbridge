@@ -1376,4 +1376,121 @@ contract GatewayV2Test is Test {
         vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
         executor.callContracts(params);
     }
+
+    function testAgentCallContractsTransferApproveSendSuccess() public {
+        bytes32 topic = keccak256("topic");
+        address recipient = makeAddr("recipient");
+
+        // Set up adapter
+        MockAdapter adapter = new MockAdapter(address(weth), recipient);
+
+        // Fund agent with 1 WETH
+        vm.deal(assetHubAgent, 1 ether);
+        hoax(assetHubAgent);
+        weth.deposit{value: 1 ether}();
+
+        // Check initial balances
+        assertEq(weth.balanceOf(assetHubAgent), 1 ether);
+        assertEq(weth.balanceOf(recipient), 0);
+
+        CallContractParams[] memory params = new CallContractParams[](2);
+        params[0] = CallContractParams({
+            target: address(weth),
+            data: abi.encodeWithSignature("approve(address,uint256)", address(adapter), 1 ether),
+            value: 0
+        });
+        params[1] = CallContractParams({
+            target: address(adapter),
+            data: abi.encodeWithSignature("swapAndSend(uint256)", 1 ether),
+            value: 0
+        });
+
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.InboundMessageDispatched(1, topic, true, relayerRewardAddress);
+
+        hoax(relayer, 1 ether);
+        IGatewayV2(address(gateway))
+            .v2_submit(
+                InboundMessageV2({
+                    origin: Constants.ASSET_HUB_AGENT_ID,
+                    nonce: 1,
+                    topic: topic,
+                    commands: makeCallContractsCommand(params)
+                }),
+                proof,
+                makeMockProof(),
+                relayerRewardAddress
+            );
+
+        // Check final balances
+        assertEq(weth.balanceOf(assetHubAgent), 0);
+        assertEq(weth.balanceOf(recipient), 1 ether);
+    }
+
+    function testAgentCallContractsTransferApproveSendFailureRevertsAll() public {
+        bytes32 topic = keccak256("topic");
+        address recipient = makeAddr("recipient");
+
+        // Set up adapter
+        MockAdapter adapter = new MockAdapter(address(weth), recipient);
+
+        // Fund agent with 1 WETH
+        vm.deal(assetHubAgent, 1 ether);
+        hoax(assetHubAgent);
+        weth.deposit{value: 1 ether}();
+
+        // Check initial balances
+        assertEq(weth.balanceOf(assetHubAgent), 1 ether);
+        assertEq(weth.balanceOf(recipient), 0);
+
+        CallContractParams[] memory params = new CallContractParams[](2);
+        params[0] = CallContractParams({
+            target: address(weth),
+            data: abi.encodeWithSignature("approve(address,uint256)", address(adapter), 1 ether),
+            value: 0
+        });
+        params[1] = CallContractParams({
+            target: address(adapter),
+            data: abi.encodeWithSignature("swapAndSend(uint256)", 2 ether), // fails because agent only has 1 ether
+            value: 0
+        });
+
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.CommandFailed(1, 0); // Gateway reports command failed
+        emit IGatewayV2.InboundMessageDispatched(1, topic, false, relayerRewardAddress);
+
+        hoax(relayer, 1 ether);
+        IGatewayV2(address(gateway))
+            .v2_submit(
+                InboundMessageV2({
+                    origin: Constants.ASSET_HUB_AGENT_ID,
+                    nonce: 1,
+                    topic: topic,
+                    commands: makeCallContractsCommand(params)
+                }),
+                proof,
+                makeMockProof(),
+                relayerRewardAddress
+            );
+
+        // Check final balances are unchanged
+        assertEq(weth.balanceOf(assetHubAgent), 1 ether);
+        assertEq(weth.balanceOf(recipient), 0);
+        // Approval should be reverted back to 0
+        assertEq(weth.allowance(assetHubAgent, address(adapter)), 0);
+    }
+}
+
+contract MockAdapter {
+    address public immutable token;
+    address public immutable recipient;
+
+    constructor(address _token, address _recipient) {
+        token = _token;
+        recipient = _recipient;
+    }
+
+    function swapAndSend(uint256 amount) external {
+        require(IERC20(token).transferFrom(msg.sender, recipient, amount), "transfer failed");
+    }
 }
