@@ -1352,4 +1352,28 @@ contract GatewayV2Test is Test {
         // message should be recorded as dispatched
         assertTrue(gw.v2_isDispatched(msgv.nonce));
     }
+
+    function testAgentExecutorCallContractBubblesRevertReason() public {
+        bytes memory data = abi.encodeWithSignature("revertUnauthorized()");
+        
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
+        executor.callContract(address(helloWorld), data, 0);
+    }
+
+    function testAgentExecutorCallContractsBubblesRevertReason() public {
+        CallContractParams[] memory params = new CallContractParams[](2);
+        params[0] = CallContractParams({
+            target: address(helloWorld),
+            data: abi.encodeWithSignature("sayHello(string)", "Success"),
+            value: 0
+        });
+        params[1] = CallContractParams({
+            target: address(helloWorld),
+            data: abi.encodeWithSignature("revertUnauthorized()"),
+            value: 0
+        });
+
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
+        executor.callContracts(params);
+    }
 }
