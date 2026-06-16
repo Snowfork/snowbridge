@@ -48,10 +48,18 @@ The [BeefyClient.sol](src/BeefyClient.sol) contract implements a light client fo
 
 ## Testing
 
-Run all tests:
+### Unit Tests
+Run standard unit tests (these are fully offline and fast):
 
 ```bash
 forge test
+```
+
+### Integration & Fork Tests
+These tests select Ethereum mainnet forks and require an internet connection to run. They check contract upgrades and verify real production proofs against live historical state:
+
+```bash
+FOUNDRY_PROFILE=integration forge test
 ```
 
 Run coverage reports:

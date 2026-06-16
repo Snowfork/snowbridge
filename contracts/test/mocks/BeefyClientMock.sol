@@ -41,6 +41,10 @@ contract BeefyClientMock is BeefyClient {
         latestBeefyBlock = _latestBeefyBlock;
     }
 
+    function setLatestMMRRoot(bytes32 _latestMMRRoot) external {
+        latestMMRRoot = _latestMMRRoot;
+    }
+
     function initialize_public(
         uint64 _initialBeefyBlock,
         ValidatorSet calldata _initialValidatorSet,
