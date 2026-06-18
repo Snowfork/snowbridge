@@ -170,6 +170,119 @@ export function buildResultXcmAssetHubERC20TransferFromParachain(
     })
 }
 
+/** V2 XCM that matches the actual forwarded XCM AssetHub receives after the
+ *  source chain's InitiateTransfer processing. Uses payfees + InitiateTransfer
+ *  + AliasOrigin, matching what the Polkadot SDK executor generates.
+ *  Only for parachains with supportsV2 enabled. */
+export function buildResultXcmAssetHubERC20TransferFromParachainV2(
+    registry: Registry,
+    ethChainId: number,
+    sourceAccount: string,
+    beneficiary: string,
+    tokenAddress: string,
+    topic: string,
+    transferAmount: bigint,
+    totalFee: bigint,
+    destinationFee: bigint,
+    sourceParachainId: number,
+    returnToSenderFee: bigint,
+    feeAssetId: any,
+    feeAssetIdReanchored: any,
+) {
+    let { hexAddress, kind } = resolveBeneficiary(sourceAccount)
+    let sourceAccountLocation
+    switch (kind) {
+        case 1:
+            sourceAccountLocation = { accountId32: { network: "Polkadot", id: hexAddress } }
+            break
+        case 2:
+            sourceAccountLocation = { accountKey20: { key: hexAddress } }
+            break
+        default:
+            throw Error(`Could not parse source address ${sourceAccount}`)
+    }
+
+    let beneficiaryLocation = accountToLocation(beneficiary)
+    let tokenLocation = erc20Location(ethChainId, tokenAddress)
+    let bridgeDest = bridgeLocation(ethChainId)
+
+    let appendixInstructions = [
+        { refundSurplus: null },
+        {
+            depositAsset: {
+                assets: { wild: { allCounted: 3 } },
+                beneficiary: {
+                    parents: 1,
+                    interior: {
+                        x2: [{ parachain: sourceParachainId }, sourceAccountLocation],
+                    },
+                },
+            },
+        },
+    ]
+
+    let ethereumInstructions = [
+        {
+            depositAsset: {
+                assets: { wild: { allCounted: 3 } },
+                beneficiary: {
+                    parents: 0,
+                    interior: { x1: [beneficiaryLocation] },
+                },
+            },
+        },
+        { setTopic: topic },
+    ]
+
+    return registry.createType("XcmVersionedXcm", {
+        v5: [
+            {
+                withdrawAsset: [{ id: feeAssetIdReanchored, fun: { Fungible: totalFee } }],
+            },
+            {
+                payfees: { asset: { id: feeAssetIdReanchored, fun: { Fungible: totalFee } } },
+            },
+            {
+                withdrawAsset: [{ id: bridgeDest, fun: { Fungible: destinationFee } }],
+            },
+            {
+                withdrawAsset: [{ id: tokenLocation, fun: { Fungible: transferAmount } }],
+            },
+            {
+                aliasOrigin: {
+                    parents: 1,
+                    interior: {
+                        x2: [{ parachain: sourceParachainId }, sourceAccountLocation],
+                    },
+                },
+            },
+            {
+                setAppendix: appendixInstructions,
+            },
+            {
+                initiateTransfer: {
+                    destination: bridgeDest,
+                    remote_fees: {
+                        reserveWithdraw: {
+                            definite: [{ id: bridgeDest, fun: { Fungible: destinationFee } }],
+                        },
+                    },
+                    preserveOrigin: true,
+                    assets: [
+                        {
+                            reserveWithdraw: {
+                                definite: [{ id: tokenLocation, fun: { Fungible: transferAmount } }],
+                            },
+                        },
+                    ],
+                    remoteXcm: ethereumInstructions,
+                },
+            },
+            { setTopic: topic },
+        ],
+    })
+}
+
 export function buildTransferXcmFromParachain(
     registry: Registry,
     envName: string,
