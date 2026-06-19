@@ -32,7 +32,7 @@ contract AgentExecutor {
     }
 
     // Call multiple contracts with Ether values; reverts on the first failure
-    function callContracts(CallContractParams[] calldata params) external {
+    function multiCall(CallContractParams[] calldata params) external {
         uint256 len = params.length;
         for (uint256 i; i < len; ++i) {
             bool success = Call.safeCall(params[i].target, params[i].data, params[i].value);

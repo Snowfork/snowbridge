@@ -25,7 +25,7 @@ import {
     RegisterForeignTokenParams,
     MintForeignTokenParams,
     CallContractParams,
-    CallContractsParams,
+    MultiCallParams,
     Payload,
     Asset,
     makeNativeAsset,
@@ -298,32 +298,32 @@ contract GatewayV2Test is Test {
         return commands;
     }
 
-    function makeCallContractsCommand(CallContractParams[] memory params)
+    function makeMultiCallCommand(CallContractParams[] memory params)
         public
         pure
         returns (CommandV2[] memory)
     {
-        CallContractsParams memory p = CallContractsParams({
+        MultiCallParams memory p = MultiCallParams({
             calls: params
         });
         bytes memory payload = abi.encode(p);
         CommandV2[] memory commands = new CommandV2[](1);
         commands[0] =
-            CommandV2({kind: CommandKind.CallContracts, gas: 500_000, payload: payload});
+            CommandV2({kind: CommandKind.MultiCall, gas: 500_000, payload: payload});
         return commands;
     }
 
-    function makeCallContractsCommandWithInsufficientGas(CallContractParams[] memory params)
+    function makeMultiCallCommandWithInsufficientGas(CallContractParams[] memory params)
         public
         pure
         returns (CommandV2[] memory)
     {
-        CallContractsParams memory p = CallContractsParams({
+        MultiCallParams memory p = MultiCallParams({
             calls: params
         });
         bytes memory payload = abi.encode(p);
         CommandV2[] memory commands = new CommandV2[](1);
-        commands[0] = CommandV2({kind: CommandKind.CallContracts, gas: 1, payload: payload});
+        commands[0] = CommandV2({kind: CommandKind.MultiCall, gas: 1, payload: payload});
         return commands;
     }
 
@@ -625,7 +625,7 @@ contract GatewayV2Test is Test {
             );
     }
 
-    function testAgentCallContractsSuccess() public {
+    function testAgentMultiCallSuccess() public {
         bytes32 topic = keccak256("topic");
 
         CallContractParams[] memory params = new CallContractParams[](2);
@@ -651,7 +651,7 @@ contract GatewayV2Test is Test {
                     origin: Constants.ASSET_HUB_AGENT_ID,
                     nonce: 1,
                     topic: topic,
-                    commands: makeCallContractsCommand(params)
+                    commands: makeMultiCallCommand(params)
                 }),
                 proof,
                 makeMockProof(),
@@ -659,7 +659,7 @@ contract GatewayV2Test is Test {
             );
     }
 
-    function testAgentCallContractsRevertedOnFirstFailure() public {
+    function testAgentMultiCallRevertedOnFirstFailure() public {
         bytes32 topic = keccak256("topic");
 
         CallContractParams[] memory params = new CallContractParams[](2);
@@ -686,7 +686,7 @@ contract GatewayV2Test is Test {
                     origin: Constants.ASSET_HUB_AGENT_ID,
                     nonce: 1,
                     topic: topic,
-                    commands: makeCallContractsCommand(params)
+                    commands: makeMultiCallCommand(params)
                 }),
                 proof,
                 makeMockProof(),
@@ -694,7 +694,7 @@ contract GatewayV2Test is Test {
             );
     }
 
-    function testAgentCallContractsRevertedOnSecondFailure() public {
+    function testAgentMultiCallRevertedOnSecondFailure() public {
         bytes32 topic = keccak256("topic");
 
         CallContractParams[] memory params = new CallContractParams[](2);
@@ -721,7 +721,7 @@ contract GatewayV2Test is Test {
                     origin: Constants.ASSET_HUB_AGENT_ID,
                     nonce: 1,
                     topic: topic,
-                    commands: makeCallContractsCommand(params)
+                    commands: makeMultiCallCommand(params)
                 }),
                 proof,
                 makeMockProof(),
@@ -729,7 +729,7 @@ contract GatewayV2Test is Test {
             );
     }
 
-    function testAgentCallContractsRevertedForInsufficientGas() public {
+    function testAgentMultiCallRevertedForInsufficientGas() public {
         bytes32 topic = keccak256("topic");
 
         CallContractParams[] memory params = new CallContractParams[](1);
@@ -751,7 +751,7 @@ contract GatewayV2Test is Test {
                     origin: Constants.ASSET_HUB_AGENT_ID,
                     nonce: 1,
                     topic: topic,
-                    commands: makeCallContractsCommandWithInsufficientGas(params)
+                    commands: makeMultiCallCommandWithInsufficientGas(params)
                 }),
                 proof,
                 makeMockProof(),
@@ -1076,18 +1076,18 @@ contract GatewayV2Test is Test {
         assertTrue(!ok, "callContract with missing agent should return false");
     }
 
-    function testCallContractsAgentDoesNotExistReturnsFalse() public {
+    function testMultiCallAgentDoesNotExistReturnsFalse() public {
         CallContractParams[] memory params = new CallContractParams[](1);
         params[0] =
             CallContractParams({target: address(0xdead), data: "", value: uint256(0)});
-        CallContractsParams memory p = CallContractsParams({calls: params});
+        MultiCallParams memory p = MultiCallParams({calls: params});
         bytes memory payload = abi.encode(p);
 
         CommandV2 memory cmd =
-            CommandV2({kind: CommandKind.CallContracts, gas: uint64(200_000), payload: payload});
+            CommandV2({kind: CommandKind.MultiCall, gas: uint64(200_000), payload: payload});
 
         bool ok = gatewayLogic.callDispatch(cmd, bytes32(uint256(0x9999)));
-        assertTrue(!ok, "callContracts with missing agent should return false");
+        assertTrue(!ok, "multiCall with missing agent should return false");
     }
 
     function testInsufficientGasReverts() public {
@@ -1358,7 +1358,7 @@ contract GatewayV2Test is Test {
         executor.callContract(address(helloWorld), data, 0);
     }
 
-    function testAgentExecutorCallContractsBubblesRevertReason() public {
+    function testAgentExecutorMultiCallBubblesRevertReason() public {
         CallContractParams[] memory params = new CallContractParams[](2);
         params[0] = CallContractParams({
             target: address(helloWorld),
@@ -1372,10 +1372,10 @@ contract GatewayV2Test is Test {
         });
 
         vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
-        executor.callContracts(params);
+        executor.multiCall(params);
     }
 
-    function testAgentCallContractsTransferApproveSendSuccess() public {
+    function testAgentMultiCallTransferApproveSendSuccess() public {
         bytes32 topic = keccak256("topic");
         address recipient = makeAddr("recipient");
 
@@ -1413,7 +1413,7 @@ contract GatewayV2Test is Test {
                     origin: Constants.ASSET_HUB_AGENT_ID,
                     nonce: 1,
                     topic: topic,
-                    commands: makeCallContractsCommand(params)
+                    commands: makeMultiCallCommand(params)
                 }),
                 proof,
                 makeMockProof(),
@@ -1425,7 +1425,7 @@ contract GatewayV2Test is Test {
         assertEq(weth.balanceOf(recipient), 1 ether);
     }
 
-    function testAgentCallContractsTransferApproveSendFailureRevertsAll() public {
+    function testAgentMultiCallTransferApproveSendFailureRevertsAll() public {
         bytes32 topic = keccak256("topic");
         address recipient = makeAddr("recipient");
 
@@ -1464,7 +1464,7 @@ contract GatewayV2Test is Test {
                     origin: Constants.ASSET_HUB_AGENT_ID,
                     nonce: 1,
                     topic: topic,
-                    commands: makeCallContractsCommand(params)
+                    commands: makeMultiCallCommand(params)
                 }),
                 proof,
                 makeMockProof(),
