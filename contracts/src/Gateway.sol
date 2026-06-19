@@ -514,6 +514,8 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
             HandlersV2.mintForeignToken(command.payload);
         } else if (command.kind == CommandKind.CallContract) {
             HandlersV2.callContract(origin, AGENT_EXECUTOR, command.payload);
+        } else if (command.kind == CommandKind.MultiCall) {
+            HandlersV2.multiCall(origin, AGENT_EXECUTOR, command.payload);
         } else {
             revert IGatewayV2.InvalidCommand();
         }

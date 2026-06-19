@@ -36,6 +36,8 @@ library CommandKind {
     uint8 constant MintForeignToken = 4;
     // Call an arbitrary solidity contract
     uint8 constant CallContract = 5;
+    // Call multiple arbitrary solidity contracts
+    uint8 constant MultiCall = 6;
 }
 
 // Payload for outbound messages destined for Polkadot
@@ -183,6 +185,12 @@ struct CallContractParams {
     bytes data;
     // Ether value
     uint256 value;
+}
+
+// Payload for MultiCall command. Reverts on first call failure.
+struct MultiCallParams {
+    // Sub-calls to execute (reverts on first failure)
+    CallContractParams[] calls;
 }
 
 enum Network {

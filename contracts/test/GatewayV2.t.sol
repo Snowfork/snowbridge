@@ -25,6 +25,7 @@ import {
     RegisterForeignTokenParams,
     MintForeignTokenParams,
     CallContractParams,
+    MultiCallParams,
     Payload,
     Asset,
     makeNativeAsset,
@@ -294,6 +295,35 @@ contract GatewayV2Test is Test {
 
         CommandV2[] memory commands = new CommandV2[](1);
         commands[0] = CommandV2({kind: CommandKind.CallContract, gas: 1, payload: payload});
+        return commands;
+    }
+
+    function makeMultiCallCommand(CallContractParams[] memory params)
+        public
+        pure
+        returns (CommandV2[] memory)
+    {
+        MultiCallParams memory p = MultiCallParams({
+            calls: params
+        });
+        bytes memory payload = abi.encode(p);
+        CommandV2[] memory commands = new CommandV2[](1);
+        commands[0] =
+            CommandV2({kind: CommandKind.MultiCall, gas: 500_000, payload: payload});
+        return commands;
+    }
+
+    function makeMultiCallCommandWithInsufficientGas(CallContractParams[] memory params)
+        public
+        pure
+        returns (CommandV2[] memory)
+    {
+        MultiCallParams memory p = MultiCallParams({
+            calls: params
+        });
+        bytes memory payload = abi.encode(p);
+        CommandV2[] memory commands = new CommandV2[](1);
+        commands[0] = CommandV2({kind: CommandKind.MultiCall, gas: 1, payload: payload});
         return commands;
     }
 
@@ -588,6 +618,140 @@ contract GatewayV2Test is Test {
                     nonce: 1,
                     topic: topic,
                     commands: makeCallContractCommand(0.1 ether)
+                }),
+                proof,
+                makeMockProof(),
+                relayerRewardAddress
+            );
+    }
+
+    function testAgentMultiCallSuccess() public {
+        bytes32 topic = keccak256("topic");
+
+        CallContractParams[] memory params = new CallContractParams[](2);
+        params[0] = CallContractParams({
+            target: address(helloWorld),
+            data: abi.encodeWithSignature("sayHello(string)", "First"),
+            value: 0.05 ether
+        });
+        params[1] = CallContractParams({
+            target: address(helloWorld),
+            data: abi.encodeWithSignature("sayHello(string)", "Second"),
+            value: 0.05 ether
+        });
+
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.InboundMessageDispatched(1, topic, true, relayerRewardAddress);
+
+        vm.deal(assetHubAgent, 1 ether);
+        hoax(relayer, 1 ether);
+        IGatewayV2(address(gateway))
+            .v2_submit(
+                InboundMessageV2({
+                    origin: Constants.ASSET_HUB_AGENT_ID,
+                    nonce: 1,
+                    topic: topic,
+                    commands: makeMultiCallCommand(params)
+                }),
+                proof,
+                makeMockProof(),
+                relayerRewardAddress
+            );
+    }
+
+    function testAgentMultiCallRevertedOnFirstFailure() public {
+        bytes32 topic = keccak256("topic");
+
+        CallContractParams[] memory params = new CallContractParams[](2);
+        params[0] = CallContractParams({
+            target: address(helloWorld),
+            data: abi.encodeWithSignature("revertUnauthorized()"),
+            value: 0
+        });
+        params[1] = CallContractParams({
+            target: address(helloWorld),
+            data: abi.encodeWithSignature("sayHello(string)", "Second"),
+            value: 0
+        });
+
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.CommandFailed(1, 0);
+        emit IGatewayV2.InboundMessageDispatched(1, topic, false, relayerRewardAddress);
+
+        vm.deal(assetHubAgent, 1 ether);
+        hoax(relayer, 1 ether);
+        IGatewayV2(address(gateway))
+            .v2_submit(
+                InboundMessageV2({
+                    origin: Constants.ASSET_HUB_AGENT_ID,
+                    nonce: 1,
+                    topic: topic,
+                    commands: makeMultiCallCommand(params)
+                }),
+                proof,
+                makeMockProof(),
+                relayerRewardAddress
+            );
+    }
+
+    function testAgentMultiCallRevertedOnSecondFailure() public {
+        bytes32 topic = keccak256("topic");
+
+        CallContractParams[] memory params = new CallContractParams[](2);
+        params[0] = CallContractParams({
+            target: address(helloWorld),
+            data: abi.encodeWithSignature("sayHello(string)", "First"),
+            value: 0
+        });
+        params[1] = CallContractParams({
+            target: address(helloWorld),
+            data: abi.encodeWithSignature("revertUnauthorized()"),
+            value: 0
+        });
+
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.CommandFailed(1, 0);
+        emit IGatewayV2.InboundMessageDispatched(1, topic, false, relayerRewardAddress);
+
+        vm.deal(assetHubAgent, 1 ether);
+        hoax(relayer, 1 ether);
+        IGatewayV2(address(gateway))
+            .v2_submit(
+                InboundMessageV2({
+                    origin: Constants.ASSET_HUB_AGENT_ID,
+                    nonce: 1,
+                    topic: topic,
+                    commands: makeMultiCallCommand(params)
+                }),
+                proof,
+                makeMockProof(),
+                relayerRewardAddress
+            );
+    }
+
+    function testAgentMultiCallRevertedForInsufficientGas() public {
+        bytes32 topic = keccak256("topic");
+
+        CallContractParams[] memory params = new CallContractParams[](1);
+        params[0] = CallContractParams({
+            target: address(helloWorld),
+            data: abi.encodeWithSignature("sayHello(string)", "World"),
+            value: 0.1 ether
+        });
+
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.CommandFailed(1, 0);
+        emit IGatewayV2.InboundMessageDispatched(1, topic, false, relayerRewardAddress);
+
+        vm.deal(assetHubAgent, 1 ether);
+        hoax(relayer, 1 ether);
+        IGatewayV2(address(gateway))
+            .v2_submit(
+                InboundMessageV2({
+                    origin: Constants.ASSET_HUB_AGENT_ID,
+                    nonce: 1,
+                    topic: topic,
+                    commands: makeMultiCallCommandWithInsufficientGas(params)
                 }),
                 proof,
                 makeMockProof(),
@@ -912,6 +1076,20 @@ contract GatewayV2Test is Test {
         assertTrue(!ok, "callContract with missing agent should return false");
     }
 
+    function testMultiCallAgentDoesNotExistReturnsFalse() public {
+        CallContractParams[] memory params = new CallContractParams[](1);
+        params[0] =
+            CallContractParams({target: address(0xdead), data: "", value: uint256(0)});
+        MultiCallParams memory p = MultiCallParams({calls: params});
+        bytes memory payload = abi.encode(p);
+
+        CommandV2 memory cmd =
+            CommandV2({kind: CommandKind.MultiCall, gas: uint64(200_000), payload: payload});
+
+        bool ok = gatewayLogic.callDispatch(cmd, bytes32(uint256(0x9999)));
+        assertTrue(!ok, "multiCall with missing agent should return false");
+    }
+
     function testInsufficientGasReverts() public {
         bytes memory payload = "";
         // Use an extremely large gas value to trigger InsufficientGasLimit revert in _dispatchCommand
@@ -1171,5 +1349,146 @@ contract GatewayV2Test is Test {
 
         // message should be recorded as dispatched
         assertTrue(gw.v2_isDispatched(msgv.nonce));
+    }
+
+    function testAgentExecutorCallContractBubblesRevertReason() public {
+        bytes memory data = abi.encodeWithSignature("revertUnauthorized()");
+
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
+        executor.callContract(address(helloWorld), data, 0);
+    }
+
+    function testAgentExecutorMultiCallBubblesRevertReason() public {
+        CallContractParams[] memory params = new CallContractParams[](2);
+        params[0] = CallContractParams({
+            target: address(helloWorld),
+            data: abi.encodeWithSignature("sayHello(string)", "Success"),
+            value: 0
+        });
+        params[1] = CallContractParams({
+            target: address(helloWorld),
+            data: abi.encodeWithSignature("revertUnauthorized()"),
+            value: 0
+        });
+
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
+        executor.multiCall(params);
+    }
+
+    function testAgentMultiCallTransferApproveSendSuccess() public {
+        bytes32 topic = keccak256("topic");
+        address recipient = makeAddr("recipient");
+
+        // Set up adapter
+        MockAdapter adapter = new MockAdapter(address(weth), recipient);
+
+        // Fund agent with 1 WETH
+        vm.deal(assetHubAgent, 1 ether);
+        hoax(assetHubAgent);
+        weth.deposit{value: 1 ether}();
+
+        // Check initial balances
+        assertEq(weth.balanceOf(assetHubAgent), 1 ether);
+        assertEq(weth.balanceOf(recipient), 0);
+
+        CallContractParams[] memory params = new CallContractParams[](2);
+        params[0] = CallContractParams({
+            target: address(weth),
+            data: abi.encodeWithSignature("approve(address,uint256)", address(adapter), 1 ether),
+            value: 0
+        });
+        params[1] = CallContractParams({
+            target: address(adapter),
+            data: abi.encodeWithSignature("swapAndSend(uint256)", 1 ether),
+            value: 0
+        });
+
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.InboundMessageDispatched(1, topic, true, relayerRewardAddress);
+
+        hoax(relayer, 1 ether);
+        IGatewayV2(address(gateway))
+            .v2_submit(
+                InboundMessageV2({
+                    origin: Constants.ASSET_HUB_AGENT_ID,
+                    nonce: 1,
+                    topic: topic,
+                    commands: makeMultiCallCommand(params)
+                }),
+                proof,
+                makeMockProof(),
+                relayerRewardAddress
+            );
+
+        // Check final balances
+        assertEq(weth.balanceOf(assetHubAgent), 0);
+        assertEq(weth.balanceOf(recipient), 1 ether);
+    }
+
+    function testAgentMultiCallTransferApproveSendFailureRevertsAll() public {
+        bytes32 topic = keccak256("topic");
+        address recipient = makeAddr("recipient");
+
+        // Set up adapter
+        MockAdapter adapter = new MockAdapter(address(weth), recipient);
+
+        // Fund agent with 1 WETH
+        vm.deal(assetHubAgent, 1 ether);
+        hoax(assetHubAgent);
+        weth.deposit{value: 1 ether}();
+
+        // Check initial balances
+        assertEq(weth.balanceOf(assetHubAgent), 1 ether);
+        assertEq(weth.balanceOf(recipient), 0);
+
+        CallContractParams[] memory params = new CallContractParams[](2);
+        params[0] = CallContractParams({
+            target: address(weth),
+            data: abi.encodeWithSignature("approve(address,uint256)", address(adapter), 1 ether),
+            value: 0
+        });
+        params[1] = CallContractParams({
+            target: address(adapter),
+            data: abi.encodeWithSignature("swapAndSend(uint256)", 2 ether), // fails because agent only has 1 ether
+            value: 0
+        });
+
+        vm.expectEmit(true, false, false, true);
+        emit IGatewayV2.CommandFailed(1, 0); // Gateway reports command failed
+        emit IGatewayV2.InboundMessageDispatched(1, topic, false, relayerRewardAddress);
+
+        hoax(relayer, 1 ether);
+        IGatewayV2(address(gateway))
+            .v2_submit(
+                InboundMessageV2({
+                    origin: Constants.ASSET_HUB_AGENT_ID,
+                    nonce: 1,
+                    topic: topic,
+                    commands: makeMultiCallCommand(params)
+                }),
+                proof,
+                makeMockProof(),
+                relayerRewardAddress
+            );
+
+        // Check final balances are unchanged
+        assertEq(weth.balanceOf(assetHubAgent), 1 ether);
+        assertEq(weth.balanceOf(recipient), 0);
+        // Approval should be reverted back to 0
+        assertEq(weth.allowance(assetHubAgent, address(adapter)), 0);
+    }
+}
+
+contract MockAdapter {
+    address public immutable token;
+    address public immutable recipient;
+
+    constructor(address _token, address _recipient) {
+        token = _token;
+        recipient = _recipient;
+    }
+
+    function swapAndSend(uint256 amount) external {
+        require(IERC20(token).transferFrom(msg.sender, recipient, amount), "transfer failed");
     }
 }

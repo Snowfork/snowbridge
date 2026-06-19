@@ -5,6 +5,7 @@ pragma solidity 0.8.34;
 import {IERC20} from "./interfaces/IERC20.sol";
 import {SafeTokenTransfer, SafeNativeTransfer} from "./utils/SafeTransfer.sol";
 import {Call} from "./utils/Call.sol";
+import {CallContractParams} from "./v2/Types.sol";
 
 /// @title Code which will run within an `Agent` using `delegatecall`.
 /// @dev This is a singleton contract, meaning that all agents will execute the same code.
@@ -26,7 +27,18 @@ contract AgentExecutor {
     function callContract(address target, bytes memory data, uint256 value) external {
         bool success = Call.safeCall(target, data, value);
         if (!success) {
-            revert();
+            Call.bubbleRevert();
+        }
+    }
+
+    // Call multiple contracts with Ether values; reverts on the first failure
+    function multiCall(CallContractParams[] calldata params) external {
+        uint256 len = params.length;
+        for (uint256 i; i < len; ++i) {
+            bool success = Call.safeCall(params[i].target, params[i].data, params[i].value);
+            if (!success) {
+                Call.bubbleRevert();
+            }
         }
     }
 }
