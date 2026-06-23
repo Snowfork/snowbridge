@@ -114,17 +114,16 @@ library Verification {
             return false;
         }
 
-        if (proof.headProof.pos >= proof.headProof.width) {
-            return false;
-        }
-
         // Compute the merkle leaf hash of our parachain
         bytes32 parachainHeadHash = createParachainHeaderMerkleLeaf(encodedParaID, proof.header);
 
         // Compute the merkle root hash of all parachain heads
-        bytes32 parachainHeadsRoot = SubstrateMerkleProof.computeRoot(
+        (bool valid, bytes32 parachainHeadsRoot) = SubstrateMerkleProof.computeRoot(
             parachainHeadHash, proof.headProof.pos, proof.headProof.width, proof.headProof.proof
         );
+        if (!valid) {
+            return false;
+        }
 
         bytes32 leafHash = createMMRLeaf(proof.leafPartial, parachainHeadsRoot);
 

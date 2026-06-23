@@ -18,4 +18,12 @@ contract VerificationWrapper {
     ) external pure returns (bool) {
         return Verification.isCommitmentInHeaderDigest(commitment, header, isV2);
     }
+
+    function createMMRLeaf(Verification.MMRLeafPartial calldata leaf, bytes32 parachainHeadsRoot)
+        external
+        pure
+        returns (bytes32)
+    {
+        return Verification.createMMRLeaf(leaf, parachainHeadsRoot);
+    }
 }

@@ -370,6 +370,10 @@ export const isFeeAllowed = (feeLocation: any, sourceParaId: number) => {
     return isRelaychainLocation(feeLocation) || isParachainNative(feeLocation, sourceParaId)
 }
 
+// AH DOT existential deposit: 0.01 DOT. Used as the minimum surplus floor for
+// PayFees to ensure RefundSurplus never tries to deposit a sub-ED amount.
+const AH_DOT_ED = 100_000_000n
+
 export const getSnowbridgeDeliveryFee = async (assetHub: ApiPromise, defaultFee?: bigint) => {
     const feeStorageKey = xxhashAsHex(":BridgeHubEthereumBaseFeeV2:", 128, true)
     const feeStorageItem = await assetHub.rpc.state.getStorage(feeStorageKey)
@@ -496,10 +500,11 @@ export const estimateFeesFromAssetHub = async <T extends EthereumProviderTypes>(
     let bridgeHubDeliveryFeeDOT = 0n
     let snowbridgeDeliveryFeeDOT = 0n
 
-    localExecutionFeeDOT = padFeeByPercentage(
-        await assetHubImpl.calculateXcmFee(deliveryXcm.localXcm, DOT_LOCATION),
-        feePadPercentage,
-    )
+    localExecutionFeeDOT =
+        padFeeByPercentage(
+            await assetHubImpl.calculateXcmFee(deliveryXcm.localXcm, DOT_LOCATION),
+            feePadPercentage,
+        ) + AH_DOT_ED
 
     bridgeHubDeliveryFeeDOT = padFeeByPercentage(
         await assetHubImpl.calculateDeliveryFeeInDOT(
@@ -565,18 +570,19 @@ export const estimateFeesFromAssetHub = async <T extends EthereumProviderTypes>(
         tipForScaling,
         rawEthereumExecutionFee,
     )
+    const scaledSlippagePad = scaledPadPercentage(
+        feeSlippagePadPercentage,
+        tipForScaling,
+        rawEthereumExecutionFee,
+        3n,
+    )
     let ethereumExecutionFee =
         padFeeByPercentage(rawEthereumExecutionFee, scaledGasPad) + tipForScaling
     const accelerationFee =
         ethereumExecutionFees.accelerationFee > 0n
             ? padFeeByPercentage(ethereumExecutionFees.accelerationFee, scaledGasPad)
             : 0n
-
-    const scaledSlippagePad = scaledPadPercentage(
-        feeSlippagePadPercentage,
-        tipForScaling,
-        rawEthereumExecutionFee,
-    )
+    let feeLocation = options?.feeTokenLocation
 
     // calculate the cost of swapping in native asset
     let totalFeeInNative: bigint | undefined = undefined
@@ -586,7 +592,6 @@ export const estimateFeesFromAssetHub = async <T extends EthereumProviderTypes>(
     let volumeTipInNative: bigint | undefined
     let accelerationFeeInNative: bigint | undefined
     let localExecutionFeeInNative: bigint | undefined
-    let feeLocation = options?.feeTokenLocation
     if (feeLocation) {
         // If the fee asset is DOT, then one swap from DOT to Ether is required on AH
         if (isRelaychainLocation(feeLocation)) {
@@ -632,10 +637,7 @@ export const estimateFeesFromAssetHub = async <T extends EthereumProviderTypes>(
         amount: returnToSenderExecutionFeeDOT,
         symbol: "DOT",
     })
-    addBreakdown(breakdown, "ethereumExecution", {
-        amount: ethereumExecutionFee ?? 0n,
-        symbol: "ETH",
-    })
+    addBreakdown(breakdown, "ethereumExecution", { amount: ethereumExecutionFee, symbol: "ETH" })
     const nativeSymbol = feeLocation ? registry.relaychain.tokenSymbols : undefined
     if (ethereumExecutionFeeInNative !== undefined && feeLocation) {
         addBreakdown(breakdown, "ethereumExecution", {
@@ -799,7 +801,10 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
         deliveryXcm.forwardXcmToAH,
         DOT_LOCATION,
     )
-    assetHubExecutionFeeDOT = padFeeByPercentage(rawAssetHubExecutionFeeDOT, feePadPercentage)
+    assetHubExecutionFeeDOT = padFeeByPercentage(
+      rawAssetHubExecutionFeeDOT,
+      feePadPercentage
+    ) + AH_DOT_ED
 
     bridgeHubDeliveryFeeDOT = padFeeByPercentage(
         await assetHubImpl.calculateDeliveryFeeInDOT(
@@ -841,18 +846,19 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
         tipForScaling,
         rawEthereumExecutionFee,
     )
+    const scaledSlippagePad = scaledPadPercentage(
+        feeSlippagePadPercentage,
+        tipForScaling,
+        rawEthereumExecutionFee,
+        3n,
+    )
     let ethereumExecutionFee =
         padFeeByPercentage(rawEthereumExecutionFee, scaledGasPad) + tipForScaling
     const accelerationFee =
         ethereumExecutionFees.accelerationFee > 0n
             ? padFeeByPercentage(ethereumExecutionFees.accelerationFee, scaledGasPad)
             : 0n
-
-    const scaledSlippagePad = scaledPadPercentage(
-        feeSlippagePadPercentage,
-        tipForScaling,
-        rawEthereumExecutionFee,
-    )
+    let feeLocation = options?.feeTokenLocation
 
     // calculate the cost of swapping in native asset
     let totalFeeInNative: bigint | undefined = undefined
@@ -861,7 +867,6 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
     let ethereumExecutionFeeInDot: bigint | undefined
     let volumeTipInNative: bigint | undefined
     let accelerationFeeInNative: bigint | undefined
-    let feeLocation = options?.feeTokenLocation
     if (feeLocation) {
         // If the fee asset is DOT, then one swap from DOT to Ether is required on AH
         if (isRelaychainLocation(feeLocation)) {
@@ -928,7 +933,7 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
             totalFeeInNative = await assetHubImpl.getAssetHubConversionPalletSwap(
                 feeLocation,
                 DOT_LOCATION,
-                padFeeByPercentage(totalFeeInDot, feeSlippagePadPercentage),
+                padFeeByPercentage(totalFeeInDot, scaledSlippagePad),
             )
             if (localExecutionFeeInNative) {
                 totalFeeInNative += localExecutionFeeInNative
