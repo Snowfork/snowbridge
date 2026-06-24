@@ -898,7 +898,22 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
                 findInBreakdown(inputFee.breakdown, "assetHubExecution", "ETH") +
                 findInBreakdown(inputFee.breakdown, "destinationDelivery", "ETH")
             const relayerFee = findInBreakdown(inputFee.breakdown, "relayer", "ETH")
-            const payloadValue = transfer.computed.totalValue - assetHubFee - relayerFee
+            // On the ETH/WETH fee-token path tx() folds the Across origin fee
+            // (bridgeFeeInL2Token) into totalValue. That spread is kept by the Across
+            // relayer and never reaches the gateway, so the Ether actually delivered to
+            // Asset Hub is totalValue - bridgeFee. Exclude it when reconstructing the
+            // dry-run payload; the swap path does not add it to totalValue.
+            const l2FeeTokenAddress =
+                context.environment.l2Bridge?.l2Chains[this.from.id]?.feeTokenAddress
+            const bridgeFeeInL2Token = (inputFee.breakdown.l2Bridge ?? []).reduce(
+                (s, a) => s + a.amount,
+                0n,
+            )
+            const deliveredValue =
+                l2TokenAddress === ETHER_TOKEN_ADDRESS || l2TokenAddress === l2FeeTokenAddress
+                    ? transfer.computed.totalValue - bridgeFeeInL2Token
+                    : transfer.computed.totalValue
+            const payloadValue = deliveredValue - assetHubFee - relayerFee
             const xcm = buildAssetHubERC20ReceivedXcm(
                 assetHub.registry,
                 registry.ethChainId,
