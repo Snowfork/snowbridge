@@ -13,6 +13,7 @@ import {
   WebSocketProvider,
 } from "ethers";
 import type {
+  AcrossDepositMessageParams,
   BeefyClient,
   DepositParamsStruct,
   EthereumProvider,
@@ -296,6 +297,92 @@ export class EthersEthereumProvider
     return AbiCoder.defaultAbiCoder().encode(
       ["uint8", "address", "uint128"],
       [0, tokenAddress, amount],
+    );
+  }
+
+  static erc20Interface = new Interface(IERC20_ABI);
+  static weth9Interface = new Interface(["function withdraw(uint256 wad)"]);
+
+  buildAcrossDepositMessage(params: AcrossDepositMessageParams): string {
+    const erc20 = EthersEthereumProvider.erc20Interface;
+    const weth = EthersEthereumProvider.weth9Interface;
+    const gateway = EthersEthereumProvider.gatewayV2Interface;
+    const sendMessageData = gateway.encodeFunctionData("v2_sendMessage", [
+      params.xcm,
+      params.assets,
+      params.claimer,
+      params.executionFee,
+      params.relayerFee,
+    ]);
+    const calls: { target: string; callData: string; value: bigint }[] = [];
+    if (params.swap) {
+      // Mirrors SnowbridgeL2Adaptor._depositTokenAndSendMessage (7 calls).
+      calls.push({
+        target: params.outputToken,
+        callData: erc20.encodeFunctionData("approve", [params.swap.router, 0n]),
+        value: 0n,
+      });
+      calls.push({
+        target: params.outputToken,
+        callData: erc20.encodeFunctionData("approve", [
+          params.swap.router,
+          params.swap.inputAmount,
+        ]),
+        value: 0n,
+      });
+      calls.push({
+        target: params.swap.router,
+        callData: params.swap.callData,
+        value: 0n,
+      });
+      const gatewayValue =
+        params.relayerFee + params.executionFee + params.destinationExecutionFee;
+      calls.push({
+        target: params.l1Weth,
+        callData: weth.encodeFunctionData("withdraw", [gatewayValue]),
+        value: 0n,
+      });
+      calls.push({
+        target: params.outputToken,
+        callData: erc20.encodeFunctionData("approve", [params.gateway, 0n]),
+        value: 0n,
+      });
+      calls.push({
+        target: params.outputToken,
+        callData: erc20.encodeFunctionData("approve", [
+          params.gateway,
+          params.outputAmount,
+        ]),
+        value: 0n,
+      });
+      calls.push({
+        target: params.gateway,
+        callData: sendMessageData,
+        value: gatewayValue,
+      });
+    } else {
+      // Mirrors SnowbridgeL2Adaptor._depositEtherAndSendMessage (2 calls).
+      const totalOutputAmount =
+        params.outputAmount +
+        params.executionFee +
+        params.relayerFee +
+        params.destinationExecutionFee;
+      calls.push({
+        target: params.l1Weth,
+        callData: weth.encodeFunctionData("withdraw", [totalOutputAmount]),
+        value: 0n,
+      });
+      calls.push({
+        target: params.gateway,
+        callData: sendMessageData,
+        value: totalOutputAmount,
+      });
+    }
+    return AbiCoder.defaultAbiCoder().encode(
+      [
+        "tuple(tuple(address target, bytes callData, uint256 value)[] calls, address fallbackRecipient)",
+      ],
+      [{ calls, fallbackRecipient: params.fallbackRecipient }],
     );
   }
 

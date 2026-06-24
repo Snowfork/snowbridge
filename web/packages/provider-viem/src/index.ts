@@ -22,6 +22,7 @@ import type {
   TransactionRequest,
 } from "viem";
 import type {
+  AcrossDepositMessageParams,
   BeefyClient,
   DepositParamsStruct,
   EthereumProvider,
@@ -487,6 +488,96 @@ export class ViemEthereumProvider
       toAddress(tokenAddress),
       amount,
     ]);
+  }
+
+  buildAcrossDepositMessage(params: AcrossDepositMessageParams): Hex {
+    const approve = (spender: string, amount: bigint): Hex =>
+      encodeFunctionData({
+        abi: parseAbi(["function approve(address,uint256)"]),
+        functionName: "approve",
+        args: [toAddress(spender), amount],
+      });
+    const withdraw = (amount: bigint): Hex =>
+      encodeFunctionData({
+        abi: parseAbi(["function withdraw(uint256)"]),
+        functionName: "withdraw",
+        args: [amount],
+      });
+    const sendMessageData = this.encodeFunctionData(
+      asAbi(IGATEWAY_V2_ABI),
+      "v2_sendMessage",
+      [
+        toBytesHex(params.xcm),
+        params.assets.map((asset) => asset as Hex),
+        toBytesHex(params.claimer),
+        params.executionFee,
+        params.relayerFee,
+      ],
+    ) as Hex;
+    const calls: { target: Address; callData: Hex; value: bigint }[] = [];
+    if (params.swap) {
+      // Mirrors SnowbridgeL2Adaptor._depositTokenAndSendMessage (7 calls).
+      calls.push({
+        target: toAddress(params.outputToken),
+        callData: approve(params.swap.router, 0n),
+        value: 0n,
+      });
+      calls.push({
+        target: toAddress(params.outputToken),
+        callData: approve(params.swap.router, params.swap.inputAmount),
+        value: 0n,
+      });
+      calls.push({
+        target: toAddress(params.swap.router),
+        callData: params.swap.callData as Hex,
+        value: 0n,
+      });
+      const gatewayValue =
+        params.relayerFee + params.executionFee + params.destinationExecutionFee;
+      calls.push({
+        target: toAddress(params.l1Weth),
+        callData: withdraw(gatewayValue),
+        value: 0n,
+      });
+      calls.push({
+        target: toAddress(params.outputToken),
+        callData: approve(params.gateway, 0n),
+        value: 0n,
+      });
+      calls.push({
+        target: toAddress(params.outputToken),
+        callData: approve(params.gateway, params.outputAmount),
+        value: 0n,
+      });
+      calls.push({
+        target: toAddress(params.gateway),
+        callData: sendMessageData,
+        value: gatewayValue,
+      });
+    } else {
+      // Mirrors SnowbridgeL2Adaptor._depositEtherAndSendMessage (2 calls).
+      const totalOutputAmount =
+        params.outputAmount +
+        params.executionFee +
+        params.relayerFee +
+        params.destinationExecutionFee;
+      calls.push({
+        target: toAddress(params.l1Weth),
+        callData: withdraw(totalOutputAmount),
+        value: 0n,
+      });
+      calls.push({
+        target: toAddress(params.gateway),
+        callData: sendMessageData,
+        value: totalOutputAmount,
+      });
+    }
+    return encodeAbiParameters(
+      parseAbiParameters(
+        "((address target, bytes callData, uint256 value)[] calls, address fallbackRecipient)",
+      ),
+      [{ calls, fallbackRecipient: toAddress(params.fallbackRecipient) }],
+    );
   }
 
   l1AdapterDepositNativeEther(

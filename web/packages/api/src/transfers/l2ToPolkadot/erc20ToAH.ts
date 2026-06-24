@@ -26,11 +26,7 @@ import {
     buildAssetHubERC20ReceivedXcm,
 } from "../../xcmbuilders/toPolkadot/erc20ToAH"
 import { accountId32Location, erc20Location } from "../../xcmBuilder"
-import {
-    DOT_LOCATION,
-    ETHER_TOKEN_ADDRESS,
-    getAssetHubEtherMinBalance,
-} from "../../assets_v2"
+import { DOT_LOCATION, ETHER_TOKEN_ADDRESS, getAssetHubEtherMinBalance } from "../../assets_v2"
 import { ensureValidationSuccess, padFeeByPercentage } from "../../utils"
 import { resolveBeneficiary } from "../../crypto"
 import { FeeInfo, ValidationLog, ValidationReason } from "../../types/toPolkadot"
@@ -39,7 +35,13 @@ import { getOperatingStatus } from "../../status"
 import { hexToU8a } from "@polkadot/util"
 import { estimateFees } from "../../across/api"
 import { VolumeFeeParams, calculateVolumeTipInWei } from "../../feeSchedule"
-import { addBreakdown, computeTotals, findInBreakdown, findInBreakdownOrZero, findTotal } from "../../fees"
+import {
+    addBreakdown,
+    computeTotals,
+    findInBreakdown,
+    findInBreakdownOrZero,
+    findTotal,
+} from "../../fees"
 import { checkDotEthPoolLiquidityForEthereumToPolkadot } from "../../poolReserves"
 
 export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInterface<T> {
@@ -57,6 +59,60 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
 
     get to(): ChainId {
         return this.route.to
+    }
+
+    // Reconstructs the Across `message` (the on-chain `Instructions` the L2
+    // adaptor emits) so the `/suggested-fees` estimate includes the
+    // destination message-execution gas. Uses placeholder beneficiary/topic —
+    // the relayer gas does not depend on those, only on the message shape.
+    private buildAcrossMessage(
+        assetHub: any,
+        tokenAddress: string,
+        amount: bigint,
+        executionFee: bigint,
+        relayerFee: bigint,
+        customXcm?: any[],
+        swap?: { router: string; inputAmount: bigint; callData: string },
+    ): string {
+        const { context, registry } = this
+        const placeholder = "0x0000000000000000000000000000000000000000000000000000000000000000"
+        const l1Weth = context.environment.l2Bridge?.l1FeeTokenAddress
+        if (!l1Weth) {
+            throw new Error("L2 bridge configuration is missing.")
+        }
+        const userAssetLocation =
+            tokenAddress === ETHER_TOKEN_ADDRESS
+                ? undefined
+                : erc20Location(registry.ethChainId, tokenAddress)
+        const xcm = hexToU8a(
+            sendMessageXCM(
+                assetHub.registry,
+                placeholder,
+                placeholder,
+                customXcm,
+                userAssetLocation,
+            ).toHex(),
+        )
+        const claimer = claimerLocationToBytes(
+            claimerFromBeneficiary(assetHub, placeholder, registry.environment),
+        )
+        const assets = swap
+            ? [context.ethereumProvider.encodeNativeAsset(tokenAddress, amount)]
+            : []
+        return context.ethereumProvider.buildAcrossDepositMessage({
+            outputToken: tokenAddress,
+            gateway: registry.gatewayAddress,
+            l1Weth,
+            fallbackRecipient: "0x0000000000000000000000000000000000000001",
+            xcm,
+            assets,
+            claimer,
+            executionFee,
+            relayerFee,
+            destinationExecutionFee: 0n,
+            outputAmount: amount,
+            swap,
+        })
     }
 
     async fee(
@@ -193,6 +249,18 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             if (!l1FeeTokenAddress) {
                 throw new Error("Fee token is not registered on Ethereum")
             }
+            const l1HandlerAddress = context.environment.l2Bridge?.l1HandlerAddress
+            if (!l1HandlerAddress) {
+                throw new Error("L2 bridge configuration is missing.")
+            }
+            const message = this.buildAcrossMessage(
+                assetHub,
+                tokenAddress,
+                amount,
+                assetHubExecutionFeeEther,
+                finalRelayerFee,
+                options?.customXcm,
+            )
             bridgeFeeInL2Token = await estimateFees(
                 acrossApiUrl,
                 l2FeeTokenAddress,
@@ -200,6 +268,7 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
                 this.from.id,
                 registry.ethChainId,
                 assetHubExecutionFeeEther + finalRelayerFee + amount,
+                { recipient: l1HandlerAddress, message },
             )
             bridgeFeeInL2Token = padFeeByPercentage(
                 bridgeFeeInL2Token,
@@ -228,6 +297,32 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
                 swapFeeInL1Token,
                 options?.l2PadFeeByPercentage ?? 33n,
             )
+            const l1SwapRouterAddress = context.environment.l2Bridge?.l1SwapRouterAddress
+            const l1HandlerAddress = context.environment.l2Bridge?.l1HandlerAddress
+            if (!l1SwapRouterAddress || !l1HandlerAddress) {
+                throw new Error("L2 bridge configuration is missing.")
+            }
+            const swapCallData = await buildSwapCallData(
+                context,
+                registry,
+                this.from.id,
+                l2TokenAddress,
+                assetHubExecutionFeeEther + finalRelayerFee,
+                swapFeeInL1Token,
+            )
+            const message = this.buildAcrossMessage(
+                assetHub,
+                tokenAddress,
+                amount,
+                assetHubExecutionFeeEther,
+                finalRelayerFee,
+                options?.customXcm,
+                {
+                    router: l1SwapRouterAddress,
+                    inputAmount: swapFeeInL1Token,
+                    callData: swapCallData,
+                },
+            )
             bridgeFeeInL2Token = await estimateFees(
                 acrossApiUrl,
                 l2TokenAddress,
@@ -235,6 +330,7 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
                 this.from.id,
                 registry.ethChainId,
                 amount + swapFeeInL1Token,
+                { recipient: l1HandlerAddress, message },
             )
             bridgeFeeInL2Token = padFeeByPercentage(
                 bridgeFeeInL2Token,

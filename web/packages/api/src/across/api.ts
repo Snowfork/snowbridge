@@ -7,13 +7,24 @@ export const estimateFees = async (
     originChainId: number,
     destinationChainId: number,
     amount: bigint,
+    // When the deposit carries a cross-chain message (the L2->Polkadot flows
+    // execute a swap + Snowbridge `v2_sendMessage` on the destination), pass the
+    // multicall handler `recipient` and the `message` so Across includes the
+    // message-execution gas in `totalRelayFee`. Without these the API returns
+    // the much cheaper plain-transfer gas, the deposit gets underfunded, and no
+    // relayer fills it (the deposit expires).
+    message?: { recipient: string; message: string },
 ): Promise<bigint> => {
-    const params = {
+    const params: Record<string, string> = {
         inputToken,
         outputToken,
         originChainId: originChainId.toString(),
         destinationChainId: destinationChainId.toString(),
         amount: amount.toString(),
+    }
+    if (message) {
+        params.recipient = message.recipient
+        params.message = message.message
     }
 
     const url = apiEndpoint + "/suggested-fees?" + new URLSearchParams(params)

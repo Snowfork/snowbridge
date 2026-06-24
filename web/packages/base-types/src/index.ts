@@ -244,6 +244,7 @@ export type AssetRegistry = {
 };
 
 export type {
+  AcrossDepositMessageParams,
   EthereumProviderConnectionOptions,
   EthereumProvider,
   EthereumProviderTypes,
@@ -299,7 +300,10 @@ export type L2ForwardMetadata = {
   swapRoutes: readonly AssetSwapRoute[];
 };
 
-export type FeeEstimateErrorCode = "AMOUNT_TOO_LOW" | "AMOUNT_TOO_HIGH" | "COULD_NOT_SWAP"
+export type FeeEstimateErrorCode =
+  | "AMOUNT_TOO_LOW"
+  | "AMOUNT_TOO_HIGH"
+  | "COULD_NOT_SWAP";
 
 export type FeeEstimateErrorDetails = {
   type: string;
@@ -321,7 +325,7 @@ export class FeeEstimateError extends Error {
       status: 0,
       message: `Could not estimate swap for '${JSON.stringify(asset1)}' -> '${JSON.stringify(asset2)}'`,
       id: "could-not-swap",
-    })
+    });
   }
 }
 
