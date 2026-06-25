@@ -65,7 +65,12 @@ library HandlersV2 {
 
     function callContract(bytes32 origin, address executor, bytes calldata data) external {
         CallContractParams memory params = abi.decode(data, (CallContractParams));
-        address agent = Functions.ensureNotAssetHubAgent(origin);
+        // The Asset Hub agent custodies bridge-controlled funds, so it must not be
+        // drivable via arbitrary contract calls.
+        if (origin == Constants.ASSET_HUB_AGENT_ID) {
+            revert IGatewayBase.Unauthorized();
+        }
+        address agent = Functions.ensureAgent(origin);
         bytes memory call =
             abi.encodeCall(AgentExecutor.callContract, (params.target, params.data, params.value));
         Functions.invokeOnAgent(agent, executor, call);

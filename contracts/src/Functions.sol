@@ -15,7 +15,6 @@ import {TokenInfo} from "./types/Common.sol";
 import {ChannelID, Channel} from "./v1/Types.sol";
 import {IGatewayBase} from "./interfaces/IGatewayBase.sol";
 import {IGatewayV1} from "./v1/IGateway.sol";
-import {Constants} from "./Constants.sol";
 
 // Common functionality that is shared between V1 and V2
 library Functions {
@@ -32,14 +31,6 @@ library Functions {
         if (agent == address(0)) {
             revert IGatewayBase.AgentDoesNotExist();
         }
-    }
-
-    /// Looks up an agent contract address, failing if no such mapping exists or if the agent is the primary asset hub agent
-    function ensureNotAssetHubAgent(bytes32 agentID) internal view returns (address agent) {
-        if(agentID == Constants.ASSET_HUB_AGENT_ID) {
-            revert IGatewayBase.UnauthorizedPrivilegedAgent();
-        }
-        agent = ensureAgent(agentID);
     }
 
     /// @dev Ensure that the specified parachain has a channel allocated

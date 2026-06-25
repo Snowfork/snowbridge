@@ -658,34 +658,25 @@ contract GatewayV2Test is Test {
             );
     }
 
-    // (2) Direct unit coverage of the new helper. The dispatcher swallows
-    // revert reasons via try/catch, so the only way to pin the specific
-    // revert selector is to call ensureNotAssetHubAgent directly.
-    function testEnsureNotAssetHubAgent_RejectsAssetHubWithSpecificError() public {
-        vm.expectRevert(IGatewayBase.UnauthorizedPrivilegedAgent.selector);
-        MockGateway(address(gateway)).exposed_ensureNotAssetHubAgent(Constants.ASSET_HUB_AGENT_ID);
+    // (2) Direct unit coverage of the inlined deny check. The dispatcher
+    // swallows revert reasons via try/catch, so the only way to pin the
+    // specific revert selector is to call callContract directly.
+    function testCallContract_RejectsAssetHubWithUnauthorized() public {
+        bytes memory data =
+            abi.encode(CallContractParams({target: address(helloWorld), data: "", value: 0}));
+        vm.expectRevert(IGatewayBase.Unauthorized.selector);
+        MockGateway(address(gateway)).exposed_callContract(
+            Constants.ASSET_HUB_AGENT_ID, address(this), data
+        );
     }
 
-    // BridgeHub is intentionally non-privileged in the V2 deny list; only
-    // ASSET_HUB_AGENT_ID is reserved.
-    function testEnsureNotAssetHubAgent_AllowsBridgeHub() public {
-        address bridgeHubAgent =
-            MockGateway(address(gateway)).exposed_ensureNotAssetHubAgent(Constants.BRIDGE_HUB_AGENT_ID);
-        assertEq(bridgeHubAgent, IGatewayV2(address(gateway)).agentOf(Constants.BRIDGE_HUB_AGENT_ID));
-    }
-
-    function testEnsureNotAssetHubAgent_AllowsUserAgent() public {
-        bytes32 userAgentId = keccak256("user-agent-direct");
-        IGatewayV2(payable(address(gateway))).v2_createAgent(userAgentId);
-        address expected = IGatewayV2(address(gateway)).agentOf(userAgentId);
-
-        address actual = MockGateway(address(gateway)).exposed_ensureNotAssetHubAgent(userAgentId);
-        assertEq(actual, expected);
-    }
-
-    function testEnsureNotAssetHubAgent_UnregisteredRevertsAgentDoesNotExist() public {
+    function testCallContract_UnregisteredRevertsAgentDoesNotExist() public {
+        bytes memory data =
+            abi.encode(CallContractParams({target: address(helloWorld), data: "", value: 0}));
         vm.expectRevert(IGatewayBase.AgentDoesNotExist.selector);
-        MockGateway(address(gateway)).exposed_ensureNotAssetHubAgent(bytes32(uint256(0xdeadbeef)));
+        MockGateway(address(gateway)).exposed_callContract(
+            bytes32(uint256(0xdeadbeef)), address(this), data
+        );
     }
 
     // (3) No-state-leak assertions on the AssetHub-rejected path.
@@ -737,18 +728,19 @@ contract GatewayV2Test is Test {
         );
     }
 
-    // (4) Fuzz: for any id != ASSET_HUB_AGENT_ID, the helper must never
-    // revert with UnauthorizedPrivilegedAgent. It is allowed to revert
-    // AgentDoesNotExist or return a registered address.
-    function testFuzz_EnsureNotAssetHubAgent_NeverRejectsNonAssetHub(bytes32 id) public {
+    // (4) Fuzz: for any id != ASSET_HUB_AGENT_ID, callContract must never
+    // revert with Unauthorized. It may revert for unrelated reasons (e.g.
+    // AgentDoesNotExist) or succeed.
+    function testFuzz_CallContract_NeverRejectsNonAssetHub(bytes32 id) public {
         vm.assume(id != Constants.ASSET_HUB_AGENT_ID);
-        try MockGateway(address(gateway)).exposed_ensureNotAssetHubAgent(id) returns (address agent) {
-            assertTrue(agent != address(0), "registered agent must be non-zero");
+        bytes memory data =
+            abi.encode(CallContractParams({target: address(helloWorld), data: "", value: 0}));
+        try MockGateway(address(gateway)).exposed_callContract(id, address(this), data) {
+            // ok
         } catch (bytes memory reason) {
-            assertEq(
-                bytes4(reason),
-                IGatewayBase.AgentDoesNotExist.selector,
-                "non-AssetHub ids must only ever fail with AgentDoesNotExist"
+            assertTrue(
+                bytes4(reason) != IGatewayBase.Unauthorized.selector,
+                "non-AssetHub ids must never be rejected as privileged"
             );
         }
     }

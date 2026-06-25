@@ -116,9 +116,10 @@ contract MockGateway is Gateway {
         HandlersV2.unlockNativeToken(executor, data);
     }
 
-    // Expose Functions.ensureNotAssetHubAgent for direct unit/fuzz testing.
-    function exposed_ensureNotAssetHubAgent(bytes32 agentID) external view returns (address) {
-        return Functions.ensureNotAssetHubAgent(agentID);
+    // Expose HandlersV2.callContract directly so the AssetHub deny check can be
+    // unit/fuzz tested without the dispatcher swallowing the revert reason.
+    function exposed_callContract(bytes32 origin, address executor, bytes calldata data) external {
+        HandlersV2.callContract(origin, executor, data);
     }
 
     // Expose internal helper for testing
