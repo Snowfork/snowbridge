@@ -1,7 +1,7 @@
 use crate::helpers::calculate_delivery_fee;
 use crate::{
     constants::*, Context, ForceCheckpointArgs, GatewayAddressArgs, GatewayOperatingModeEnum,
-    OperatingModeEnum, PricingParametersArgs, RebalanceSovereignFeeAccountsArgs, RegisterEtherArgs,
+    OperatingModeEnum, PricingParametersArgs, RebalanceSovAccountsArgs, RegisterEtherArgs,
     UpdateAssetArgs, UpgradeArgs,
 };
 use alloy_primitives::{utils::format_units, U256};
@@ -364,10 +364,42 @@ pub fn set_gateway_address(params: &GatewayAddressArgs) -> BridgeHubRuntimeCall 
     )
 }
 
+/// Quote the DOT needed to receive exactly `eth_out` wei of Ether via AssetConversion.
+/// `include_fee = true` includes the 0.3% LP fee; the difference between the two is the fee.
 #[cfg(feature = "polkadot")]
-pub async fn rebalance_sovereign_fee_accounts(
+async fn quote_dot_for_exact_eth(
     context: &Context,
-    params: &RebalanceSovereignFeeAccountsArgs,
+    eth_out: u128,
+    include_fee: bool,
+) -> Result<u128, Box<dyn std::error::Error>> {
+    use crate::asset_hub_runtime::runtime_types::staging_xcm::v5::{
+        junctions::Junctions, location::Location,
+    };
+    let dot = Location {
+        parents: 1,
+        interior: Junctions::Here,
+    };
+    let eth = crate::commands::asset_hub_polkadot_types::get_ether_id(
+        crate::bridge_hub_runtime::CHAIN_ID,
+    );
+    context
+        .asset_hub_api
+        .runtime_api()
+        .at_latest()
+        .await?
+        .call(
+            crate::asset_hub_runtime::apis()
+                .asset_conversion_api()
+                .quote_price_tokens_for_exact_tokens(dot, eth, eth_out, include_fee),
+        )
+        .await?
+        .ok_or_else(|| "AssetConversionApi returned no DOT quote for the requested ETH amount".into())
+}
+
+#[cfg(feature = "polkadot")]
+pub async fn rebalance_sov_accounts(
+    context: &Context,
+    params: &RebalanceSovAccountsArgs,
 ) -> Result<AssetHubRuntimeCall, Box<dyn std::error::Error>> {
     use crate::asset_hub_runtime::runtime_types::{
         bounded_collections::bounded_vec::BoundedVec,
@@ -389,55 +421,83 @@ pub async fn rebalance_sovereign_fee_accounts(
     };
 
     const GATEWAY_PROXY: [u8; 20] = hex_literal::hex!("27ca963c279c93801941e1eb8799c23f407d68e7");
+    // Asset Hub Treasury account = `PalletId(*b"py/trsry").into_account_truncating()`
+    // = b"modl" ++ b"py/trsry" ++ [0u8; 20]. SS58 13UVJyLnbVp9RBZYFwFGyDvVd1y27Tt8tkntv6Q7JVPhFsTB.
+    // This is where Snowbridge/XCM delivery fees historically accrue (pre-DAP FeeManager sink).
     const TREASURY_ACCOUNT: [u8; 32] =
-        hex_literal::hex!("6d6f646c706f7374616b65000000000000000000000000000000000000000000");
+        hex_literal::hex!("6d6f646c70792f74727372790000000000000000000000000000000000000000");
 
-    let eth_amount = params.eth_amount.try_into().map_err(|_| {
-        format!(
-            "--eth-amount {} exceeds the u128 amount supported by XCM fungible assets",
-            params.eth_amount
-        )
+    if params.eth_swap_price_pad < 0.0 || params.eth_swap_slippage_pad < 0.0 {
+        return Err("swap pads must be non-negative decimals (e.g. 0.1 for 10%)".into());
+    }
+
+    let gateway_eth: u128 = params.eth_amount.try_into().map_err(|_| {
+        format!("--eth-amount {} exceeds the u128 supported by XCM", params.eth_amount)
+    })?;
+    let bridge_fee_eth: u128 = params.bridge_fee_eth.try_into().map_err(|_| {
+        format!("--bridge-fee-eth {} exceeds the u128 supported by XCM", params.bridge_fee_eth)
     })?;
     let dot_amount = params.dot_amount.to::<u128>();
 
-    let dot_location_for_quote =
-        crate::asset_hub_runtime::runtime_types::staging_xcm::v5::location::Location {
-            parents: 1,
-            interior:
-                crate::asset_hub_runtime::runtime_types::staging_xcm::v5::junctions::Junctions::Here,
-        };
-    let eth_location_for_quote = crate::commands::asset_hub_polkadot_types::get_ether_id(
-        crate::bridge_hub_runtime::CHAIN_ID,
-    );
+    // The swap must produce exactly the gateway top-up plus the Ethereum-leg bridge fee.
+    let eth_out = gateway_eth
+        .checked_add(bridge_fee_eth)
+        .ok_or("ETH out (eth-amount + bridge-fee-eth) overflowed u128")?;
 
-    let swap_dot_amount = context
-        .asset_hub_api
-        .runtime_api()
-        .at_latest()
-        .await?
-        .call(
-            crate::asset_hub_runtime::apis()
-                .asset_conversion_api()
-                .quote_price_tokens_for_exact_tokens(
-                    dot_location_for_quote,
-                    eth_location_for_quote,
-                    eth_amount,
-                    true,
-                ),
-        )
-        .await?
-        .ok_or("AssetConversionApi returned no DOT quote for the requested ETH amount")?;
-    let withdraw_dot_amount = dot_amount
-        .checked_add(swap_dot_amount)
-        .ok_or("DOT withdraw amount overflowed u128")?;
+    // `include_fee=true` is the real exact-out cost (constant-product price impact + 0.3% LP fee);
+    // `include_fee=false` is the linear spot estimate (no impact, no fee). swap_base is what the
+    // swap actually spends, so `give` is built from it.
+    let swap_base = quote_dot_for_exact_eth(context, eth_out, true).await?;
+    let dot_no_fee = quote_dot_for_exact_eth(context, eth_out, false).await?;
+    // Split the gap honestly: the 0.3% LP fee is applied to the input, the remainder is the
+    // pool price impact (which is large when the DOT/Ether pool is shallow).
+    let lp_fee = swap_base.saturating_mul(3) / 1000;
+    let price_impact = swap_base.saturating_sub(dot_no_fee).saturating_sub(lp_fee);
 
-    eprintln!("DOT to Bridge Hub sovereign: {} PLANCK", dot_amount);
-    eprintln!("ETH to GatewayProxy: {} WEI", eth_amount);
-    eprintln!("Quoted DOT for ETH swap: {} PLANCK", swap_dot_amount);
+    // Display split of the spot DOT across the two ETH buckets (proportional by ETH).
+    let gateway_dot = (dot_no_fee as u128).saturating_mul(gateway_eth) / eth_out;
+    let bridge_fee_dot = dot_no_fee.saturating_sub(gateway_dot);
+
+    // Pads (decimals, e.g. 0.10) applied to the full swap cost, in parts-per-billion for precision.
+    let ppb = 1_000_000_000u128;
+    let price_ppb = (params.eth_swap_price_pad * ppb as f64).round() as u128;
+    let slippage_ppb = (params.eth_swap_slippage_pad * ppb as f64).round() as u128;
+    let price_pad = swap_base.saturating_mul(price_ppb) / ppb;
+    let slippage_pad = swap_base.saturating_mul(slippage_ppb) / ppb;
+
+    // `give` is the max DOT the exact-out swap may spend; unused DOT flows to the AH sovereign.
+    let give_dot = swap_base
+        .checked_add(price_pad)
+        .and_then(|v| v.checked_add(slippage_pad))
+        .ok_or("swap give amount overflowed u128")?;
+    let withdraw_dot = dot_amount
+        .checked_add(give_dot)
+        .ok_or("total DOT withdraw overflowed u128")?;
+
+    let dot = |x: u128| format_units(U256::from(x), POLKADOT_DECIMALS).unwrap();
+    let eth = |x: u128| format_units(U256::from(x), "eth").unwrap();
+    let pct = |p: f64| {
+        let s = format!("{:.4}", p * 100.0);
+        s.trim_end_matches('0').trim_end_matches('.').to_string()
+    };
+    let to_dot = |x: u128| x as f64 / 10f64.powi(POLKADOT_DECIMALS as i32);
+    let to_eth = |x: u128| x as f64 / 10f64.powi(18);
+    let spot_rate = to_dot(dot_no_fee) / to_eth(eth_out);
+    let eff_rate = to_dot(swap_base) / to_eth(eth_out);
+
+    eprintln!("Rebalance Sovereign Accounts (Polkadot)");
     eprintln!(
-        "Total DOT withdrawn from treasury: {} PLANCK",
-        withdraw_dot_amount
+        "Exchange rate = {:.3} DOT/ETH spot, {:.3} DOT/ETH effective ({} ETH out)",
+        spot_rate, eff_rate, eth(eth_out)
     );
+    eprintln!("Total Withdraw from Treasury = {} DOT", dot(withdraw_dot));
+    eprintln!("  Bridge Hub Sovereign     = {} DOT", dot(dot_amount));
+    eprintln!("  Snowbridge Gateway       = {} DOT ({} ETH)", dot(gateway_dot), eth(gateway_eth));
+    eprintln!("  Bridging fee             = {} DOT ({} ETH)", dot(bridge_fee_dot), eth(bridge_fee_eth));
+    eprintln!("  Pool price impact        = {} DOT", dot(price_impact));
+    eprintln!("  LP fee (0.3%)            = {} DOT", dot(lp_fee));
+    eprintln!("  Price fluctuation pad    = {} DOT ({}% pad)", dot(price_pad), pct(params.eth_swap_price_pad));
+    eprintln!("  Slippage pad             = {} DOT ({}% pad)", dot(slippage_pad), pct(params.eth_swap_slippage_pad));
 
     let dot_location = Location {
         parents: 1,
@@ -449,59 +509,51 @@ pub async fn rebalance_sovereign_fee_accounts(
             chain_id: crate::bridge_hub_runtime::CHAIN_ID,
         })]),
     };
+    let treasury_location = Location {
+        parents: 0,
+        interior: Junctions::X1([Junction::AccountId32 {
+            network: None,
+            id: TREASURY_ACCOUNT,
+        }]),
+    };
 
-    let dot_for_withdraw = asset(dot_location.clone(), withdraw_dot_amount);
-    let dot_for_swap = asset(dot_location.clone(), swap_dot_amount);
-    let dot_for_bridge_hub = asset(dot_location.clone(), dot_amount);
-    let eth_for_gateway = asset(eth_location.clone(), eth_amount);
+    let dot_for_withdraw = asset(dot_location.clone(), withdraw_dot);
+    let dot_for_swap = asset(dot_location.clone(), give_dot);
+    let eth_out_asset = asset(eth_location.clone(), eth_out);
+    let eth_for_gateway = asset(eth_location.clone(), gateway_eth);
+    let eth_for_fee = asset(eth_location.clone(), bridge_fee_eth);
 
     let message = Xcm(vec![
         UnpaidExecution {
             weight_limit: WeightLimit::Unlimited,
             check_origin: None,
         },
-        AliasOrigin(Location {
-            parents: 0,
-            interior: Junctions::X1([Junction::AccountId32 {
-                network: None,
-                id: TREASURY_ACCOUNT,
-            }]),
-        }),
+        // Act as the Treasury so the withdraw debits its balance.
+        AliasOrigin(treasury_location.clone()),
         WithdrawAsset(Assets(vec![dot_for_withdraw])),
+        // Set early so any leftover/dust (and any error path) refunds to the Treasury.
+        SetAppendix(Xcm(vec![
+            RefundSurplus,
+            DepositAsset {
+                assets: AssetFilter::Wild(WildAsset::All),
+                beneficiary: treasury_location,
+            },
+        ])),
+        // Swap for the EXACT ETH out (gateway + bridge fee), spending up to `give_dot`; fail otherwise.
         ExchangeAsset {
             give: AssetFilter::Definite(Assets(vec![dot_for_swap])),
-            want: Assets(vec![eth_for_gateway.clone()]),
+            want: Assets(vec![eth_out_asset]),
             maximal: false,
         },
+        // Bridge the exact gateway ETH to Ethereum, paying the Ethereum-side fee in ETH.
         InitiateTransfer {
-            destination: Location {
-                parents: 1,
-                interior: Junctions::X1([Junction::Parachain(BRIDGE_HUB_ID)]),
-            },
-            remote_fees: None,
+            destination: eth_location.clone(),
+            remote_fees: Some(AssetTransferFilter::ReserveWithdraw(AssetFilter::Definite(
+                Assets(vec![eth_for_fee]),
+            ))),
             preserve_origin: true,
             assets: BoundedVec(vec![AssetTransferFilter::ReserveWithdraw(
-                AssetFilter::Definite(Assets(vec![dot_for_bridge_hub.clone()])),
-            )]),
-            remote_xcm: Xcm(vec![DepositAsset {
-                assets: AssetFilter::Definite(Assets(vec![dot_for_bridge_hub])),
-                beneficiary: Location {
-                    parents: 1,
-                    interior: Junctions::X1([Junction::Parachain(ASSET_HUB_ID)]),
-                },
-            }]),
-        },
-        InitiateTransfer {
-            destination: Location {
-                parents: 2,
-                interior: Junctions::X1([Junction::GlobalConsensus(NetworkId::Ethereum {
-                    chain_id: crate::bridge_hub_runtime::CHAIN_ID,
-                })]),
-            },
-            remote_fees: None,
-            preserve_origin: true,
-            assets: BoundedVec(vec![AssetTransferFilter::ReserveWithdraw(
-                AssetFilter::Definite(Assets(vec![eth_for_gateway.clone()])),
+                AssetFilter::Definite(Assets(vec![eth_for_gateway])),
             )]),
             remote_xcm: Xcm(vec![DepositAsset {
                 assets: AssetFilter::Wild(WildAsset::AllOf {
@@ -517,15 +569,29 @@ pub async fn rebalance_sovereign_fee_accounts(
                 },
             }]),
         },
-        DepositAsset {
-            assets: AssetFilter::Wild(WildAsset::All),
-            beneficiary: Location {
-                parents: 0,
-                interior: Junctions::X1([Junction::AccountId32 {
-                    network: None,
-                    id: TREASURY_ACCOUNT,
-                }]),
+        // Send ALL remaining DOT to the Asset Hub sovereign account on Bridge Hub.
+        // DOT moves between system parachains by teleport (the relay is its reserve, not BH),
+        // so ReserveWithdraw here fails with UntrustedReserveLocation.
+        InitiateTransfer {
+            destination: Location {
+                parents: 1,
+                interior: Junctions::X1([Junction::Parachain(BRIDGE_HUB_ID)]),
             },
+            remote_fees: None,
+            preserve_origin: true,
+            assets: BoundedVec(vec![AssetTransferFilter::Teleport(AssetFilter::Wild(
+                WildAsset::AllOf {
+                    id: AssetId(dot_location),
+                    fun: WildFungibility::Fungible,
+                },
+            ))]),
+            remote_xcm: Xcm(vec![DepositAsset {
+                assets: AssetFilter::Wild(WildAsset::All),
+                beneficiary: Location {
+                    parents: 1,
+                    interior: Junctions::X1([Junction::Parachain(ASSET_HUB_ID)]),
+                },
+            }]),
         },
     ]);
 
@@ -548,11 +614,11 @@ pub async fn rebalance_sovereign_fee_accounts(
 }
 
 #[cfg(not(feature = "polkadot"))]
-pub async fn rebalance_sovereign_fee_accounts(
+pub async fn rebalance_sov_accounts(
     _context: &Context,
-    _params: &RebalanceSovereignFeeAccountsArgs,
+    _params: &RebalanceSovAccountsArgs,
 ) -> Result<AssetHubRuntimeCall, Box<dyn std::error::Error>> {
-    panic!("RebalanceSovereignFeeAccounts only for polkadot runtime.");
+    panic!("RebalanceSovAccounts only for polkadot runtime.");
 }
 
 pub fn make_asset_sufficient(params: &UpdateAssetArgs) -> AssetHubRuntimeCall {

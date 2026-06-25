@@ -78,7 +78,8 @@ pub enum Command {
     #[command(alias = "upgrade-202603")]
     Upgrade202603,
     /// Rebalance sovereign fee accounts
-    RebalanceSovereignFeeAccounts(RebalanceSovereignFeeAccountsArgs),
+    #[command(alias = "rebalance-sovereign-fee-accounts")]
+    RebalanceSovAccounts(RebalanceSovAccountsArgs),
 }
 
 #[derive(Debug, Args)]
@@ -300,13 +301,23 @@ pub struct RegisterEtherArgs {
 }
 
 #[derive(Debug, Args)]
-pub struct RebalanceSovereignFeeAccountsArgs {
+pub struct RebalanceSovAccountsArgs {
     /// DOT amount to deliver to the Asset Hub sovereign account on Bridge Hub.
+    /// Exclusive of the swap, conversion fee, and pads — those are added by the tool.
     #[arg(long, value_name = POLKADOT_SYMBOL, value_parser = parse_units_polkadot)]
     pub dot_amount: U128,
-    /// ETH amount to deliver to the GatewayProxy address.
+    /// ETH amount to deliver to the Snowbridge GatewayProxy on Ethereum.
     #[arg(long, value_name = "ETHER", value_parser = parse_units_eth)]
     pub eth_amount: U256,
+    /// Bridge execution fee in ETH for the transfer to Ethereum (added to the exact swap output).
+    #[arg(long, value_name = "ETHER", value_parser = parse_units_eth, default_value = "0.0025")]
+    pub bridge_fee_eth: U256,
+    /// Slippage pad as a decimal (e.g. 0.03 = 3%). Raises the max DOT spent on the swap.
+    #[arg(long, default_value_t = 0.03)]
+    pub eth_swap_slippage_pad: f64,
+    /// Price-drift pad as a decimal (e.g. 0.10 = 10%). Raises the max DOT spent on the swap.
+    #[arg(long, default_value_t = 0.10)]
+    pub eth_swap_price_pad: f64,
 }
 
 #[derive(Debug, Args)]
@@ -681,8 +692,8 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
                 send_xcm_bridge_hub(&context, vec![upgrade_call]).await?
             }
         }
-        Command::RebalanceSovereignFeeAccounts(params) => {
-            commands::rebalance_sovereign_fee_accounts(&context, params).await?
+        Command::RebalanceSovAccounts(params) => {
+            commands::rebalance_sov_accounts(&context, params).await?
         }
     };
 
