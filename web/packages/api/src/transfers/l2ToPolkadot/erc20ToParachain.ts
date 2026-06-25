@@ -604,7 +604,12 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
             // symbol bucket in fee.totals. Add it explicitly so msg.value /
             // depositParams.inputAmount cover the Across leg.
             value = totalFeeInWei + amount + bridgeFeeInL2Token
-            inputAmount = amount + (l2TokenAddress === l2FeeTokenAddress ? bridgeFeeInL2Token : 0n)
+            // The adaptor pulls exactly depositParams.inputAmount (= value) from the
+            // user — as msg.value for native ETH, or via WETH safeTransferFrom on the
+            // fee-token path. totalInputAmount must equal that so validation checks the
+            // real balance/allowance requirement; otherwise a WETH send passes
+            // validation and then reverts in sendEtherAndCall.
+            inputAmount = value
             depositParams = {
                 inputToken: l2TokenAddress,
                 outputToken: tokenAddress,
