@@ -22,10 +22,8 @@ library Functions {
     using SafeNativeTransfer for address payable;
     using SafeTokenTransferFrom for IERC20;
 
-    error AgentDoesNotExist();
     error InvalidToken();
     error InvalidAmount();
-    error ChannelDoesNotExist();
 
     /// Looks up an agent contract address, failing if no such mapping exists
     function ensureAgent(bytes32 agentID) internal view returns (address agent) {
