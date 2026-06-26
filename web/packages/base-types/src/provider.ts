@@ -85,6 +85,31 @@ export type L1LegacySwapRouterExactOutputSingleParams = {
   sqrtPriceLimitX96: bigint;
 };
 
+// Parameters for reconstructing the Across `message` (an `abi.encode`d
+// `Instructions { Call[] calls; address fallbackRecipient }`) that the L2
+// adaptor emits on-chain. Used purely off-chain to obtain a message-aware gas
+// estimate from the Across `/suggested-fees` API. When `swap` is provided the
+// ERC20 (`sendTokenAndCall`) 7-call message is built, otherwise the native
+// ether (`sendEtherAndCall`) 2-call message is built.
+export type AcrossDepositMessageParams = {
+  outputToken: string;
+  gateway: string;
+  l1Weth: string;
+  fallbackRecipient: string;
+  xcm: Uint8Array;
+  assets: string[];
+  claimer: Uint8Array;
+  executionFee: bigint;
+  relayerFee: bigint;
+  destinationExecutionFee: bigint;
+  outputAmount: bigint;
+  swap?: {
+    router: string;
+    inputAmount: bigint;
+    callData: string;
+  };
+};
+
 export interface EthereumProviderTypes {
   Connection: unknown;
   Contract: unknown;
@@ -125,6 +150,7 @@ export interface EthereumProvider<T extends EthereumProviderTypes> {
     data: string,
   ): U;
   encodeNativeAsset(tokenAddress: string, amount: bigint): string;
+  buildAcrossDepositMessage(params: AcrossDepositMessageParams): string;
   l1AdapterDepositNativeEther(
     params: L1AdapterDepositParams,
     recipient: string,

@@ -38,6 +38,10 @@ struct SendParams {
     bytes claimer;
     uint128 executionFee;
     uint128 relayerFee;
+    // Ether forwarded to the gateway as surplus `value` (msg.value - executionFee -
+    // relayerFee) for destination-parachain XCM execution via initiateTransfer.
+    // Zero for Asset-Hub-only transfers.
+    uint128 destinationExecutionFee;
 }
 
 struct SwapParams {

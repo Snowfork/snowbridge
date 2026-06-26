@@ -101,8 +101,7 @@ contract SnowbridgeL2Adaptor {
             "Input token must be zero address or L2 WETH address for native ETH deposits"
         );
         checkInputs(params, sendParams, recipient);
-        uint256 totalOutputAmount =
-            params.outputAmount + sendParams.executionFee + sendParams.relayerFee;
+        uint256 totalOutputAmount = params.outputAmount + _gatewayValue(sendParams);
         require(
             params.inputAmount > totalOutputAmount,
             "Input amount must cover output amount and fee amount"
@@ -153,9 +152,7 @@ contract SnowbridgeL2Adaptor {
             Call({target: address(swapParams.router), callData: swapParams.callData, value: 0});
         calls[3] = Call({
             target: address(L1_WETH9),
-            callData: abi.encodeCall(
-                L1_WETH9.withdraw, (sendParams.relayerFee + sendParams.executionFee)
-            ),
+            callData: abi.encodeCall(L1_WETH9.withdraw, (_gatewayValue(sendParams))),
             value: 0
         });
         calls[4] = Call({
@@ -180,7 +177,7 @@ contract SnowbridgeL2Adaptor {
                     sendParams.relayerFee
                 )
             ),
-            value: sendParams.relayerFee + sendParams.executionFee
+            value: _gatewayValue(sendParams)
         });
         Instructions memory instructions =
             Instructions({calls: calls, fallbackRecipient: recipient});
@@ -275,6 +272,11 @@ contract SnowbridgeL2Adaptor {
         require(swapParams.inputAmount > 0, "Input amount for fee must be greater than zero");
         require(swapParams.router != address(0), "Swap router cannot be zero address");
         require(swapParams.callData.length > 0, "Swap callData cannot be empty");
+    }
+
+    function _gatewayValue(SendParams calldata sendParams) internal pure returns (uint256) {
+        return uint256(sendParams.executionFee) + uint256(sendParams.relayerFee)
+            + uint256(sendParams.destinationExecutionFee);
     }
 
     receive() external payable {}

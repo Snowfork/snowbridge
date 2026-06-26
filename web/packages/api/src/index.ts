@@ -651,16 +651,19 @@ export class SnowbridgeApi<P extends EthereumProvider<any>> {
                 const destinationEthChain = destinationChain as EthereumChain
                 if (sourceParachain.id === this.info.registry.assetHubParaId) {
                     const { ERC20FromAH } = require("./transfers/polkadotToL2/erc20FromAH")
-                    const tIface: ToEthereumL2TransferInterface<ProviderTypesFor<P>> = new ERC20FromAH(
-                        this.context,
-                        this.info.registry,
-                        route,
-                        sourceParachain,
-                        destinationEthChain,
-                    )
+                    const tIface: ToEthereumL2TransferInterface<ProviderTypesFor<P>> =
+                        new ERC20FromAH(
+                            this.context,
+                            this.info.registry,
+                            route,
+                            sourceParachain,
+                            destinationEthChain,
+                        )
                     return withKind(tIface, kind) as TransferFromTo<F, T, ProviderTypesFor<P>>
                 }
-                const { ERC20FromParachain } = require("./transfers/polkadotToL2/erc20FromParachain")
+                const {
+                    ERC20FromParachain,
+                } = require("./transfers/polkadotToL2/erc20FromParachain")
                 const tIface: ToEthereumL2TransferInterface<ProviderTypesFor<P>> =
                     new ERC20FromParachain(
                         this.context,
@@ -674,14 +677,27 @@ export class SnowbridgeApi<P extends EthereumProvider<any>> {
             case "ethereum_l2->polkadot": {
                 const sourceEthChain = sourceChain as EthereumChain
                 const destinationParachain = destinationChain as Parachain
-                const { ERC20ToAH } = require("./transfers/l2ToPolkadot/erc20ToAH")
-                const tIface: ToPolkadotL2TransferInterface<ProviderTypesFor<P>> = new ERC20ToAH(
-                    this.context,
-                    this.info.registry,
-                    route,
-                    sourceEthChain,
-                    destinationParachain,
-                )
+                if (destinationParachain.id === this.info.registry.assetHubParaId) {
+                    const { ERC20ToAH } = require("./transfers/l2ToPolkadot/erc20ToAH")
+                    const tIface: ToPolkadotL2TransferInterface<ProviderTypesFor<P>> =
+                        new ERC20ToAH(
+                            this.context,
+                            this.info.registry,
+                            route,
+                            sourceEthChain,
+                            destinationParachain,
+                        )
+                    return withKind(tIface, kind) as TransferFromTo<F, T, ProviderTypesFor<P>>
+                }
+                const { ERC20ToParachain } = require("./transfers/l2ToPolkadot/erc20ToParachain")
+                const tIface: ToPolkadotL2TransferInterface<ProviderTypesFor<P>> =
+                    new ERC20ToParachain(
+                        this.context,
+                        this.info.registry,
+                        route,
+                        sourceEthChain,
+                        destinationParachain,
+                    )
                 return withKind(tIface, kind) as TransferFromTo<F, T, ProviderTypesFor<P>>
             }
             default:

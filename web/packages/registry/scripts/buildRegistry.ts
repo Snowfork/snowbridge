@@ -148,7 +148,7 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
             l1SwapRouterAddress: "0xe592427a0aece92de3edee1f18e0157c05861564",
             l2Chains: {
                 "8453": {
-                    adapterAddress: "0x07fe4E7340976FC873B74bAfe3C3e5b0e01f3665".toLowerCase(),
+                    adapterAddress: "0x9e41656f3457f21fd566da6e8e9d9158f1390122".toLowerCase(),
                     feeTokenAddress: "0x4200000000000000000000000000000000000006",
                     swapRoutes: [
                         // WETH
@@ -166,7 +166,7 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
                     ],
                 },
                 "42161": {
-                    adapterAddress: "0x836895Ad176235Dfe9C59b3df56C7579d90ea338".toLowerCase(),
+                    adapterAddress: "0x16543a52030b9525a95bc41ab5594e8514694203".toLowerCase(),
                     feeTokenAddress: "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1".toLowerCase(),
                     swapRoutes: [
                         // WETH
@@ -184,7 +184,7 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
                     ],
                 },
                 "10": {
-                    adapterAddress: "0x836895Ad176235Dfe9C59b3df56C7579d90ea338".toLowerCase(),
+                    adapterAddress: "0x523309b0fdf6990383bce3fbe1283940b3b6cbc3".toLowerCase(),
                     feeTokenAddress: "0x4200000000000000000000000000000000000006".toLowerCase(),
                     swapRoutes: [
                         // WETH
@@ -463,8 +463,7 @@ function buildTransferLocations(
     // L2 paths
     if (environment.l2Bridge) {
         const assetHubAssets = Object.keys(assetHub.assets)
-        // L2 bridging is only supported for Asset Hub today.
-        const l2ParachainIds = [registry.assetHubParaId]
+        const v2ParachainIds = environment.v2_parachains ?? [registry.assetHubParaId]
         for (const l2ChainKey of Object.keys(environment.l2Bridge.l2Chains)) {
             const l2ChainId = Number(l2ChainKey)
             const l2Chain = environment.l2Bridge.l2Chains[l2ChainId]
@@ -477,7 +476,7 @@ function buildTransferLocations(
                 .map((a) => a.swapTokenAddress?.toLowerCase())
                 .filter((a) => a !== undefined)
 
-            for (const paraId of l2ParachainIds) {
+            for (const paraId of v2ParachainIds) {
                 const sourceParachain = registry.parachains[`polkadot_${paraId}`]
                 if (!sourceParachain) continue
 

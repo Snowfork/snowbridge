@@ -45,7 +45,8 @@ contract TestSnowbridgeL2AdaptorNativeEther is Script {
                 assets: assets,
                 claimer: hex"0001010054d82b42bcd22b175d71d62ef2114defcf14344c4b88acf0eb4356737d7fdb4a",
                 executionFee: 5_688_771_233_667,
-                relayerFee: 50_035_501_219_494
+                relayerFee: 50_035_501_219_494,
+                destinationExecutionFee: 0
             });
         } else if (
             keccak256(bytes(vm.envString("L1_NETWORK"))) == keccak256(bytes("mainnet"))
@@ -68,7 +69,8 @@ contract TestSnowbridgeL2AdaptorNativeEther is Script {
                 assets: assets,
                 claimer: hex"0001010054d82b42bcd22b175d71d62ef2114defcf14344c4b88acf0eb4356737d7fdb4a",
                 executionFee: 5_688_771_233_667,
-                relayerFee: 50_035_501_219_494
+                relayerFee: 50_035_501_219_494,
+                destinationExecutionFee: 0
             });
         } else if (
             keccak256(bytes(vm.envString("L1_NETWORK"))) == keccak256(bytes("sepolia"))
@@ -91,7 +93,8 @@ contract TestSnowbridgeL2AdaptorNativeEther is Script {
                 assets: assets,
                 claimer: hex"000101005827013ddc4082f8252f8729bd2f06e77e7863dea9202a6f0e7a2c34e356e85a",
                 executionFee: 33_346_219_347_761,
-                relayerFee: 553_808_951_460_256
+                relayerFee: 553_808_951_460_256,
+                destinationExecutionFee: 0
             });
         } else if (
             keccak256(bytes(vm.envString("L1_NETWORK"))) == keccak256(bytes("sepolia"))
@@ -115,7 +118,8 @@ contract TestSnowbridgeL2AdaptorNativeEther is Script {
                 assets: assets,
                 claimer: hex"000101005827013ddc4082f8252f8729bd2f06e77e7863dea9202a6f0e7a2c34e356e85a",
                 executionFee: 33_346_219_347_761,
-                relayerFee: 553_808_951_460_256
+                relayerFee: 553_808_951_460_256,
+                destinationExecutionFee: 0
             });
         } else {
             revert("Unsupported L2 network");

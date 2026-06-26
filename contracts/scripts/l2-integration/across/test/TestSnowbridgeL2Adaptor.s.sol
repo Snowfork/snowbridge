@@ -67,7 +67,8 @@ contract TestSnowbridgeL2Adaptor is Script {
                 assets: assets,
                 claimer: hex"0001010054d82b42bcd22b175d71d62ef2114defcf14344c4b88acf0eb4356737d7fdb4a",
                 executionFee: 5_688_737_408_032,
-                relayerFee: 50_187_270_355_445
+                relayerFee: 50_187_270_355_445,
+                destinationExecutionFee: 0
             });
             swapParams = SwapParams({
                 inputAmount: swapAmount,
@@ -81,7 +82,8 @@ contract TestSnowbridgeL2Adaptor is Script {
                             recipient: address(MAINNET_MULTI_CALL_HANDLER),
                             deadline: block.timestamp + MAINNET_TIME_BUFFER,
                             amountInMaximum: swapAmount,
-                            amountOut: sendParams.relayerFee + sendParams.executionFee,
+                            amountOut: sendParams.relayerFee + sendParams.executionFee
+                                + sendParams.destinationExecutionFee,
                             sqrtPriceLimitX96: 0 // 0 is fine here as amountInMaximum is used
                         }))
                 )
@@ -110,7 +112,8 @@ contract TestSnowbridgeL2Adaptor is Script {
                 assets: assets,
                 claimer: hex"0001010054d82b42bcd22b175d71d62ef2114defcf14344c4b88acf0eb4356737d7fdb4a",
                 executionFee: 5_688_737_408_032,
-                relayerFee: 50_187_270_355_445
+                relayerFee: 50_187_270_355_445,
+                destinationExecutionFee: 0
             });
             swapParams = SwapParams({
                 inputAmount: swapAmount,
@@ -124,7 +127,8 @@ contract TestSnowbridgeL2Adaptor is Script {
                             recipient: address(MAINNET_MULTI_CALL_HANDLER),
                             deadline: block.timestamp + MAINNET_TIME_BUFFER,
                             amountInMaximum: swapAmount,
-                            amountOut: sendParams.relayerFee + sendParams.executionFee,
+                            amountOut: sendParams.relayerFee + sendParams.executionFee
+                                + sendParams.destinationExecutionFee,
                             sqrtPriceLimitX96: 0 // 0 is fine here as amountInMaximum is used
                         }))
                 )
@@ -153,7 +157,8 @@ contract TestSnowbridgeL2Adaptor is Script {
                 assets: assets,
                 claimer: hex"000101005827013ddc4082f8252f8729bd2f06e77e7863dea9202a6f0e7a2c34e356e85a",
                 executionFee: 33_329_707_255_987,
-                relayerFee: 559_885_563_730_065
+                relayerFee: 559_885_563_730_065,
+                destinationExecutionFee: 0
             });
             swapParams = SwapParams({
                 inputAmount: swapAmount,
@@ -166,7 +171,8 @@ contract TestSnowbridgeL2Adaptor is Script {
                             fee: 500,
                             recipient: address(SEPOLIA_MULTI_CALL_HANDLER),
                             amountInMaximum: swapAmount,
-                            amountOut: sendParams.relayerFee + sendParams.executionFee,
+                            amountOut: sendParams.relayerFee + sendParams.executionFee
+                                + sendParams.destinationExecutionFee,
                             sqrtPriceLimitX96: 0
                         }))
                 )
@@ -196,7 +202,8 @@ contract TestSnowbridgeL2Adaptor is Script {
                 assets: assets,
                 claimer: hex"000101005827013ddc4082f8252f8729bd2f06e77e7863dea9202a6f0e7a2c34e356e85a",
                 executionFee: 33_329_707_255_987,
-                relayerFee: 559_885_563_730_065
+                relayerFee: 559_885_563_730_065,
+                destinationExecutionFee: 0
             });
             swapParams = SwapParams({
                 inputAmount: swapAmount,
@@ -209,7 +216,8 @@ contract TestSnowbridgeL2Adaptor is Script {
                             fee: 500,
                             recipient: address(SEPOLIA_MULTI_CALL_HANDLER),
                             amountInMaximum: swapAmount,
-                            amountOut: sendParams.relayerFee + sendParams.executionFee,
+                            amountOut: sendParams.relayerFee + sendParams.executionFee
+                                + sendParams.destinationExecutionFee,
                             sqrtPriceLimitX96: 0
                         }))
                 )

@@ -53,7 +53,7 @@ const registry = {
             l1SwapRouterAddress: "0xe592427a0aece92de3edee1f18e0157c05861564",
             l2Chains: {
                 "10": {
-                    adapterAddress: "0x836895ad176235dfe9c59b3df56c7579d90ea338",
+                    adapterAddress: "0x523309b0fdf6990383bce3fbe1283940b3b6cbc3",
                     feeTokenAddress: "0x4200000000000000000000000000000000000006",
                     swapRoutes: [
                         {
@@ -69,7 +69,7 @@ const registry = {
                     ],
                 },
                 "8453": {
-                    adapterAddress: "0x07fe4e7340976fc873b74bafe3c3e5b0e01f3665",
+                    adapterAddress: "0x9e41656f3457f21fd566da6e8e9d9158f1390122",
                     feeTokenAddress: "0x4200000000000000000000000000000000000006",
                     swapRoutes: [
                         {
@@ -85,7 +85,7 @@ const registry = {
                     ],
                 },
                 "42161": {
-                    adapterAddress: "0x836895ad176235dfe9c59b3df56c7579d90ea338",
+                    adapterAddress: "0x16543a52030b9525a95bc41ab5594e8514694203",
                     feeTokenAddress: "0x82af49447d8a07e3bd95bd0d56f35241523fbab1",
                     swapRoutes: [
                         {
@@ -515,6 +515,36 @@ const registry = {
         {
             from: {
                 kind: "polkadot",
+                id: 2034,
+            },
+            to: {
+                kind: "ethereum_l2",
+                id: 10,
+            },
+            assets: [
+                "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                "0x0000000000000000000000000000000000000000",
+            ],
+        },
+        {
+            from: {
+                kind: "ethereum_l2",
+                id: 10,
+            },
+            to: {
+                kind: "polkadot",
+                id: 2034,
+            },
+            assets: [
+                "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                "0x0000000000000000000000000000000000000000",
+            ],
+        },
+        {
+            from: {
+                kind: "polkadot",
                 id: 1000,
             },
             to: {
@@ -545,6 +575,36 @@ const registry = {
         {
             from: {
                 kind: "polkadot",
+                id: 2034,
+            },
+            to: {
+                kind: "ethereum_l2",
+                id: 8453,
+            },
+            assets: [
+                "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                "0x0000000000000000000000000000000000000000",
+            ],
+        },
+        {
+            from: {
+                kind: "ethereum_l2",
+                id: 8453,
+            },
+            to: {
+                kind: "polkadot",
+                id: 2034,
+            },
+            assets: [
+                "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                "0x0000000000000000000000000000000000000000",
+            ],
+        },
+        {
+            from: {
+                kind: "polkadot",
                 id: 1000,
             },
             to: {
@@ -565,6 +625,36 @@ const registry = {
             to: {
                 kind: "polkadot",
                 id: 1000,
+            },
+            assets: [
+                "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                "0x0000000000000000000000000000000000000000",
+            ],
+        },
+        {
+            from: {
+                kind: "polkadot",
+                id: 2034,
+            },
+            to: {
+                kind: "ethereum_l2",
+                id: 42161,
+            },
+            assets: [
+                "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                "0x0000000000000000000000000000000000000000",
+            ],
+        },
+        {
+            from: {
+                kind: "ethereum_l2",
+                id: 42161,
+            },
+            to: {
+                kind: "polkadot",
+                id: 2034,
             },
             assets: [
                 "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
@@ -574,7 +664,7 @@ const registry = {
         },
     ],
     registry: {
-        timestamp: "2026-06-11T08:55:00.280Z",
+        timestamp: "2026-06-12T06:19:27.228Z",
         environment: "polkadot_mainnet",
         ethChainId: 1,
         gatewayAddress: "0x27ca963c279c93801941e1eb8799c23f407d68e7",
@@ -1960,7 +2050,7 @@ const registry = {
                         isSufficient: false,
                     },
                 },
-                estimatedExecutionFeeDOT: 54967893n,
+                estimatedExecutionFeeDOT: 56125754n,
                 estimatedDeliveryFeeDOT: 307100000n,
             },
             polkadot_2034: {
@@ -2160,7 +2250,7 @@ const registry = {
                         isSufficient: true,
                     },
                 },
-                estimatedExecutionFeeDOT: 3119486n,
+                estimatedExecutionFeeDOT: 3168492n,
                 estimatedDeliveryFeeDOT: 307100000n,
             },
             polkadot_2043: {
