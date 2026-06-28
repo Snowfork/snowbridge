@@ -40,6 +40,12 @@ export class HydrationParachain extends ParachainBase {
             }
 
             const assetId = Number(id.args[0]?.toString())
+            const lockdownState: any =
+                await this.provider.query.circuitBreaker.assetLockdownState(assetId)
+            if (!lockdownState.isSome || !lockdownState.unwrap().isUnlocked) {
+                continue
+            }
+
             const asset: any = (
                 await this.provider.query.assetRegistry.assets(assetId)
             ).toPrimitive()
