@@ -179,6 +179,12 @@ contract BeefyClient {
     /// @dev State of the next validator set
     ValidatorSetState public nextValidatorSet;
 
+    /// @dev Ethereum block.timestamp at which `currentValidatorSet` was last anchored by a
+    /// witnessed handover (or at construction). Bounds how long the current set may be trusted
+    /// to authenticate a non-consecutive "skip-ahead" update. Deliberately NOT refreshed by a
+    /// skip, so that an attacker cannot ratchet the trust window forward.
+    uint64 public currentSetActivatedAt;
+
     /// @dev Pending tickets for commitment submission
     mapping(bytes32 ticketID => Ticket) public tickets;
 
@@ -195,6 +201,15 @@ contract BeefyClient {
      */
     // forge-lint: disable-next-line(unsafe-typecast)
     bytes2 public constant MMR_ROOT_ID = bytes2("mh");
+
+    /**
+     * @dev Maximum wall-clock time (measured by Ethereum's block.timestamp) that the current
+     * validator set may be trusted to authenticate a non-consecutive "skip-ahead" commitment.
+     * MUST be shorter than the Polkadot unbonding period (28 days), with margin, so that any set
+     * accepted via a skip is still bonded — which is what preserves the honest-supermajority
+     * assumption the skip relies on. See the long-form rationale on non-consecutive updates.
+     */
+    uint256 public constant trustingPeriod = 14 days;
 
     /**
      * @dev Minimum delay in number of blocks that a relayer must wait between calling
@@ -240,6 +255,7 @@ contract BeefyClient {
     error PrevRandaoNotCaptured();
     error StaleCommitment();
     error WaitPeriodNotOver();
+    error TrustingPeriodExpired();
 
     constructor(
         uint256 _randaoCommitDelay,
@@ -258,6 +274,8 @@ contract BeefyClient {
         minNumRequiredSignatures = _minNumRequiredSignatures;
         fiatShamirRequiredSignatures = _fiatShamirRequiredSignatures;
         latestBeefyBlock = _initialBeefyBlock;
+        // The genesis set is trusted by construction; anchor its trusting window now.
+        currentSetActivatedAt = uint64(block.timestamp);
         currentValidatorSet.id = _initialValidatorSet.id;
         currentValidatorSet.length = _initialValidatorSet.length;
         currentValidatorSet.root = _initialValidatorSet.root;
@@ -295,6 +313,12 @@ contract BeefyClient {
             signatureUsageCount = nextValidatorSet.usageCounters.get(proof.index);
             nextValidatorSet.usageCounters.set(proof.index, signatureUsageCount.saturatingAdd(1));
             vset = nextValidatorSet;
+        } else if (canSkipAhead(commitment.validatorSetID)) {
+            // Non-consecutive "skip-ahead": a commitment from a later session within a
+            // confirmed-stable era, authenticated against the current set's root.
+            signatureUsageCount = currentValidatorSet.usageCounters.get(proof.index);
+            currentValidatorSet.usageCounters
+                .set(proof.index, signatureUsageCount.saturatingAdd(1));
         } else {
             revert InvalidCommitment();
         }
@@ -401,7 +425,12 @@ contract BeefyClient {
             is_next_session = true;
             vset = nextValidatorSet;
         } else if (commitment.validatorSetID != currentValidatorSet.id) {
-            revert InvalidCommitment();
+            // Non-consecutive skip-ahead, authenticated against the current set (vset stays
+            // currentValidatorSet). canSkipAhead reverts if the trusting window has closed,
+            // otherwise reverts InvalidCommitment for an out-of-range id.
+            if (!canSkipAhead(commitment.validatorSetID)) {
+                revert InvalidCommitment();
+            }
         }
 
         // Validate that all padding bits (beyond vset.length) are zero
@@ -429,6 +458,11 @@ contract BeefyClient {
             nextValidatorSet.length = leaf.nextAuthoritySetLen;
             nextValidatorSet.root = leaf.nextAuthoritySetRoot;
             nextValidatorSet.usageCounters = createUint16Array(leaf.nextAuthoritySetLen);
+            // A witnessed handover is fresh evidence the new current set is active: re-anchor.
+            currentSetActivatedAt = uint64(block.timestamp);
+        } else if (commitment.validatorSetID != currentValidatorSet.id) {
+            // Skip-ahead (id already validated by canSkipAhead above; current id not yet advanced).
+            applySkip(commitment.validatorSetID, newMMRRoot, leaf, leafProof, leafProofOrder);
         }
 
         latestMMRRoot = newMMRRoot;
@@ -508,7 +542,11 @@ contract BeefyClient {
         if (commitment.validatorSetID == nextValidatorSet.id) {
             vset = nextValidatorSet;
         } else if (commitment.validatorSetID != currentValidatorSet.id) {
-            revert InvalidCommitment();
+            // Non-consecutive skip-ahead is authenticated against the current set (vset stays
+            // currentValidatorSet). canSkipAhead reverts if the trusting window has closed.
+            if (!canSkipAhead(commitment.validatorSetID)) {
+                revert InvalidCommitment();
+            }
         }
 
         if (
@@ -550,7 +588,11 @@ contract BeefyClient {
             is_next_session = true;
             vset = nextValidatorSet;
         } else if (commitment.validatorSetID != currentValidatorSet.id) {
-            revert InvalidCommitment();
+            // Non-consecutive skip-ahead, authenticated against the current set (vset stays
+            // currentValidatorSet). canSkipAhead reverts if the trusting window has closed.
+            if (!canSkipAhead(commitment.validatorSetID)) {
+                revert InvalidCommitment();
+            }
         }
 
         if (
@@ -585,6 +627,11 @@ contract BeefyClient {
             nextValidatorSet.length = leaf.nextAuthoritySetLen;
             nextValidatorSet.root = leaf.nextAuthoritySetRoot;
             nextValidatorSet.usageCounters = createUint16Array(leaf.nextAuthoritySetLen);
+            // A witnessed handover is fresh evidence the new current set is active: re-anchor.
+            currentSetActivatedAt = uint64(block.timestamp);
+        } else if (commitment.validatorSetID != currentValidatorSet.id) {
+            // Skip-ahead (id already validated by canSkipAhead above; current id not yet advanced).
+            applySkip(commitment.validatorSetID, newMMRRoot, leaf, leafProof, leafProofOrder);
         }
 
         latestMMRRoot = newMMRRoot;
@@ -594,6 +641,65 @@ contract BeefyClient {
     }
 
     /* Internal Functions */
+
+    /**
+     * @dev Returns true if a commitment from `validatorSetID` may be authenticated against the
+     * current validator set as a non-consecutive skip-ahead update. This is safe only when:
+     *  (a) the id is strictly ahead of the next set (a genuine skip past known sessions),
+     *  (b) the era is confirmed stable (current and next share the same membership root), so the
+     *      signatures legitimately verify against the current root, and
+     *  (c) the current set is still within its trusting period, so it is provably still bonded
+     *      and its honest-supermajority assumption still holds.
+     * When (a) and (b) hold but the window has closed it reverts TrustingPeriodExpired, giving
+     * relayers a precise signal (rather than a generic InvalidCommitment) that the light client
+     * has fallen too far behind and must be advanced via consecutive handovers / governance.
+     */
+    function canSkipAhead(uint64 validatorSetID) internal view returns (bool) {
+        if (
+            validatorSetID <= nextValidatorSet.id
+                || currentValidatorSet.root != nextValidatorSet.root
+        ) {
+            return false;
+        }
+        if (block.timestamp >= uint256(currentSetActivatedAt) + trustingPeriod) {
+            revert TrustingPeriodExpired();
+        }
+        return true;
+    }
+
+    /**
+     * @dev Fast-forward the validator set after a verified skip-ahead commitment. Advances the
+     * current set id to the (now signature-verified) commitment id while keeping the same
+     * membership root, and loads the next set from the MMR leaf — which may introduce a new era
+     * (root change) that the following consecutive handover will adopt. Crucially does NOT touch
+     * currentSetActivatedAt: a skip is authenticated by the existing anchor and must never be
+     * able to extend the trusting window (no ratchet).
+     */
+    function applySkip(
+        uint64 validatorSetID,
+        bytes32 newMMRRoot,
+        MMRLeaf calldata leaf,
+        bytes32[] calldata leafProof,
+        uint256 leafProofOrder
+    ) internal {
+        // Validator set ids must remain strictly increasing.
+        if (leaf.nextAuthoritySetID <= validatorSetID) {
+            revert InvalidMMRLeaf();
+        }
+        bool leafIsValid = MMRProof.verifyLeafProof(
+            newMMRRoot, keccak256(encodeMMRLeaf(leaf)), leafProof, leafProofOrder
+        );
+        if (!leafIsValid) {
+            revert InvalidMMRLeafProof();
+        }
+        // Advance current to the verified id, preserving the (unchanged) membership root and length.
+        currentValidatorSet.id = validatorSetID;
+        currentValidatorSet.usageCounters = createUint16Array(currentValidatorSet.length);
+        nextValidatorSet.id = leaf.nextAuthoritySetID;
+        nextValidatorSet.length = leaf.nextAuthoritySetLen;
+        nextValidatorSet.root = leaf.nextAuthoritySetRoot;
+        nextValidatorSet.usageCounters = createUint16Array(leaf.nextAuthoritySetLen);
+    }
 
     // Creates a unique ticket ID for a new interactive prover-verifier session
     function createTicketID(address account, bytes32 commitmentHash)

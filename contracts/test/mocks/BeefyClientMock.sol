@@ -51,6 +51,7 @@ contract BeefyClientMock is BeefyClient {
         ValidatorSet calldata _nextValidatorSet
     ) external {
         latestBeefyBlock = _initialBeefyBlock;
+        currentSetActivatedAt = uint64(block.timestamp);
         currentValidatorSet.id = _initialValidatorSet.id;
         currentValidatorSet.length = _initialValidatorSet.length;
         currentValidatorSet.root = _initialValidatorSet.root;
@@ -59,6 +60,10 @@ contract BeefyClientMock is BeefyClient {
         nextValidatorSet.length = _nextValidatorSet.length;
         nextValidatorSet.root = _nextValidatorSet.root;
         nextValidatorSet.usageCounters = createUint16Array(nextValidatorSet.length);
+    }
+
+    function setCurrentSetActivatedAt(uint64 _activatedAt) external {
+        currentSetActivatedAt = _activatedAt;
     }
 
     // Used to verify integrity of storage to storage copies
