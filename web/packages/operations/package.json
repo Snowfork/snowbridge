@@ -16,6 +16,7 @@
     "initializeAlarmsFromContainer": "docker run -v $(pwd)/config:/config --rm snowbridge-monitor:latest init",
     "monitor": "npx ts-node src/main.ts monitor",
     "fisherman": "npx ts-node src/main.ts fisherman",
+    "verifyBeefyRotation": "npx ts-node src/verify_beefy_rotation.ts",
     "historyV2": "npx ts-node src/global_transfer_history_v2.ts",
     "buildTokenRegistry": "npx ts-node src/build_asset_registry.ts",
     "transferWethFromPolkadotToKusama": "npx ts-node src/transfer_for_kusama_entry.ts WEthPToK 0 WETH 200000000000000",
