@@ -3,8 +3,6 @@ mod bridge_hub_runtime;
 mod commands;
 mod constants;
 mod helpers;
-#[allow(unused)]
-mod relay_runtime;
 mod treasury_commands;
 
 use alloy_primitives::{address, utils::parse_units, Address, Bytes, FixedBytes, U128, U256};
@@ -79,6 +77,9 @@ pub enum Command {
     /// Upgrade to FiatShamir on Polkadot
     #[command(alias = "upgrade-202603")]
     Upgrade202603,
+    /// Rebalance sovereign fee accounts
+    #[command(alias = "rebalance-sovereign-fee-accounts")]
+    RebalanceSovAccounts(RebalanceSovAccountsArgs),
 }
 
 #[derive(Debug, Args)]
@@ -300,6 +301,30 @@ pub struct RegisterEtherArgs {
 }
 
 #[derive(Debug, Args)]
+pub struct RebalanceSovAccountsArgs {
+    /// DOT amount to deliver to the Asset Hub sovereign account on Bridge Hub.
+    /// Exclusive of the swap, conversion fee, and pads — those are added by the tool.
+    #[arg(long, value_name = POLKADOT_SYMBOL, value_parser = parse_units_polkadot)]
+    pub dot_amount: U128,
+    /// ETH amount to deliver to the Snowbridge GatewayProxy on Ethereum.
+    #[arg(long, value_name = "ETHER", value_parser = parse_units_eth)]
+    pub eth_amount: U256,
+    /// Bridge execution fee in ETH for the transfer to Ethereum (added to the exact swap output).
+    #[arg(long, value_name = "ETHER", value_parser = parse_units_eth, default_value = "0.0025")]
+    pub bridge_fee_eth: U256,
+    /// DOT to fund Bridge Hub execution of the sovereign-account deposit. Drawn from the Treasury
+    /// on top of --dot-amount; any unused remainder is refunded into the sovereign deposit.
+    #[arg(long, value_name = POLKADOT_SYMBOL, value_parser = parse_units_polkadot, default_value = "0.1")]
+    pub bridge_hub_fee_dot: U128,
+    /// Slippage pad as a decimal (e.g. 0.03 = 3%). Raises the max DOT spent on the swap.
+    #[arg(long, default_value_t = 0.03)]
+    pub eth_swap_slippage_pad: f64,
+    /// Price-drift pad as a decimal (e.g. 0.10 = 10%). Raises the max DOT spent on the swap.
+    #[arg(long, default_value_t = 0.10)]
+    pub eth_swap_price_pad: f64,
+}
+
+#[derive(Debug, Args)]
 pub struct ApiEndpoints {
     #[arg(long, value_name = "URL")]
     bridge_hub_api: Option<String>,
@@ -357,7 +382,7 @@ pub enum Format {
 
 struct Context {
     bridge_hub_api: Box<OnlineClient<PolkadotConfig>>,
-    _asset_hub_api: Box<OnlineClient<PolkadotConfig>>,
+    asset_hub_api: Box<OnlineClient<PolkadotConfig>>,
     _relay_api: Box<OnlineClient<PolkadotConfig>>,
 }
 
@@ -390,7 +415,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     let context = Context {
         bridge_hub_api: Box::new(bridge_hub_api),
-        _asset_hub_api: Box::new(asset_hub_api),
+        asset_hub_api: Box::new(asset_hub_api),
         _relay_api: Box::new(relay_api),
     };
 
@@ -558,7 +583,9 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             let (register_ether_call, set_ether_metadata_call) = commands::register_ether(&params);
             send_xcm_asset_hub(&context, vec![register_ether_call, set_ether_metadata_call]).await?
         }
-        Command::TreasuryProposal2024(params) => treasury_commands::treasury_proposal(&params),
+        Command::TreasuryProposal2024(params) => {
+            treasury_commands::treasury_proposal(&params)
+        }
         Command::GovUpdate202501(GovUpdate202501Args {
             pricing_parameters,
             register_ether,
@@ -668,6 +695,9 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
                 });
                 send_xcm_bridge_hub(&context, vec![upgrade_call]).await?
             }
+        }
+        Command::RebalanceSovAccounts(params) => {
+            commands::rebalance_sov_accounts(&context, params).await?
         }
     };
 
