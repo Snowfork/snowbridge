@@ -22,8 +22,7 @@
 
 import { ApiPromise, WsProvider } from "@polkadot/api"
 
-const RELAY_WS =
-    process.env.RELAY_WS ?? "wss://polkadot.api.onfinality.io/public-ws"
+const RELAY_WS = process.env.RELAY_WS ?? "wss://polkadot.api.onfinality.io/public-ws"
 const HOURS = Number(process.argv[2] ?? 36)
 
 const short = (h: { toString(): string }): string => {
@@ -66,7 +65,8 @@ async function main() {
 
         // The runtime calls the contract's authority set is derived from.
         const curProof = (await api.call.beefyMmrApi.authoritySetProof()) as unknown as AuthoritySet
-        const nextProof = (await api.call.beefyMmrApi.nextAuthoritySetProof()) as unknown as AuthoritySet
+        const nextProof =
+            (await api.call.beefyMmrApi.nextAuthoritySetProof()) as unknown as AuthoritySet
         console.log(
             `\nbeefyMmrApi.authoritySetProof()     -> id=${curProof.id} len=${curProof.len} root=${short(curProof.keysetCommitment)}`,
         )
@@ -111,12 +111,10 @@ async function main() {
         }
         process.stdout.write("\n")
         rows.reverse()
-        if (pruned)
-            console.log(`\n(${pruned} samples with unavailable/pruned state skipped)`)
+        if (pruned) console.log(`\n(${pruned} samples with unavailable/pruned state skipped)`)
 
         // Collapse consecutive samples that share the same state.
-        const key = (r: Sample) =>
-            `${r.session}|${r.vsetId}|${r.curRoot}|${r.nextRoot}`
+        const key = (r: Sample) => `${r.session}|${r.vsetId}|${r.curRoot}|${r.nextRoot}`
         const collapsed: Sample[] = []
         for (const r of rows) {
             const last = collapsed[collapsed.length - 1]
