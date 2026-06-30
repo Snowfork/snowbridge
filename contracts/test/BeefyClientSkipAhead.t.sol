@@ -108,6 +108,79 @@ contract BeefyClientSkipAheadTest is BeefyClientTest {
         );
     }
 
+    /// @dev applySkip in isolation: fast-forwards current to the verified id (root/length
+    /// preserved), loads next from the leaf, and must NOT touch the trusting-window anchor.
+    /// Driven directly because the Fiat-Shamir submit subsample is keyed by the current set id
+    /// (createFiatShamirHash), which differs from the skipped-to id, so the cached Fiat-Shamir
+    /// proof fixtures can't be replayed against a skip without regenerating them.
+    function testApplySkipAdvancesStateWithoutRatchet() public {
+        // current = setId-3, next = setId-2, both sharing `root`.
+        initialize(setId - 3);
+        uint64 anchorBefore = beefyClient.currentSetActivatedAt();
+
+        // Advance wall-clock so an (incorrect) re-anchor would be observably different.
+        vm.warp(block.timestamp + 1 hours);
+
+        // Skip ahead to setId, loading next from the (valid) fixture leaf/proof against mmrRoot.
+        beefyClient.applySkip_public(setId, mmrRoot, mmrLeaf, mmrLeafProofs, leafProofOrder);
+
+        // Current fast-forwarded to the skipped id; membership root and length preserved.
+        (uint128 curId, uint128 curLen, bytes32 curRoot,) = beefyClient.currentValidatorSet();
+        assertEq(uint256(curId), uint256(setId), "current id advanced to skipped id");
+        assertEq(curRoot, root, "current root preserved across skip");
+        assertEq(uint256(curLen), uint256(setSize), "current length preserved across skip");
+
+        // Next loaded from the leaf (here a new era => different root).
+        (uint128 nextId,, bytes32 nextRoot,) = beefyClient.nextValidatorSet();
+        assertEq(uint256(nextId), uint256(mmrLeaf.nextAuthoritySetID), "next id from leaf");
+        assertEq(nextRoot, mmrLeaf.nextAuthoritySetRoot, "next root from leaf");
+
+        // No ratchet: a skip must not move the anchor forward.
+        assertEq(
+            beefyClient.currentSetActivatedAt(), anchorBefore, "skip must not re-anchor window"
+        );
+    }
+
+    /// @dev applySkip enforces strictly increasing ids: the leaf's nextAuthoritySetID must be
+    /// greater than the skipped-to commitment id, else InvalidMMRLeaf. Driven through the real
+    /// interactive submitFinal so the gate is exercised end-to-end (its subsample is prevRandao-
+    /// seeded, so the cached fixtures replay correctly for a skip).
+    function testSkipAheadRevertsWithInvalidMMRLeaf() public {
+        BeefyClient.Commitment memory commitment = initialize(setId - 3);
+
+        beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
+        vm.roll(block.number + randaoCommitDelay);
+        commitPrevRandao();
+        createFinalProofs();
+
+        // Skip-ahead gates pass, signatures verify, but the leaf claims a non-increasing next id
+        // (== the skipped-to id) — applySkip must reject it before advancing.
+        mmrLeaf.nextAuthoritySetID = setId;
+        vm.expectRevert(BeefyClient.InvalidMMRLeaf.selector);
+        beefyClient.submitFinal(
+            commitment, bitfield, finalValidatorProofs, mmrLeaf, mmrLeafProofs, leafProofOrder
+        );
+    }
+
+    /// @dev applySkip verifies the leaf against the commitment's MMR root; a tampered leaf
+    /// (here a wrong parentNumber) must fail with InvalidMMRLeafProof.
+    function testSkipAheadRevertsWithInvalidMMRLeafProof() public {
+        BeefyClient.Commitment memory commitment = initialize(setId - 3);
+
+        beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
+        vm.roll(block.number + randaoCommitDelay);
+        commitPrevRandao();
+        createFinalProofs();
+
+        // id check passes (leaf.nextAuthoritySetID == setId + 1 > setId), but the corrupted leaf
+        // no longer matches the proof.
+        mmrLeaf.parentNumber = 1;
+        vm.expectRevert(BeefyClient.InvalidMMRLeafProof.selector);
+        beefyClient.submitFinal(
+            commitment, bitfield, finalValidatorProofs, mmrLeaf, mmrLeafProofs, leafProofOrder
+        );
+    }
+
     /// @dev A genuine (consecutive) handover is fresh evidence the new set is active, so it MUST
     /// re-anchor the trusting window — the mechanism that keeps skips available across long eras.
     function testHandoverReanchorsTrustingWindow() public {

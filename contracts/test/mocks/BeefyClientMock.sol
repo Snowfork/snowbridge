@@ -66,6 +66,16 @@ contract BeefyClientMock is BeefyClient {
         currentSetActivatedAt = _activatedAt;
     }
 
+    function applySkip_public(
+        uint64 validatorSetID,
+        bytes32 newMMRRoot,
+        MMRLeaf calldata leaf,
+        bytes32[] calldata leafProof,
+        uint256 leafProofOrder
+    ) external {
+        applySkip(validatorSetID, newMMRRoot, leaf, leafProof, leafProofOrder);
+    }
+
     // Used to verify integrity of storage to storage copies
     function copyCounters() external {
         currentValidatorSet.usageCounters = createUint16Array(1000);
