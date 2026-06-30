@@ -590,6 +590,16 @@ contract BeefyClient {
         } else if (commitment.validatorSetID != currentValidatorSet.id) {
             // Non-consecutive skip-ahead, authenticated against the current set (vset stays
             // currentValidatorSet). canSkipAhead reverts if the trusting window has closed.
+            //
+            // Note for skip-ahead: the Fiat-Shamir signer subsample is seeded by
+            // createFiatShamirHash, which mixes in vset.id — here the *current* set's id, which is
+            // strictly behind commitment.validatorSetID. This is self-consistent: membership is
+            // unchanged across a stable era (current.root == next.root, enforced by canSkipAhead),
+            // so the validators selected by a current-id-seeded subsample are the same accounts
+            // that signed the later session, and the relayer derives the identical subsample via
+            // createFiatShamirFinalBitfield (which also uses the current set). The signatures
+            // themselves are over commitmentHash (which binds commitment.validatorSetID), so the
+            // id mismatch only varies which honest signers are sampled, never what they attest.
             if (!canSkipAhead(commitment.validatorSetID)) {
                 revert InvalidCommitment();
             }
