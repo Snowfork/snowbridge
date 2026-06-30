@@ -408,7 +408,6 @@ pub async fn rebalance_sov_accounts(
         staging_xcm::v5::{
             asset::{
                 Asset, AssetFilter, AssetId, AssetTransferFilter, Assets, Fungibility, WildAsset,
-                WildFungibility,
             },
             junction::{Junction, NetworkId},
             junctions::Junctions,
@@ -470,8 +469,15 @@ pub async fn rebalance_sov_accounts(
         .checked_add(price_pad)
         .and_then(|v| v.checked_add(slippage_pad))
         .ok_or("swap give amount overflowed u128")?;
+    // Bridge Hub charges for executing the inbound teleport + deposit of the remaining DOT into the
+    // Asset Hub sovereign account. The unpaid-execution path is not available to us here (the
+    // origin after the teleport is neither cleared-and-allowed nor an unpaid-allowed location), so
+    // we pay BH execution with teleported DOT. Draw it from the Treasury on top of `dot_amount` so
+    // the sovereign still nets the full amount; any unused remainder is refunded into the deposit.
+    let bridge_hub_fee_dot = params.bridge_hub_fee_dot.to::<u128>();
     let withdraw_dot = dot_amount
         .checked_add(give_dot)
+        .and_then(|v| v.checked_add(bridge_hub_fee_dot))
         .ok_or("total DOT withdraw overflowed u128")?;
 
     let dot = |x: u128| format_units(U256::from(x), POLKADOT_DECIMALS).unwrap();
@@ -498,6 +504,7 @@ pub async fn rebalance_sov_accounts(
     eprintln!("  LP fee (0.3%)            = {} DOT", dot(lp_fee));
     eprintln!("  Price fluctuation pad    = {} DOT ({}% pad)", dot(price_pad), pct(params.eth_swap_price_pad));
     eprintln!("  Slippage pad             = {} DOT ({}% pad)", dot(slippage_pad), pct(params.eth_swap_slippage_pad));
+    eprintln!("  Bridge Hub exec fee      = {} DOT (refunded into sovereign if unused)", dot(bridge_hub_fee_dot));
 
     let dot_location = Location {
         parents: 1,
@@ -522,6 +529,16 @@ pub async fn rebalance_sov_accounts(
     let eth_out_asset = asset(eth_location.clone(), eth_out);
     let eth_for_gateway = asset(eth_location.clone(), gateway_eth);
     let eth_for_fee = asset(eth_location.clone(), bridge_fee_eth);
+    let dot_for_bh_fee = asset(dot_location.clone(), bridge_hub_fee_dot);
+
+    // The Snowbridge V2 outbound converter requires the exported message to end
+    // with SetTopic (otherwise XcmConverterError::SetTopicExpected => the BridgeHub
+    // export to Ethereum can't be converted and the whole message is Unroutable).
+    // Derive a deterministic topic from the transfer parameters so the preimage
+    // stays reproducible while distinct rebalances get distinct message ids.
+    let topic: [u8; 32] = sp_crypto_hashing::blake2_256(
+        &(gateway_eth, bridge_fee_eth, withdraw_dot, give_dot).encode(),
+    );
 
     let message = Xcm(vec![
         UnpaidExecution {
@@ -530,6 +547,10 @@ pub async fn rebalance_sov_accounts(
         },
         // Act as the Treasury so the withdraw debits its balance.
         AliasOrigin(treasury_location.clone()),
+        // Pay onward-message delivery fees by withdrawing from the Treasury (origin) directly,
+        // not from holding. Otherwise the final "all remaining DOT" teleport drains holding
+        // before the BridgeHub send charges its delivery fee, failing with NotHoldingFees.
+        SetFeesMode { jit_withdraw: true },
         WithdrawAsset(Assets(vec![dot_for_withdraw])),
         // Set early so any leftover/dust (and any error path) refunds to the Treasury.
         SetAppendix(Xcm(vec![
@@ -555,44 +576,61 @@ pub async fn rebalance_sov_accounts(
             assets: BoundedVec(vec![AssetTransferFilter::ReserveWithdraw(
                 AssetFilter::Definite(Assets(vec![eth_for_gateway])),
             )]),
-            remote_xcm: Xcm(vec![DepositAsset {
-                assets: AssetFilter::Wild(WildAsset::AllOf {
-                    id: AssetId(eth_location),
-                    fun: WildFungibility::Fungible,
-                }),
-                beneficiary: Location {
-                    parents: 0,
-                    interior: Junctions::X1([Junction::AccountKey20 {
-                        network: None,
-                        key: GATEWAY_PROXY,
-                    }]),
+            remote_xcm: Xcm(vec![
+                DepositAsset {
+                    // The Snowbridge V2 converter evaluates this in Ethereum context, where the
+                    // gateway ETH reanchors to `Here`. An `AllOf { id: <Ethereum location> }`
+                    // filter would not match that id (FilterDoesNotConsumeAllAssets => Unroutable),
+                    // so deposit by count like the canonical builders do.
+                    assets: AssetFilter::Wild(WildAsset::AllCounted(1)),
+                    beneficiary: Location {
+                        parents: 0,
+                        interior: Junctions::X1([Junction::AccountKey20 {
+                            network: None,
+                            key: GATEWAY_PROXY,
+                        }]),
+                    },
                 },
-            }]),
+                // Required by the Snowbridge V2 export converter (SetTopicExpected).
+                SetTopic(topic),
+            ]),
         },
         // Send ALL remaining DOT to the Asset Hub sovereign account on Bridge Hub.
         // DOT moves between system parachains by teleport (the relay is its reserve, not BH),
         // so ReserveWithdraw here fails with UntrustedReserveLocation.
+        //
+        // We must pay for BH execution: `remote_fees: None` would append `UnpaidExecution`, which
+        // BH's barrier rejects here (it disallows `ClearOrigin` on the unpaid path, and an
+        // `AliasOrigin` to the Treasury is not an unpaid-allowed origin). Paying with a teleported
+        // DOT fee instead routes the message through BH's paid-execution barrier, which accepts the
+        // sibling Asset Hub origin and tolerates the subsequent `ClearOrigin`.
         InitiateTransfer {
             destination: Location {
                 parents: 1,
                 interior: Junctions::X1([Junction::Parachain(BRIDGE_HUB_ID)]),
             },
-            remote_fees: None,
-            preserve_origin: true,
+            remote_fees: Some(AssetTransferFilter::Teleport(AssetFilter::Definite(Assets(
+                vec![dot_for_bh_fee],
+            )))),
+            // A plain deposit to the sovereign needs no origin; ClearOrigin keeps the paid barrier happy.
+            preserve_origin: false,
             assets: BoundedVec(vec![AssetTransferFilter::Teleport(AssetFilter::Wild(
-                WildAsset::AllOf {
-                    id: AssetId(dot_location),
-                    fun: WildFungibility::Fungible,
-                },
+                WildAsset::AllCounted(1),
             ))]),
-            remote_xcm: Xcm(vec![DepositAsset {
-                assets: AssetFilter::Wild(WildAsset::All),
-                beneficiary: Location {
-                    parents: 1,
-                    interior: Junctions::X1([Junction::Parachain(ASSET_HUB_ID)]),
+            remote_xcm: Xcm(vec![
+                // Refund the unused execution fee back into holding so it lands in the sovereign too.
+                RefundSurplus,
+                DepositAsset {
+                    assets: AssetFilter::Wild(WildAsset::All),
+                    beneficiary: Location {
+                        parents: 1,
+                        interior: Junctions::X1([Junction::Parachain(ASSET_HUB_ID)]),
+                    },
                 },
-            }]),
+            ]),
         },
+        // Correlate the AH-side message with the bridged Ethereum message for tracing.
+        SetTopic(topic),
     ]);
 
     fn asset(id: Location, amount: u128) -> Asset {

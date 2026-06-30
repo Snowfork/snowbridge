@@ -312,6 +312,10 @@ pub struct RebalanceSovAccountsArgs {
     /// Bridge execution fee in ETH for the transfer to Ethereum (added to the exact swap output).
     #[arg(long, value_name = "ETHER", value_parser = parse_units_eth, default_value = "0.0025")]
     pub bridge_fee_eth: U256,
+    /// DOT to fund Bridge Hub execution of the sovereign-account deposit. Drawn from the Treasury
+    /// on top of --dot-amount; any unused remainder is refunded into the sovereign deposit.
+    #[arg(long, value_name = POLKADOT_SYMBOL, value_parser = parse_units_polkadot, default_value = "0.1")]
+    pub bridge_hub_fee_dot: U128,
     /// Slippage pad as a decimal (e.g. 0.03 = 3%). Raises the max DOT spent on the swap.
     #[arg(long, default_value_t = 0.03)]
     pub eth_swap_slippage_pad: f64,
