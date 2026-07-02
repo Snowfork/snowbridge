@@ -20,8 +20,8 @@ library Bits {
     }
 
     // Sets the bit at the given 'index' in 'self' to:
-    //  '1' - if the bit is '0'
-    //  '0' - if the bit is '1'
+    // '1' - if the bit is '0'
+    // '0' - if the bit is '1'
     // Returns the modified value.
     function toggleBit(uint256 self, uint8 index) internal pure returns (uint256) {
         return self ^ (ONE << index);
@@ -34,7 +34,7 @@ library Bits {
 
     // Check if the bit at the given 'index' in 'self' is set.
     // Returns:
-    //  'true' - if the value of the bit is '1'
+    // 'true' - if the value of the bit is '1'
     //  'false' - if the value of the bit is '0'
     function bitSet(uint256 self, uint8 index) internal pure returns (bool) {
         return (self >> index) & 1 == 1;

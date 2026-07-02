@@ -105,9 +105,9 @@ library Bitfield {
             uint256 count = 0;
             for (uint256 i = 0; i < self.length; i++) {
                 uint256 x = self[i];
-                x = (x & M1) + ((x >> 1) & M1); //put count of each  2 bits into those  2 bits
-                x = (x & M2) + ((x >> 2) & M2); //put count of each  4 bits into those  4 bits
-                x = (x & M4) + ((x >> 4) & M4); //put count of each  8 bits into those  8 bits
+                x = (x & M1) + ((x >> 1) & M1); //put count of each 2 bits into those 2 bits
+                x = (x & M2) + ((x >> 2) & M2); //put count of each 4 bits into those 4 bits
+                x = (x & M4) + ((x >> 4) & M4); //put count of each 8 bits into those 8 bits
                 x = (x & M8) + ((x >> 8) & M8); //put count of each 16 bits into those 16 bits
                 x = (x & M16) + ((x >> 16) & M16); //put count of each 32 bits into those 32 bits
                 x = (x & M32) + ((x >> 32) & M32); //put count of each 64 bits into those 64 bits
@@ -146,9 +146,9 @@ library Bitfield {
             // Count bits in full 256-bit elements
             for (uint256 i = 0; i < fullElements && i < self.length; i++) {
                 uint256 x = self[i];
-                x = (x & M1) + ((x >> 1) & M1); //put count of each  2 bits into those  2 bits
-                x = (x & M2) + ((x >> 2) & M2); //put count of each  4 bits into those  4 bits
-                x = (x & M4) + ((x >> 4) & M4); //put count of each  8 bits into those  8 bits
+                x = (x & M1) + ((x >> 1) & M1); //put count of each 2 bits into those 2 bits
+                x = (x & M2) + ((x >> 2) & M2); //put count of each 4 bits into those 4 bits
+                x = (x & M4) + ((x >> 4) & M4); //put count of each 8 bits into those 8 bits
                 x = (x & M8) + ((x >> 8) & M8); //put count of each 16 bits into those 16 bits
                 x = (x & M16) + ((x >> 16) & M16); //put count of each 32 bits into those 32 bits
                 x = (x & M32) + ((x >> 32) & M32); //put count of each 64 bits into those 64 bits
