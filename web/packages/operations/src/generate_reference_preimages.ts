@@ -16,11 +16,6 @@ const BRIDGE_HUB_WS = process.env.BRIDGE_HUB_WS ?? "wss://polkadot-bridge-hub-rp
 // Transient (gitignored) output; PET owns the canonical copy.
 const OUTPUT_PATH = join(__dirname, "..", "reference", "halt_reference_preimages.json")
 
-interface RuntimeInfo {
-    specName: string
-    specVersion: number
-}
-
 interface PreimageEntry {
     hash: string
     callData: string
@@ -29,18 +24,8 @@ interface PreimageEntry {
 
 interface ReferenceFile {
     description: string
-    generatedAt: string
-    assetHubRuntime: RuntimeInfo
-    bridgeHubRuntime: RuntimeInfo
     halt: PreimageEntry
     resume: PreimageEntry
-}
-
-function runtimeInfo(api: ApiPromise): RuntimeInfo {
-    return {
-        specName: api.runtimeVersion.specName.toString(),
-        specVersion: api.runtimeVersion.specVersion.toNumber(),
-    }
 }
 
 async function main() {
@@ -82,9 +67,6 @@ async function main() {
                 "Reviewed by the Polkadot Fellowship and executed against forked live " +
                 "chains by polkadot-ecosystem-tests. Verify an operator-generated " +
                 "preimage by comparing its hash against the matching hash here.",
-            generatedAt: new Date().toISOString().slice(0, 10),
-            assetHubRuntime: runtimeInfo(assetHub),
-            bridgeHubRuntime: runtimeInfo(bridgeHub),
             halt: {
                 hash: halt.hash,
                 callData: halt.callData,
