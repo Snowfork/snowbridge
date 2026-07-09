@@ -1,4 +1,4 @@
-endpoint: wss://polkadot-rpc.dwellir.com
+endpoint: wss://polkadot.ibp.network
 mock-signature-host: true
 block: ${env.POLKADOT_BLOCK_NUMBER}
 db: ./polkadot.sqlite
