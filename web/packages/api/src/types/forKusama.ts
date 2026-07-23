@@ -45,6 +45,7 @@ export enum ValidationReason {
     MaxConsumersReached,
     AccountDoesNotExist,
     InsufficientPoolReserves,
+    MinimumAmountValidation,
 }
 
 export type ValidationLog = {

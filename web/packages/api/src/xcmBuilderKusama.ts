@@ -241,13 +241,18 @@ export function buildKusamaToPolkadotDestAssetHubXCM(
     transferAmount: bigint,
     beneficiary: string,
     topic: string,
+    // Optional service fee: the real kusama->polkadot message carries `serviceFeeKsm` extra KSM
+    // and skims it to `feeRecipient` on Polkadot AH before the beneficiary deposit. Modelling it
+    // here keeps validate()'s dest dry-run faithful so a broken fee skim is caught.
+    serviceFeeKsm: bigint = 0n,
+    feeRecipient?: string,
 ) {
     let withdrawAssets: any[] = []
     let reserveAssetsDeposited = [
         {
             id: ksmLocationOnPolkadotAssetHub,
             fun: {
-                Fungible: totalFeeInNative,
+                Fungible: totalFeeInNative + serviceFeeKsm,
             },
         },
     ]
@@ -306,6 +311,23 @@ export function buildKusamaToPolkadotDestAssetHubXCM(
                 withdrawAsset: withdrawAssets,
             },
             { clearOrigin: null },
+            ...(serviceFeeKsm > 0n && feeRecipient
+                ? [
+                      {
+                          depositAsset: {
+                              assets: {
+                                  Definite: [
+                                      {
+                                          id: ksmLocationOnPolkadotAssetHub,
+                                          fun: { Fungible: serviceFeeKsm },
+                                      },
+                                  ],
+                              },
+                              beneficiary: accountId32Location(feeRecipient),
+                          },
+                      },
+                  ]
+                : []),
             {
                 depositAsset: {
                     assets: {

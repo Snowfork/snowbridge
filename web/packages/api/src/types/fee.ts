@@ -35,7 +35,11 @@ export type ToEthereumFeeKey =
 export type InterParachainFeeKey = "assetHubDelivery" | "destinationExecution"
 
 // kusama ↔ polkadot
-export type KusamaFeeKey = "xcmBridge" | "bridgeHubDelivery" | "destinationExecution"
+export type KusamaFeeKey =
+    | "xcmBridge"
+    | "bridgeHubDelivery"
+    | "destinationExecution"
+    | "serviceFee"
 
 // v1 ethereum → polkadot (legacy adapter)
 export type V1ToPolkadotFeeKey = "destinationDelivery" | "destinationExecution"

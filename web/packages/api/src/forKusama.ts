@@ -35,7 +35,13 @@ import {
 import { CallDryRunEffects, XcmDryRunApiError, XcmDryRunEffects } from "@polkadot/types/interfaces"
 import { Result } from "@polkadot/types"
 import { ensureValidationSuccess, padFeeByPercentage, u32ToLeBytes } from "./utils"
-import { addBreakdown, computeTotals, findInBreakdown, findInBreakdownOrZero, findTotal } from "./fees"
+import {
+    addBreakdown,
+    computeTotals,
+    findInBreakdown,
+    findInBreakdownOrZero,
+    findTotal,
+} from "./fees"
 import {
     checkDotKsmPoolLiquidityForKusamaToPolkadot,
     checkKsmDotPoolLiquidityForPolkadotToKusama,
@@ -62,6 +68,21 @@ const KUSAMA_BASE_FEE = 10_602_492_378n // 0.0106KSM
 const KUSAMA_FEE_PER_BYTE = 1000000n // 0.000001 KSM
 const POLKADOT_BASE_FEE = 333_794_429n // 0.033 DOT
 const POLKADOT_FEE_PER_BYTE = 16666n // 0.0000016666 DOT
+
+// Service fee (~$1) deposited on Polkadot AH for both directions, on top of the
+// bridge/execution fees. TEST CONFIG: recipient is Clara's own account so the fee is
+// claimable back during testing; replace for production. Denominated in the source
+// chain's native asset (DOT for polkadot->kusama, KSM for kusama->polkadot), which is
+// what each direction has in Polkadot-AH holding. Fixed native amounts for now, so the
+// dollar value drifts with price (DOT ~$0.80, KSM ~$3.17 as of 2026-07-20).
+const SERVICE_FEE_RECIPIENT =
+    "0x6cd8840ea69d18a2f1dde746df70629df118b870ec228367d6bcf3348ca3b10b"
+const SERVICE_FEE_DOT = 12_400_000_000n // ~1.24 DOT (10 decimals) ~= $1
+const SERVICE_FEE_KSM = 315_000_000_000n // ~0.315 KSM (12 decimals) ~= $1
+
+function serviceFeeAmount(direction: Direction): bigint {
+    return direction === Direction.ToPolkadot ? SERVICE_FEE_KSM : SERVICE_FEE_DOT
+}
 
 function resolveInputs(
     registry: AssetRegistry,
@@ -268,6 +289,9 @@ export class KusamaTransfer<T extends EthereumProviderTypes> implements KusamaTr
         destinationFee = destinationFee + BigInt(minBalanceFeeDest)
         totalXcmBridgeFee = padFeeByPercentage(totalXcmBridgeFee, 33n)
 
+        // Service fee (~$1) charged in the source native asset, deposited on Polkadot AH.
+        const serviceFee = serviceFeeAmount(this.#direction())
+
         let totalFee = totalXcmBridgeFee + bridgeHubDeliveryFee + destinationFee
         const sourceSymbol = this.#direction() === Direction.ToPolkadot ? "KSM" : "DOT"
         // destNativeSymbol is the asset coming OUT of the destination AH swap
@@ -288,8 +312,12 @@ export class KusamaTransfer<T extends EthereumProviderTypes> implements KusamaTr
             amount: destinationFeeInDestNative,
             symbol: destNativeSymbol,
         })
+        addBreakdown(breakdown, "serviceFee", { amount: serviceFee, symbol: sourceSymbol })
 
-        const summary = [{ description: "Bridge fee", amount: totalFee, symbol: sourceSymbol }]
+        const summary = [
+            { description: "Bridge fee", amount: totalFee, symbol: sourceSymbol },
+            { description: "Service fee", amount: serviceFee, symbol: sourceSymbol },
+        ]
 
         return {
             kind: this.from.kind === "kusama" ? "kusama->polkadot" : "polkadot->kusama",
@@ -344,6 +372,7 @@ export class KusamaTransfer<T extends EthereumProviderTypes> implements KusamaTr
             this.#direction(),
             tokenAddress,
         )
+        const serviceFee = serviceFeeAmount(this.#direction())
         let tx
         if (this.#direction() == Direction.ToPolkadot) {
             tx = createERC20ToPolkadotTx(
@@ -357,6 +386,7 @@ export class KusamaTransfer<T extends EthereumProviderTypes> implements KusamaTr
                     "destinationExecution",
                     fee.kind === "kusama->polkadot" ? "KSM" : "DOT",
                 ),
+                serviceFee,
                 messageId,
             )
         } else {
@@ -371,6 +401,7 @@ export class KusamaTransfer<T extends EthereumProviderTypes> implements KusamaTr
                     "destinationExecution",
                     fee.kind === "kusama->polkadot" ? "KSM" : "DOT",
                 ),
+                serviceFee,
                 messageId,
             )
         }
@@ -419,6 +450,7 @@ export class KusamaTransfer<T extends EthereumProviderTypes> implements KusamaTr
             sourceAccountHex,
             sourceParachain: _source,
             beneficiaryAddressHex,
+            sourceAssetMetadata,
             destAssetMetadata,
         } = transfer.computed
         const { tx } = transfer
@@ -449,6 +481,26 @@ export class KusamaTransfer<T extends EthereumProviderTypes> implements KusamaTr
                 kind: ValidationKind.Error,
                 reason: ValidationReason.InsufficientTokenBalance,
                 message: "Insufficient token balance to submit transaction.",
+            })
+        }
+
+        // The transferred token is deposited in full on the destination asset hub (the fee is paid
+        // separately in the native asset), so the amount must clear the token's minimum balance
+        // there or the deposit fails and the funds trap under the message origin. An amount exactly
+        // equal to the minimum balance also traps (observed with 0.01 USDC == its min balance), so
+        // require headroom above it. Mirror the other transfer impls (e.g. toKusama/erc20ToKusamaAH)
+        // and take the larger of the two sides' minimum balances so the check is correct regardless
+        // of direction.
+        const destTokenMinimumBalance =
+            sourceAssetMetadata.minimumBalance > destAssetMetadata.minimumBalance
+                ? sourceAssetMetadata.minimumBalance
+                : destAssetMetadata.minimumBalance
+        if (amount <= destTokenMinimumBalance) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.MinimumAmountValidation,
+                message:
+                    "The amount transferred is at or below the minimum balance of the token on the destination chain.",
             })
         }
 
@@ -489,6 +541,8 @@ export class KusamaTransfer<T extends EthereumProviderTypes> implements KusamaTr
 
         let destAssetHubXCM: any
         if (this.#direction() == Direction.ToPolkadot) {
+            // Model the service-fee skim so the dest dry-run is faithful to the real message
+            // (kusama->polkadot deposits the KSM service fee on Polkadot AH).
             destAssetHubXCM = buildKusamaToPolkadotDestAssetHubXCM(
                 destAssetHub.registry,
                 findInBreakdown(
@@ -501,6 +555,8 @@ export class KusamaTransfer<T extends EthereumProviderTypes> implements KusamaTr
                 transfer.input.amount,
                 transfer.computed.beneficiaryAddressHex,
                 "0x0000000000000000000000000000000000000000000000000000000000000000",
+                serviceFeeAmount(this.#direction()),
+                SERVICE_FEE_RECIPIENT,
             )
         } else {
             destAssetHubXCM = buildPolkadotToKusamaDestAssetHubXCM(
@@ -680,6 +736,7 @@ function createERC20ToKusamaTx(
     beneficiaryAccount: string,
     amount: bigint,
     destFeeInSourceNative: bigint,
+    serviceFee: bigint,
     topic: string,
 ): SubmittableExtrinsic<"promise", ISubmittableResult> {
     let assets: any
@@ -722,7 +779,7 @@ function createERC20ToKusamaTx(
         beneficiaryAccount,
         topic,
     )
-    return parachain.tx.polkadotXcm.transferAssetsUsingTypeAndThen(
+    const transfer = parachain.tx.polkadotXcm.transferAssetsUsingTypeAndThen(
         destination,
         assets,
         reserveTypeAsset,
@@ -731,6 +788,14 @@ function createERC20ToKusamaTx(
         customXcm,
         "Unlimited",
     )
+    // polkadot->kusama: source IS Polkadot AH, so pay the service fee here as a local DOT
+    // transfer to the recipient, atomically with the bridge transfer via batchAll. (The
+    // customXcm runs on Kusama AH for this direction, so it cannot place a PAH-side fee.)
+    const serviceFeeTransfer = parachain.tx.balances.transferKeepAlive(
+        SERVICE_FEE_RECIPIENT,
+        serviceFee,
+    )
+    return parachain.tx.utility.batchAll([serviceFeeTransfer, transfer])
 }
 
 function createERC20ToPolkadotTx(
@@ -740,17 +805,22 @@ function createERC20ToPolkadotTx(
     beneficiaryAccount: string,
     amount: bigint,
     destFeeInSourceNative: bigint,
+    serviceFee: bigint,
     topic: string,
 ): SubmittableExtrinsic<"promise", ISubmittableResult> {
     let assets: any
     let reserveTypeAsset = "DestinationReserve"
+    // kusama->polkadot: the custom XCM runs on Polkadot AH (dest) holding KSM, so the service
+    // fee is skimmed there. Send it from Kusama AH as extra KSM headroom on top of the
+    // destination execution fee (`destFeeInSourceNative`), so it survives BuyExecution and is
+    // present in Polkadot-AH holding for the fee deposit.
     // is KSM
     if (isRelaychainLocation(tokenLocation)) {
         assets = {
             v4: [
                 {
                     id: NATIVE_TOKEN_LOCATION,
-                    fun: { Fungible: destFeeInSourceNative + amount },
+                    fun: { Fungible: destFeeInSourceNative + amount + serviceFee },
                 },
             ],
         }
@@ -760,7 +830,7 @@ function createERC20ToPolkadotTx(
             v4: [
                 {
                     id: NATIVE_TOKEN_LOCATION,
-                    fun: { Fungible: destFeeInSourceNative },
+                    fun: { Fungible: destFeeInSourceNative + serviceFee },
                 },
                 {
                     id: tokenLocation,
@@ -779,6 +849,8 @@ function createERC20ToPolkadotTx(
         parachain.registry,
         beneficiaryAccount,
         topic,
+        serviceFee,
+        SERVICE_FEE_RECIPIENT,
     )
     return parachain.tx.polkadotXcm.transferAssetsUsingTypeAndThen(
         destination,
@@ -852,7 +924,7 @@ async function dryRunSourceAssetHub(
     }
 }
 
-async function dryRunDestAssetHub(assetHub: ApiPromise, parachainId: number, xcm: any) {
+export async function dryRunDestAssetHub(assetHub: ApiPromise, parachainId: number, xcm: any) {
     const sourceParachain = { v4: { parents: 1, interior: { x1: [{ parachain: parachainId }] } } }
     const result = await assetHub.call.dryRunApi.dryRunXcm<
         Result<XcmDryRunEffects, XcmDryRunApiError>

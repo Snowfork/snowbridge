@@ -16,6 +16,17 @@ export const transferForKusama = async (
         env = process.env.NODE_ENV
     }
     const info = bridgeInfoFor(env)
+    // polkadot.io RPCs are flaky; prefer dwellir for Polkadot AH connectivity.
+    if (env === "polkadot_mainnet" && (info as any).environment?.parachains) {
+        ;(info as any).environment.parachains["1000"] =
+            "wss://asset-hub-polkadot-rpc.n.dwellir.com"
+    }
+    // The default Kusama AH RPC (dwellir) drops mid-subscription, so signAndSend on the
+    // kusama->polkadot (source = Kusama AH) path never finalizes. Pin the polkadot.io one.
+    if (env === "polkadot_mainnet" && (info as any).environment?.kusama?.parachains) {
+        ;(info as any).environment.kusama.parachains["1000"] =
+            "wss://kusama-asset-hub-rpc.polkadot.io"
+    }
     const { registry, environment: snowbridgeEnv } = info
     if (snowbridgeEnv === undefined) {
         throw Error(`Unknown environment '${env}'`)
@@ -26,12 +37,11 @@ export const transferForKusama = async (
 
     const polkadot_keyring = new Keyring({ type: "sr25519" })
 
-    const SOURCE_ACCOUNT = process.env["SOURCE_SUBSTRATE_KEY"]
-        ? polkadot_keyring.addFromUri(process.env["SOURCE_SUBSTRATE_KEY"])
-        : polkadot_keyring.addFromUri("//Ferdie")
-    const DEST_ACCOUNT = process.env["DEST_SUBSTRATE_KEY"]
-        ? polkadot_keyring.addFromUri(process.env["DEST_SUBSTRATE_KEY"])
-        : polkadot_keyring.addFromUri("//Ferdie")
+    const sourceUri =
+        process.env["SOURCE_SUBSTRATE_KEY"] ?? process.env["KUSAMA_SUBSTRATE_KEY"] ?? "//Ferdie"
+    const destUri = process.env["DEST_SUBSTRATE_KEY"] ?? sourceUri
+    const SOURCE_ACCOUNT = polkadot_keyring.addFromUri(sourceUri)
+    const DEST_ACCOUNT = polkadot_keyring.addFromUri(destUri)
 
     const SOURCE_ACCOUNT_PUBLIC = SOURCE_ACCOUNT.address
     const DEST_ACCOUNT_PUBLIC = DEST_ACCOUNT.address
@@ -95,6 +105,15 @@ export const transferForKusama = async (
         if (!validation.success) {
             console.error("validation errors", validation.logs)
             throw Error(`validation has one of more errors.`)
+        }
+
+        console.log("fee:", fee)
+        console.log("validation:", validation)
+
+        if (process.env["DRY_RUN"] == "true") {
+            console.log("DRY_RUN=true: validation passed, skipping signAndSend")
+            await context.destroyContext()
+            return
         }
 
         // Step 5. Submit transaction and get receipt for tracking
