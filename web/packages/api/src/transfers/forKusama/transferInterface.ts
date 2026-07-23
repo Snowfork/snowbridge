@@ -5,13 +5,14 @@ import type {
     DeliveryFee,
     MessageReceipt,
     Transfer,
+    TransferOptions,
     ValidatedTransfer,
 } from "../../types/forKusama"
 
 export interface TransferInterface<T extends EthereumProviderTypes> {
     readonly context: Context<T>
 
-    fee(tokenAddress: string): Promise<DeliveryFee>
+    fee(tokenAddress: string, options?: TransferOptions): Promise<DeliveryFee>
 
     tx(
         sourceAccount: string,
@@ -28,6 +29,7 @@ export interface TransferInterface<T extends EthereumProviderTypes> {
         beneficiaryAccount: string,
         tokenAddress: string,
         amount: bigint,
+        options?: TransferOptions,
     ): Promise<ValidatedTransfer>
 
     signAndSend(

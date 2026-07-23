@@ -241,9 +241,7 @@ export function buildKusamaToPolkadotDestAssetHubXCM(
     transferAmount: bigint,
     beneficiary: string,
     topic: string,
-    // Optional service fee: the real kusama->polkadot message carries `serviceFeeKsm` extra KSM
-    // and skims it to `feeRecipient` on Polkadot AH before the beneficiary deposit. Modelling it
-    // here keeps validate()'s dest dry-run faithful so a broken fee skim is caught.
+    // When set, skim this KSM amount to feeRecipient before the beneficiary deposit.
     serviceFeeKsm: bigint = 0n,
     feeRecipient?: string,
 ) {

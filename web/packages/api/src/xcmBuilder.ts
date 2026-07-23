@@ -400,11 +400,7 @@ export function buildParachainERC20ReceivedXcmOnAssetHub(
 function buildAssetHubXcmFromParachainKusama(
     beneficiary: string,
     topic: string,
-    // Optional service fee: when set, skim a fixed KSM amount to feeRecipient on
-    // Polkadot AH before depositing the remainder to the beneficiary. Only used on
-    // the kusama->polkadot direction, whose custom XCM executes on Polkadot AH and
-    // arrives holding KSM. The KSM sent from Kusama AH must include this amount as
-    // headroom on top of the destination execution fee.
+    // When set, skim this KSM amount to feeRecipient before depositing the remainder to the beneficiary.
     serviceFeeKsm?: bigint,
     feeRecipient?: string,
 ) {

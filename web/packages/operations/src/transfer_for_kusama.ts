@@ -21,8 +21,7 @@ export const transferForKusama = async (
         ;(info as any).environment.parachains["1000"] =
             "wss://asset-hub-polkadot-rpc.n.dwellir.com"
     }
-    // The default Kusama AH RPC (dwellir) drops mid-subscription, so signAndSend on the
-    // kusama->polkadot (source = Kusama AH) path never finalizes. Pin the polkadot.io one.
+    // Pin a reliable Kusama AH RPC; the default drops mid-subscription.
     if (env === "polkadot_mainnet" && (info as any).environment?.kusama?.parachains) {
         ;(info as any).environment.kusama.parachains["1000"] =
             "wss://kusama-asset-hub-rpc.polkadot.io"
@@ -86,8 +85,20 @@ export const transferForKusama = async (
                       { kind: "kusama", id: registry.kusama!.assetHubParaId },
                   )
 
-        // Step 1. Get the delivery fee for the transaction
-        const fee = await transferImpl.fee(tokenAddress)
+        // Step 1. Get the delivery fee. Optional service fee via SERVICE_FEE_RECIPIENT +
+        // SERVICE_FEE_AMOUNT (source native base units: DOT for p->k, KSM for k->p).
+        const serviceFeeRecipient = process.env["SERVICE_FEE_RECIPIENT"]
+        const serviceFeeAmount = process.env["SERVICE_FEE_AMOUNT"]
+        const options =
+            serviceFeeRecipient && serviceFeeAmount
+                ? {
+                      serviceFee: {
+                          recipient: serviceFeeRecipient,
+                          amount: BigInt(serviceFeeAmount),
+                      },
+                  }
+                : undefined
+        const fee = await transferImpl.fee(tokenAddress, options)
 
         // Step 2. Create a transfer tx
         const transfer = await transferImpl.tx(

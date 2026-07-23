@@ -26,11 +26,24 @@ export type Transfer = {
     tx: SubmittableExtrinsic<"promise", ISubmittableResult>
 }
 
+// Optional service fee deposited on Polkadot AH. `amount` is in the source chain's native asset
+// (DOT for polkadot->kusama, KSM for kusama->polkadot).
+export type ServiceFeeConfig = {
+    recipient: string
+    amount: bigint
+}
+
+export type TransferOptions = {
+    serviceFee?: ServiceFeeConfig
+}
+
 export type DeliveryFee = {
     kind: "kusama->polkadot" | "polkadot->kusama"
     breakdown: { [P in KusamaFeeKey]?: FeeAsset[] }
     summary: FeeItem[]
     totals: FeeAsset[]
+    // Resolved service fee, read by tx()/validate().
+    serviceFee?: ServiceFeeConfig
 }
 
 export enum ValidationKind {
