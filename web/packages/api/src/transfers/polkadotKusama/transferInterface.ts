@@ -7,7 +7,7 @@ import type {
     Transfer,
     TransferOptions,
     ValidatedTransfer,
-} from "../../types/forKusama"
+} from "../../types/polkadotKusama"
 
 export interface TransferInterface<T extends EthereumProviderTypes> {
     readonly context: Context<T>

@@ -2,10 +2,10 @@ import "dotenv/config"
 import { Keyring } from "@polkadot/keyring"
 import { createApi } from "@snowbridge/api"
 import { EthersEthereumProvider } from "@snowbridge/provider-ethers"
-import { Direction } from "@snowbridge/api/dist/forKusama"
+import { Direction } from "@snowbridge/api/dist/polkadotKusama"
 import { bridgeInfoFor } from "@snowbridge/registry"
 
-export const transferForKusama = async (
+export const transferPolkadotKusama = async (
     transferName: string,
     direction: Direction,
     amount: bigint,

@@ -24,7 +24,7 @@ import type { AddTipInterface } from "./addTip/addTipInterface"
 import type { AgentCreationInterface } from "./types/registration/agent"
 import type { RegistrationInterface } from "./types/registration/toPolkadot"
 import type { TransferInterface as ForInterParachainTransferInterface } from "./transfers/forInterParachain/transferInterface"
-import type { TransferInterface as ForKusamaTransferInterface } from "./transfers/forKusama/transferInterface"
+import type { TransferInterface as PolkadotKusamaTransferInterface } from "./transfers/polkadotKusama/transferInterface"
 import type { TransferInterface as ToPolkadotTransferInterface } from "./transfers/toPolkadot/transferInterface"
 import type { TransferInterface as ToPolkadotL2TransferInterface } from "./transfers/l2ToPolkadot/transferInterface"
 import type { TransferInterface as ToEthereumTransferInterface } from "./transfers/toEthereum/transferInterface"
@@ -60,7 +60,7 @@ export * as toPolkadotSnowbridgeV2 from "./types/toPolkadotSnowbridgeV2"
 export * as toEthereumV2 from "./types/toEthereum"
 export * as toEthereumFromEVMV2 from "./types/toEthereumEvm"
 export * as forInterParachain from "./types/forInterParachain"
-export * as forKusama from "./types/forKusama"
+export * as polkadotKusama from "./types/polkadotKusama"
 export type { VolumeFeeParams } from "./feeSchedule"
 export type {
     FeeAsset,
@@ -419,8 +419,8 @@ export type ApiOptions<P extends EthereumProvider<any>> = {
 
 export type TransferImplementation<T extends EthereumProviderTypes = EthereumProviderTypes> =
     | ({ kind: "polkadot->polkadot" } & ForInterParachainTransferInterface<T>)
-    | ({ kind: "kusama->polkadot" } & ForKusamaTransferInterface<T>)
-    | ({ kind: "polkadot->kusama" } & ForKusamaTransferInterface<T>)
+    | ({ kind: "kusama->polkadot" } & PolkadotKusamaTransferInterface<T>)
+    | ({ kind: "polkadot->kusama" } & PolkadotKusamaTransferInterface<T>)
     | ({ kind: "polkadot->ethereum" } & ToEthereumTransferInterface<T>)
     | ({ kind: "ethereum->polkadot" } & ToPolkadotTransferInterface<T>)
     | ({ kind: "ethereum->ethereum" } & ToEthereumEvmTransferInterface<T>)
@@ -564,9 +564,9 @@ export class SnowbridgeApi<P extends EthereumProvider<any>> {
             case "polkadot->kusama": {
                 const sourceParachain = sourceChain as Parachain
                 const destinationParachain = destinationChain as Parachain
-                const { KusamaTransfer } = require("./forKusama")
+                const { PolkadotKusamaTransfer } = require("./polkadotKusama")
                 return withKind(
-                    new KusamaTransfer(
+                    new PolkadotKusamaTransfer(
                         this.info,
                         this.context,
                         route,

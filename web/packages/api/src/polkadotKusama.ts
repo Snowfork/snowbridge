@@ -47,7 +47,7 @@ import {
     checkKsmDotPoolLiquidityForPolkadotToKusama,
 } from "./poolReserves"
 import { resolveBeneficiary } from "./crypto"
-import { TransferInterface as KusamaTransferInterface } from "./transfers/forKusama/transferInterface"
+import { TransferInterface as PolkadotKusamaTransferInterface } from "./transfers/polkadotKusama/transferInterface"
 import { Context } from "."
 import type {
     DeliveryFee,
@@ -56,9 +56,9 @@ import type {
     TransferOptions,
     ValidatedTransfer,
     ValidationLog,
-} from "./types/forKusama"
-import { ValidationKind, ValidationReason } from "./types/forKusama"
-export { ValidationKind, ValidationReason } from "./types/forKusama"
+} from "./types/polkadotKusama"
+import { ValidationKind, ValidationReason } from "./types/polkadotKusama"
+export { ValidationKind, ValidationReason } from "./types/polkadotKusama"
 
 export enum Direction {
     ToKusama,
@@ -97,7 +97,7 @@ function resolveInputs(
     return { sourceAssetMetadata, destAssetMetadata, sourceParachain }
 }
 
-export class KusamaTransfer<T extends EthereumProviderTypes> implements KusamaTransferInterface<T> {
+export class PolkadotKusamaTransfer<T extends EthereumProviderTypes> implements PolkadotKusamaTransferInterface<T> {
     readonly info: BridgeInfo
     readonly context: Context<T>
     readonly route: TransferRoute
