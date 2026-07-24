@@ -483,9 +483,10 @@ export class KusamaTransfer<T extends EthereumProviderTypes> implements KusamaTr
         }
 
         // The transferred amount must exceed the destination token's minimum balance, else the
-        // deposit fails and the funds trap. Use the larger of the two sides' minimum balances.
+        // deposit fails and the funds trap. resolveInputs labels metadata by chain (source =
+        // Polkadot AH, dest = Kusama AH), not by transfer direction, so pick the true destination.
         const destTokenMinimumBalance =
-            sourceAssetMetadata.minimumBalance > destAssetMetadata.minimumBalance
+            this.#direction() === Direction.ToPolkadot
                 ? sourceAssetMetadata.minimumBalance
                 : destAssetMetadata.minimumBalance
         if (amount <= destTokenMinimumBalance) {
@@ -534,7 +535,6 @@ export class KusamaTransfer<T extends EthereumProviderTypes> implements KusamaTr
 
         let destAssetHubXCM: any
         if (this.#direction() == Direction.ToPolkadot) {
-            // Include the service-fee skim so the dry-run matches the real message.
             destAssetHubXCM = buildKusamaToPolkadotDestAssetHubXCM(
                 destAssetHub.registry,
                 findInBreakdown(
@@ -805,7 +805,6 @@ function createERC20ToPolkadotTx(
 ): SubmittableExtrinsic<"promise", ISubmittableResult> {
     let assets: any
     let reserveTypeAsset = "DestinationReserve"
-    // Send the service fee as extra KSM; it is skimmed on Polkadot AH by the custom XCM.
     // is KSM
     if (isRelaychainLocation(tokenLocation)) {
         assets = {

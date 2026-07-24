@@ -42,7 +42,6 @@ export type DeliveryFee = {
     breakdown: { [P in KusamaFeeKey]?: FeeAsset[] }
     summary: FeeItem[]
     totals: FeeAsset[]
-    // Resolved service fee, read by tx()/validate().
     serviceFee?: ServiceFeeConfig
 }
 
