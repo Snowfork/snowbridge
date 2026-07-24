@@ -675,9 +675,24 @@ export class PolkadotKusamaTransfer<T extends EthereumProviderTypes> implements 
                 transfer.tx.signAndSend(account, options, (c) => {
                     if (c.isError) {
                         console.error(c)
-                        reject(c.internalError || c.dispatchError || c)
+                        if (c.internalError instanceof Error) {
+                            reject(c.internalError)
+                        } else if (c.dispatchError?.isModule) {
+                            const decoded = sourceAssetHub.registry.findMetaError(
+                                c.dispatchError.asModule,
+                            )
+                            reject(new Error(`Transaction failed: ${decoded.section}.${decoded.name}`))
+                        } else if (c.dispatchError) {
+                            reject(new Error(`Transaction failed: ${c.dispatchError.toString()}`))
+                        } else {
+                            reject(new Error(`Transaction failed with status: ${c.status.type}`))
+                        }
+                        return
                     }
-                    if (c.isFinalized) {
+                    // messageId is computed off-chain (SetTopic we control), so re-orgs can't
+                    // change it, resolve on isInBlock to avoid the finalization wait.
+                    const resolveOnInBlock = transfer.computed.messageId !== undefined
+                    if ((resolveOnInBlock && c.isInBlock) || c.isFinalized) {
                         const result = {
                             txHash: u8aToHex(c.txHash),
                             txIndex: c.txIndex || 0,
