@@ -280,9 +280,7 @@ export class PolkadotKusamaTransfer<T extends EthereumProviderTypes> implements 
             options?.serviceFee && options.serviceFee.amount > 0n
                 ? {
                       amount: options.serviceFee.amount,
-                      recipient: isHex(options.serviceFee.recipient)
-                          ? options.serviceFee.recipient
-                          : u8aToHex(decodeAddress(options.serviceFee.recipient)),
+                      recipient: resolveBeneficiary(options.serviceFee.recipient).hexAddress,
                   }
                 : undefined
 
