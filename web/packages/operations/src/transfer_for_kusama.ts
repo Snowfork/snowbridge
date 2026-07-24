@@ -16,16 +16,6 @@ export const transferForKusama = async (
         env = process.env.NODE_ENV
     }
     const info = bridgeInfoFor(env)
-    // polkadot.io RPCs are flaky; prefer dwellir for Polkadot AH connectivity.
-    if (env === "polkadot_mainnet" && (info as any).environment?.parachains) {
-        ;(info as any).environment.parachains["1000"] =
-            "wss://asset-hub-polkadot-rpc.n.dwellir.com"
-    }
-    // Pin a reliable Kusama AH RPC; the default drops mid-subscription.
-    if (env === "polkadot_mainnet" && (info as any).environment?.kusama?.parachains) {
-        ;(info as any).environment.kusama.parachains["1000"] =
-            "wss://kusama-asset-hub-rpc.polkadot.io"
-    }
     const { registry, environment: snowbridgeEnv } = info
     if (snowbridgeEnv === undefined) {
         throw Error(`Unknown environment '${env}'`)

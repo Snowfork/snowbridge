@@ -460,6 +460,35 @@ function buildTransferLocations(
         }
     }
 
+    // Polkadot AH ↔ Kusama AH paths (assets common to both)
+    if (registry.kusama) {
+        const assetHubAssets = Object.keys(assetHub.assets)
+        for (const kusamaPara of Object.values(registry.kusama.parachains)) {
+            const kusamaAssets = Object.keys(kusamaPara.assets)
+            const pahKahCommon = new Set(
+                assetHubAssets.filter((pa) => kusamaAssets.find((ka) => ka === pa)),
+            )
+            for (const asset of pahKahCommon) {
+                const p1: Path = {
+                    source: { kind: assetHub.kind, id: assetHub.id },
+                    destination: { kind: kusamaPara.kind, id: kusamaPara.id },
+                    asset,
+                }
+                if (pathFilter(p1)) {
+                    locations.push(p1)
+                }
+                const p2: Path = {
+                    source: p1.destination,
+                    destination: p1.source,
+                    asset,
+                }
+                if (pathFilter(p2)) {
+                    locations.push(p2)
+                }
+            }
+        }
+    }
+
     // L2 paths
     if (environment.l2Bridge) {
         const assetHubAssets = Object.keys(assetHub.assets)
