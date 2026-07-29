@@ -1,6 +1,6 @@
 import "dotenv/config"
-import { Direction } from "@snowbridge/api/dist/forKusama"
-import { transferForKusama } from "./transfer_for_kusama"
+import { Direction } from "@snowbridge/api/dist/polkadotKusama"
+import { transferPolkadotKusama } from "./transfer_polkadot_kusama"
 
 const transfer = async (
     transferName: string,
@@ -9,7 +9,7 @@ const transfer = async (
     amount: bigint,
 ) => {
     const directionEnum = direction === 1 ? Direction.ToPolkadot : Direction.ToKusama
-    await transferForKusama(transferName, directionEnum, amount, symbol)
+    await transferPolkadotKusama(transferName, directionEnum, amount, symbol)
 }
 
 if (process.argv.length != 6) {

@@ -241,13 +241,16 @@ export function buildKusamaToPolkadotDestAssetHubXCM(
     transferAmount: bigint,
     beneficiary: string,
     topic: string,
+    // When set, skim this KSM amount to feeRecipient before the beneficiary deposit.
+    serviceFeeKsm: bigint = 0n,
+    feeRecipient?: string,
 ) {
     let withdrawAssets: any[] = []
     let reserveAssetsDeposited = [
         {
             id: ksmLocationOnPolkadotAssetHub,
             fun: {
-                Fungible: totalFeeInNative,
+                Fungible: totalFeeInNative + serviceFeeKsm,
             },
         },
     ]
@@ -306,6 +309,23 @@ export function buildKusamaToPolkadotDestAssetHubXCM(
                 withdrawAsset: withdrawAssets,
             },
             { clearOrigin: null },
+            ...(serviceFeeKsm > 0n && feeRecipient
+                ? [
+                      {
+                          depositAsset: {
+                              assets: {
+                                  Definite: [
+                                      {
+                                          id: ksmLocationOnPolkadotAssetHub,
+                                          fun: { Fungible: serviceFeeKsm },
+                                      },
+                                  ],
+                              },
+                              beneficiary: accountId32Location(feeRecipient),
+                          },
+                      },
+                  ]
+                : []),
             {
                 depositAsset: {
                     assets: {

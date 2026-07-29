@@ -2,10 +2,10 @@ import "dotenv/config"
 import { Keyring } from "@polkadot/keyring"
 import { createApi } from "@snowbridge/api"
 import { EthersEthereumProvider } from "@snowbridge/provider-ethers"
-import { Direction } from "@snowbridge/api/dist/forKusama"
+import { Direction } from "@snowbridge/api/dist/polkadotKusama"
 import { bridgeInfoFor } from "@snowbridge/registry"
 
-export const transferForKusama = async (
+export const transferPolkadotKusama = async (
     transferName: string,
     direction: Direction,
     amount: bigint,
@@ -26,12 +26,11 @@ export const transferForKusama = async (
 
     const polkadot_keyring = new Keyring({ type: "sr25519" })
 
-    const SOURCE_ACCOUNT = process.env["SOURCE_SUBSTRATE_KEY"]
-        ? polkadot_keyring.addFromUri(process.env["SOURCE_SUBSTRATE_KEY"])
-        : polkadot_keyring.addFromUri("//Ferdie")
-    const DEST_ACCOUNT = process.env["DEST_SUBSTRATE_KEY"]
-        ? polkadot_keyring.addFromUri(process.env["DEST_SUBSTRATE_KEY"])
-        : polkadot_keyring.addFromUri("//Ferdie")
+    const sourceUri =
+        process.env["SOURCE_SUBSTRATE_KEY"] ?? process.env["KUSAMA_SUBSTRATE_KEY"] ?? "//Ferdie"
+    const destUri = process.env["DEST_SUBSTRATE_KEY"] ?? sourceUri
+    const SOURCE_ACCOUNT = polkadot_keyring.addFromUri(sourceUri)
+    const DEST_ACCOUNT = polkadot_keyring.addFromUri(destUri)
 
     const SOURCE_ACCOUNT_PUBLIC = SOURCE_ACCOUNT.address
     const DEST_ACCOUNT_PUBLIC = DEST_ACCOUNT.address
@@ -76,8 +75,20 @@ export const transferForKusama = async (
                       { kind: "kusama", id: registry.kusama!.assetHubParaId },
                   )
 
-        // Step 1. Get the delivery fee for the transaction
-        const fee = await transferImpl.fee(tokenAddress)
+        // Step 1. Get the delivery fee. Optional service fee via SERVICE_FEE_RECIPIENT +
+        // SERVICE_FEE_AMOUNT (source native base units: DOT for p->k, KSM for k->p).
+        const serviceFeeRecipient = process.env["SERVICE_FEE_RECIPIENT"]
+        const serviceFeeAmount = process.env["SERVICE_FEE_AMOUNT"]
+        const options =
+            serviceFeeRecipient && serviceFeeAmount
+                ? {
+                      serviceFee: {
+                          recipient: serviceFeeRecipient,
+                          amount: BigInt(serviceFeeAmount),
+                      },
+                  }
+                : undefined
+        const fee = await transferImpl.fee(tokenAddress, options)
 
         // Step 2. Create a transfer tx
         const transfer = await transferImpl.tx(
@@ -95,6 +106,15 @@ export const transferForKusama = async (
         if (!validation.success) {
             console.error("validation errors", validation.logs)
             throw Error(`validation has one of more errors.`)
+        }
+
+        console.log("fee:", fee)
+        console.log("validation:", validation)
+
+        if (process.env["DRY_RUN"] == "true") {
+            console.log("DRY_RUN=true: validation passed, skipping signAndSend")
+            await context.destroyContext()
+            return
         }
 
         // Step 5. Submit transaction and get receipt for tracking

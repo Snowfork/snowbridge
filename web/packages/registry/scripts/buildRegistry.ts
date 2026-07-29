@@ -460,6 +460,36 @@ function buildTransferLocations(
         }
     }
 
+    // Polkadot AH ↔ Kusama AH paths (assets common to both). Only the Kusama Asset Hub is a
+    // supported destination; the transfer impl always resolves to kusama.assetHubParaId.
+    const kusamaAssetHub =
+        registry.kusama?.parachains[`kusama_${registry.kusama.assetHubParaId}`]
+    if (kusamaAssetHub) {
+        const assetHubAssets = Object.keys(assetHub.assets)
+        const kusamaAssets = Object.keys(kusamaAssetHub.assets)
+        const pahKahCommon = new Set(
+            assetHubAssets.filter((pa) => kusamaAssets.find((ka) => ka === pa)),
+        )
+        for (const asset of pahKahCommon) {
+            const p1: Path = {
+                source: { kind: assetHub.kind, id: assetHub.id },
+                destination: { kind: kusamaAssetHub.kind, id: kusamaAssetHub.id },
+                asset,
+            }
+            if (pathFilter(p1)) {
+                locations.push(p1)
+            }
+            const p2: Path = {
+                source: p1.destination,
+                destination: p1.source,
+                asset,
+            }
+            if (pathFilter(p2)) {
+                locations.push(p2)
+            }
+        }
+    }
+
     // L2 paths
     if (environment.l2Bridge) {
         const assetHubAssets = Object.keys(assetHub.assets)

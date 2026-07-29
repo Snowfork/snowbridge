@@ -397,25 +397,47 @@ export function buildParachainERC20ReceivedXcmOnAssetHub(
     })
 }
 
-function buildAssetHubXcmFromParachainKusama(beneficiary: string, topic: string) {
-    return [
-        {
+function buildAssetHubXcmFromParachainKusama(
+    beneficiary: string,
+    topic: string,
+    // When set, skim this KSM amount to feeRecipient before depositing the remainder to the beneficiary.
+    serviceFeeKsm?: bigint,
+    feeRecipient?: string,
+) {
+    const instructions: any[] = []
+    if (serviceFeeKsm && serviceFeeKsm > 0n && feeRecipient) {
+        instructions.push({
             depositAsset: {
                 assets: {
-                    Wild: {
-                        AllCounted: 2,
-                    },
+                    Definite: [
+                        {
+                            id: ksmLocationOnPolkadotAssetHub,
+                            fun: { Fungible: serviceFeeKsm },
+                        },
+                    ],
                 },
                 beneficiary: {
                     parents: 0,
-                    interior: { x1: [{ AccountId32: { id: beneficiary } }] },
+                    interior: { x1: [{ AccountId32: { id: feeRecipient } }] },
                 },
             },
+        })
+    }
+    instructions.push({
+        depositAsset: {
+            assets: {
+                Wild: {
+                    AllCounted: 2,
+                },
+            },
+            beneficiary: {
+                parents: 0,
+                interior: { x1: [{ AccountId32: { id: beneficiary } }] },
+            },
         },
-        {
-            setTopic: topic,
-        },
-    ]
+    })
+    instructions.push({ setTopic: topic })
+    return instructions
 }
 
 function buildAssetHubXcmFromParachain(
@@ -531,9 +553,16 @@ export function buildAssetHubERC20TransferToKusama(
     registry: Registry,
     beneficiary: string,
     topic: string,
+    serviceFeeKsm?: bigint,
+    feeRecipient?: string,
 ) {
     return registry.createType("XcmVersionedXcm", {
-        v4: buildAssetHubXcmFromParachainKusama(beneficiary, topic),
+        v4: buildAssetHubXcmFromParachainKusama(
+            beneficiary,
+            topic,
+            serviceFeeKsm,
+            feeRecipient,
+        ),
     })
 }
 
