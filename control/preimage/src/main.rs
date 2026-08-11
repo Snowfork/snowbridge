@@ -80,6 +80,9 @@ pub enum Command {
     /// Rebalance sovereign fee accounts
     #[command(alias = "rebalance-sovereign-fee-accounts")]
     RebalanceSovAccounts(RebalanceSovAccountsArgs),
+    /// Governance update 202607: rebalance the sovereign accounts and update pricing in one batch
+    #[command(alias = "gov-update-202607")]
+    GovUpdate202607(GovUpdate202607Args),
 }
 
 #[derive(Debug, Args)]
@@ -322,6 +325,14 @@ pub struct RebalanceSovAccountsArgs {
     /// Price-drift pad as a decimal (e.g. 0.10 = 10%). Raises the max DOT spent on the swap.
     #[arg(long, default_value_t = 0.10)]
     pub eth_swap_price_pad: f64,
+}
+
+#[derive(Debug, Args)]
+pub struct GovUpdate202607Args {
+    #[command(flatten)]
+    rebalance: RebalanceSovAccountsArgs,
+    #[command(flatten)]
+    pricing_parameters: PricingParametersArgs,
 }
 
 #[derive(Debug, Args)]
@@ -698,6 +709,25 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
         }
         Command::RebalanceSovAccounts(params) => {
             commands::rebalance_sov_accounts(&context, params).await?
+        }
+        Command::GovUpdate202607(GovUpdate202607Args {
+            rebalance,
+            pricing_parameters,
+        }) => {
+            // Rebalance the sovereign accounts first, then update pricing, atomically.
+            let rebalance_call = commands::rebalance_sov_accounts(&context, rebalance).await?;
+
+            let (set_pricing_parameters, set_ethereum_fee) =
+                commands::pricing_parameters(&context, pricing_parameters).await?;
+            let bh_set_pricing_call =
+                send_xcm_bridge_hub(&context, vec![set_pricing_parameters]).await?;
+            let ah_set_pricing_call = send_xcm_asset_hub(&context, vec![set_ethereum_fee]).await?;
+
+            utility_batch_all(vec![
+                rebalance_call,
+                bh_set_pricing_call,
+                ah_set_pricing_call,
+            ])
         }
     };
 

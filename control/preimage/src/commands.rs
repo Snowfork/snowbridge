@@ -552,7 +552,9 @@ pub async fn rebalance_sov_accounts(
         // before the BridgeHub send charges its delivery fee, failing with NotHoldingFees.
         SetFeesMode { jit_withdraw: true },
         WithdrawAsset(Assets(vec![dot_for_withdraw])),
-        // Set early so any leftover/dust (and any error path) refunds to the Treasury.
+        // Set early so any leftover/dust (and any error path) refunds to the Treasury. On the happy
+        // path the BH leg sweeps all remaining DOT to the sovereign, so this catches only dust;
+        // on an error path it returns the still-held balance to the Treasury.
         SetAppendix(Xcm(vec![
             RefundSurplus,
             DepositAsset {
@@ -598,6 +600,9 @@ pub async fn rebalance_sov_accounts(
         // Send ALL remaining DOT to the Asset Hub sovereign account on Bridge Hub.
         // DOT moves between system parachains by teleport (the relay is its reserve, not BH),
         // so ReserveWithdraw here fails with UntrustedReserveLocation.
+        //
+        // `remote_fees` takes the Definite BH execution fee off holding first; `assets` then sweeps
+        // everything left (dot_amount plus any unspent swap pads) to the sovereign.
         //
         // We must pay for BH execution: `remote_fees: None` would append `UnpaidExecution`, which
         // BH's barrier rejects here (it disallows `ClearOrigin` on the unpaid path, and an
