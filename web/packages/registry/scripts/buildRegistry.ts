@@ -96,7 +96,6 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
         beaconApiUrl: "https://lodestar-mainnet.chainsafe.io",
         ethereumChains: {
             "1": "https://ethereum-rpc.publicnode.com",
-            "1284": "https://rpc.api.moonbeam.network",
             "8453": "https://base-rpc.publicnode.com",
             "42161": "https://arbitrum-one-rpc.publicnode.com",
             "10": "https://optimism-rpc.publicnode.com",
@@ -108,11 +107,9 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
             "3369": "wss://mythos-rpc.dmarket.com",
             "2034": "wss://hydration-rpc.n.dwellir.com",
             "2030": "wss://eu.bifrost-polkadot-rpc.liebi.com/ws",
-            "2004": "wss://wss.api.moonbeam.network",
             "2000": "wss://acala-rpc-0.aca-api.network",
             "2043": "wss://parachain-rpc.origin-trail.network",
-            // TODO: Add back in jampton once we have an indexer in place.
-            //"3397": "wss://rpc.jamton.network",
+            "3397": "wss://rpc.jamton.network",
         },
         gatewayContract: "0x27ca963c279c93801941e1eb8799c23f407d68e7",
         beefyContract: "0x7cfc5c8b341991993080af67d940b6ad19a010e1",
@@ -128,10 +125,6 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
                 "1000": "wss://asset-hub-kusama-rpc.n.dwellir.com",
                 "1002": "https://bridge-hub-kusama-rpc.n.dwellir.com",
             },
-        },
-        precompiles: {
-            // Add override for mythos token and add precompile for moonbeam
-            "2004": "0x000000000000000000000000000000000000081a",
         },
         metadataOverrides: {
             // Change the name of TRAC
@@ -462,8 +455,7 @@ function buildTransferLocations(
 
     // Polkadot AH ↔ Kusama AH paths (assets common to both). Only the Kusama Asset Hub is a
     // supported destination; the transfer impl always resolves to kusama.assetHubParaId.
-    const kusamaAssetHub =
-        registry.kusama?.parachains[`kusama_${registry.kusama.assetHubParaId}`]
+    const kusamaAssetHub = registry.kusama?.parachains[`kusama_${registry.kusama.assetHubParaId}`]
     if (kusamaAssetHub) {
         const assetHubAssets = Object.keys(assetHub.assets)
         const kusamaAssets = Object.keys(kusamaAssetHub.assets)
