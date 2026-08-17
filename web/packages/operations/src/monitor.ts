@@ -13,6 +13,17 @@ import { monitorParams } from "./monitorConfig"
 import { Environment } from "../../base-types/dist"
 import { bridgeInfoFor } from "@snowbridge/registry"
 
+// Indexer and pool failures are swallowed below so they cannot take the rest of the
+// collection down. Without this the affected series just vanish from /metrics and their
+// threshold alarms silently stop evaluating.
+export const sectionOk = {
+    bridgeStatus: false,
+    channels: false,
+    balances: false,
+    pools: false,
+    indexer: false,
+}
+
 function contextConfigOverrides(input: Environment): Environment {
     let config = { ...input }
     let injectedEthChains: { [ethChainId: string]: string } = {}
@@ -55,7 +66,7 @@ function contextConfigOverrides(input: Environment): Environment {
     return config
 }
 
-export const monitor = async (): Promise<AllMetrics> => {
+export const collectMetrics = async (): Promise<AllMetrics> => {
     let env = "local_e2e"
     if (process.env.NODE_ENV !== undefined) {
         env = process.env.NODE_ENV
@@ -68,6 +79,12 @@ export const monitor = async (): Promise<AllMetrics> => {
 
     const { name } = snowbridgeEnv
 
+    sectionOk.bridgeStatus = false
+    sectionOk.channels = false
+    sectionOk.balances = false
+    sectionOk.pools = false
+    sectionOk.indexer = false
+
     const context = createApi({
         info: {
             ...info,
@@ -76,51 +93,63 @@ export const monitor = async (): Promise<AllMetrics> => {
         ethereumProvider: new EthersEthereumProvider(),
     }).context
 
-    const bridgeStatus = await status.bridgeStatusInfo(context, {
-        polkadotBlockTimeInSeconds: 6,
-        ethereumBlockTimeInSeconds: 12,
-    })
-
-    const channels = await fetchChannelStatus(context, snowbridgeEnv)
-
-    const { relayers, sovereigns } = await fetchBalances(context, snowbridgeEnv)
-
-    const liquidityPools = await fetchLiquidityPools(context, snowbridgeEnv)
-
-    let indexerStatus: status.IndexerServiceStatusInfo[] = []
     try {
-        indexerStatus = await fetchIndexerStatus(context, snowbridgeEnv)
-    } catch (e) {
-        console.error("Failed to fetch indexer status, continuing without it:", e)
-    }
+        const bridgeStatus = await status.bridgeStatusInfo(context, {
+            polkadotBlockTimeInSeconds: 6,
+            ethereumBlockTimeInSeconds: 12,
+        })
+        sectionOk.bridgeStatus = true
 
-    const allMetrics: AllMetrics = {
-        name,
-        bridgeStatus,
-        channels,
-        relayers,
-        sovereigns,
-        indexerStatus,
-        liquidityPools,
-    }
-    console.log(
-        "All metrics:",
-        JSON.stringify(
-            allMetrics,
-            (key, value) => {
-                if (typeof value === "bigint") {
-                    return `bigint:${value.toString()}`
-                }
-                return value
-            },
-            2,
-        ),
-    )
+        const channels = await fetchChannelStatus(context, snowbridgeEnv)
+        sectionOk.channels = true
 
+        const { relayers, sovereigns } = await fetchBalances(context, snowbridgeEnv)
+        sectionOk.balances = true
+
+        const liquidityPools = await fetchLiquidityPools(context, snowbridgeEnv)
+        sectionOk.pools = liquidityPools.length > 0
+
+        let indexerStatus: status.IndexerServiceStatusInfo[] = []
+        try {
+            indexerStatus = await fetchIndexerStatus(context, snowbridgeEnv)
+            sectionOk.indexer = indexerStatus.length > 0
+        } catch (e) {
+            console.error("Failed to fetch indexer status, continuing without it:", e)
+            sectionOk.indexer = false
+        }
+
+        const allMetrics: AllMetrics = {
+            name,
+            bridgeStatus,
+            channels,
+            relayers,
+            sovereigns,
+            indexerStatus,
+            liquidityPools,
+        }
+        console.log(
+            "All metrics:",
+            JSON.stringify(
+                allMetrics,
+                (key, value) => {
+                    if (typeof value === "bigint") {
+                        return `bigint:${value.toString()}`
+                    }
+                    return value
+                },
+                2,
+            ),
+        )
+
+        return allMetrics
+    } finally {
+        await context.destroyContext()
+    }
+}
+
+export const monitor = async (): Promise<AllMetrics> => {
+    const allMetrics = await collectMetrics()
     await sendMetrics(allMetrics)
-
-    await context.destroyContext()
-
     return allMetrics
 }
 

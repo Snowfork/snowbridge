@@ -3,14 +3,27 @@ import { EthersEthereumProvider } from "@snowbridge/provider-ethers"
 import { BeefyClient, BeefyClient__factory } from "@snowbridge/contract-types"
 import { AbstractProvider } from "ethers"
 import { existsSync } from "fs"
-import { readFile, writeFile } from "fs/promises"
+import { readFile, rename, writeFile } from "fs/promises"
 import { ApiPromise } from "@polkadot/api"
 import { sendForkVotingAlarm, sendFutureBlockVotingAlarm } from "./alarm"
 import { pino, type Logger } from "pino"
 import { bridgeInfoFor } from "@snowbridge/registry"
 
-const CheckpointFilepath = `checkpoint.json`
+const CheckpointFilepath = process.env["FISHERMAN_CHECKPOINT_PATH"] || `checkpoint.json`
 const CheckpointInterval = process.env["FISHERMAN_CHECKPOINT_INTERVAL"] || "5000" // blocks
+
+export type Equivocations = { ForkVoting: number; FutureBlockVoting: number }
+
+export type Checkpoint = {
+    lastProcessedBlock: number
+    equivocations: Equivocations
+}
+
+export type FishermanScanResult = {
+    lastScannedBlock: number
+    latestEthereumBlock: number
+    detected: Equivocations
+}
 
 const getLogger = (): Logger => {
     return pino({
@@ -28,7 +41,7 @@ const getLogger = (): Logger => {
 
 let logger = getLogger()
 
-export const run = async (): Promise<void> => {
+export const run = async (sendCloudWatchAlarms = true): Promise<FishermanScanResult> => {
     let env = "local_e2e"
     if (process.env.NODE_ENV !== undefined) {
         env = process.env.NODE_ENV
@@ -41,69 +54,104 @@ export const run = async (): Promise<void> => {
 
     const ctx = createApi({ info, ethereumProvider: new EthersEthereumProvider() }).context
 
-    const relaychain = await ctx.relaychain()
-    await relaychain.isReady
-    const ethereum = ctx.ethereum()
-    const beefyClient = BeefyClient__factory.connect(ctx.environment.beefyContract)
+    try {
+        const relaychain = await ctx.relaychain()
+        await relaychain.isReady
+        const ethereum = ctx.ethereum()
+        const beefyClient = BeefyClient__factory.connect(ctx.environment.beefyContract)
 
-    const latestFinalizedBeefyBlock = (
-        await relaychain.rpc.chain.getHeader(
-            (await relaychain.rpc.beefy.getFinalizedHead()).toU8a(),
+        const latestFinalizedBeefyBlock = (
+            await relaychain.rpc.chain.getHeader(
+                (await relaychain.rpc.beefy.getFinalizedHead()).toU8a(),
+            )
+        ).number.toNumber()
+        const latestEthereumBlock = await ethereum.getBlockNumber()
+        const checkpoint = await loadCheckPoint()
+        const startBlock = checkpoint.lastProcessedBlock
+        let endBlock = Math.min(latestEthereumBlock, startBlock + parseInt(CheckpointInterval))
+        logger.info(
+            "Scanning NewTicket event from Beefy Client, blocks from %d to %d",
+            startBlock,
+            endBlock,
         )
-    ).number.toNumber()
-    const latestEthereumBlock = await ethereum.getBlockNumber()
-    const startBlock = await loadCheckPoint()
-    let endBlock = Math.min(latestEthereumBlock, startBlock + parseInt(CheckpointInterval))
-    logger.info(
-        "Scanning NewTicket event from Beefy Client, blocks from %d to %d",
-        startBlock,
-        endBlock,
-    )
-    await scanNewTicket(
-        snowbridgeEnv.name,
-        relaychain,
-        ethereum,
-        beefyClient,
-        startBlock,
-        endBlock,
-        latestFinalizedBeefyBlock,
-    )
-    await scanNewMMRRoot(
-        snowbridgeEnv.name,
-        relaychain,
-        ethereum,
-        beefyClient,
-        startBlock,
-        endBlock,
-        latestFinalizedBeefyBlock,
-    )
-    logger.info("Saving checkpoint at block %d", endBlock)
-    await saveCheckPoint(endBlock)
-}
+        const fromTickets = await scanNewTicket(
+            snowbridgeEnv.name,
+            relaychain,
+            ethereum,
+            beefyClient,
+            startBlock,
+            endBlock,
+            latestFinalizedBeefyBlock,
+            sendCloudWatchAlarms,
+        )
+        const fromMMRRoots = await scanNewMMRRoot(
+            snowbridgeEnv.name,
+            relaychain,
+            ethereum,
+            beefyClient,
+            startBlock,
+            endBlock,
+            latestFinalizedBeefyBlock,
+            sendCloudWatchAlarms,
+        )
 
-const loadCheckPoint = async () => {
-    let checkpointBlock
-    if (existsSync(CheckpointFilepath)) {
-        const json = await readFile(CheckpointFilepath, "utf-8")
-        const obj = JSON.parse(json)
-        checkpointBlock = obj.lastProcessedBlock
-    } else {
-        checkpointBlock = process.env["FISHERMAN_START_BLOCK"]
-            ? parseInt(process.env["FISHERMAN_START_BLOCK"])
-            : 23423100
+        const detected: Equivocations = {
+            ForkVoting: fromTickets.ForkVoting + fromMMRRoots.ForkVoting,
+            FutureBlockVoting: fromTickets.FutureBlockVoting + fromMMRRoots.FutureBlockVoting,
+        }
+        logger.info("Saving checkpoint at block %d", endBlock)
+        await saveCheckPoint(endBlock, {
+            ForkVoting: checkpoint.equivocations.ForkVoting + detected.ForkVoting,
+            FutureBlockVoting:
+                checkpoint.equivocations.FutureBlockVoting + detected.FutureBlockVoting,
+        })
+
+        return { lastScannedBlock: endBlock, latestEthereumBlock, detected }
+    } finally {
+        await ctx.destroyContext()
     }
-    return checkpointBlock
 }
 
-const saveCheckPoint = async (blockNumber: number) => {
+export const loadCheckPoint = async (): Promise<Checkpoint> => {
+    if (!existsSync(CheckpointFilepath)) {
+        return {
+            lastProcessedBlock: process.env["FISHERMAN_START_BLOCK"]
+                ? parseInt(process.env["FISHERMAN_START_BLOCK"])
+                : 23423100,
+            equivocations: { ForkVoting: 0, FutureBlockVoting: 0 },
+        }
+    }
+    const json = await readFile(CheckpointFilepath, "utf-8")
+    let obj
+    try {
+        obj = JSON.parse(json)
+    } catch (e) {
+        // Never fall back to the default start block here: that silently rewinds the
+        // scanner by hundreds of thousands of blocks.
+        throw Error(`Corrupt fisherman checkpoint at ${CheckpointFilepath}: ${e}`)
+    }
+    return {
+        lastProcessedBlock: obj.lastProcessedBlock,
+        equivocations: {
+            ForkVoting: obj.equivocations?.ForkVoting ?? 0,
+            FutureBlockVoting: obj.equivocations?.FutureBlockVoting ?? 0,
+        },
+    }
+}
+
+const saveCheckPoint = async (blockNumber: number, equivocations: Equivocations) => {
     const json = JSON.stringify(
         {
             lastProcessedBlock: blockNumber,
+            equivocations,
         },
         null,
         2,
     )
-    await writeFile(CheckpointFilepath, json)
+    // Block and counts must land together, so a kill mid-scan either re-scans the range
+    // or skips it, never one without the other.
+    await writeFile(`${CheckpointFilepath}.tmp`, json)
+    await rename(`${CheckpointFilepath}.tmp`, CheckpointFilepath)
 }
 
 const scanNewTicket = async (
@@ -114,7 +162,9 @@ const scanNewTicket = async (
     startBlock: number,
     endBlock: number,
     latestBlock: number,
-) => {
+    sendCloudWatchAlarms: boolean,
+): Promise<Equivocations> => {
+    const detected: Equivocations = { ForkVoting: 0, FutureBlockVoting: 0 }
     const pastEvents = await beefyClient.queryFilter(
         beefyClient.filters.NewTicket(),
         startBlock,
@@ -136,13 +186,20 @@ const scanNewTicket = async (
         logger.info("Canonical MMR Root: %s", canonicalMMRRoot.toHex())
         if (canonicalMMRRoot.toHex() != beefyMMRRoot) {
             logger.fatal("MMR Root mismatch!")
-            await sendForkVotingAlarm(network, blockNumber)
+            detected.ForkVoting++
+            if (sendCloudWatchAlarms) {
+                await sendForkVotingAlarm(network, blockNumber)
+            }
         }
         if (beefyBlockNumber > latestBlock) {
             logger.fatal("Voting on a future block!")
-            await sendFutureBlockVotingAlarm(network, blockNumber)
+            detected.FutureBlockVoting++
+            if (sendCloudWatchAlarms) {
+                await sendFutureBlockVotingAlarm(network, blockNumber)
+            }
         }
     }
+    return detected
 }
 
 const scanNewMMRRoot = async (
@@ -153,7 +210,9 @@ const scanNewMMRRoot = async (
     startBlock: number,
     endBlock: number,
     latestBlock: number,
-) => {
+    sendCloudWatchAlarms: boolean,
+): Promise<Equivocations> => {
+    const detected: Equivocations = { ForkVoting: 0, FutureBlockVoting: 0 }
     const pastEvents = await beefyClient.queryFilter(
         beefyClient.filters.NewMMRRoot(),
         startBlock,
@@ -170,11 +229,18 @@ const scanNewMMRRoot = async (
         logger.info("Canonical MMR Root: %s", canonicalMMRRoot.toHex())
         if (canonicalMMRRoot.toHex() != beefyMMRRoot) {
             logger.fatal("MMR Root mismatch!")
-            await sendForkVotingAlarm(network, blockNumber)
+            detected.ForkVoting++
+            if (sendCloudWatchAlarms) {
+                await sendForkVotingAlarm(network, blockNumber)
+            }
         }
         if (beefyBlockNumber > latestBlock) {
             logger.fatal("Voting on a future block!")
-            await sendFutureBlockVotingAlarm(network, blockNumber)
+            detected.FutureBlockVoting++
+            if (sendCloudWatchAlarms) {
+                await sendFutureBlockVotingAlarm(network, blockNumber)
+            }
         }
     }
+    return detected
 }

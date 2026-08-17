@@ -7,6 +7,7 @@ RUN rm -rf /app/packages/contracts && rm -rf /app/packages/test && rm -rf /app/p
 
 WORKDIR /app/packages/operations
 VOLUME /config
+EXPOSE 9000
 ENV DOTENV_CONFIG_PATH=/config/.env
 ENTRYPOINT [ "node", "./dist/src/main.js" ]
 CMD [ "start" ]

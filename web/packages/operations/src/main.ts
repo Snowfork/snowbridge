@@ -2,9 +2,10 @@ import "dotenv/config"
 import { monitor } from "./monitor"
 import { initializeAlarms } from "./alarm"
 import * as fisherman from "./fisherman"
+import { runExporter } from "./prometheus"
 
 if (process.argv.length != 3) {
-    console.error("Expected one argument with Enum from `monitor|init|fisherman`")
+    console.error("Expected one argument with Enum from `monitor|init|fisherman|prometheus`")
     process.exit(1)
 }
 
@@ -39,4 +40,14 @@ if (process.argv[2] == "monitor") {
             console.error("Error:", error)
             process.exit(1)
         })
+} else if (process.argv[2] == "prometheus") {
+    runExporter().catch((error) => {
+        console.error("Error:", error)
+        process.exit(1)
+    })
+} else {
+    console.error(
+        `Unknown command '${process.argv[2]}'. Expected 'monitor|init|fisherman|prometheus'`,
+    )
+    process.exit(1)
 }
