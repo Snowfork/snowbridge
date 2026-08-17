@@ -61,27 +61,6 @@ export async function eth1ToPolkadot2000Eth(api: SnowbridgeApi<ViemEthereumProvi
     printEvmTx("ethereum:1 -> polkadot:2000", "ETH", transfer.tx)
 }
 
-export async function eth1ToPolkadot2004Weth(api: SnowbridgeApi<ViemEthereumProvider>) {
-    const sourceAccount = process.env.ETHEREUM_ACCOUNT_PUBLIC
-    const beneficiaryAccount = process.env.ETHEREUM_ACCOUNT_PUBLIC
-    if (!sourceAccount) throw new Error("Missing required env var for source account.")
-    if (!beneficiaryAccount) throw new Error("Missing required env var for beneficiary account.")
-
-    const {
-        chains: { ethereum, moonbeamSubstrate },
-    } = polkadot_mainnet
-
-    const sender = api.sender(ethereum, moonbeamSubstrate)
-    const transfer = await sender.build(
-        sourceAccount,
-        beneficiaryAccount,
-        "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
-        15000000000000n,
-    )
-
-    printEvmTx("ethereum:1 -> polkadot:2004", "WETH", transfer.tx)
-}
-
 export async function eth1ToPolkadot2030Eth(api: SnowbridgeApi<ViemEthereumProvider>) {
     const sourceAccount = process.env.ETHEREUM_ACCOUNT_PUBLIC
     const beneficiaryAccount = process.env.SUBSTRATE_ACCOUNT_PUBLIC
@@ -160,27 +139,6 @@ export async function eth1ToPolkadot3369Myth(api: SnowbridgeApi<ViemEthereumProv
     const transfer = await sender.build(sourceAccount, beneficiaryAccount, tokenAddress, amount)
 
     printEvmTx("ethereum:1 -> polkadot:3369", "MYTH", transfer.tx)
-}
-
-export async function ethereum1284ToEth1Weth(api: SnowbridgeApi<ViemEthereumProvider>) {
-    const sourceAccount = process.env.ETHEREUM_ACCOUNT_PUBLIC
-    const beneficiaryAccount = process.env.ETHEREUM_ACCOUNT_PUBLIC
-    if (!sourceAccount) throw new Error("Missing required env var for source account.")
-    if (!beneficiaryAccount) throw new Error("Missing required env var for beneficiary account.")
-
-    const {
-        chains: { moonbeam, ethereum },
-    } = polkadot_mainnet
-
-    const sender = api.sender(moonbeam, ethereum)
-    const transfer = await sender.build(
-        sourceAccount,
-        beneficiaryAccount,
-        "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
-        1n,
-    )
-
-    printEvmTx("ethereum:1284 -> ethereum:1", "WETH", transfer.tx)
 }
 
 export async function ethereumL210ToPolkadot1000Eth(api: SnowbridgeApi<ViemEthereumProvider>) {
@@ -410,33 +368,6 @@ export async function polkadot2000ToEth1Eth(api: SnowbridgeApi<ViemEthereumProvi
         JSON.stringify({
             route: "polkadot:2000 -> ethereum:1",
             token: "ETH",
-            txHex: transfer.tx.toHex(),
-        }),
-    )
-}
-
-export async function polkadot2004ToEth1Weth(api: SnowbridgeApi<ViemEthereumProvider>) {
-    const sourceAccount = process.env.ETHEREUM_ACCOUNT_PUBLIC
-    const beneficiaryAccount = process.env.ETHEREUM_ACCOUNT_PUBLIC
-    if (!sourceAccount) throw new Error("Missing required env var for source account.")
-    if (!beneficiaryAccount) throw new Error("Missing required env var for beneficiary account.")
-
-    const {
-        chains: { moonbeamSubstrate, ethereum },
-    } = polkadot_mainnet
-
-    const sender = api.sender(moonbeamSubstrate, ethereum)
-    const transfer = await sender.build(
-        sourceAccount,
-        beneficiaryAccount,
-        "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
-        1n,
-    )
-
-    console.log(
-        JSON.stringify({
-            route: "polkadot:2004 -> ethereum:1",
-            token: "WETH",
             txHex: transfer.tx.toHex(),
         }),
     )
