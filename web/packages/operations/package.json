@@ -12,10 +12,6 @@
     "build": "tsc",
     "lint": "eslint src/*",
     "format": "prettier src --write",
-    "initializeAlarms": "npx ts-node src/main.ts init",
-    "initializeAlarmsFromContainer": "docker run -v $(pwd)/config:/config --rm snowbridge-monitor:latest init",
-    "monitor": "npx ts-node src/main.ts monitor",
-    "fisherman": "npx ts-node src/main.ts fisherman",
     "historyV2": "npx ts-node src/global_transfer_history_v2.ts",
     "buildTokenRegistry": "npx ts-node src/build_asset_registry.ts",
     "generateReferencePreimages": "npx ts-node src/generate_reference_preimages.ts",
@@ -123,7 +119,6 @@
     "typescript": "5.9.3"
   },
   "dependencies": {
-    "@aws-sdk/client-cloudwatch": "^3.901.0",
     "@polkadot/api": "16.5.4",
     "@polkadot/keyring": "14.0.3",
     "@polkadot/types": "16.5.4",
@@ -136,11 +131,8 @@
     "@snowbridge/provider-ethers": "workspace:*",
     "@snowbridge/provider-viem": "workspace:*",
     "@snowbridge/registry": "workspace:*",
-    "@types/pino": "^7.0.5",
     "dotenv": "^17.2.3",
     "ethers": "^6.16.0",
-    "lodash": "^4.17.21",
-    "pino": "^10.0.0",
-    "pino-pretty": "^13.1.1"
+    "lodash": "^4.17.21"
   }
 }
