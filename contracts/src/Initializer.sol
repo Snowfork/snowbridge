@@ -60,7 +60,7 @@ library Initializer {
             mode: OperatingMode.Normal, agent: bridgeHubAgent, inboundNonce: 0, outboundNonce: 0
         });
 
-        // Initialize agent for for AssetHub
+        // Initialize agent for AssetHub
         address assetHubAgent = address(new Agent(Constants.ASSET_HUB_AGENT_ID));
         core.agents[Constants.ASSET_HUB_AGENT_ID] = assetHubAgent;
 
