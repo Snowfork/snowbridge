@@ -205,9 +205,12 @@ contract BeefyClient {
     /**
      * @dev Maximum wall-clock time (measured by Ethereum's block.timestamp) that the current
      * validator set may be trusted to authenticate a non-consecutive "skip-ahead" commitment.
-     * MUST be shorter than the Polkadot unbonding period (28 days), with margin, so that any set
-     * accepted via a skip is still bonded — which is what preserves the honest-supermajority
-     * assumption the skip relies on. See the long-form rationale on non-consecutive updates.
+     * Chosen shorter than the Polkadot unbonding period (28 days), with margin, so that a set
+     * accepted via a skip is *likely* still bonded. This is a heuristic, not a guarantee:
+     * `currentSetActivatedAt` records when Ethereum observed the handover, not when the set
+     * became active on Polkadot, so it trails real activation by however far the relayer was
+     * behind and bounds the set's age only from below. See the long-form rationale on
+     * non-consecutive updates.
      */
     uint256 public constant trustingPeriod = 14 days;
 
