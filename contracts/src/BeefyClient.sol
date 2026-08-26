@@ -703,8 +703,12 @@ contract BeefyClient {
             revert InvalidMMRLeafProof();
         }
         // Advance current to the verified id, preserving the (unchanged) membership root and length.
+        // usageCounters are deliberately NOT reset: canSkipAhead requires current.root ==
+        // next.root, so a skip carries the identical validators forward. Clearing the counters
+        // would hand back the anti-grinding discount that repeated submitInitial calls have
+        // already paid for (see computeNumRequiredSignatures). A handover resets them because
+        // the membership actually changes; a skip must not.
         currentValidatorSet.id = validatorSetID;
-        currentValidatorSet.usageCounters = createUint16Array(currentValidatorSet.length);
         nextValidatorSet.id = leaf.nextAuthoritySetID;
         nextValidatorSet.length = leaf.nextAuthoritySetLen;
         nextValidatorSet.root = leaf.nextAuthoritySetRoot;

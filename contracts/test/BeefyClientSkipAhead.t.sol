@@ -51,6 +51,43 @@ contract BeefyClientSkipAheadTest is BeefyClientTest {
         );
     }
 
+    /// @dev A skip carries the *same* validators forward (canSkipAhead requires
+    /// current.root == next.root), so the anti-grinding usage counters must survive it. Clearing
+    /// them would refund the escalating signature cost that computeNumRequiredSignatures charges
+    /// for repeated submitInitial calls — a discount reachable below quorum, unlike the rest of
+    /// the skip path. A handover resets the counters because the membership actually changes.
+    function testSkipAheadPreservesUsageCounters() public {
+        // current = setId-3, next = setId-2, both sharing `root`. Commitment is from setId.
+        BeefyClient.Commitment memory commitment = initialize(setId - 3);
+
+        // On the skip path submitInitial bumps the *current* set's counters.
+        beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[1]);
+        assertEq(beefyClient.getValidatorCounter(false, finalValidatorProofs[1].index), 1);
+
+        beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
+        assertEq(beefyClient.getValidatorCounter(false, finalValidatorProofs[0].index), 1);
+
+        vm.roll(block.number + randaoCommitDelay);
+        commitPrevRandao();
+        createFinalProofs();
+        beefyClient.submitFinal(
+            commitment, bitfield, finalValidatorProofs, mmrLeaf, mmrLeafProofs, leafProofOrder
+        );
+        assertEq(beefyClient.latestBeefyBlock(), blockNumber);
+
+        // Membership is unchanged across the skip, so the counters must still stand.
+        assertEq(
+            beefyClient.getValidatorCounter(false, finalValidatorProofs[0].index),
+            1,
+            "skip must not clear current usage counters"
+        );
+        assertEq(
+            beefyClient.getValidatorCounter(false, finalValidatorProofs[1].index),
+            1,
+            "skip must not clear current usage counters"
+        );
+    }
+
     /// @dev Once the current set is older than the trusting period it may be unbonded, so a skip
     /// must be refused with a precise TrustingPeriodExpired signal (Fiat-Shamir path).
     function testSkipAheadRevertsWhenTrustingPeriodExpiredFiatShamir() public {
