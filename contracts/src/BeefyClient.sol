@@ -661,8 +661,11 @@ contract BeefyClient {
      *  (a) the id is strictly ahead of the next set (a genuine skip past known sessions),
      *  (b) the era is confirmed stable (current and next share the same membership root), so the
      *      signatures legitimately verify against the current root, and
-     *  (c) the current set is still within its trusting period, so it is provably still bonded
-     *      and its honest-supermajority assumption still holds.
+     *  (c) the current set is still within its trusting period, i.e. the client has witnessed a
+     *      handover recently enough that the set is unlikely to be unbonded. This is a staleness
+     *      bound only, not a proof of bondedness — see the note on `trustingPeriod`. Safety here
+     *      rests on the same honest-quorum assumption as every other path, since reaching this
+     *      point still requires a quorum of signatures over the commitment.
      * When (a) and (b) hold but the window has closed it reverts TrustingPeriodExpired, giving
      * relayers a precise signal (rather than a generic InvalidCommitment) that the light client
      * has fallen too far behind and must be advanced via consecutive handovers / governance.
