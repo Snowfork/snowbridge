@@ -74,12 +74,36 @@ async function main() {
             `beefyMmrApi.nextAuthoritySetProof() -> id=${nextProof.id} len=${nextProof.len} root=${short(nextProof.keysetCommitment)}`,
         )
 
+        // Fail fast if the endpoint does not carry the pallets we sample. Without this the
+        // per-sample catch below would swallow a TypeError on every iteration and the run would
+        // end up reporting "verified" over zero rows.
+        for (const [section, item] of [
+            ["session", "currentIndex"],
+            ["beefy", "validatorSetId"],
+            ["beefyMmrLeaf", "beefyAuthorities"],
+            ["beefyMmrLeaf", "beefyNextAuthorities"],
+        ] as const) {
+            if (
+                !(api.query as Record<string, Record<string, unknown> | undefined>)[section]?.[item]
+            ) {
+                throw new Error(
+                    `${RELAY_WS} does not expose query.${section}.${item}. ` +
+                        `Point RELAY_WS at a relay chain running BEEFY.`,
+                )
+            }
+        }
+
         // Historical sweep, sampling ~every 30 min to catch every 4h session.
         const STEP = 300 // ~30 min at 6s block time
         const SPAN = Math.round((HOURS * 3600) / 6) // window in blocks
         const total = Math.floor(SPAN / STEP) + 1
         const rows: Sample[] = []
-        let pruned = 0
+        // Kept apart: unavailable state is expected on a non-archive node, whereas a query that
+        // throws points at a real problem. Collapsing both into one "pruned" tally is what let a
+        // fully failed run read as a clean one.
+        let unavailable = 0
+        let queryFailed = 0
+        let firstQueryError: string | null = null
         let i = 0
         console.log(`\nSampling ${total} blocks (every ${STEP} blocks) ...`)
         for (let b = N; b >= N - SPAN; b -= STEP) {
@@ -88,7 +112,7 @@ async function main() {
             try {
                 at = await api.at(await api.rpc.chain.getBlockHash(b))
             } catch {
-                pruned++
+                unavailable++
                 continue
             }
             try {
@@ -105,13 +129,25 @@ async function main() {
                     curRoot: (cur as unknown as AuthoritySet).keysetCommitment.toHex(),
                     nextRoot: (nxt as unknown as AuthoritySet).keysetCommitment.toHex(),
                 })
-            } catch {
-                pruned++
+            } catch (e) {
+                queryFailed++
+                if (firstQueryError === null) {
+                    firstQueryError = e instanceof Error ? e.message : String(e)
+                }
             }
         }
         process.stdout.write("\n")
         rows.reverse()
-        if (pruned) console.log(`\n(${pruned} samples with unavailable/pruned state skipped)`)
+        if (unavailable) {
+            console.log(
+                `\n(${unavailable}/${i} samples: state unavailable — pruned, or ${RELAY_WS} is not an archive node)`,
+            )
+        }
+        if (queryFailed) {
+            console.log(
+                `\n(${queryFailed}/${i} samples: storage query failed${firstQueryError ? ` — first error: ${firstQueryError}` : ""})`,
+            )
+        }
 
         // Collapse consecutive samples that share the same state.
         const key = (r: Sample) => `${r.session}|${r.vsetId}|${r.curRoot}|${r.nextRoot}`
@@ -120,6 +156,26 @@ async function main() {
             const last = collapsed[collapsed.length - 1]
             if (last && key(last) === key(r)) continue
             collapsed.push({ ...r })
+        }
+
+        // Nothing observed means nothing verified. Reporting the summary here would print
+        // "vsetIds consecutive (+1) : true" off an empty array and read as a confirmation.
+        if (collapsed.length === 0) {
+            console.error(
+                `\nERROR: 0 of ${i} samples produced state. Nothing was verified.\n` +
+                    `  ${unavailable} unavailable, ${queryFailed} failed to query.\n` +
+                    `  Set RELAY_WS to an archive endpoint that serves the sampled range and retry.`,
+            )
+            process.exitCode = 1
+            return
+        }
+
+        const failed = unavailable + queryFailed
+        if (failed > i / 4) {
+            console.log(
+                `\nWARNING: ${failed} of ${i} samples failed. Coverage is partial — treat the` +
+                    ` summary below as indicative, not as a verification.`,
+            )
         }
 
         console.log(`\nPer-session BEEFY state over ~${HOURS}h (oldest -> newest):`)
@@ -137,17 +193,29 @@ async function main() {
         const vsetIds = [...new Set(collapsed.map((r) => r.vsetId))]
         const roots = [...new Set(collapsed.map((r) => r.curRoot))]
         const lastOfEra = collapsed.filter((r) => r.curRoot !== r.nextRoot)
+        // A single observed id satisfies `every` vacuously, which says nothing about whether ids
+        // advance by one. Only claim the property when there are at least two to compare.
+        const consecutive = vsetIds.every((v, n, a) => n === 0 || v === a[n - 1] + 1)
         console.log("\nSummary:")
         console.log(
             `  sessions observed        : ${sessions.length} (${sessions[0]}…${sessions[sessions.length - 1]})`,
         )
         console.log(
-            `  vsetIds consecutive (+1) : ${vsetIds.every((v, i, a) => i === 0 || v === a[i - 1] + 1)}`,
+            `  vsetIds consecutive (+1) : ${vsetIds.length > 1 ? consecutive : `n/a (only ${vsetIds.length} observed)`}`,
         )
         console.log(`  distinct membership roots: ${roots.length}`)
         console.log(
             `  skip-ahead available in  : ${collapsed.length - lastOfEra.length} of ${collapsed.length} sessions (refused only in each era's last session)`,
         )
+
+        // The script exists to test this premise, so a run that disproves it must not exit 0.
+        if (vsetIds.length > 1 && !consecutive) {
+            console.error(
+                `\nERROR: vsetIds are not consecutive over the sampled window.` +
+                    ` The skip-ahead premise does not hold here.`,
+            )
+            process.exitCode = 1
+        }
     } finally {
         await api.disconnect()
     }
