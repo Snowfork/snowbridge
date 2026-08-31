@@ -1,5 +1,6 @@
 import { Registry } from "@polkadot/types/types"
 import {
+    buildServiceFeeDeposit,
     bridgeLocation,
     accountToLocation,
     HERE_LOCATION,
@@ -119,6 +120,7 @@ export function buildTransferXcmFromAssetHub(
 
     let totalDOTFeeAmount = findTotal(fee, "DOT")
     let remoteEtherFeeAmount = findInBreakdownOrZero(fee.breakdown, "ethereumExecution", "ETH")
+    let serviceFeeEtherAmount = fee.serviceFee?.amount ?? 0n
 
     let assets = []
     if (isRelaychainLocation(tokenLocation)) {
@@ -131,7 +133,7 @@ export function buildTransferXcmFromAssetHub(
         assets.push({
             id: bridgeLocation(ethChainId),
             fun: {
-                Fungible: remoteEtherFeeAmount,
+                Fungible: remoteEtherFeeAmount + serviceFeeEtherAmount,
             },
         })
     } else {
@@ -152,7 +154,7 @@ export function buildTransferXcmFromAssetHub(
             assets.push({
                 id: bridgeLocation(ethChainId),
                 fun: {
-                    Fungible: remoteEtherFeeAmount,
+                    Fungible: remoteEtherFeeAmount + serviceFeeEtherAmount,
                 },
             })
         } // Parachain assets or KSM assets
@@ -172,7 +174,7 @@ export function buildTransferXcmFromAssetHub(
             assets.push({
                 id: bridgeLocation(ethChainId),
                 fun: {
-                    Fungible: remoteEtherFeeAmount,
+                    Fungible: remoteEtherFeeAmount + serviceFeeEtherAmount,
                 },
             })
         }
@@ -213,6 +215,7 @@ export function buildTransferXcmFromAssetHub(
                 },
             ],
         },
+        ...buildServiceFeeDeposit(bridgeLocation(ethChainId), fee.serviceFee),
         {
             initiateTransfer: {
                 destination: bridgeLocation(ethChainId),

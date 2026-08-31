@@ -7,6 +7,14 @@ export type DeliveryFee<K extends string> = {
     totals: FeeAsset[]
 }
 
+// Volume fee deposited to `recipient` on Asset Hub instead of added to the
+// relayerFee. `amount` uses the collection asset of the route, which is ether on
+// Asset Hub for Ethereum<->Polkadot routes.
+export type ServiceFee = {
+    recipient: string
+    amount: bigint
+}
+
 // ethereum → polkadot (V2)
 export type ToPolkadotFeeKey =
     | "assetHubDelivery"
@@ -15,6 +23,7 @@ export type ToPolkadotFeeKey =
     | "destinationExecution"
     | "relayer"
     | "extrinsic"
+    | "serviceFee"
 
 // ethereum_l2 → polkadot
 export type L2ToPolkadotFeeKey = ToPolkadotFeeKey | "l2Bridge" | "l1Swap"
@@ -30,16 +39,13 @@ export type ToEthereumFeeKey =
     | "returnToSenderExecution"
     | "ethereumExecution"
     | "l2Bridge"
+    | "serviceFee"
 
 // polkadot → polkadot (inter-parachain)
 export type InterParachainFeeKey = "assetHubDelivery" | "destinationExecution"
 
 // kusama ↔ polkadot
-export type KusamaFeeKey =
-    | "xcmBridge"
-    | "bridgeHubDelivery"
-    | "destinationExecution"
-    | "serviceFee"
+export type KusamaFeeKey = "xcmBridge" | "bridgeHubDelivery" | "destinationExecution" | "serviceFee"
 
 // v1 ethereum → polkadot (legacy adapter)
 export type V1ToPolkadotFeeKey = "destinationDelivery" | "destinationExecution"

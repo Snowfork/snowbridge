@@ -35,7 +35,8 @@ import { buildMessageId, Transfer, ValidatedTransfer } from "../../toPolkadotSno
 import { getOperatingStatus } from "../../status"
 import { hexToU8a } from "@polkadot/util"
 import { estimateFees } from "../../across/api"
-import { VolumeFeeParams, calculateVolumeTipInWei } from "../../feeSchedule"
+import { VolumeFeeParams, resolveVolumeFee } from "../../feeSchedule"
+import { ServiceFee } from "../../types/fee"
 import {
     addBreakdown,
     computeTotals,
@@ -79,6 +80,7 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
         destExecutionFeeEther: bigint,
         customXcm?: any[],
         swap?: { router: string; inputAmount: bigint; callData: string },
+        serviceFee?: ServiceFee,
     ): string {
         const { context, registry } = this
         const placeholder = "0x0000000000000000000000000000000000000000000000000000000000000000"
@@ -97,6 +99,7 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
                 destExecutionFeeEther,
                 placeholder,
                 customXcm,
+                serviceFee,
             ).toHex(),
         )
         const claimer = claimerLocationToBytes(
@@ -134,9 +137,11 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
             volumeFee?: VolumeFeeParams
         },
     ): Promise<DeliveryFee> {
-        if (options?.volumeFee && options?.overrideRelayerFee !== undefined) {
-            throw new Error("Cannot specify both volumeFee and overrideRelayerFee")
-        }
+        // Runs before the estimation XCM is built, so the estimate weighs the
+        // same serviceFee DepositAsset that the sent message carries.
+        const serviceFee = resolveVolumeFee(options?.volumeFee, () =>
+            getAssetHubEtherMinBalance(this.registry),
+        )
         const context = this.context
         const registry = this.registry
         const { assetHub, bridgeHub } = {
@@ -268,12 +273,7 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
             deliveryFeeInEther,
         )
 
-        let volumeTip: bigint | undefined
-        let finalRelayerFee = relayerFee
-        if (options?.volumeFee) {
-            volumeTip = calculateVolumeTipInWei(options.volumeFee)
-            finalRelayerFee += volumeTip
-        }
+        const serviceFeeAmount = serviceFee?.amount ?? 0n
 
         // Total ether that must arrive on Asset Hub to cover AH execution, the
         // relayer (which already includes the BridgeHub->AH delivery), and the
@@ -282,7 +282,8 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
             assetHubExecutionFeeEther +
             destinationDeliveryFeeEther +
             destinationExecutionFeeEther +
-            finalRelayerFee
+            relayerFee +
+            serviceFeeAmount
 
         // Calculate fee with Across SDK
         let bridgeFeeInL2Token = 0n,
@@ -311,9 +312,11 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
                 tokenAddress,
                 amount,
                 assetHubExecutionFeeEther + destinationDeliveryFeeEther,
-                finalRelayerFee,
+                relayerFee,
                 destinationExecutionFeeEther,
                 options?.customXcm,
+                undefined,
+                serviceFee,
             )
             bridgeFeeInL2Token = await estimateFees(
                 acrossApiUrl,
@@ -370,7 +373,7 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
                 tokenAddress,
                 amount,
                 assetHubExecutionFeeEther + destinationDeliveryFeeEther,
-                finalRelayerFee,
+                relayerFee,
                 destinationExecutionFeeEther,
                 options?.customXcm,
                 {
@@ -378,6 +381,7 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
                     inputAmount: swapFeeInL1Token,
                     callData: swapCallData,
                 },
+                serviceFee,
             )
             bridgeFeeInL2Token = await estimateFees(
                 acrossApiUrl,
@@ -430,7 +434,10 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
             amount: destinationExecutionFeeEther,
             symbol: "ETH",
         })
-        addBreakdown(breakdown, "relayer", { amount: finalRelayerFee, symbol: "ETH" })
+        addBreakdown(breakdown, "relayer", { amount: relayerFee, symbol: "ETH" })
+        if (serviceFee) {
+            addBreakdown(breakdown, "serviceFee", { amount: serviceFee.amount, symbol: "ETH" })
+        }
         addBreakdown(breakdown, "extrinsic", { amount: extrinsicFeeDot, symbol: "DOT" })
         addBreakdown(breakdown, "extrinsic", { amount: extrinsicFeeEther, symbol: "ETH" })
         if (bridgeFeeInL2Token > 0n) {
@@ -452,11 +459,14 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
                 symbol: "ETH",
             },
             {
-                description: "Relayer tip",
-                amount: finalRelayerFee - deliveryFeeInEther,
+                description: "Relayer fee",
+                amount: relayerFee - deliveryFeeInEther,
                 symbol: "ETH",
             },
         ]
+        if (serviceFee) {
+            summary.push({ description: "Service fee", amount: serviceFee.amount, symbol: "ETH" })
+        }
         if (bridgeFeeInL2Token > 0n) {
             summary.push({
                 description: "Across fee",
@@ -478,6 +488,7 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
             breakdown,
             summary,
             totals: computeTotals(summary),
+            serviceFee,
         }
     }
 
@@ -571,6 +582,7 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
                 destExecutionFeeEther,
                 topic,
                 options?.customXcm,
+                fee.serviceFee,
             ).toHex(),
         )
         let claimer = claimerFromBeneficiary(assetHub, beneficiaryAddressHex, registry.environment)
@@ -933,6 +945,7 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
                 findInBreakdown(inputFee.breakdown, "destinationExecution", "ETH"),
                 "0x0000000000000000000000000000000000000000000000000000000000000000",
                 transfer.input.customXcm,
+                inputFee.serviceFee,
             )
 
             let result = await assetHubImpl.dryRunXcm(

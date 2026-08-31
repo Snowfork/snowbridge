@@ -36,7 +36,7 @@ import { VolumeFeeParams } from "../../feeSchedule"
 import {
     buildContractCallHex,
     estimateFeesFromParachains,
-    mockDeliveryFee,
+    mockDeliveryFeeFor,
     queryXcmExecuteWeight,
     signAndSendTransfer,
     validateTransferFromParachain,
@@ -100,6 +100,7 @@ export class ERC20FromParachain<T extends EthereumProviderTypes> implements Tran
                 1n,
                 DOT_LOCATION,
                 DOT_LOCATION,
+                mockDeliveryFeeFor(options).serviceFee,
             )
         } else {
             forwardXcmToAH = buildResultXcmAssetHubERC20TransferFromParachain(
@@ -130,7 +131,7 @@ export class ERC20FromParachain<T extends EthereumProviderTypes> implements Tran
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             sourceAssetMetadata,
             1n,
-            mockDeliveryFee,
+            mockDeliveryFeeFor(options),
         )
 
         forwardedXcmToBH = buildExportXcm(

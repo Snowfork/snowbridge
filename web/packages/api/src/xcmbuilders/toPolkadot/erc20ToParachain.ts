@@ -1,12 +1,14 @@
 import { Registry } from "@polkadot/types/types"
 import {
     accountToLocation,
+    buildServiceFeeDeposit,
     buildSplitDepositAsset,
     erc20Location,
     ethereumNetwork,
     parachainLocation,
 } from "../../xcmBuilder"
 import { DOT_LOCATION, ETHER_TOKEN_ADDRESS } from "../../assets_v2"
+import { ServiceFee } from "../../types/fee"
 
 export function buildAssetHubERC20ReceivedXcm(
     registry: Registry,
@@ -22,6 +24,7 @@ export function buildAssetHubERC20ReceivedXcm(
     remoteEtherFeeAmount: bigint,
     topic: string,
     customXcm?: any[],
+    serviceFee?: ServiceFee,
 ) {
     let ether = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
     let beneficiaryLocation = accountToLocation(beneficiary)
@@ -145,6 +148,7 @@ export function buildAssetHubERC20ReceivedXcm(
             {
                 refundSurplus: null,
             },
+            ...buildServiceFeeDeposit(ether, serviceFee),
             {
                 depositAsset: {
                     assets: {
@@ -308,6 +312,7 @@ export function sendMessageXCM(
     remoteEtherFeeAmount: bigint,
     topic: string,
     customXcm?: any[],
+    serviceFee?: ServiceFee,
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     let ether = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
@@ -361,6 +366,7 @@ export function sendMessageXCM(
             {
                 refundSurplus: null,
             },
+            ...buildServiceFeeDeposit(ether, serviceFee),
             {
                 depositAsset: {
                     assets: {
@@ -396,6 +402,7 @@ export function buildParachainERC20ReceivedXcmOnDestWithDOTFee(
     remoteDotFeeAmount: bigint,
     topic: string,
     customXcm?: any[],
+    serviceFee?: ServiceFee,
 ) {
     let ether = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
     let beneficiaryLocation = accountToLocation(beneficiary)
@@ -544,6 +551,7 @@ export function buildParachainERC20ReceivedXcmOnDestWithDOTFee(
             },
             // Mirror the user-side `sendMessageXCMWithDOTDestFee` AH-side tail.
             { refundSurplus: null },
+            ...buildServiceFeeDeposit(ether, serviceFee),
             {
                 depositAsset: {
                     assets: {
@@ -574,6 +582,7 @@ export function sendMessageXCMWithDOTDestFee(
     remoteEtherFeeAmount: bigint,
     remoteDotFeeAmount: bigint,
     topic: string,
+    serviceFee?: ServiceFee,
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     let ether = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
@@ -650,6 +659,7 @@ export function sendMessageXCMWithDOTDestFee(
             {
                 refundSurplus: null,
             },
+            ...buildServiceFeeDeposit(ether, serviceFee),
             {
                 depositAsset: {
                     assets: {

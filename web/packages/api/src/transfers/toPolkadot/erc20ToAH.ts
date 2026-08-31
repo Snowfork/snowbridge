@@ -28,8 +28,14 @@ import { FeeInfo, ValidationLog, ValidationReason } from "../../types/toPolkadot
 import { buildMessageId, Transfer, ValidatedTransfer } from "../../toPolkadotSnowbridgeV2"
 import { getOperatingStatus } from "../../status"
 import { hexToU8a } from "@polkadot/util"
-import { VolumeFeeParams, calculateVolumeTipInWei } from "../../feeSchedule"
-import { addBreakdown, computeTotals, findInBreakdown, findInBreakdownOrZero, findTotal } from "../../fees"
+import { VolumeFeeParams, resolveVolumeFee } from "../../feeSchedule"
+import {
+    addBreakdown,
+    computeTotals,
+    findInBreakdown,
+    findInBreakdownOrZero,
+    findTotal,
+} from "../../fees"
 import { checkDotEthPoolLiquidityForEthereumToPolkadot } from "../../poolReserves"
 
 export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInterface<T> {
@@ -59,9 +65,11 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             volumeFee?: VolumeFeeParams
         },
     ): Promise<DeliveryFee> {
-        if (options?.volumeFee && options?.overrideRelayerFee !== undefined) {
-            throw new Error("Cannot specify both volumeFee and overrideRelayerFee")
-        }
+        // Runs before the estimation XCM is built, so the estimate weighs the
+        // same serviceFee DepositAsset that the sent message carries.
+        const serviceFee = resolveVolumeFee(options?.volumeFee, () =>
+            getAssetHubEtherMinBalance(this.registry),
+        )
         const context = this.context
         const registry = this.registry
         const assetHub = await context.assetHub()
@@ -80,6 +88,8 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             "0x0000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000000000000000000000000000",
+            undefined,
+            serviceFee,
         )
         let ether = erc20Location(registry.ethChainId, ETHER_TOKEN_ADDRESS)
         const feePadPercentage = options?.padFeeByPercentage
@@ -130,15 +140,6 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             deliveryFeeInEther,
         )
 
-        let volumeTip: bigint | undefined
-        let finalRelayerFee = relayerFee
-        if (options?.volumeFee) {
-            volumeTip = calculateVolumeTipInWei(options.volumeFee)
-            finalRelayerFee += volumeTip
-        }
-
-        const totalFeeInWei = assetHubExecutionFeeEther + finalRelayerFee
-
         const breakdown: DeliveryFee["breakdown"] = {}
         addBreakdown(breakdown, "assetHubDelivery", { amount: deliveryFeeInEther, symbol: "ETH" })
         addBreakdown(breakdown, "assetHubDelivery", { amount: deliveryFeeInDOT, symbol: "DOT" })
@@ -150,9 +151,12 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             amount: assetHubExecutionFeeDOT,
             symbol: "DOT",
         })
-        addBreakdown(breakdown, "relayer", { amount: finalRelayerFee, symbol: "ETH" })
+        addBreakdown(breakdown, "relayer", { amount: relayerFee, symbol: "ETH" })
         addBreakdown(breakdown, "extrinsic", { amount: extrinsicFeeDot, symbol: "DOT" })
         addBreakdown(breakdown, "extrinsic", { amount: extrinsicFeeEther, symbol: "ETH" })
+        if (serviceFee) {
+            addBreakdown(breakdown, "serviceFee", { amount: serviceFee.amount, symbol: "ETH" })
+        }
 
         const summary = [
             {
@@ -162,11 +166,14 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             },
             { description: "Bridge fees", amount: deliveryFeeInEther, symbol: "ETH" },
             {
-                description: "Relayer tip",
-                amount: finalRelayerFee - deliveryFeeInEther,
+                description: "Relayer fee",
+                amount: relayerFee - deliveryFeeInEther,
                 symbol: "ETH",
             },
         ]
+        if (serviceFee) {
+            summary.push({ description: "Service fee", amount: serviceFee.amount, symbol: "ETH" })
+        }
 
         return {
             kind: "ethereum->polkadot",
@@ -174,6 +181,7 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             breakdown,
             summary,
             totals: computeTotals(summary),
+            serviceFee,
         }
     }
 
@@ -253,10 +261,12 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
         const xcm = hexToU8a(
             sendMessageXCM(
                 assetHub.registry,
+                registry.ethChainId,
                 beneficiaryAddressHex,
                 topic,
                 customXcm,
                 userAssetLocation,
+                fee.serviceFee,
             ).toHex(),
         )
         let claimer = claimerFromBeneficiary(assetHub, beneficiaryAddressHex, registry.environment)
@@ -483,6 +493,7 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
                 transfer.computed.beneficiaryAddressHex,
                 "0x0000000000000000000000000000000000000000000000000000000000000000",
                 transfer.input.customXcm,
+                transfer.input.fee.serviceFee,
             )
 
             let result = await assetHubImpl.dryRunXcm(registry.bridgeHubParaId, xcm)
