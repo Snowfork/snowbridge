@@ -312,7 +312,7 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
                 relayerFee,
                 destinationExecutionFeeEther,
                 options?.customXcm,
-                undefined,
+                undefined, // swap
                 serviceFee,
             )
             bridgeFeeInL2Token = await estimateFees(

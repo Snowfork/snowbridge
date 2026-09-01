@@ -264,7 +264,7 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
                 assetHubExecutionFeeEther,
                 relayerFee,
                 options?.customXcm,
-                undefined,
+                undefined, // swap
                 serviceFee,
             )
             bridgeFeeInL2Token = await estimateFees(

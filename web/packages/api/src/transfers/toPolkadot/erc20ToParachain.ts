@@ -107,7 +107,7 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
             this.to.id,
             1000000000000n,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
-            undefined,
+            undefined, // customXcm
             serviceFee,
         )
         const bridgeHubImpl = await this.context.paraImplementation(bridgeHub)

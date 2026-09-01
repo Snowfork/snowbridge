@@ -104,7 +104,7 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             this.to.id,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
-            undefined,
+            undefined, // customXcm
             serviceFee,
         )
         const bridgeHubImpl = await this.context.paraImplementation(bridgeHub)
