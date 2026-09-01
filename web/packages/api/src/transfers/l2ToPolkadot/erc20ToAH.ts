@@ -231,12 +231,11 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             deliveryFeeInEther,
         )
 
-        const serviceFeeAmount = serviceFee?.amount ?? 0n
-
         // Total ether that must arrive on Asset Hub to cover AH execution, the
         // relayer (which already includes the BridgeHub->AH delivery), and the
         // service fee deposit.
-        const assetHubEtherToDeliver = assetHubExecutionFeeEther + relayerFee + serviceFeeAmount
+        const assetHubEtherToDeliver =
+            assetHubExecutionFeeEther + relayerFee + (serviceFee?.amount ?? 0n)
 
         // Calculate fee with Across SDK
         let bridgeFeeInL2Token = 0n,

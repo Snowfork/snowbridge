@@ -273,8 +273,6 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
             deliveryFeeInEther,
         )
 
-        const serviceFeeAmount = serviceFee?.amount ?? 0n
-
         // Total ether that must arrive on Asset Hub to cover AH execution, the
         // relayer (which already includes the BridgeHub->AH delivery), and the
         // AH->destination delivery + destination execution legs.
@@ -283,7 +281,7 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
             destinationDeliveryFeeEther +
             destinationExecutionFeeEther +
             relayerFee +
-            serviceFeeAmount
+            (serviceFee?.amount ?? 0n)
 
         // Calculate fee with Across SDK
         let bridgeFeeInL2Token = 0n,
