@@ -1,6 +1,10 @@
 import { AssetMap, FeeEstimateError, PNAMap } from "@snowbridge/base-types"
 import { ParachainBase } from "./parachainBase"
-import { getTokenFromLocation, ROCOCO_GENESIS, WESTEND_GENESIS } from "../xcmBuilder"
+import {
+    getTokenFromLocation,
+    ROCOCO_GENESIS,
+    WESTEND_GENESIS,
+} from "../xcmBuilder"
 import { DOT_LOCATION } from "../assets_v2"
 
 export class AssetHubParachain extends ParachainBase {
@@ -231,8 +235,8 @@ export class AssetHubParachain extends ParachainBase {
     }
 }
 
-// Currently, the bridgeable assets are limited to KSM, DOT, native assets on AH
-// and TEER
+// Currently, the bridgeable assets are limited to KSM, DOT, native assets on AH,
+// HDX, TEER, and XRT.
 function bridgeablePNAsOnAH(location: any, assetHubParaId: number, env: string): any {
     if (location.parents != 1) {
         return
@@ -277,6 +281,18 @@ function bridgeablePNAsOnAH(location: any, assetHubParaId: number, env: string):
                     },
                 ],
             },
+        }
+    }
+    // HDX is the native asset of Hydration.
+    else if (
+        location.interior.x3 &&
+        location.interior.x3[0]?.globalConsensus?.polkadot !== undefined &&
+        location.interior.x3[1]?.parachain === 2034 &&
+        location.interior.x3[2]?.generalIndex === 0
+    ) {
+        return {
+            parents: 1,
+            interior: { x2: [{ parachain: 2034 }, { generalIndex: 0 }] },
         }
     }
     // Others from 3rd Parachains, only TEER for now

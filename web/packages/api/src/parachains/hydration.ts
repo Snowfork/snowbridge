@@ -3,6 +3,12 @@ import { ParachainBase } from "./parachainBase"
 import { getTokenFromLocation } from "../xcmBuilder"
 import { DOT_LOCATION } from "../assets_v2"
 
+const HDX_LOCATION = { parents: 0, interior: { x1: [{ generalIndex: 0 }] } }
+const HDX_LOCATION_ON_ASSET_HUB = {
+    parents: 1,
+    interior: { x2: [{ parachain: 2034 }, { generalIndex: 0 }] },
+}
+
 export class HydrationParachain extends ParachainBase {
     getXC20DOT() {
         return undefined
@@ -29,7 +35,7 @@ export class HydrationParachain extends ParachainBase {
         return this.getLocationBalance(DOT_LOCATION, account)
     }
 
-    async getAssets(ethChainId: number, _pnas: PNAMap): Promise<AssetMap> {
+    async getAssets(ethChainId: number, pnas: PNAMap): Promise<AssetMap> {
         const assets: AssetMap = {}
         const entries = await this.provider.query.assetRegistry.assetLocations.entries()
         for (const [id, value] of entries) {
@@ -57,6 +63,30 @@ export class HydrationParachain extends ParachainBase {
                 symbol: String(asset.symbol ?? ""),
                 decimals: Number(asset.decimals),
                 isSufficient: Boolean(asset.isSufficient),
+            }
+        }
+
+        // HDX is Hydration's native asset and is identified by GeneralIndex(0).
+        const chainInfo = await this.chainProperties()
+        const existentialDeposit = BigInt(
+            this.provider.consts.balances.existentialDeposit.toPrimitive() as any,
+        )
+        for (const { token, foreignId, ethereumlocation } of Object.values(pnas)) {
+            if (!isHydrationNativeLocation(ethereumlocation, this.parachainId)) {
+                continue
+            }
+
+            assets[token.toLowerCase()] = {
+                token: token.toLowerCase(),
+                name: String(chainInfo.name),
+                minimumBalance: existentialDeposit,
+                symbol: chainInfo.tokenSymbols,
+                decimals: chainInfo.tokenDecimals,
+                isSufficient: true,
+                location: HDX_LOCATION,
+                locationOnAH: HDX_LOCATION_ON_ASSET_HUB,
+                locationOnEthereum: ethereumlocation,
+                foreignId,
             }
         }
         return assets
@@ -102,4 +132,13 @@ export class HydrationParachain extends ParachainBase {
     ): Promise<bigint> {
         throw Error(`${this.specName} does not support.`)
     }
+}
+
+function isHydrationNativeLocation(location: any, parachainId: number): boolean {
+    return (
+        location?.parents === 1 &&
+        location.interior?.x3?.[0]?.globalConsensus?.polkadot !== undefined &&
+        location.interior.x3[1]?.parachain === parachainId &&
+        location.interior.x3[2]?.generalIndex === 0
+    )
 }

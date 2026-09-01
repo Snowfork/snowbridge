@@ -144,6 +144,7 @@ const registry = {
                 "0x21fab0ea070f162180447881d5873cf3d57200d6",
                 "0x12bbfdc9e813614eef8dc8a2560b0efbeaf7c2ab",
                 "0x5fdcd48f09fb67de3d202cd854b372aec1100ed5",
+                "0x21846aa238b81ffd3e94cdb28005a32d36cc8c93",
                 "0xa37b046782518a80e2e69056009fbd0431d36e50",
                 "0x769916a66fdac0e3d57363129caac59386ea622b",
                 "0x1f752250f518e419f2f03804e25728c5c6dff73f",
@@ -194,6 +195,7 @@ const registry = {
                 "0x21fab0ea070f162180447881d5873cf3d57200d6",
                 "0x12bbfdc9e813614eef8dc8a2560b0efbeaf7c2ab",
                 "0x5fdcd48f09fb67de3d202cd854b372aec1100ed5",
+                "0x21846aa238b81ffd3e94cdb28005a32d36cc8c93",
                 "0xa37b046782518a80e2e69056009fbd0431d36e50",
                 "0x769916a66fdac0e3d57363129caac59386ea622b",
                 "0x1f752250f518e419f2f03804e25728c5c6dff73f",
@@ -261,26 +263,21 @@ const registry = {
             },
             assets: [
                 "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
-                "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
                 "0x5a98fcbea516cf06857215779fd812ca3bef1b32",
                 "0x45804880de22913dafe09f4980848ece6ecbaf78",
                 "0xcccccccccc33d538dbc2ee4feab0a7a1ff4e8a94",
-                "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
                 "0x57e114b691db790c35207b2e685d4a43181e6061",
-                "0x8236a87084f8b84306f72007f36f2618a5634494",
                 "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a",
-                "0xd166337499e176bbc38a1fbd113ab144e5bd2df7",
                 "0x56072c95faa701256059aa122697b133aded9279",
                 "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
                 "0xaa7a9ca87d3694b5755f213b5d04094b8d0f0a6f",
                 "0x18084fba666a33d37592fa2633fd49a74dd93a88",
                 "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
-                "0xe9f6d9898f9269b519e1435e6ebaff766c7f46bf",
-                "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
                 "0x0000000000000000000000000000000000000000",
                 "0xdac17f958d2ee523a2206206994597c13d831ec7",
                 "0x514910771af9ca656af840dff83e8264ecf986ca",
                 "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
+                "0x21846aa238b81ffd3e94cdb28005a32d36cc8c93",
             ],
         },
         {
@@ -293,25 +290,21 @@ const registry = {
                 id: 2034,
             },
             assets: [
-                "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
                 "0x5a98fcbea516cf06857215779fd812ca3bef1b32",
                 "0x45804880de22913dafe09f4980848ece6ecbaf78",
                 "0xcccccccccc33d538dbc2ee4feab0a7a1ff4e8a94",
                 "0x57e114b691db790c35207b2e685d4a43181e6061",
-                "0x8236a87084f8b84306f72007f36f2618a5634494",
                 "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a",
-                "0xd166337499e176bbc38a1fbd113ab144e5bd2df7",
                 "0x56072c95faa701256059aa122697b133aded9279",
                 "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
                 "0xaa7a9ca87d3694b5755f213b5d04094b8d0f0a6f",
                 "0x18084fba666a33d37592fa2633fd49a74dd93a88",
                 "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
-                "0xe9f6d9898f9269b519e1435e6ebaff766c7f46bf",
-                "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
                 "0x0000000000000000000000000000000000000000",
                 "0xdac17f958d2ee523a2206206994597c13d831ec7",
                 "0x514910771af9ca656af840dff83e8264ecf986ca",
                 "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
+                "0x21846aa238b81ffd3e94cdb28005a32d36cc8c93",
             ],
         },
         {
@@ -391,26 +384,21 @@ const registry = {
             },
             assets: [
                 "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
-                "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
                 "0x5a98fcbea516cf06857215779fd812ca3bef1b32",
                 "0x45804880de22913dafe09f4980848ece6ecbaf78",
                 "0xcccccccccc33d538dbc2ee4feab0a7a1ff4e8a94",
-                "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
                 "0x57e114b691db790c35207b2e685d4a43181e6061",
-                "0x8236a87084f8b84306f72007f36f2618a5634494",
                 "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a",
-                "0xd166337499e176bbc38a1fbd113ab144e5bd2df7",
                 "0x56072c95faa701256059aa122697b133aded9279",
                 "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
                 "0xaa7a9ca87d3694b5755f213b5d04094b8d0f0a6f",
                 "0x18084fba666a33d37592fa2633fd49a74dd93a88",
                 "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
-                "0xe9f6d9898f9269b519e1435e6ebaff766c7f46bf",
-                "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
                 "0x0000000000000000000000000000000000000000",
                 "0xdac17f958d2ee523a2206206994597c13d831ec7",
                 "0x514910771af9ca656af840dff83e8264ecf986ca",
                 "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
+                "0x21846aa238b81ffd3e94cdb28005a32d36cc8c93",
             ],
         },
         {
@@ -423,24 +411,20 @@ const registry = {
                 id: 2034,
             },
             assets: [
-                "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
                 "0x5a98fcbea516cf06857215779fd812ca3bef1b32",
                 "0x45804880de22913dafe09f4980848ece6ecbaf78",
                 "0xcccccccccc33d538dbc2ee4feab0a7a1ff4e8a94",
                 "0x57e114b691db790c35207b2e685d4a43181e6061",
-                "0x8236a87084f8b84306f72007f36f2618a5634494",
                 "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a",
-                "0xd166337499e176bbc38a1fbd113ab144e5bd2df7",
                 "0x56072c95faa701256059aa122697b133aded9279",
                 "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
                 "0x18084fba666a33d37592fa2633fd49a74dd93a88",
                 "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
-                "0xe9f6d9898f9269b519e1435e6ebaff766c7f46bf",
-                "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
                 "0x0000000000000000000000000000000000000000",
                 "0xdac17f958d2ee523a2206206994597c13d831ec7",
                 "0x514910771af9ca656af840dff83e8264ecf986ca",
                 "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
+                "0x21846aa238b81ffd3e94cdb28005a32d36cc8c93",
             ],
         },
         {
@@ -557,7 +541,6 @@ const registry = {
                 id: 10,
             },
             assets: [
-                "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
                 "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
                 "0x0000000000000000000000000000000000000000",
             ],
@@ -572,7 +555,6 @@ const registry = {
                 id: 2034,
             },
             assets: [
-                "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
                 "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
                 "0x0000000000000000000000000000000000000000",
             ],
@@ -617,7 +599,6 @@ const registry = {
                 id: 8453,
             },
             assets: [
-                "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
                 "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
                 "0x0000000000000000000000000000000000000000",
             ],
@@ -632,7 +613,6 @@ const registry = {
                 id: 2034,
             },
             assets: [
-                "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
                 "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
                 "0x0000000000000000000000000000000000000000",
             ],
@@ -677,7 +657,6 @@ const registry = {
                 id: 42161,
             },
             assets: [
-                "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
                 "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
                 "0x0000000000000000000000000000000000000000",
             ],
@@ -692,14 +671,13 @@ const registry = {
                 id: 2034,
             },
             assets: [
-                "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
                 "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
                 "0x0000000000000000000000000000000000000000",
             ],
         },
     ],
     registry: {
-        timestamp: "2026-08-11T22:18:25.557Z",
+        timestamp: "2026-09-01T22:25:06.912Z",
         environment: "polkadot_mainnet",
         ethChainId: 1,
         gatewayAddress: "0x27ca963c279c93801941e1eb8799c23f407d68e7",
@@ -713,7 +691,7 @@ const registry = {
             accountType: "AccountId32",
             name: "Polkadot",
             specName: "polkadot",
-            specVersion: 2003002,
+            specVersion: 2004000,
         },
         bridgeHub: {
             tokenSymbols: "DOT",
@@ -723,7 +701,7 @@ const registry = {
             accountType: "AccountId32",
             name: "Polkadot BridgeHub",
             specName: "bridge-hub-polkadot",
-            specVersion: 2003002,
+            specVersion: 2004000,
         },
         ethereumChains: {
             ethereum_1: {
@@ -997,6 +975,15 @@ const registry = {
                             "0x7ca757304cac2ff0881de18dc6a1dfa7f10e51b0cba0297e0e762f8072049c98",
                         deliveryGas: 80000n,
                     },
+                    "0x21846aa238b81ffd3e94cdb28005a32d36cc8c93": {
+                        token: "0x21846aa238b81ffd3e94cdb28005a32d36cc8c93",
+                        name: "Hydration",
+                        symbol: "HDX",
+                        decimals: 12,
+                        foreignId:
+                            "0xd5678e3bb6486c4fef73dc109cf23d5648654edd4b41fb32e1ce9f9a984a3d59",
+                        deliveryGas: 80000n,
+                    },
                     "0xa37b046782518a80e2e69056009fbd0431d36e50": {
                         token: "0xa37b046782518a80e2e69056009fbd0431d36e50",
                         name: "PINK",
@@ -1162,7 +1149,7 @@ const registry = {
                     accountType: "AccountId32",
                     name: "Polkadot Asset Hub",
                     specName: "statemint",
-                    specVersion: 2003002,
+                    specVersion: 2004000,
                 },
                 assets: {
                     "0x9d39a5de30e57443bff2a8307a4256c8797a3497": {
@@ -1621,6 +1608,60 @@ const registry = {
                         isSufficient: false,
                         assetId: "31337",
                     },
+                    "0x21846aa238b81ffd3e94cdb28005a32d36cc8c93": {
+                        token: "0x21846aa238b81ffd3e94cdb28005a32d36cc8c93",
+                        name: "Hydration",
+                        symbol: "HDX",
+                        decimals: 12,
+                        locationOnEthereum: {
+                            parents: 1,
+                            interior: {
+                                x3: [
+                                    {
+                                        globalConsensus: {
+                                            polkadot: null,
+                                        },
+                                    },
+                                    {
+                                        parachain: 2034,
+                                    },
+                                    {
+                                        generalIndex: 0,
+                                    },
+                                ],
+                            },
+                        },
+                        location: {
+                            parents: 1,
+                            interior: {
+                                x2: [
+                                    {
+                                        parachain: 2034,
+                                    },
+                                    {
+                                        generalIndex: 0,
+                                    },
+                                ],
+                            },
+                        },
+                        locationOnAH: {
+                            parents: 1,
+                            interior: {
+                                x2: [
+                                    {
+                                        parachain: 2034,
+                                    },
+                                    {
+                                        generalIndex: 0,
+                                    },
+                                ],
+                            },
+                        },
+                        foreignId:
+                            "0xd5678e3bb6486c4fef73dc109cf23d5648654edd4b41fb32e1ce9f9a984a3d59",
+                        minimumBalance: 1n,
+                        isSufficient: false,
+                    },
                     "0xa37b046782518a80e2e69056009fbd0431d36e50": {
                         token: "0xa37b046782518a80e2e69056009fbd0431d36e50",
                         name: "PINK",
@@ -1855,7 +1896,7 @@ const registry = {
                     accountType: "AccountId32",
                     name: "Acala",
                     specName: "acala",
-                    specVersion: 2350,
+                    specVersion: 2370,
                 },
                 assets: {
                     "0x0000000000000000000000000000000000000000": {
@@ -1895,7 +1936,7 @@ const registry = {
                     evmChainId: 996,
                     name: "Bifrost Polkadot",
                     specName: "bifrost_polkadot",
-                    specVersion: 25002,
+                    specVersion: 25004,
                 },
                 assets: {
                     "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2": {
@@ -1943,7 +1984,7 @@ const registry = {
                     evmChainId: 222222,
                     name: "Hydration",
                     specName: "hydradx",
-                    specVersion: 435,
+                    specVersion: 440,
                 },
                 assets: {
                     "0x45804880de22913dafe09f4980848ece6ecbaf78": {
@@ -2010,14 +2051,6 @@ const registry = {
                         decimals: 18,
                         isSufficient: true,
                     },
-                    "0xe9f6d9898f9269b519e1435e6ebaff766c7f46bf": {
-                        token: "0xe9f6d9898f9269b519e1435e6ebaff766c7f46bf",
-                        name: "",
-                        minimumBalance: 1n,
-                        symbol: "",
-                        decimals: 0,
-                        isSufficient: false,
-                    },
                     "0xcccccccccc33d538dbc2ee4feab0a7a1ff4e8a94": {
                         token: "0xcccccccccc33d538dbc2ee4feab0a7a1ff4e8a94",
                         name: "Centrifuge",
@@ -2050,30 +2083,6 @@ const registry = {
                         decimals: 18,
                         isSufficient: true,
                     },
-                    "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599": {
-                        token: "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
-                        name: "Wrapped Bitcoin",
-                        minimumBalance: 23n,
-                        symbol: "WBTC",
-                        decimals: 8,
-                        isSufficient: true,
-                    },
-                    "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd": {
-                        token: "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
-                        name: "Savings USDS",
-                        minimumBalance: 9910802775024780n,
-                        symbol: "sUSDS",
-                        decimals: 18,
-                        isSufficient: true,
-                    },
-                    "0xd166337499e176bbc38a1fbd113ab144e5bd2df7": {
-                        token: "0xd166337499e176bbc38a1fbd113ab144e5bd2df7",
-                        name: "Saturn sUSDat",
-                        minimumBalance: 20012007204322600n,
-                        symbol: "sUSDat",
-                        decimals: 18,
-                        isSufficient: true,
-                    },
                     "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0": {
                         token: "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
                         name: "Wrapped staked ETH",
@@ -2098,24 +2107,59 @@ const registry = {
                         decimals: 18,
                         isSufficient: true,
                     },
-                    "0x8236a87084f8b84306f72007f36f2618a5634494": {
-                        token: "0x8236a87084f8b84306f72007f36f2618a5634494",
-                        name: "Lombard Staked BTC",
-                        minimumBalance: 11n,
-                        symbol: "LBTC",
-                        decimals: 8,
+                    "0x21846aa238b81ffd3e94cdb28005a32d36cc8c93": {
+                        token: "0x21846aa238b81ffd3e94cdb28005a32d36cc8c93",
+                        name: "Hydration",
+                        minimumBalance: 1000000000000n,
+                        symbol: "HDX",
+                        decimals: 12,
                         isSufficient: true,
-                    },
-                    "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2": {
-                        token: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
-                        name: "Wrapped Ethereum",
-                        minimumBalance: 6009615384615n,
-                        symbol: "WETH",
-                        decimals: 18,
-                        isSufficient: true,
+                        location: {
+                            parents: 0,
+                            interior: {
+                                x1: [
+                                    {
+                                        generalIndex: 0,
+                                    },
+                                ],
+                            },
+                        },
+                        locationOnAH: {
+                            parents: 1,
+                            interior: {
+                                x2: [
+                                    {
+                                        parachain: 2034,
+                                    },
+                                    {
+                                        generalIndex: 0,
+                                    },
+                                ],
+                            },
+                        },
+                        locationOnEthereum: {
+                            parents: 1,
+                            interior: {
+                                x3: [
+                                    {
+                                        globalConsensus: {
+                                            polkadot: null,
+                                        },
+                                    },
+                                    {
+                                        parachain: 2034,
+                                    },
+                                    {
+                                        generalIndex: 0,
+                                    },
+                                ],
+                            },
+                        },
+                        foreignId:
+                            "0xd5678e3bb6486c4fef73dc109cf23d5648654edd4b41fb32e1ce9f9a984a3d59",
                     },
                 },
-                estimatedExecutionFeeDOT: 8388577n,
+                estimatedExecutionFeeDOT: 7145706n,
                 estimatedDeliveryFeeDOT: 307100000n,
             },
             polkadot_2043: {
