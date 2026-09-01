@@ -1,3 +1,6 @@
+import { ACCOUNT_ID_32, resolveBeneficiary } from "./crypto"
+import type { ServiceFee } from "./types/fee"
+
 type FeeBand = {
     lowerUsd: bigint
     upperUsd: bigint
@@ -20,6 +23,36 @@ export type VolumeFeeParams = {
     txValueUsd: bigint
     ethToUsdNumerator: bigint
     ethToUsdDenominator: bigint
+    // Asset Hub account the fee is deposited to. Must be a 32-byte AccountId32.
+    serviceFeeRecipient: string
+}
+
+// The volume fee, as a deposit for the message to make on Asset Hub. It is never
+// relayer reward: the amount reaches the recipient through a DepositAsset in the
+// XCM and nowhere else.
+//
+// No fee due means no deposit instruction is built. Any fee that is due is raised
+// to `minServiceFee`, the Asset Hub bridged-ether min balance: a smaller deposit
+// fails with `Token::BelowMinimum` against a recipient that holds no ether, and
+// the fee would be lost. `minServiceFee` is lazy because reading it from the
+// registry throws on chains with no bridged ether registered.
+export function resolveVolumeFee(
+    params: VolumeFeeParams | undefined,
+    minServiceFee: () => bigint,
+): ServiceFee | undefined {
+    if (!params) {
+        return undefined
+    }
+    const fee = calculateVolumeTipInWei(params)
+    if (fee === 0n) {
+        return undefined
+    }
+    const { hexAddress, kind } = resolveBeneficiary(params.serviceFeeRecipient)
+    if (kind !== ACCOUNT_ID_32) {
+        throw new Error("Service fee recipient must be a 32-byte Asset Hub account.")
+    }
+    const floor = minServiceFee()
+    return { recipient: hexAddress, amount: fee > floor ? fee : floor }
 }
 
 export function lookupFeeRatio(txValueUsd: bigint): { numerator: bigint; denominator: bigint } {

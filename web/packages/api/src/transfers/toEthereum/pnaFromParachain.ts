@@ -35,7 +35,7 @@ import { VolumeFeeParams } from "../../feeSchedule"
 import {
     buildContractCallHex,
     estimateFeesFromParachains,
-    mockDeliveryFee,
+    mockDeliveryFeeFor,
     queryXcmExecuteWeight,
     signAndSendTransfer,
     validateTransferFromParachain,
@@ -95,6 +95,7 @@ export class PNAFromParachain<T extends EthereumProviderTypes> implements Transf
             340282366920938463463374607431768211455n,
             340282366920938463463374607431768211455n,
             340282366920938463463374607431768211455n,
+            mockDeliveryFeeFor(options).serviceFee,
         )
 
         returnToSenderXcm = buildParachainPNAReceivedXcmOnDestination(
@@ -117,7 +118,7 @@ export class PNAFromParachain<T extends EthereumProviderTypes> implements Transf
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             sourceAssetMetadata,
             1n,
-            mockDeliveryFee,
+            mockDeliveryFeeFor(options),
         )
 
         forwardedXcmToBH = buildExportXcm(

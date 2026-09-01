@@ -1,5 +1,6 @@
 import { Registry } from "@polkadot/types/types"
 import {
+    buildServiceFeeDeposit,
     bridgeLocation,
     erc20Location,
     erc20LocationReanchored,
@@ -121,6 +122,7 @@ export function buildTransferXcmFromAssetHub(
 
     let totalDOTFeeAmount = findTotal(fee, "DOT")
     let remoteEtherFeeAmount = findInBreakdownOrZero(fee.breakdown, "ethereumExecution", "ETH")
+    let serviceFeeEtherAmount = fee.serviceFee?.amount ?? 0n
 
     let assets = []
     assets.push({
@@ -133,14 +135,14 @@ export function buildTransferXcmFromAssetHub(
         assets.push({
             id: bridgeLocation(ethChainId),
             fun: {
-                Fungible: tokenAmount + remoteEtherFeeAmount,
+                Fungible: tokenAmount + remoteEtherFeeAmount + serviceFeeEtherAmount,
             },
         })
     } else {
         assets.push({
             id: bridgeLocation(ethChainId),
             fun: {
-                Fungible: remoteEtherFeeAmount,
+                Fungible: remoteEtherFeeAmount + serviceFeeEtherAmount,
             },
         })
         assets.push({
@@ -187,6 +189,7 @@ export function buildTransferXcmFromAssetHub(
                 },
             ],
         },
+        ...buildServiceFeeDeposit(bridgeLocation(ethChainId), fee.serviceFee),
         {
             initiateTransfer: {
                 destination: bridgeLocation(ethChainId),

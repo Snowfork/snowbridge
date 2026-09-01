@@ -1,6 +1,7 @@
 import { Keyring } from "@polkadot/keyring"
 import { createApi } from "@snowbridge/api"
 import { findTotalOrZero } from "@snowbridge/api/dist/fees"
+import { volumeFeeFromEnv } from "./fee"
 import { EthersEthereumProvider } from "@snowbridge/provider-ethers"
 import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { formatUnits, Wallet } from "ethers"
@@ -39,7 +40,8 @@ export const transferToEthereum = async (
     const ETHEREUM_ACCOUNT_PUBLIC =
         process.env.ETHEREUM_ACCOUNT_PUBLIC ?? (await ETHEREUM_ACCOUNT.getAddress())
     const POLKADOT_ACCOUNT = polkadot_keyring.addFromUri(process.env.SUBSTRATE_KEY ?? "//Ferdie")
-    const POLKADOT_ACCOUNT_PUBLIC = POLKADOT_ACCOUNT.address
+    // Optional override, so dry runs can start from a funded account without its key.
+    const POLKADOT_ACCOUNT_PUBLIC = process.env.SUBSTRATE_ACCOUNT_PUBLIC ?? POLKADOT_ACCOUNT.address
 
     console.log("eth", ETHEREUM_ACCOUNT_PUBLIC, "sub", POLKADOT_ACCOUNT_PUBLIC)
 
@@ -60,12 +62,19 @@ export const transferToEthereum = async (
             { kind: "ethereum", id: registry.ethChainId },
         )
         // Step 1. Get the delivery fee for the transaction
+        const volumeFee = volumeFeeFromEnv()
         let fee = await transferImpl.fee(TOKEN_CONTRACT, {
             feeTokenLocation: options?.feeTokenLocation,
             slippagePadPercentage: 20n,
             contractCall: options?.contractCall,
             accelerated: options?.accelerated,
+            volumeFee,
         })
+        console.log("fee: ", fee)
+        if (volumeFee) {
+            console.log("volume fee params:", volumeFee)
+            console.log("service fee:", fee.serviceFee)
+        }
 
         // Step 2. Create a transfer tx
         const transfer = await transferImpl.tx(

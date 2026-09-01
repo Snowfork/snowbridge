@@ -31,7 +31,7 @@ import { VolumeFeeParams } from "../../feeSchedule"
 import {
     buildContractCallHex,
     estimateFeesFromAssetHub,
-    mockDeliveryFee,
+    mockDeliveryFeeFor,
     queryXcmExecuteWeight,
     signAndSendTransfer,
     validateTransferFromAssetHub,
@@ -83,7 +83,7 @@ export class ERC20FromAH<T extends EthereumProviderTypes> implements TransferInt
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             sourceAssetMetadata,
             1n,
-            mockDeliveryFee,
+            mockDeliveryFeeFor(options),
         )
 
         let forwardedXcmToBH = buildExportXcm(
