@@ -233,6 +233,11 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
 
         const serviceFeeAmount = serviceFee?.amount ?? 0n
 
+        // Total ether that must arrive on Asset Hub to cover AH execution, the
+        // relayer (which already includes the BridgeHub->AH delivery), and the
+        // service fee deposit.
+        const assetHubEtherToDeliver = assetHubExecutionFeeEther + relayerFee + serviceFeeAmount
+
         // Calculate fee with Across SDK
         let bridgeFeeInL2Token = 0n,
             swapFeeInL1Token = 0n
@@ -269,7 +274,7 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
                 l1FeeTokenAddress,
                 this.from.id,
                 registry.ethChainId,
-                assetHubExecutionFeeEther + relayerFee + serviceFeeAmount + amount,
+                assetHubEtherToDeliver + amount,
                 { recipient: l1HandlerAddress, message },
             )
             bridgeFeeInL2Token = padFeeByPercentage(
@@ -288,7 +293,7 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             let params: QuoteExactOutputSingleParamsStruct = {
                 tokenIn: tokenAddress,
                 tokenOut: l1FeeTokenAddress,
-                amount: assetHubExecutionFeeEther + relayerFee + serviceFeeAmount,
+                amount: assetHubEtherToDeliver,
                 fee: swapFee ?? 500, // 0.05% pool fee
                 sqrtPriceLimitX96: 0, // no price limit
             }
@@ -308,7 +313,7 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
                 registry,
                 this.from.id,
                 l2TokenAddress,
-                assetHubExecutionFeeEther + relayerFee + serviceFeeAmount,
+                assetHubEtherToDeliver,
                 swapFeeInL1Token,
             )
             const message = this.buildAcrossMessage(
