@@ -288,7 +288,6 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
         // Calculate fee with Across SDK
         let bridgeFeeInL2Token = 0n,
             swapFeeInL1Token = 0n
-        let totalFeeInWei = assetHubEtherToDeliver
         const acrossApiUrl = context.environment.l2Bridge?.acrossAPIUrl
         const l2FeeTokenAddress =
             context.environment.l2Bridge?.l2Chains[this.from.id]?.feeTokenAddress
@@ -331,7 +330,6 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
                 bridgeFeeInL2Token,
                 options?.l2PadFeeByPercentage ?? 33n,
             )
-            totalFeeInWei += bridgeFeeInL2Token
         } else {
             let swapFee =
                 registry.ethereumChains?.[`ethereum_l2_${this.from.id}`]?.assets[l2TokenAddress]
