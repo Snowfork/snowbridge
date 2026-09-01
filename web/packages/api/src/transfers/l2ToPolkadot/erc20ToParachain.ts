@@ -137,8 +137,6 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
             volumeFee?: VolumeFeeParams
         },
     ): Promise<DeliveryFee> {
-        // Runs before the estimation XCM is built, so the estimate weighs the
-        // same serviceFee DepositAsset that the sent message carries.
         const serviceFee = resolveVolumeFee(options?.volumeFee, () =>
             getAssetHubEtherMinBalance(this.registry),
         )

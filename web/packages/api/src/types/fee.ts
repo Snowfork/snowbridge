@@ -7,9 +7,10 @@ export type DeliveryFee<K extends string> = {
     totals: FeeAsset[]
 }
 
-// Volume fee deposited to `recipient` on Asset Hub instead of added to the
-// relayerFee. `amount` uses the collection asset of the route, which is ether on
-// Asset Hub for Ethereum<->Polkadot routes.
+// A fee the message deposits to `recipient` on Asset Hub. `amount` has two sources:
+// Ethereum<->Polkadot derives it from the transfer's USD value through FEE_SCHEDULE,
+// in bridged ether; Polkadot<->Kusama takes a flat amount from the caller, in the
+// source chain's own token.
 export type ServiceFee = {
     recipient: string
     amount: bigint
