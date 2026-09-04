@@ -27,6 +27,7 @@ export function buildTransferXcmFromParachainWithNativeAssetFee(
     fee: DeliveryFee,
     claimerLocation?: any,
     callHex?: string,
+    assetTransferType: "teleport" | "reserveDeposit" = "teleport",
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     let sourceLocation = accountToLocation(sourceAccount)
@@ -203,7 +204,7 @@ export function buildTransferXcmFromParachainWithNativeAssetFee(
                 initiateTransfer: {
                     destination: parachainLocation(assetHubParaId),
                     remote_fees: {
-                        teleport: {
+                        [assetTransferType]: {
                             definite: [
                                 {
                                     id: HERE_LOCATION,
@@ -220,7 +221,7 @@ export function buildTransferXcmFromParachainWithNativeAssetFee(
                     preserveOrigin: true,
                     assets: [
                         {
-                            teleport: {
+                            [assetTransferType]: {
                                 definite: [
                                     {
                                         id: HERE_LOCATION,
@@ -232,7 +233,7 @@ export function buildTransferXcmFromParachainWithNativeAssetFee(
                             },
                         },
                         {
-                            teleport: {
+                            [assetTransferType]: {
                                 definite: [
                                     {
                                         id: tokenLocation,

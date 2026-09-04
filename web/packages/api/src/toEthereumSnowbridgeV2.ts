@@ -18,6 +18,7 @@ import { PNAFromAH } from "./transfers/toEthereum/pnaFromAH"
 import { TransferInterface } from "./transfers/toEthereum/transferInterface"
 import { ERC20FromAH } from "./transfers/toEthereum/erc20FromAH"
 import { PNAFromParachain } from "./transfers/toEthereum/pnaFromParachain"
+import { PNAReserveFromParachain } from "./transfers/toEthereum/pnaReserveFromParachain"
 import { ERC20FromParachain } from "./transfers/toEthereum/erc20FromParachain"
 import {
     isRelaychainLocation,
@@ -92,7 +93,16 @@ export class TransferToEthereum<T extends EthereumProviderTypes> implements Tran
                           this.source,
                           this.destination,
                       )
-                    : new PNAFromParachain(
+                    : sourceParaId === 2034 &&
+                        sourceAssetMetadata.symbol === this.source.info.tokenSymbols
+                      ? new PNAReserveFromParachain(
+                            this.context,
+                            this.registry,
+                            this.route,
+                            this.source,
+                            this.destination,
+                        )
+                      : new PNAFromParachain(
                           this.context,
                           this.registry,
                           this.route,
@@ -1872,5 +1882,4 @@ export async function sourceAgentAddress<T extends EthereumProviderTypes>(
     const agentID = await sourceAgentId(context, parachainId, sourceAccountHex)
     return gateway.agentOf(agentID)
 }
-
 

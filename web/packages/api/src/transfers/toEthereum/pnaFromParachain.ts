@@ -48,6 +48,7 @@ export class PNAFromParachain<T extends EthereumProviderTypes> implements Transf
         public readonly route: TransferRoute,
         public readonly source: Parachain,
         public readonly destination: EthereumChain,
+        protected readonly assetTransferType: "teleport" | "reserveDeposit" = "teleport",
     ) {}
 
     get from(): ChainId {
@@ -118,6 +119,7 @@ export class PNAFromParachain<T extends EthereumProviderTypes> implements Transf
             sourceAssetMetadata,
             1n,
             mockDeliveryFee,
+            this.assetTransferType,
         )
 
         forwardedXcmToBH = buildExportXcm(
@@ -222,6 +224,7 @@ export class PNAFromParachain<T extends EthereumProviderTypes> implements Transf
                 fee,
                 claimerLocation,
                 callHex,
+                this.assetTransferType,
             )
         } else if (isRelaychainLocation(fee.feeLocation)) {
             xcm = buildTransferXcmFromParachainWithDOTAsFee(
@@ -238,6 +241,7 @@ export class PNAFromParachain<T extends EthereumProviderTypes> implements Transf
                 fee,
                 claimerLocation,
                 callHex,
+                this.assetTransferType,
             )
         } else if (isParachainNative(fee.feeLocation, sourceParachainImpl.parachainId)) {
             xcm = buildTransferXcmFromParachainWithNativeAssetFee(
@@ -255,6 +259,7 @@ export class PNAFromParachain<T extends EthereumProviderTypes> implements Transf
                 fee,
                 claimerLocation,
                 callHex,
+                this.assetTransferType,
             )
         } else {
             throw new Error(

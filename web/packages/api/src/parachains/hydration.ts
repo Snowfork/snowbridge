@@ -19,6 +19,10 @@ export class HydrationParachain extends ParachainBase {
     }
 
     async getLocationBalance(location: any, account: string, _pnaAssetId?: any): Promise<bigint> {
+        if (isHdxLocation(location)) {
+            return this.getNativeBalance(account)
+        }
+
         const paraAssetId = (
             await this.provider.query.assetRegistry.locationAssets(location)
         ).toPrimitive()
@@ -140,5 +144,13 @@ function isHydrationNativeLocation(location: any, parachainId: number): boolean 
         location.interior?.x3?.[0]?.globalConsensus?.polkadot !== undefined &&
         location.interior.x3[1]?.parachain === parachainId &&
         location.interior.x3[2]?.generalIndex === 0
+    )
+}
+
+function isHdxLocation(location: any): boolean {
+    return (
+        location?.parents === 0 &&
+        location.interior?.x1?.length === 1 &&
+        location.interior.x1[0]?.generalIndex === 0
     )
 }

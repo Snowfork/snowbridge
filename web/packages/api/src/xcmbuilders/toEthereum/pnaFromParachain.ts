@@ -340,6 +340,7 @@ export function buildTransferXcmFromParachain(
     fee: DeliveryFee,
     claimerLocation?: any,
     callHex?: string,
+    assetTransferType: "teleport" | "reserveDeposit" = "teleport",
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     let sourceLocation = accountToLocation(sourceAccount)
@@ -487,7 +488,7 @@ export function buildTransferXcmFromParachain(
                             },
                         },
                         {
-                            teleport: {
+                            [assetTransferType]: {
                                 definite: [
                                     {
                                         id: tokenLocation,
