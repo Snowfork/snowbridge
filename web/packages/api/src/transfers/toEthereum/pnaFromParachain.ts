@@ -119,6 +119,8 @@ export class PNAFromParachain<T extends EthereumProviderTypes> implements Transf
             sourceAssetMetadata,
             1n,
             mockDeliveryFee,
+            undefined,
+            undefined,
             this.assetTransferType,
         )
 
