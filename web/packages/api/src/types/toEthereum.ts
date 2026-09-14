@@ -42,7 +42,6 @@ export type DeliveryFee = {
     breakdown: { [P in ToEthereumFeeKey]?: FeeAsset[] }
     summary: FeeItem[]
     totals: FeeAsset[]
-    // Ether deposited to this Asset Hub account instead of added to the relayerFee.
     serviceFee?: ServiceFee
 }
 

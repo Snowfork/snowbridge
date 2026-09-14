@@ -16,7 +16,6 @@ export type DeliveryFee = {
     breakdown: { [P in ToPolkadotFeeKey | L2ToPolkadotFeeKey]?: FeeAsset[] }
     summary: FeeItem[]
     totals: FeeAsset[]
-    // Ether deposited to this Asset Hub account instead of added to the relayerFee.
     serviceFee?: ServiceFee
 }
 
