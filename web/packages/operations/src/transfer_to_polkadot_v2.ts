@@ -5,7 +5,7 @@ import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { formatEther, Wallet } from "ethers"
 import { bridgeInfoFor } from "@snowbridge/registry"
 import { WETH9__factory } from "@snowbridge/contract-types"
-import { findFeeBreakdownTotal, findFeeTotal } from "./fee"
+import { findFeeBreakdownTotal, findFeeTotal, volumeFeeFromEnv } from "./fee"
 
 export const transferToPolkadot = async (
     destParaId: number,
@@ -78,11 +78,17 @@ export const transferToPolkadot = async (
         // Step 1. Get the delivery fee for the transaction
         const feeAssetLocation =
             feeAsset?.toLowerCase() === "dot" ? assetsV2.DOT_LOCATION : undefined
+        const volumeFee = volumeFeeFromEnv()
         let fee = await transferImpl.fee(TOKEN_CONTRACT, {
             feeAsset: feeAssetLocation,
+            volumeFee,
         })
 
         console.log("fee: ", fee)
+        if (volumeFee) {
+            console.log("volume fee params:", volumeFee)
+            console.log("service fee:", fee.serviceFee)
+        }
         // Step 2. Create a transfer tx
         const transfer = await transferImpl.tx(
             ETHEREUM_ACCOUNT_PUBLIC,

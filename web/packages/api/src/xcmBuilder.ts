@@ -1,6 +1,7 @@
 import { Registry } from "@polkadot/types/types"
 import { DOT_LOCATION, ETHER_TOKEN_ADDRESS } from "./assets_v2"
 import { resolveBeneficiary } from "./crypto"
+import type { ServiceFee } from "./types/fee"
 
 export const HERE_LOCATION = { parents: 0, interior: "Here" }
 export const NATIVE_TOKEN_LOCATION = { parents: 1, interior: "Here" }
@@ -557,12 +558,7 @@ export function buildAssetHubERC20TransferToKusama(
     feeRecipient?: string,
 ) {
     return registry.createType("XcmVersionedXcm", {
-        v4: buildAssetHubXcmFromParachainKusama(
-            beneficiary,
-            topic,
-            serviceFeeKsm,
-            feeRecipient,
-        ),
+        v4: buildAssetHubXcmFromParachainKusama(beneficiary, topic, serviceFeeKsm, feeRecipient),
     })
 }
 
@@ -1468,6 +1464,41 @@ export const buildSplitDepositAsset = (
             },
         },
     ]
+}
+
+// DepositAsset that deposits serviceFee.amount to serviceFee.recipient on Asset
+// Hub. It comes before the beneficiary deposit, so the beneficiary never gets it.
+export const buildServiceFeeDeposit = (assetLocation: any, serviceFee?: ServiceFee) => {
+    if (!serviceFee || serviceFee.amount <= 0n) {
+        return []
+    }
+    return [
+        {
+            depositAsset: {
+                assets: {
+                    definite: [
+                        {
+                            id: assetLocation,
+                            fun: { Fungible: serviceFee.amount },
+                        },
+                    ],
+                },
+                beneficiary: {
+                    parents: 0,
+                    interior: { x1: [accountToLocation(serviceFee.recipient)] },
+                },
+            },
+        },
+    ]
+}
+
+// ReserveAssetDeposited for ether that arrives as message payload, on top of the
+// fee ether. The serviceFee is one example. Empty when the amount is zero.
+export const buildPayloadEtherDeposit = (ether: any, amount: bigint) => {
+    if (amount <= 0n) {
+        return []
+    }
+    return [{ reserveAssetDeposited: [{ id: ether, fun: { Fungible: amount } }] }]
 }
 
 export const WESTEND_GENESIS = "0xe143f23803ac50e8f6f8e62695d1ce9e4e1d68aa36c1cd2cfd15340213f3423e"

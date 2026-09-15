@@ -1,5 +1,6 @@
 import { Registry } from "@polkadot/types/types"
 import {
+    buildServiceFeeDeposit,
     bridgeLocation,
     parachainLocation,
     accountToLocation,
@@ -38,6 +39,8 @@ export function buildTransferXcmFromParachainWithNativeAssetFee(
         findInBreakdownOrZero(fee.breakdown, "returnToSenderExecution", nativeSymbol)
     let totalNativeFeeAmount = findTotal(fee, nativeSymbol)
     let remoteEtherFeeAmount = findInBreakdownOrZero(fee.breakdown, "ethereumExecution", "ETH")
+    let serviceFeeEtherAmount = fee.serviceFee?.amount ?? 0n
+    let serviceFeeNativeAmount = findInBreakdownOrZero(fee.breakdown, "serviceFee", nativeSymbol)
     let remoteEtherFeeNativeAmount = findInBreakdownOrZero(
         fee.breakdown,
         "ethereumExecution",
@@ -120,13 +123,14 @@ export function buildTransferXcmFromParachainWithNativeAssetFee(
                     {
                         id: bridgeLocation(ethChainId),
                         fun: {
-                            Fungible: remoteEtherFeeAmount,
+                            Fungible: remoteEtherFeeAmount + serviceFeeEtherAmount,
                         },
                     },
                 ],
                 maximal: false,
             },
         },
+        ...buildServiceFeeDeposit(bridgeLocation(ethChainId), fee.serviceFee),
         {
             initiateTransfer: {
                 destination: bridgeLocation(ethChainId),
@@ -211,7 +215,8 @@ export function buildTransferXcmFromParachainWithNativeAssetFee(
                                         Fungible:
                                             totalNativeFeeAmount -
                                             localNativeFeeAmount -
-                                            remoteEtherFeeNativeAmount,
+                                            remoteEtherFeeNativeAmount -
+                                            serviceFeeNativeAmount,
                                     },
                                 },
                             ],
@@ -225,7 +230,8 @@ export function buildTransferXcmFromParachainWithNativeAssetFee(
                                     {
                                         id: HERE_LOCATION,
                                         fun: {
-                                            Fungible: remoteEtherFeeNativeAmount,
+                                            Fungible:
+                                                remoteEtherFeeNativeAmount + serviceFeeNativeAmount,
                                         },
                                     },
                                 ],

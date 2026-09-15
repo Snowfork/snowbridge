@@ -1,5 +1,6 @@
 import { Registry } from "@polkadot/types/types"
 import {
+    buildServiceFeeDeposit,
     bridgeLocation,
     erc20Location,
     erc20LocationReanchored,
@@ -12,6 +13,7 @@ import {
 import { DOT_LOCATION } from "../../assets_v2"
 import { Asset } from "@snowbridge/base-types"
 import { DeliveryFee } from "../../toEthereum_v2"
+import { ServiceFee } from "../../types/fee"
 import { resolveBeneficiary } from "../../crypto"
 import { findInBreakdownOrZero, findTotal } from "../../fees"
 
@@ -188,6 +190,7 @@ export function buildResultXcmAssetHubERC20TransferFromParachainV2(
     returnToSenderFee: bigint,
     feeAssetId: any,
     feeAssetIdReanchored: any,
+    serviceFee?: ServiceFee,
 ) {
     let { hexAddress, kind } = resolveBeneficiary(sourceAccount)
     let sourceAccountLocation
@@ -259,6 +262,9 @@ export function buildResultXcmAssetHubERC20TransferFromParachainV2(
             {
                 setAppendix: appendixInstructions,
             },
+            // Mirrors the sent message, which deposits the service fee on Asset Hub
+            // before forwarding to Ethereum, so the weighed XCM matches it.
+            ...buildServiceFeeDeposit(bridgeDest, serviceFee),
             {
                 initiateTransfer: {
                     destination: bridgeDest,
@@ -271,7 +277,9 @@ export function buildResultXcmAssetHubERC20TransferFromParachainV2(
                     assets: [
                         {
                             reserveWithdraw: {
-                                definite: [{ id: tokenLocation, fun: { Fungible: transferAmount } }],
+                                definite: [
+                                    { id: tokenLocation, fun: { Fungible: transferAmount } },
+                                ],
                             },
                         },
                     ],
@@ -306,7 +314,12 @@ export function buildTransferXcmFromParachain(
         findInBreakdownOrZero(fee.breakdown, "localExecution", "DOT") +
         findInBreakdownOrZero(fee.breakdown, "localDelivery", "DOT")
     let totalDOTFeeAmount: bigint = findTotal(fee, "DOT")
-    let remoteEtherFeeAmount: bigint = findInBreakdownOrZero(fee.breakdown, "ethereumExecution", "ETH")
+    let remoteEtherFeeAmount: bigint = findInBreakdownOrZero(
+        fee.breakdown,
+        "ethereumExecution",
+        "ETH",
+    )
+    let serviceFeeEtherAmount: bigint = fee.serviceFee?.amount ?? 0n
 
     let assets = []
 
@@ -320,14 +333,14 @@ export function buildTransferXcmFromParachain(
         assets.push({
             id: bridgeLocation(ethChainId),
             fun: {
-                Fungible: remoteEtherFeeAmount + tokenAmount,
+                Fungible: remoteEtherFeeAmount + serviceFeeEtherAmount + tokenAmount,
             },
         })
     } else {
         assets.push({
             id: bridgeLocation(ethChainId),
             fun: {
-                Fungible: remoteEtherFeeAmount,
+                Fungible: remoteEtherFeeAmount + serviceFeeEtherAmount,
             },
         })
         assets.push({
@@ -351,6 +364,7 @@ export function buildTransferXcmFromParachain(
         {
             setAppendix: appendixInstructions,
         },
+        ...buildServiceFeeDeposit(bridgeLocation(ethChainId), fee.serviceFee),
         {
             initiateTransfer: {
                 destination: bridgeLocation(ethChainId),
@@ -446,7 +460,7 @@ export function buildTransferXcmFromParachain(
                                     {
                                         id: bridgeLocation(ethChainId),
                                         fun: {
-                                            Fungible: remoteEtherFeeAmount,
+                                            Fungible: remoteEtherFeeAmount + serviceFeeEtherAmount,
                                         },
                                     },
                                 ],

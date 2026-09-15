@@ -1,12 +1,15 @@
 import { Registry } from "@polkadot/types/types"
 import {
     accountToLocation,
+    buildPayloadEtherDeposit,
+    buildServiceFeeDeposit,
     buildSplitDepositAsset,
     erc20Location,
     ethereumNetwork,
     parachainLocation,
 } from "../../xcmBuilder"
 import { DOT_LOCATION, ETHER_TOKEN_ADDRESS } from "../../assets_v2"
+import { ServiceFee } from "../../types/fee"
 
 export function buildAssetHubPNAReceivedXcm(
     registry: Registry,
@@ -21,6 +24,7 @@ export function buildAssetHubPNAReceivedXcm(
     destinationParaId: number,
     topic: string,
     customXcm?: any[],
+    serviceFee?: ServiceFee,
 ) {
     let ether = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
     let beneficiaryLocation = accountToLocation(beneficiary)
@@ -67,6 +71,9 @@ export function buildAssetHubPNAReceivedXcm(
                     },
                 ],
             },
+            // Payload ether on top of the fee ether: the destination execution
+            // fee plus the service fee.
+            ...buildPayloadEtherDeposit(ether, remoteExecutionFee + (serviceFee?.amount ?? 0n)),
             {
                 descendOrigin: {
                     x1: [
@@ -124,6 +131,7 @@ export function buildAssetHubPNAReceivedXcm(
             {
                 refundSurplus: null,
             },
+            ...buildServiceFeeDeposit(ether, serviceFee),
             {
                 depositAsset: {
                     assets: {
@@ -211,6 +219,7 @@ export function sendMessageXCM(
     remoteEtherFeeAmount: bigint,
     topic: string,
     customXcm?: any[],
+    serviceFee?: ServiceFee,
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     let ether = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
@@ -261,6 +270,7 @@ export function sendMessageXCM(
             {
                 refundSurplus: null,
             },
+            ...buildServiceFeeDeposit(ether, serviceFee),
             {
                 depositAsset: {
                     assets: {
@@ -347,6 +357,7 @@ export function buildAssetHubPNAReceivedXcmWithDOTFee(
     destinationParaId: number,
     topic: string,
     customXcm?: any[],
+    serviceFee?: ServiceFee,
 ) {
     let ether = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
     let beneficiaryLocation = accountToLocation(beneficiary)
@@ -393,6 +404,9 @@ export function buildAssetHubPNAReceivedXcmWithDOTFee(
                     },
                 ],
             },
+            // Payload ether on top of the fee ether: the destination execution
+            // fee plus the service fee.
+            ...buildPayloadEtherDeposit(ether, remoteEtherFeeAmount + (serviceFee?.amount ?? 0n)),
             {
                 descendOrigin: {
                     x1: [
@@ -472,6 +486,7 @@ export function buildAssetHubPNAReceivedXcmWithDOTFee(
             },
             // Mirror the user-side `sendMessageXCMWithDOTDestFee` AH-side tail.
             { refundSurplus: null },
+            ...buildServiceFeeDeposit(ether, serviceFee),
             {
                 depositAsset: {
                     assets: {
@@ -503,6 +518,7 @@ export function sendMessageXCMWithDOTDestFee(
     remoteDotFeeAmount: bigint,
     topic: string,
     customXcm?: any[],
+    serviceFee?: ServiceFee,
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     let ether = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
@@ -576,6 +592,7 @@ export function sendMessageXCMWithDOTDestFee(
             {
                 refundSurplus: null,
             },
+            ...buildServiceFeeDeposit(ether, serviceFee),
             {
                 depositAsset: {
                     assets: {

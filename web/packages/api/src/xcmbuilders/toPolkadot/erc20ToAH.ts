@@ -1,11 +1,13 @@
 import { Registry } from "@polkadot/types/types"
 import {
     accountToLocation,
+    buildServiceFeeDeposit,
     buildSplitDepositAsset,
     erc20Location,
     ethereumNetwork,
 } from "../../xcmBuilder"
 import { ETHER_TOKEN_ADDRESS } from "../../assets_v2"
+import { ServiceFee } from "../../types/fee"
 
 export function buildAssetHubERC20ReceivedXcm(
     registry: Registry,
@@ -19,6 +21,7 @@ export function buildAssetHubERC20ReceivedXcm(
     beneficiary: string,
     topic: string,
     customXcm?: any[],
+    serviceFee?: ServiceFee,
 ) {
     let ether = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
     let beneficiaryLocation = accountToLocation(beneficiary)
@@ -99,6 +102,9 @@ export function buildAssetHubERC20ReceivedXcm(
             // DepositAsset attempts to settle ether dust + tokens together.
             // Without this, the dry-run misses ether-dust BelowMinimum traps.
             { refundSurplus: null },
+            // Before customXcm: the Definite take is saturating, so instructions a
+            // caller supplies could drain holding and silently shrink the deposit.
+            ...buildServiceFeeDeposit(ether, serviceFee),
             ...(customXcm || []), // Insert custom XCM instructions if provided
             ...buildSplitDepositAsset(
                 beneficiaryLocation,
@@ -116,10 +122,12 @@ export function buildAssetHubERC20ReceivedXcm(
 
 export function sendMessageXCM(
     registry: Registry,
+    ethChainId: number,
     beneficiary: string,
     topic: string,
     customXcm?: any[],
     userAssetLocation?: any,
+    serviceFee?: ServiceFee,
 ) {
     let beneficiaryLocation = accountToLocation(beneficiary)
     return registry.createType("XcmVersionedXcm", {
@@ -127,6 +135,9 @@ export function sendMessageXCM(
             {
                 refundSurplus: null,
             },
+            // Before customXcm: the Definite take is saturating, so instructions a
+            // caller supplies could drain holding and silently shrink the deposit.
+            ...buildServiceFeeDeposit(erc20Location(ethChainId, ETHER_TOKEN_ADDRESS), serviceFee),
             ...(customXcm || []), // Insert custom XCM instructions if provided
             ...buildSplitDepositAsset(beneficiaryLocation, userAssetLocation, 2),
             {

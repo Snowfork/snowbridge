@@ -31,7 +31,7 @@ import { VolumeFeeParams } from "../../feeSchedule"
 import {
     buildContractCallHex,
     estimateFeesFromAssetHub,
-    mockDeliveryFee,
+    mockDeliveryFeeFor,
     queryXcmExecuteWeight,
     signAndSendTransfer,
     validateTransferFromAssetHub,
@@ -85,7 +85,7 @@ export class PNAFromAH<T extends EthereumProviderTypes> implements TransferInter
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             sourceAssetMetadata,
             1n,
-            mockDeliveryFee,
+            mockDeliveryFeeFor(options),
         )
 
         forwardedXcmToBH = buildExportXcm(

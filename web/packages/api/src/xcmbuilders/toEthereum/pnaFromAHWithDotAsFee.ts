@@ -1,5 +1,6 @@
 import { Registry } from "@polkadot/types/types"
 import {
+    buildServiceFeeDeposit,
     bridgeLocation,
     accountToLocation,
     isRelaychainLocation,
@@ -31,6 +32,7 @@ export function buildTransferXcmFromAssetHubWithDOTAsFee(
         findInBreakdownOrZero(fee.breakdown, "snowbridgeDelivery", "DOT")
     let totalDOTFeeAmount = findTotal(fee, "DOT")
     let remoteEtherFeeAmount = findInBreakdownOrZero(fee.breakdown, "ethereumExecution", "ETH")
+    let serviceFeeEtherAmount = fee.serviceFee?.amount ?? 0n
 
     let assets = []
     if (isRelaychainLocation(tokenLocation)) {
@@ -110,13 +112,14 @@ export function buildTransferXcmFromAssetHubWithDOTAsFee(
                     {
                         id: bridgeLocation(ethChainId),
                         fun: {
-                            Fungible: remoteEtherFeeAmount,
+                            Fungible: remoteEtherFeeAmount + serviceFeeEtherAmount,
                         },
                     },
                 ],
                 maximal: false,
             },
         },
+        ...buildServiceFeeDeposit(bridgeLocation(ethChainId), fee.serviceFee),
         {
             initiateTransfer: {
                 destination: bridgeLocation(ethChainId),

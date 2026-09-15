@@ -34,7 +34,7 @@ import {
 } from "../../xcmbuilders/toPolkadot/pnaToParachain"
 import { getOperatingStatus } from "../../status"
 import { hexToU8a } from "@polkadot/util"
-import { VolumeFeeParams, calculateVolumeTipInWei } from "../../feeSchedule"
+import { VolumeFeeParams, resolveVolumeFee } from "../../feeSchedule"
 import {
     addBreakdown,
     computeTotals,
@@ -71,9 +71,9 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
             volumeFee?: VolumeFeeParams
         },
     ): Promise<DeliveryFee> {
-        if (options?.volumeFee && options?.overrideRelayerFee !== undefined) {
-            throw new Error("Cannot specify both volumeFee and overrideRelayerFee")
-        }
+        const serviceFee = resolveVolumeFee(options?.volumeFee, () =>
+            getAssetHubEtherMinBalance(this.registry),
+        )
         const context = this.context
         const registry = this.registry
         const assetHub = await context.assetHub()
@@ -102,6 +102,8 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             this.to.id,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
+            undefined, // customXcm
+            serviceFee,
         )
         const bridgeHubImpl = await this.context.paraImplementation(bridgeHub)
         const assetHubImpl = await this.context.paraImplementation(assetHub)
@@ -211,19 +213,6 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
             deliveryFeeInEther,
         )
 
-        let volumeTip: bigint | undefined
-        let finalRelayerFee = relayerFee
-        if (options?.volumeFee) {
-            volumeTip = calculateVolumeTipInWei(options.volumeFee)
-            finalRelayerFee += volumeTip
-        }
-
-        const totalFeeInWei =
-            assetHubExecutionFeeEther +
-            destinationDeliveryFeeEther +
-            destinationExecutionFeeEther +
-            finalRelayerFee
-
         const breakdown: DeliveryFee["breakdown"] = {}
         addBreakdown(breakdown, "assetHubDelivery", { amount: deliveryFeeInEther, symbol: "ETH" })
         addBreakdown(breakdown, "assetHubDelivery", { amount: deliveryFeeInDOT, symbol: "DOT" })
@@ -253,9 +242,12 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
                 symbol: "DOT",
             })
         }
-        addBreakdown(breakdown, "relayer", { amount: finalRelayerFee, symbol: "ETH" })
+        addBreakdown(breakdown, "relayer", { amount: relayerFee, symbol: "ETH" })
         addBreakdown(breakdown, "extrinsic", { amount: extrinsicFeeDot, symbol: "DOT" })
         addBreakdown(breakdown, "extrinsic", { amount: extrinsicFeeEther, symbol: "ETH" })
+        if (serviceFee) {
+            addBreakdown(breakdown, "serviceFee", { amount: serviceFee.amount, symbol: "ETH" })
+        }
 
         const summary = [
             {
@@ -269,11 +261,14 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
                 symbol: "ETH",
             },
             {
-                description: "Relayer tip",
-                amount: finalRelayerFee - deliveryFeeInEther,
+                description: "Relayer fee",
+                amount: relayerFee - deliveryFeeInEther,
                 symbol: "ETH",
             },
         ]
+        if (serviceFee) {
+            summary.push({ description: "Service fee", amount: serviceFee.amount, symbol: "ETH" })
+        }
 
         return {
             kind: "ethereum->polkadot",
@@ -281,6 +276,7 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
             breakdown,
             summary,
             totals: computeTotals(summary),
+            serviceFee,
         }
     }
 
@@ -370,6 +366,7 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
                     destExecutionFeeDOT,
                     topic,
                     customXcm,
+                    fee.serviceFee,
                 ).toHex(),
             )
         } else {
@@ -384,6 +381,7 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
                     destExecutionFeeEther,
                     topic,
                     customXcm,
+                    fee.serviceFee,
                 ).toHex(),
             )
         }
@@ -624,6 +622,7 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
                     destinationParaId,
                     "0x0000000000000000000000000000000000000000000000000000000000000000",
                     transfer.input.customXcm,
+                    inputFee.serviceFee,
                 )
             } else {
                 xcm = buildAssetHubPNAReceivedXcm(
@@ -639,6 +638,7 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
                     destinationParaId,
                     "0x0000000000000000000000000000000000000000000000000000000000000000",
                     transfer.input.customXcm,
+                    inputFee.serviceFee,
                 )
             }
             let result = await assetHubImpl.dryRunXcm(

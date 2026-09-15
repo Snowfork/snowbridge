@@ -69,26 +69,6 @@ export function padFeeByPercentage(fee: bigint, padPercent: bigint) {
     return (fee * (100n + padPercent)) / 100n
 }
 
-// Quadratic decay: pad = staticPad * max(0, 1 - r/2)^2 where r = tip / rawCost.
-// Stretched to k=2 so the pad only collapses to its floor once tip >= 2×rawCost.
-// minPadPercent floors the result — required for slippage pads where the tip
-// does not buffer AMM drift (only gas), so the pad must never reach 0.
-export function scaledPadPercentage(
-    staticPadPercent: bigint,
-    tip: bigint,
-    rawCost: bigint,
-    minPadPercent: bigint = 0n,
-): bigint {
-    if (staticPadPercent <= 0n) return minPadPercent
-    if (rawCost <= 0n) return staticPadPercent
-    if (tip <= 0n) return staticPadPercent
-    const stretched = rawCost * 2n
-    if (tip >= stretched) return minPadPercent
-    const remaining = stretched - tip
-    const scaled = (remaining * remaining * staticPadPercent) / (stretched * stretched)
-    return scaled > minPadPercent ? scaled : minPadPercent
-}
-
 export class ValidationError<
     T extends { success: boolean; logs: { message: string }[] },
 > extends Error {

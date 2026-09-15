@@ -1,10 +1,6 @@
 import { EthereumProviderTypes, L2MessageReceipt } from "@snowbridge/base-types"
 import { Context } from "../.."
-import type {
-    DeliveryFee,
-    Transfer,
-    ValidatedTransfer,
-} from "../../types/toPolkadotSnowbridgeV2"
+import type { DeliveryFee, Transfer, ValidatedTransfer } from "../../types/toPolkadotSnowbridgeV2"
 import type { VolumeFeeParams } from "../../feeSchedule"
 
 export interface TransferInterface<T extends EthereumProviderTypes> {

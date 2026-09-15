@@ -10,6 +10,10 @@ export const paraIdToSovereignAccount = (type: "para" | "sibl", paraId: number):
     return u8aToHex(address)
 }
 
+// Beneficiary address kinds returned by resolveBeneficiary.
+export const ACCOUNT_ID_32 = 1
+export const ACCOUNT_KEY_20 = 2
+
 export function resolveBeneficiary(address: string) {
     if (isHex(address)) {
         if (address.length === 42) {

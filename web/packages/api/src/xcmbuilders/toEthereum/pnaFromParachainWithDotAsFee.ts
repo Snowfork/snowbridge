@@ -1,5 +1,6 @@
 import { Registry } from "@polkadot/types/types"
 import {
+    buildServiceFeeDeposit,
     bridgeLocation,
     parachainLocation,
     accountToLocation,
@@ -35,7 +36,13 @@ export function buildTransferXcmFromParachainWithDOTAsFee(
         findInBreakdownOrZero(fee.breakdown, "localDelivery", "DOT") +
         findInBreakdownOrZero(fee.breakdown, "returnToSenderExecution", "DOT")
     let totalDOTFeeAmount: bigint = findTotal(fee, "DOT")
-    let remoteEtherFeeAmount: bigint = findInBreakdownOrZero(fee.breakdown, "ethereumExecution", "ETH")
+    let remoteEtherFeeAmount: bigint = findInBreakdownOrZero(
+        fee.breakdown,
+        "ethereumExecution",
+        "ETH",
+    )
+    let serviceFeeEtherAmount: bigint = fee.serviceFee?.amount ?? 0n
+    let serviceFeeInDOTAmount: bigint = findInBreakdownOrZero(fee.breakdown, "serviceFee", "DOT")
     let remoteEtherFeeInDOTAmount: bigint = findInBreakdownOrZero(
         fee.breakdown,
         "ethereumExecution",
@@ -84,13 +91,14 @@ export function buildTransferXcmFromParachainWithDOTAsFee(
                     {
                         id: bridgeLocation(ethChainId),
                         fun: {
-                            Fungible: remoteEtherFeeAmount,
+                            Fungible: remoteEtherFeeAmount + serviceFeeEtherAmount,
                         },
                     },
                 ],
                 maximal: false,
             },
         },
+        ...buildServiceFeeDeposit(bridgeLocation(ethChainId), fee.serviceFee),
         {
             initiateTransfer: {
                 destination: bridgeLocation(ethChainId),
@@ -175,7 +183,8 @@ export function buildTransferXcmFromParachainWithDOTAsFee(
                                         Fungible:
                                             totalDOTFeeAmount -
                                             localDOTFeeAmount -
-                                            remoteEtherFeeInDOTAmount,
+                                            remoteEtherFeeInDOTAmount -
+                                            serviceFeeInDOTAmount,
                                     },
                                 },
                             ],
@@ -189,7 +198,8 @@ export function buildTransferXcmFromParachainWithDOTAsFee(
                                     {
                                         id: DOT_LOCATION,
                                         fun: {
-                                            Fungible: remoteEtherFeeInDOTAmount,
+                                            Fungible:
+                                                remoteEtherFeeInDOTAmount + serviceFeeInDOTAmount,
                                         },
                                     },
                                 ],

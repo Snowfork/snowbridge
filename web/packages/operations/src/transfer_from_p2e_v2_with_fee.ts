@@ -11,7 +11,7 @@ const transfer = async (sourceParaId: number, symbol: string, feeType: number, a
     } else {
         feeTokenLocation = parachainLocation(sourceParaId)
     }
-    await transferToEthereum(sourceParaId, symbol, amount, feeTokenLocation)
+    await transferToEthereum(sourceParaId, symbol, amount, { feeTokenLocation })
 }
 
 if (process.argv.length != 6) {
