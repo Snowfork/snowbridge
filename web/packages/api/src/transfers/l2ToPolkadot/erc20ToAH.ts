@@ -113,7 +113,7 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             claimer,
             executionFee,
             relayerFee,
-            destinationExecutionFee: 0n,
+            destinationExecutionFee: serviceFee?.amount ?? 0n,
             outputAmount: amount,
             swap,
         })
@@ -519,7 +519,9 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             claimer: claimerLocationToBytes(claimer),
             executionFee: findInBreakdown(fee.breakdown, "assetHubExecution", "ETH"),
             relayerFee: findInBreakdown(fee.breakdown, "relayer", "ETH"),
-            destinationExecutionFee: 0n,
+            // The adaptor forwards only executionFee + relayerFee + destinationExecutionFee
+            // to the Gateway, so the service fee must be in one of them to reach Asset Hub.
+            destinationExecutionFee: fee.serviceFee?.amount ?? 0n,
         }
         const l2FeeTokenAddress =
             context.environment.l2Bridge?.l2Chains[this.from.id]?.feeTokenAddress

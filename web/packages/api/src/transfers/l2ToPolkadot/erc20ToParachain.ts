@@ -118,7 +118,7 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
             claimer,
             executionFee: gatewayExecutionFee,
             relayerFee,
-            destinationExecutionFee: destExecutionFeeEther,
+            destinationExecutionFee: destExecutionFeeEther + (serviceFee?.amount ?? 0n),
             outputAmount: amount,
             swap,
         })
@@ -593,7 +593,7 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
             claimer: claimerLocationToBytes(claimer),
             executionFee: assetHubExecutionFee,
             relayerFee: findInBreakdown(fee.breakdown, "relayer", "ETH"),
-            destinationExecutionFee: destExecutionFeeEther,
+            destinationExecutionFee: destExecutionFeeEther + (fee.serviceFee?.amount ?? 0n),
         }
         const l2FeeTokenAddress =
             context.environment.l2Bridge?.l2Chains[this.from.id]?.feeTokenAddress
