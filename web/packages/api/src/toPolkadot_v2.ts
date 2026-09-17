@@ -157,6 +157,8 @@ export class V1ToPolkadotAdapter<T extends EthereumProviderTypes>
             overrideRelayerFee?: bigint
         },
     ): Promise<ToPolkadotV2DeliveryFee> {
+        // options.volumeFee is ignored, not rejected: the v1 Gateway charges a fixed
+        // bridging fee and refunds any excess, so v1 routes have no volume fee.
         if (options?.feeAsset !== undefined) {
             throw new Error("v1 toPolkadot adapter does not support options.feeAsset.")
         }
