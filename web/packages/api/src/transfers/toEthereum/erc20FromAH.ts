@@ -83,7 +83,7 @@ export class ERC20FromAH<T extends EthereumProviderTypes> implements TransferInt
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             sourceAssetMetadata,
             1n,
-            mockDeliveryFeeFor(options),
+            mockDeliveryFeeFor(this.registry, options),
         )
 
         let forwardedXcmToBH = buildExportXcm(

@@ -37,7 +37,6 @@ import {
 } from "./assets_v2"
 import { getOperatingStatus } from "./status"
 import { resolveVolumeFee, VolumeFeeParams } from "./feeSchedule"
-import type { ServiceFee } from "./types/fee"
 import {
     addBreakdown,
     computeTotals,
@@ -905,7 +904,7 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
                 padFeeByPercentage(ethereumExecutionFeeInDot, feeSlippagePadPercentage),
             )
             if (serviceFee) {
-                const serviceFeeInDOT = await assetHubImpl.getAssetHubConversionPalletSwap(
+                serviceFeeInDot = await assetHubImpl.getAssetHubConversionPalletSwap(
                     DOT_LOCATION,
                     bridgeLocation(registry.ethChainId),
                     padFeeByPercentage(serviceFee.amount, feeSlippagePadPercentage),
@@ -913,9 +912,8 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
                 serviceFeeInNative = await assetHubImpl.getAssetHubConversionPalletSwap(
                     feeLocation,
                     DOT_LOCATION,
-                    padFeeByPercentage(serviceFeeInDOT, feeSlippagePadPercentage),
+                    padFeeByPercentage(serviceFeeInDot, feeSlippagePadPercentage),
                 )
-                serviceFeeInDot = padFeeByPercentage(serviceFeeInDOT, feeSlippagePadPercentage)
             }
             if (accelerationFee > 0n) {
                 const accelerationFeeInDOT = await assetHubImpl.getAssetHubConversionPalletSwap(
@@ -999,8 +997,8 @@ export const estimateFeesFromParachains = async <T extends EthereumProviderTypes
                 symbol: feeNativeSymbol,
             })
         }
-        // Native-fee path: the DOT put into the DOT -> ETH swap for the serviceFee.
-        // Reserve validation uses it with the ethereumExecution DOT entry.
+        // Native-fee path: the DOT quoted for the padded serviceFee, on the same basis
+        // as the ethereumExecution DOT entry. Reserve validation sums the two.
         if (serviceFeeInDot !== undefined && feeNativeSymbol !== "DOT") {
             addBreakdown(breakdown, "serviceFee", { amount: serviceFeeInDot, symbol: "DOT" })
         }
@@ -1225,6 +1223,10 @@ export const validateTransferFromAssetHub = async <T extends EthereumProviderTyp
             sourceAssetMetadata,
         )
     }
+    // An ether transfer paid in ether withdraws the amount and the ether fee as one asset.
+    const isEthToken = tokenAddress.toLowerCase() === ETHER_TOKEN_ADDRESS.toLowerCase()
+    const extraEthOnSourceWithdraw =
+        isEthToken && !fee.feeLocation ? requiredEtherOnSource(fee) : 0n
     const ahTotalNative = findTotalOrUndefined(fee, "DOT")
     if (isNativeBalance && ahTotalNative !== undefined) {
         if (amount + ahTotalNative > tokenBalance) {
@@ -1235,7 +1237,7 @@ export const validateTransferFromAssetHub = async <T extends EthereumProviderTyp
             })
         }
     } else {
-        if (amount > tokenBalance) {
+        if (amount + extraEthOnSourceWithdraw > tokenBalance) {
             logs.push({
                 kind: ValidationKind.Error,
                 reason: ValidationReason.InsufficientTokenBalance,
@@ -1245,7 +1247,8 @@ export const validateTransferFromAssetHub = async <T extends EthereumProviderTyp
     }
 
     // No fee specified means that the fee.ethereumExecutionFee is paid in Ether on source chain.
-    if (!fee.feeLocation) {
+    // For an ether transfer that fee is already in the token balance check above.
+    if (!fee.feeLocation && !isEthToken) {
         let etherBalance = await sourceParachainImpl.getTokenBalance(
             sourceAccountHex,
             registry.ethChainId,
@@ -1767,30 +1770,16 @@ export const mockDeliveryFee: DeliveryFee = {
     totals: [{ amount: 10n, symbol: "DOT" }],
 }
 
-// A realistic service fee, so the placeholder XCM encodes the same compact width
-// as the message that is sent. A 1n placeholder is one byte where a real fee is five.
-const MOCK_SERVICE_FEE = 15_000_000_000_000n
-
-// Placeholder DeliveryFee that weighs the local XCM. It carries a serviceFee when
-// the caller asks for one, so the estimate covers the same instructions as the
+// Placeholder DeliveryFee that weighs the local XCM with the same serviceFee as the
 // message that is sent.
-export function mockDeliveryFeeFor(options?: { volumeFee?: VolumeFeeParams }): DeliveryFee {
-    // Gate on resolveVolumeFee so a fee that rounds to zero weighs the same
-    // instructions as the message that is sent.
-    if (!resolveVolumeFee(options?.volumeFee, () => 0n)) {
-        return mockDeliveryFee
-    }
-    return {
-        ...mockDeliveryFee,
-        breakdown: {
-            ...mockDeliveryFee.breakdown,
-            serviceFee: [{ amount: MOCK_SERVICE_FEE, symbol: "ETH" }],
-        },
-        serviceFee: {
-            recipient: "0x0000000000000000000000000000000000000000000000000000000000000000",
-            amount: MOCK_SERVICE_FEE,
-        },
-    }
+export function mockDeliveryFeeFor(
+    registry: AssetRegistry,
+    options?: { volumeFee?: VolumeFeeParams },
+): DeliveryFee {
+    const serviceFee = resolveVolumeFee(options?.volumeFee, () =>
+        getAssetHubEtherMinBalance(registry),
+    )
+    return serviceFee ? { ...mockDeliveryFee, serviceFee } : mockDeliveryFee
 }
 
 // Agent creation exports

@@ -113,7 +113,7 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             claimer,
             executionFee,
             relayerFee,
-            destinationExecutionFee: 0n,
+            destinationExecutionFee: serviceFee?.amount ?? 0n,
             outputAmount: amount,
             swap,
         })
@@ -171,6 +171,8 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             "0x0000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000000000000000000000000000",
+            undefined, // customXcm
+            serviceFee,
         )
         let ether = erc20Location(registry.ethChainId, ETHER_TOKEN_ADDRESS)
         const feePadPercentage = options?.padFeeByPercentage
@@ -519,7 +521,7 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             claimer: claimerLocationToBytes(claimer),
             executionFee: findInBreakdown(fee.breakdown, "assetHubExecution", "ETH"),
             relayerFee: findInBreakdown(fee.breakdown, "relayer", "ETH"),
-            destinationExecutionFee: 0n,
+            destinationExecutionFee: fee.serviceFee?.amount ?? 0n,
         }
         const l2FeeTokenAddress =
             context.environment.l2Bridge?.l2Chains[this.from.id]?.feeTokenAddress
