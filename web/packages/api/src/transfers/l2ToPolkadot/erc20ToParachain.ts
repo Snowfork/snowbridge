@@ -186,6 +186,8 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
             this.to.id,
             1000000000000n,
             "0x0000000000000000000000000000000000000000000000000000000000000000",
+            undefined, // customXcm
+            serviceFee,
         )
         let ether = erc20Location(registry.ethChainId, ETHER_TOKEN_ADDRESS)
         const feePadPercentage = options?.padFeeByPercentage

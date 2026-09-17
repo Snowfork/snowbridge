@@ -85,7 +85,7 @@ export class PNAFromAH<T extends EthereumProviderTypes> implements TransferInter
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             sourceAssetMetadata,
             1n,
-            mockDeliveryFeeFor(options),
+            mockDeliveryFeeFor(this.registry, options),
         )
 
         forwardedXcmToBH = buildExportXcm(

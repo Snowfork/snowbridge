@@ -171,6 +171,8 @@ export class ERC20ToAH<T extends EthereumProviderTypes> implements TransferInter
             "0x0000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000000000000000000000000000",
+            undefined, // customXcm
+            serviceFee,
         )
         let ether = erc20Location(registry.ethChainId, ETHER_TOKEN_ADDRESS)
         const feePadPercentage = options?.padFeeByPercentage
