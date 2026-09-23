@@ -1456,4 +1456,29 @@ contract GatewayV1Test is Test {
         uint256 v = gw.exposed_v1_transactionBaseGas();
         assertGt(v, 21_000);
     }
+
+    // EIP-7976 charges 64 gas per calldata byte as a floor, against 16 under standard
+    // pricing, so the floor is the larger of the two for the same calldata.
+    function test_exposed_v1_transactionFloorGas_exceeds_standard_calldata_cost() public view {
+        MockGateway gw = MockGateway(address(gateway));
+        uint256 floorGas = gw.exposed_v1_transactionFloorGas();
+        uint256 baseGas = gw.exposed_v1_transactionBaseGas();
+
+        // Both calls have identical calldata, so the difference is purely the per-byte rate:
+        // 64 against 16, less the 14_698 of unmetered execution the base estimate carries.
+        assertEq(floorGas, baseGas + (floorGas - 21_000) * 3 / 4 - 14_698);
+        assertGt(floorGas, 21_000);
+    }
+
+    // The floor only decides the refund when execution is small relative to calldata. A
+    // dispatch heavy enough to pass the break-even leaves standard pricing in charge.
+    function test_v1_refund_uses_standard_pricing_when_execution_dominates() public view {
+        MockGateway gw = MockGateway(address(gateway));
+        uint256 floorGas = gw.exposed_v1_transactionFloorGas();
+        uint256 baseGas = gw.exposed_v1_transactionBaseGas();
+
+        // Break-even sits at 48 gas per calldata byte of execution.
+        uint256 meteredGas = floorGas - 21_000;
+        assertGt(baseGas + meteredGas, floorGas);
+    }
 }

@@ -127,6 +127,10 @@ contract MockGateway is Gateway {
         return v1_transactionBaseGas();
     }
 
+    function exposed_v1_transactionFloorGas() external pure returns (uint256) {
+        return v1_transactionFloorGas();
+    }
+
     // Helper to call vulnerable-onlySelf handler from within the contract (so msg.sender == this)
     function setOperatingMode(bytes calldata data) external {
         HandlersV2.setOperatingMode(data);
