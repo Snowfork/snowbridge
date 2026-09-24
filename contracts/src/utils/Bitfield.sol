@@ -176,6 +176,59 @@ library Bitfield {
         }
     }
 
+    /**
+     * @dev Enumerate the positions of the set bits in `self`, in ascending order.
+     *
+     * Used to turn a bitfield the contract derived itself (a subsample) into the canonical
+     * ordered index list that a compact proof set is checked against. Because the list comes
+     * from the sample rather than from calldata, the indices are inherently in range, strictly
+     * ascending and duplicate-free, so a caller cannot answer one sampled slot twice.
+     *
+     * @param self the bitfield to enumerate
+     * @param n the expected number of set bits. Reverts unless exactly `n` bits are set, so a
+     *        bitfield that does not match the count it was sampled for can never be used.
+     */
+    function toIndices(uint256[] memory self, uint256 n)
+        internal
+        pure
+        returns (uint256[] memory indices)
+    {
+        indices = new uint256[](n);
+        uint256 found;
+        for (uint256 w = 0; w < self.length; w++) {
+            uint256 word = self[w];
+            while (word != 0) {
+                if (found == n) {
+                    revert InvalidSamplingParams();
+                }
+                indices[found] = (w << 8) | lowestSetBit(word);
+                unchecked {
+                    word &= word - 1;
+                    found++;
+                }
+            }
+        }
+        if (found != n) {
+            revert InvalidSamplingParams();
+        }
+    }
+
+    /// @dev Index of the lowest set bit of a non-zero `word`: log2 of the isolated bit.
+    function lowestSetBit(uint256 word) private pure returns (uint256 r) {
+        /// @solidity memory-safe-assembly
+        assembly {
+            let b := and(word, sub(0, word))
+            r := shl(7, lt(0xffffffffffffffffffffffffffffffff, b))
+            r := or(r, shl(6, lt(0xffffffffffffffff, shr(r, b))))
+            r := or(r, shl(5, lt(0xffffffff, shr(r, b))))
+            r := or(r, shl(4, lt(0xffff, shr(r, b))))
+            r := or(r, shl(3, lt(0xff, shr(r, b))))
+            r := or(r, shl(2, lt(0xf, shr(r, b))))
+            r := or(r, shl(1, lt(0x3, shr(r, b))))
+            r := or(r, lt(0x1, shr(r, b)))
+        }
+    }
+
     function isSet(uint256[] memory self, uint256 index) internal pure returns (bool) {
         uint256 element = index >> 8;
         // forge-lint: disable-next-line(unsafe-typecast)

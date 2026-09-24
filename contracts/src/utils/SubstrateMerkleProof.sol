@@ -92,6 +92,46 @@ library SubstrateMerkleProof {
         return (false, bytes32(0));
     }
 
+    /**
+     * @notice `computeRoot` for a path carried inside a longer flat array: consume this leaf's
+     *      canonical siblings starting at `offset` and return the offset just past them. The
+     *      geometry, not calldata, decides how many siblings a leaf takes. `valid` is false when
+     *      `position` is out of range or the array ends before the path does; checking that the
+     *      final offset equals the array length is left to the caller.
+     */
+    function computeRootAt(
+        bytes32 leaf,
+        uint256 position,
+        uint256 width,
+        bytes32[] calldata siblings,
+        uint256 offset
+    ) internal pure returns (bool valid, bytes32 root, uint256 next) {
+        if (position >= width) {
+            return (false, bytes32(0), offset);
+        }
+        bytes32 node = leaf;
+        unchecked {
+            while (width > 1) {
+                // Same promotion rule as `computeRoot`: a lone trailing node of an odd-width
+                // layer is carried up and consumes no sibling.
+                if (!(position + 1 == width && width & 1 == 1)) {
+                    if (offset >= siblings.length) {
+                        return (false, bytes32(0), offset);
+                    }
+                    if (position & 1 == 1) {
+                        node = efficientHash(siblings[offset], node);
+                    } else {
+                        node = efficientHash(node, siblings[offset]);
+                    }
+                    offset++;
+                }
+                position = position >> 1;
+                width = ((width - 1) >> 1) + 1;
+            }
+        }
+        return (true, node, offset);
+    }
+
     function efficientHash(bytes32 a, bytes32 b) internal pure returns (bytes32 value) {
         /// @solidity memory-safe-assembly
         assembly {

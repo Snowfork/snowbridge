@@ -3,6 +3,7 @@ import {Test} from "forge-std/Test.sol";
 import {BeefyClient} from "../src/BeefyClient.sol";
 import {Bitfield} from "../src/utils/Bitfield.sol";
 import {ScaleCodec} from "../src/utils/ScaleCodec.sol";
+import {CompactProofLib} from "./utils/CompactProofLib.sol";
 
 contract FiatShamirPaddingBitsGrindTest is Test {
     using Bitfield for uint256[];
@@ -75,7 +76,7 @@ contract FiatShamirPaddingBitsGrindTest is Test {
         beefy.submitFiatShamir(
             commitment,
             bitfield0,
-            attackerProofs,
+            CompactProofLib.toCompact(attackerProofs),
             BeefyClient.MMRLeaf({
                 version: 0,
                 parentNumber: 0,
@@ -117,7 +118,7 @@ contract FiatShamirPaddingBitsGrindTest is Test {
         beefy.submitFiatShamir(
             commitment,
             grindedBitfield,
-            attackerProofs,
+            CompactProofLib.toCompact(attackerProofs),
             BeefyClient.MMRLeaf({
                 version: 0,
                 parentNumber: 0,

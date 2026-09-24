@@ -31,6 +31,7 @@ import {SubstrateMerkleProof} from "../src/utils/SubstrateMerkleProof.sol";
 import {BeefyClient} from "../src/BeefyClient.sol";
 import {BeefyClientMock} from "./mocks/BeefyClientMock.sol";
 import {MerkleLibSubstrate} from "./utils/MerkleLib.sol";
+import {CompactProofLib} from "./utils/CompactProofLib.sol";
 
 /// memory->calldata bridge so we exercise the REAL on-chain library code
 contract SubMerkleHarness {
@@ -375,7 +376,7 @@ contract BeefyClientForgeRejectionTest is Test {
         bytes32[] memory empty = new bytes32[](0);
         // FIX: the aliased proofs no longer pass isValidatorInSet -> submitFinal reverts.
         vm.expectRevert(BeefyClient.InvalidValidatorProof.selector);
-        bc.submitFinal(_commit(), bf, proofs, leaf, empty, 0);
+        bc.submitFinal(_commit(), bf, CompactProofLib.toCompact(proofs), leaf, empty, 0);
 
         assertTrue(bc.latestMMRRoot() != forged, "root of trust NOT forged");
         assertEq(bc.latestMMRRoot(), bytes32(0), "latestMMRRoot unchanged (forge rejected)");
@@ -599,7 +600,7 @@ contract FiatShamirForgeRejectionTest is Test {
         // FIX: even with a winning grind and a quorum-satisfying bitfield, the aliased proofs are
         // rejected -> the single-tx forge reverts.
         vm.expectRevert(BeefyClient.InvalidValidatorProof.selector);
-        bc.submitFiatShamir(_commit(bn), bitfield, proofs, leaf, empty, 0);
+        bc.submitFiatShamir(_commit(bn), bitfield, CompactProofLib.toCompact(proofs), leaf, empty, 0);
 
         assertTrue(bc.latestMMRRoot() != forged, "single-tx FS forge rejected");
         emit log_named_uint("grind found a biasing blockNumber after tries", tries);

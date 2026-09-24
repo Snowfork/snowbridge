@@ -106,6 +106,29 @@ contract BeefyClient {
     }
 
     /**
+     * @dev A compact set of validator signatures for `submitFinal` and `submitFiatShamir`.
+     *
+     * The sampled positions are derived on-chain from the sample bitfield, so nothing about
+     * *which* validators must answer is taken from calldata. That lets three fields present in
+     * `ValidatorProof` be dropped:
+     *
+     *  - `index`, because the sample itself is the canonical ascending index list
+     *    (`Bitfield.toIndices`), which is also why a slot cannot be answered twice;
+     *  - `account`, because the signer is recovered from its own signature - a wrong signature
+     *    yields a wrong address, a wrong leaf, and a failing Merkle check;
+     *  - each proof's length, because a path's length is fixed by (position, validator set
+     *    size), which `SubstrateMerkleProof.computeRootAt` walks.
+     */
+    struct CompactValidatorProofs {
+        // Signatures over the commitment hash, ordered by ascending validator index to match
+        // `Bitfield.toIndices` of the sample. SIGNATURE_BYTES per entry: r (32) || s (32) || v (1).
+        bytes signatures;
+        // Every validator-set Merkle path concatenated, in the same ascending order. Each leaf
+        // consumes exactly its canonical path length; trailing elements are rejected.
+        bytes32[] siblings;
+    }
+
+    /**
      * @dev A ticket tracks working state for the interactive submission of new commitments
      */
     struct Ticket {
@@ -195,6 +218,12 @@ contract BeefyClient {
      */
     // forge-lint: disable-next-line(unsafe-typecast)
     bytes2 public constant MMR_ROOT_ID = bytes2("mh");
+
+    /**
+     * @dev Byte length of one packed signature in `CompactValidatorProofs.signatures`:
+     * r (32) || s (32) || v (1).
+     */
+    uint256 internal constant SIGNATURE_BYTES = 65;
 
     /**
      * @dev Minimum delay in number of blocks that a relayer must wait between calling
@@ -378,7 +407,8 @@ contract BeefyClient {
      * @dev Submit a commitment and leaf for final verification
      * @param commitment contains the full commitment that was used for the commitmentHash
      * @param bitfield claiming which validators have signed the commitment
-     * @param proofs a struct containing the data needed to verify all validator signatures
+     * @param proofs packed signatures plus the concatenated validator-set Merkle paths,
+     * both ordered by ascending validator index (see `CompactValidatorProofs`)
      * @param leaf an MMR leaf provable using the MMR root in the commitment payload
      * @param leafProof an MMR leaf proof
      * @param leafProofOrder a bitfield describing the order of each item (left vs right)
@@ -386,7 +416,7 @@ contract BeefyClient {
     function submitFinal(
         Commitment calldata commitment,
         uint256[] calldata bitfield,
-        ValidatorProof[] calldata proofs,
+        CompactValidatorProofs calldata proofs,
         MMRLeaf calldata leaf,
         bytes32[] calldata leafProof,
         uint256 leafProofOrder
@@ -527,7 +557,8 @@ contract BeefyClient {
      * @dev Submit a commitment and leaf using the Fiat-Shamir approach
      * @param commitment contains the full commitment that was used for the commitmentHash
      * @param bitfield claiming which validators have signed the commitment
-     * @param proofs a struct containing the data needed to verify all validator signatures
+     * @param proofs packed signatures plus the concatenated validator-set Merkle paths,
+     * both ordered by ascending validator index (see `CompactValidatorProofs`)
      * @param leaf an MMR leaf provable using the MMR root in the commitment payload
      * @param leafProof an MMR leaf proof
      * @param leafProofOrder a bitfield describing the order of each item (left vs right)
@@ -535,7 +566,7 @@ contract BeefyClient {
     function submitFiatShamir(
         Commitment calldata commitment,
         uint256[] calldata bitfield,
-        ValidatorProof[] calldata proofs,
+        CompactValidatorProofs calldata proofs,
         MMRLeaf calldata leaf,
         bytes32[] calldata leafProof,
         uint256 leafProofOrder
@@ -656,40 +687,16 @@ contract BeefyClient {
         bytes32 ticketID,
         uint256[] calldata bitfield,
         ValidatorSetState storage vset,
-        ValidatorProof[] calldata proofs
+        CompactValidatorProofs calldata proofs
     ) internal view {
         Ticket storage ticket = tickets[ticketID];
-        // Verify that enough signature proofs have been supplied
         uint256 numRequiredSignatures = ticket.numRequiredSignatures;
-        if (proofs.length != numRequiredSignatures) {
-            revert InvalidValidatorProofLength();
-        }
 
         // Generate final bitfield indicating which validators need to be included in the proofs.
         uint256[] memory finalbitfield =
             Bitfield.subsample(ticket.prevRandao, bitfield, vset.length, numRequiredSignatures);
 
-        for (uint256 i = 0; i < proofs.length; i++) {
-            ValidatorProof calldata proof = proofs[i];
-
-            // Check that validator is actually in a validator set
-            if (!isValidatorInSet(vset, proof.account, proof.index, proof.proof)) {
-                revert InvalidValidatorProof();
-            }
-
-            // Check that validator is in bitfield
-            if (!Bitfield.isSet(finalbitfield, proof.index)) {
-                revert InvalidValidatorProof();
-            }
-
-            // Check that validator signed the commitment
-            if (ECDSA.recover(commitmentHash, proof.v, proof.r, proof.s) != proof.account) {
-                revert InvalidSignature();
-            }
-
-            // Ensure no validator can appear more than once in bitfield
-            Bitfield.unset(finalbitfield, proof.index);
-        }
+        verifySampledSignatures(commitmentHash, finalbitfield, numRequiredSignatures, vset, proofs);
     }
 
     /**
@@ -699,37 +706,117 @@ contract BeefyClient {
         bytes32 commitmentHash,
         uint256[] calldata bitfield,
         ValidatorSetState storage vset,
-        ValidatorProof[] calldata proofs
+        CompactValidatorProofs calldata proofs
     ) internal view {
         uint256 requiredSignatures = Math.min(
             fiatShamirRequiredSignatures, computeMaxRequiredSignatures(vset.length)
         );
-        if (proofs.length != requiredSignatures) {
-            revert InvalidValidatorProofLength();
-        }
 
         uint256[] memory finalbitfield = fiatShamirFinalBitfield(commitmentHash, bitfield, vset);
 
-        for (uint256 i = 0; i < proofs.length; i++) {
-            ValidatorProof calldata proof = proofs[i];
+        verifySampledSignatures(commitmentHash, finalbitfield, requiredSignatures, vset, proofs);
+    }
 
-            // Check that validator is in bitfield
-            if (!Bitfield.isSet(finalbitfield, proof.index)) {
-                revert InvalidValidatorProof();
-            }
+    /**
+     * @dev Check that every validator the sample selected signed `commitmentHash` and is in
+     * `vset`. Shared by the interactive and Fiat-Shamir paths, which differ only in how
+     * `finalbitfield` was drawn.
+     *
+     * `finalbitfield` is a subsample the contract computed itself, so it is the authority on
+     * which validators must answer and in what order. Three properties that the previous
+     * per-proof format had to check explicitly now hold by construction:
+     *
+     *  - membership in the sample: the positions ARE the sample;
+     *  - no duplicate answers: `toIndices` yields each position once;
+     *  - honest signer identity: the address is recovered, not supplied.
+     *
+     * A proof still cannot alias onto a position it was not built for, because each leaf
+     * consumes exactly its canonical path from `siblings` (`SubstrateMerkleProof.computeRootAt`)
+     * and every sibling must be consumed (see SubstrateMerkleProofAliasing.t.sol).
+     */
+    function verifySampledSignatures(
+        bytes32 commitmentHash,
+        uint256[] memory finalbitfield,
+        uint256 numRequiredSignatures,
+        ValidatorSetState storage vset,
+        CompactValidatorProofs calldata proofs
+    ) internal view {
+        if (proofs.signatures.length != numRequiredSignatures * SIGNATURE_BYTES) {
+            revert InvalidValidatorProofLength();
+        }
 
-            // Check that validator is actually in a validator set
-            if (!isValidatorInSet(vset, proof.account, proof.index, proof.proof)) {
-                revert InvalidValidatorProof();
-            }
+        uint256[] memory indices = Bitfield.toIndices(finalbitfield, numRequiredSignatures);
 
-            // Check that validator signed the commitment
-            if (ECDSA.recover(commitmentHash, proof.v, proof.r, proof.s) != proof.account) {
-                revert InvalidSignature();
-            }
+        uint256 offset;
+        for (uint256 i = 0; i < numRequiredSignatures; i++) {
+            offset = verifySampledSignature(commitmentHash, vset, proofs, indices[i], i, offset);
+        }
 
-            // Ensure no validator can appear more than once in bitfield
-            Bitfield.unset(finalbitfield, proof.index);
+        // Every sibling supplied must have been consumed by exactly one leaf.
+        if (offset != proofs.siblings.length) {
+            revert InvalidValidatorProofLength();
+        }
+    }
+
+    /**
+     * @dev Verify the `i`th signature against the validator sampled at `position`, consuming
+     * that leaf's share of the flat `siblings` array starting at `offset`.
+     * @return the offset of the next leaf's share.
+     */
+    function verifySampledSignature(
+        bytes32 commitmentHash,
+        ValidatorSetState storage vset,
+        CompactValidatorProofs calldata proofs,
+        uint256 position,
+        uint256 i,
+        uint256 offset
+    ) internal view returns (uint256) {
+        bytes32 leaf = recoverLeaf(commitmentHash, proofs.signatures, i);
+
+        (bool valid, bytes32 root, uint256 next) = SubstrateMerkleProof.computeRootAt(
+            leaf, position, vset.length, proofs.siblings, offset
+        );
+        if (!valid) {
+            revert InvalidValidatorProofLength();
+        }
+        if (root != vset.root) {
+            revert InvalidValidatorProof();
+        }
+
+        return next;
+    }
+
+    /**
+     * @dev The validator-set Merkle leaf of whoever produced the `i`th signature.
+     *
+     * The signer is recovered rather than supplied, so a wrong signature yields a wrong address,
+     * a wrong leaf, and a failing Merkle check. `ECDSA.recover` reverts on a malformed or
+     * malleable signature.
+     */
+    function recoverLeaf(bytes32 commitmentHash, bytes calldata signatures, uint256 i)
+        internal
+        pure
+        returns (bytes32)
+    {
+        (uint8 v, bytes32 r, bytes32 s) = signatureAt(signatures, i);
+        return keccak256(abi.encodePacked(ECDSA.recover(commitmentHash, v, r, s)));
+    }
+
+    /**
+     * @dev Read the `i`th packed signature out of `signatures`. The caller must already have
+     * checked `signatures.length == n * SIGNATURE_BYTES`, which bounds `i < n`.
+     */
+    function signatureAt(bytes calldata signatures, uint256 i)
+        internal
+        pure
+        returns (uint8 v, bytes32 r, bytes32 s)
+    {
+        /// @solidity memory-safe-assembly
+        assembly {
+            let o := add(signatures.offset, mul(i, 65))
+            r := calldataload(o)
+            s := calldataload(add(o, 32))
+            v := byte(0, calldataload(add(o, 64)))
         }
     }
 
