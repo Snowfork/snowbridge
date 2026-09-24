@@ -1457,28 +1457,74 @@ contract GatewayV1Test is Test {
         assertGt(v, 21_000);
     }
 
-    // EIP-7976 charges 64 gas per calldata byte as a floor, against 16 under standard
-    // pricing, so the floor is the larger of the two for the same calldata.
-    function test_exposed_v1_transactionFloorGas_exceeds_standard_calldata_cost() public view {
-        MockGateway gw = MockGateway(address(gateway));
-        uint256 floorGas = gw.exposed_v1_transactionFloorGas();
-        uint256 baseGas = gw.exposed_v1_transactionBaseGas();
-
-        // Both calls have identical calldata, so the difference is purely the per-byte rate:
-        // 64 against 16, less the 14_698 of unmetered execution the base estimate carries.
-        assertEq(floorGas, baseGas + (floorGas - 21_000) * 3 / 4 - 14_698);
-        assertGt(floorGas, 21_000);
+    function _submitV1Calldata(uint64 nonce, bytes32[] memory leafProof)
+        internal
+        returns (bytes memory)
+    {
+        (Command command, bytes memory params) = makeUnlockTokenCommand(
+            assetHubAgentID, address(0), makeAddr(vm.toString(nonce)), 1
+        );
+        return abi.encodeCall(
+            IGatewayV1.submitV1,
+            (
+                InboundMessage({
+                    channelID: assetHubParaID.into(),
+                    nonce: nonce,
+                    command: command,
+                    params: params,
+                    maxDispatchGas: maxDispatchGas,
+                    maxFeePerGas: maxRefund,
+                    reward: reward,
+                    id: messageID
+                }),
+                leafProof,
+                makeMockProof()
+            )
+        );
     }
 
-    // The floor only decides the refund when execution is small relative to calldata. A
-    // dispatch heavy enough to pass the break-even leaves standard pricing in charge.
-    function test_v1_refund_uses_standard_pricing_when_execution_dominates() public view {
-        MockGateway gw = MockGateway(address(gateway));
-        uint256 floorGas = gw.exposed_v1_transactionFloorGas();
-        uint256 baseGas = gw.exposed_v1_transactionBaseGas();
+    /// @dev Submit an unlock of 1 wei to a new recipient with `leafProof`, and return what the
+    /// relayer was paid. With `agentFunds` = 0 the dispatch fails fast; the relayer is paid either
+    /// way. A first
+    /// message sets the channel nonce, so the measured one updates it as on mainnet rather than
+    /// creating the slot.
+    function _submitV1RefundPaid(bytes32[] memory leafProof, uint256 agentFunds)
+        internal
+        returns (uint256 paid, uint256 calldataLength)
+    {
+        deal(assetHubAgent, agentFunds);
+        vm.txGasPrice(10 gwei);
+        deal(address(gateway), 50 ether);
 
-        // Break-even sits at 48 gas per calldata byte of execution.
-        uint256 meteredGas = floorGas - 21_000;
-        assertGt(baseGas + meteredGas, floorGas);
+        vm.prank(relayer);
+        (bool ok,) = address(gateway).call(_submitV1Calldata(1, proof));
+        assertTrue(ok);
+
+        bytes memory cd = _submitV1Calldata(2, leafProof);
+        calldataLength = cd.length;
+        uint256 before = relayer.balance;
+        vm.prank(relayer);
+        (ok,) = address(gateway).call(cd);
+        assertTrue(ok);
+        paid = relayer.balance - before;
+    }
+
+    /// @dev Large calldata and a dispatch that fails fast: the EIP-7976 floor decides the refund.
+    function testRelayerRefundUsesCalldataFloor() public {
+        bytes32[] memory leafProof = new bytes32[](80);
+        for (uint256 i = 0; i < leafProof.length; i++) {
+            leafProof[i] = keccak256(abi.encode(i));
+        }
+        (uint256 paid, uint256 len) = _submitV1RefundPaid(leafProof, 0);
+        assertGt(len, 3000);
+
+        assertEq(paid, (15_000 + 64 * 3000) * 10 gwei + reward);
+    }
+
+    /// @dev Small calldata: execution decides the refund, above the floor.
+    function testRelayerRefundAboveFloorWhenExecutionDominates() public {
+        (uint256 paid, uint256 len) = _submitV1RefundPaid(proof, 2);
+
+        assertGt(paid, (15_000 + 64 * len) * 10 gwei + reward);
     }
 }

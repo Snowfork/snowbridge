@@ -369,10 +369,14 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
      * APIv1 Internal functions
      */
 
+    // Intrinsic gas of a `submitV1` transaction under EIP-2780 (Glamsterdam): 12,000 base plus
+    // 3,000 for the cold recipient. `submitV1` sends no value, so no value cost applies.
+    uint256 internal constant V1_TRANSACTION_INTRINSIC_GAS = 15_000;
+
     // Best-effort attempt at estimating the base gas use of `submitV1` transaction, outside
     // the block of code that is metered.
     // This includes:
-    // * Cost paid for every transaction: 21000 gas
+    // * Cost paid for every transaction: V1_TRANSACTION_INTRINSIC_GAS
     // * Cost of calldata: Zero byte = 4 gas, Non-zero byte = 16 gas
     // * Cost of code inside submitInitial that is not metered: 14_698
     //
@@ -385,7 +389,7 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
     //
     // Reference: Ethereum Yellow Paper
     function v1_transactionBaseGas() internal pure returns (uint256) {
-        return 21_000 + 14_698 + (Math.min(msg.data.length, 3000) * 16);
+        return V1_TRANSACTION_INTRINSIC_GAS + 14_698 + (Math.min(msg.data.length, 3000) * 16);
     }
 
     // EIP-7976 raises TOTAL_COST_FLOOR_PER_TOKEN from 10 to 16. The floor counts every
@@ -397,7 +401,7 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
     //
     // Bounded to the same 3000 bytes as the base estimate.
     function v1_transactionFloorGas() internal pure returns (uint256) {
-        return 21_000 + (Math.min(msg.data.length, 3000) * 64);
+        return V1_TRANSACTION_INTRINSIC_GAS + (Math.min(msg.data.length, 3000) * 64);
     }
 
     /*
