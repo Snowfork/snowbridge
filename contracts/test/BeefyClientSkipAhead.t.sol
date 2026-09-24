@@ -4,17 +4,12 @@ pragma solidity 0.8.34;
 import {BeefyClient} from "../src/BeefyClient.sol";
 import {BeefyClientTest} from "./BeefyClient.t.sol";
 
-/// @dev Tests for non-consecutive ("skip-ahead") validator set updates. Reuses the fixtures and
-/// helpers from BeefyClientTest.
-///
-/// Fixture facts (test/data): the signed commitment is for validatorSetID == setId, the validator
-/// merkle root is `root`, and the MMR leaf attests nextAuthoritySetID == setId + 1 with a
-/// *different* root (a genuine era change). So initializing current/next a few sessions behind
-/// `setId` (all sharing `root`) turns the same fixture into a skip-ahead within a stable era.
+/// @dev Skip-ahead tests, reusing BeefyClientTest's fixtures. The fixture commitment is for set
+/// `setId` with root `root`, and its leaf announces set `setId + 1` with a different root.
+/// Starting current/next a few ids earlier with `root` turns it into a skip.
 contract BeefyClientSkipAheadTest is BeefyClientTest {
-    /// @dev Interactive skip-ahead: a commitment from a later session inside a stable era is
-    /// accepted against the current set, fast-forwards the id (root preserved), and loads next
-    /// from the leaf.
+    /// @dev An interactive skip moves current to the new id, keeps its root, and loads next from
+    /// the leaf.
     function testSkipAheadInteractiveAdvances() public {
         // current = setId-3, next = setId-2, both sharing `root`. Commitment is from setId.
         BeefyClient.Commitment memory commitment = initialize(setId - 3);
@@ -41,11 +36,7 @@ contract BeefyClientSkipAheadTest is BeefyClientTest {
         assertEq(nextRoot, mmrLeaf.nextAuthoritySetRoot, "next root from leaf");
     }
 
-    /// @dev A skip carries the *same* validators forward (canSkipAhead requires
-    /// current.root == next.root), so the anti-grinding usage counters must survive it. Clearing
-    /// them would refund the escalating signature cost that computeNumRequiredSignatures charges
-    /// for repeated submitInitial calls — a discount reachable below quorum, unlike the rest of
-    /// the skip path. A handover resets the counters because the membership actually changes.
+    /// @dev A skip keeps the same validators, so it keeps their usage counters.
     function testSkipAheadPreservesUsageCounters() public {
         // current = setId-3, next = setId-2, both sharing `root`. Commitment is from setId.
         BeefyClient.Commitment memory commitment = initialize(setId - 3);
@@ -78,8 +69,7 @@ contract BeefyClientSkipAheadTest is BeefyClientTest {
         );
     }
 
-    /// @dev A skip is only safe inside a confirmed-stable era. If a root change is already pending
-    /// (current.root != next.root), the skip is ambiguous and must be rejected.
+    /// @dev No skip while current and next have different roots.
     function testSkipAheadRevertsWhenEraChangePending() public {
         BeefyClient.Commitment memory commitment = initialize(setId - 3);
 
@@ -96,10 +86,9 @@ contract BeefyClientSkipAheadTest is BeefyClientTest {
         );
     }
 
-    /// @dev An id at or below the next set is not a skip; it stays an ordinary InvalidCommitment.
+    /// @dev An id at or below the next set is not a skip.
     function testSkipAheadRejectsIdNotAheadOfNext() public {
-        // current = setId, next = setId+1; the fixture commitment (== setId) is the normal current
-        // case, but a stale id below current must revert InvalidCommitment.
+        // current = setId, next = setId + 1; an id below current is rejected.
         BeefyClient.Commitment memory commitment = initialize(setId);
         commitment.validatorSetID = setId - 1;
 
@@ -109,16 +98,13 @@ contract BeefyClientSkipAheadTest is BeefyClientTest {
         );
     }
 
-    /// @dev applySkip in isolation: fast-forwards current to the verified id (root/length
-    /// preserved) and loads next from the leaf.
-    /// Driven directly because the Fiat-Shamir submit subsample is keyed by the current set id
-    /// (createFiatShamirHash), which differs from the skipped-to id, so the cached Fiat-Shamir
-    /// proof fixtures can't be replayed against a skip without regenerating them.
+    /// @dev applySkip on its own. The Fiat-Shamir fixtures were generated for set `setId`, but a
+    /// skip seeds with the current id, so they can't be replayed through a skip.
     function testApplySkipAdvancesState() public {
         // current = setId-3, next = setId-2, both sharing `root`.
         initialize(setId - 3);
 
-        // Skip ahead to setId, loading next from the (valid) fixture leaf/proof against mmrRoot.
+        // Skip to setId with the fixture leaf and proof.
         beefyClient.applySkip_public(setId, mmrRoot, mmrLeaf, mmrLeafProofs, leafProofOrder);
 
         // Current fast-forwarded to the skipped id; membership root and length preserved.
@@ -133,10 +119,7 @@ contract BeefyClientSkipAheadTest is BeefyClientTest {
         assertEq(nextRoot, mmrLeaf.nextAuthoritySetRoot, "next root from leaf");
     }
 
-    /// @dev applySkip requires the leaf's nextAuthoritySetID to be exactly the skipped-to
-    /// commitment id + 1, else InvalidMMRLeaf. Driven through the real
-    /// interactive submitFinal so the gate is exercised end-to-end (its subsample is prevRandao-
-    /// seeded, so the cached fixtures replay correctly for a skip).
+    /// @dev The leaf must announce the skipped-to id + 1.
     function testSkipAheadRevertsWithInvalidMMRLeaf() public {
         BeefyClient.Commitment memory commitment = initialize(setId - 3);
 
@@ -145,8 +128,7 @@ contract BeefyClientSkipAheadTest is BeefyClientTest {
         commitPrevRandao();
         createFinalProofs();
 
-        // Skip-ahead gates pass, signatures verify, but the leaf claims a non-increasing next id
-        // (== the skipped-to id) — applySkip must reject it before advancing.
+        // Signatures verify, but the leaf announces the skipped-to id itself.
         mmrLeaf.nextAuthoritySetID = setId;
         vm.expectRevert(BeefyClient.InvalidMMRLeaf.selector);
         beefyClient.submitFinal(
@@ -154,8 +136,7 @@ contract BeefyClientSkipAheadTest is BeefyClientTest {
         );
     }
 
-    /// @dev applySkip verifies the leaf against the commitment's MMR root; a tampered leaf
-    /// (here a wrong parentNumber) must fail with InvalidMMRLeafProof.
+    /// @dev A tampered leaf fails the MMR proof.
     function testSkipAheadRevertsWithInvalidMMRLeafProof() public {
         BeefyClient.Commitment memory commitment = initialize(setId - 3);
 
@@ -164,8 +145,7 @@ contract BeefyClientSkipAheadTest is BeefyClientTest {
         commitPrevRandao();
         createFinalProofs();
 
-        // id check passes (leaf.nextAuthoritySetID == setId + 1 > setId), but the corrupted leaf
-        // no longer matches the proof.
+        // The id check passes, but the leaf no longer matches the proof.
         mmrLeaf.parentNumber = 1;
         vm.expectRevert(BeefyClient.InvalidMMRLeafProof.selector);
         beefyClient.submitFinal(
@@ -173,8 +153,7 @@ contract BeefyClientSkipAheadTest is BeefyClientTest {
         );
     }
 
-    /// @dev A skip may reach at most `maxSkipAheadSessions` past the current set: one further
-    /// is an ordinary InvalidCommitment.
+    /// @dev One id past `maxSkipAheadSessions` is rejected.
     function testSkipAheadRejectsIdBeyondMaxDistance() public {
         uint32 maxSkip = uint32(beefyClient.maxSkipAheadSessions());
         BeefyClient.Commitment memory commitment = initialize(setId - maxSkip - 1);
@@ -188,7 +167,7 @@ contract BeefyClientSkipAheadTest is BeefyClientTest {
         beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
     }
 
-    /// @dev Exactly `maxSkipAheadSessions` past the current set is still a valid skip.
+    /// @dev Exactly `maxSkipAheadSessions` ahead is accepted.
     function testSkipAheadAcceptsIdAtMaxDistance() public {
         uint32 maxSkip = uint32(beefyClient.maxSkipAheadSessions());
         BeefyClient.Commitment memory commitment = initialize(setId - maxSkip);
@@ -205,9 +184,7 @@ contract BeefyClientSkipAheadTest is BeefyClientTest {
         assertEq(uint256(curId), uint256(setId), "current id advanced to skipped id");
     }
 
-    /// @dev A ticket opened as a skip checks its quorum against the current set. If a handover
-    /// then makes the commitment id resolve to a set of a different length, the claimed bitfield
-    /// is no longer a proven quorum of that set, so submitFinal must reject the ticket.
+    /// @dev A skip ticket is rejected if a handover then maps its id to a set of another length.
     function testSkipAheadTicketRejectedWhenSetLengthChanges() public {
         BeefyClient.Commitment memory commitment = initialize(setId - 3);
         beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
@@ -215,7 +192,7 @@ contract BeefyClientSkipAheadTest is BeefyClientTest {
         commitPrevRandao();
         createFinalProofs();
 
-        // A handover lands in between: setId is now the next set, with a larger membership.
+        // A handover lands: setId is now the next set, one validator larger.
         beefyClient.initialize_public(
             0,
             BeefyClient.ValidatorSet(setId - 1, setSize, root),
@@ -228,8 +205,7 @@ contract BeefyClientSkipAheadTest is BeefyClientTest {
         );
     }
 
-    /// @dev Every leaf from set X announces set X + 1, so a leaf announcing anything later is
-    /// not from the skipped-to session and must be rejected.
+    /// @dev A leaf announcing X + 2 is not from set X.
     function testSkipAheadRevertsWithLeafFromLaterSession() public {
         BeefyClient.Commitment memory commitment = initialize(setId - 3);
 
