@@ -253,11 +253,14 @@ contract CompactValidatorProofsTest is Test {
         }
     }
 
-    function testComputeRootAtRejectsOutOfRangePosition() public view {
+    function testFuzz_computeRootAtRejectsOutOfRangePosition(uint256 wSeed, uint256 over)
+        public
+        view
+    {
+        uint256 width = bound(wSeed, 1, 700);
+        uint256 position = width + bound(over, 0, 1000);
         (bool valid,,) =
-            this.computeRootAtExternal(bytes32(uint256(1)), 600, 600, new bytes32[](0), 0);
-        assertFalse(valid);
-        (valid,,) = this.computeRootAtExternal(bytes32(uint256(1)), 601, 600, new bytes32[](0), 0);
+            this.computeRootAtExternal(bytes32(uint256(1)), position, width, new bytes32[](0), 0);
         assertFalse(valid);
     }
 
@@ -298,6 +301,30 @@ contract CompactValidatorProofsTest is Test {
             assertLt(idx[i], setSize, "index out of range");
             if (i > 0) {
                 assertGt(idx[i], idx[i - 1], "not strictly ascending");
+            }
+        }
+    }
+
+    function testFuzz_toIndicesMatchesNaiveScan(uint256 a, uint256 b, uint256 c) public pure {
+        uint256[] memory bf = new uint256[](3);
+        bf[0] = a;
+        bf[1] = b;
+        bf[2] = c;
+
+        uint256 n;
+        for (uint256 i = 0; i < 768; i++) {
+            if (Bitfield.isSet(bf, i)) n++;
+        }
+        vm.assume(n > 0);
+
+        uint256[] memory idx = Bitfield.toIndices(bf, n);
+        assertEq(idx.length, n);
+
+        uint256 k;
+        for (uint256 i = 0; i < 768; i++) {
+            if (Bitfield.isSet(bf, i)) {
+                assertEq(idx[k], i, "toIndices disagrees with naive scan");
+                k++;
             }
         }
     }
