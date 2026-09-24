@@ -291,6 +291,72 @@ contract CompactValidatorProofsTest is Test {
         }
     }
 
+    // Polytope's multiproof verifier was forged (solidity-merkle-trees#57) with a leaf count
+    // above 2^255: leaves started on different layers, the walk stopped at the root, and a
+    // forged subtree was never folded in. Here every node stays on one layer and the loop is
+    // bounded by `width`, so even at the largest widths the call must terminate cleanly.
+
+    /// Arbitrary input at any width: returns instead of panicking (a revert fails the test).
+    function testFuzz_computeMultiRootHugeWidthTerminates(
+        uint256 width,
+        uint256 seed,
+        uint8 nSeed,
+        uint8 sibSeed
+    ) public view {
+        width = bound(width, 2, type(uint256).max);
+        uint256 n = bound(nSeed, 1, 8);
+        uint256[] memory positions = new uint256[](n);
+        bytes32[] memory leaves = new bytes32[](n);
+        for (uint256 i = 0; i < n; i++) {
+            // Spread positions over the whole range, including the top edge.
+            positions[i] = uint256(keccak256(abi.encode(seed, i))) % width;
+            leaves[i] = keccak256(abi.encode(seed, "leaf", i));
+        }
+        MerkleLibSubstrate.sort(positions);
+        bytes32[] memory sibs = siblings(bytes32(seed), sibSeed);
+
+        this.computeMultiRootExternal(positions, leaves, width, sibs);
+    }
+
+    /// One leaf at any width, including the top edge: same result as `computeRoot`.
+    function testFuzz_computeMultiRootHugeWidthMatchesComputeRoot(
+        uint256 width,
+        uint256 pSeed,
+        bytes32 leaf
+    ) public view {
+        width = bound(width, 1, type(uint256).max);
+        uint256 position = pSeed % 4 == 0 ? width - 1 : bound(pSeed, 0, width - 1);
+        bytes32[] memory path = siblings(leaf, pathLength(position, width));
+
+        uint256[] memory positions = new uint256[](1);
+        positions[0] = position;
+        bytes32[] memory leaves = new bytes32[](1);
+        leaves[0] = leaf;
+
+        (bool multiOk, bytes32 multiRoot) =
+            this.computeMultiRootExternal(positions, leaves, width, path);
+        (bool singleOk, bytes32 singleRoot) = this.computeRootExternal(leaf, position, width, path);
+        assertTrue(multiOk && singleOk, "canonical path rejected");
+        assertEq(multiRoot, singleRoot, "multiproof != computeRoot");
+    }
+
+    function siblings(bytes32 seed, uint256 n) internal pure returns (bytes32[] memory out) {
+        out = new bytes32[](n);
+        for (uint256 i = 0; i < n; i++) {
+            out[i] = keccak256(abi.encode(seed, "sibling", i));
+        }
+    }
+
+    /// Canonical path length for `position`: one sibling per layer, except where it is the lone
+    /// trailing node of an odd-width layer.
+    function pathLength(uint256 position, uint256 width) internal pure returns (uint256 n) {
+        while (width > 1) {
+            if (!(position + 1 == width && width & 1 == 1)) n++;
+            position >>= 1;
+            width = ((width - 1) >> 1) + 1;
+        }
+    }
+
     function testComputeMultiRootRejectsBadPositions() public view {
         bytes32[] memory two = new bytes32[](2);
         bytes32[] memory none = new bytes32[](0);
