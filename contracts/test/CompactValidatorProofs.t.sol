@@ -209,23 +209,7 @@ contract CompactValidatorProofsTest is Test {
         view
     {
         uint256 width = bound(wSeed, 1, 700);
-        (bytes32[][] memory L, bytes32 fullRoot) =
-            MerkleLibSubstrate.buildLevels(MerkleLibSubstrate.genLeaves(width));
-        uint256[] memory positions = randomSubset(width, subsetSeed);
-        bytes32[] memory expected = referenceSiblings(L, positions);
-
-        // The test builder, fed per-leaf paths, must produce the same siblings.
-        BeefyClient.ValidatorProof[] memory ps = new BeefyClient.ValidatorProof[](positions.length);
-        for (uint256 i = 0; i < positions.length; i++) {
-            ps[i].index = positions[i];
-            ps[i].proof = MerkleLibSubstrate.proofFromLevels(L, positions[i]);
-        }
-        assertEq(CompactProofLib.multiproof(ps, width), expected, "builder disagrees");
-
-        (bool valid, bytes32 got) =
-            this.computeMultiRootExternal(positions, leavesAt(L, positions), width, expected);
-        assertTrue(valid, "multiproof rejected");
-        assertEq(got, fullRoot, "multiproof root disagrees with full tree");
+        _assertMultiRootForPositions(width, randomSubset(width, subsetSeed));
     }
 
     function testFuzz_computeMultiRootRejectsBadFraming(uint256 wSeed, uint256 subsetSeed)
@@ -258,30 +242,46 @@ contract CompactValidatorProofsTest is Test {
 
     function testFuzz_computeMultiRootRejectsTampering(
         uint256 wSeed,
-        uint256 subsetSeed,
+        uint256 shape,
         uint256 pick,
         bytes32 junk
     ) public view {
         uint256 width = bound(wSeed, 2, 700);
         (bytes32[][] memory L, bytes32 fullRoot) =
             MerkleLibSubstrate.buildLevels(MerkleLibSubstrate.genLeaves(width));
-        uint256[] memory positions = randomSubset(width, subsetSeed);
+        uint256[] memory positions = subsetOfShape(width, shape);
         bytes32[] memory leaves = leavesAt(L, positions);
         bytes32[] memory sibs = referenceSiblings(L, positions);
 
-        // Replace one leaf or one sibling with a different value.
-        uint256 k = pick % (leaves.length + sibs.length);
-        if (k < leaves.length) {
-            vm.assume(junk != leaves[k]);
-            leaves[k] = junk;
+        uint256 k = pick >> 1;
+        if (pick & 1 == 1 && sibs.length >= 2) {
+            // Swap two genuine siblings: right values, wrong order.
+            uint256 i = k % sibs.length;
+            uint256 j = (i + 1 + (k >> 128) % (sibs.length - 1)) % sibs.length;
+            vm.assume(sibs[i] != sibs[j]);
+            (sibs[i], sibs[j]) = (sibs[j], sibs[i]);
         } else {
-            vm.assume(junk != sibs[k - leaves.length]);
-            sibs[k - leaves.length] = junk;
+            // Replace one leaf or one sibling with a different value.
+            k %= leaves.length + sibs.length;
+            if (k < leaves.length) {
+                vm.assume(junk != leaves[k]);
+                leaves[k] = junk;
+            } else {
+                vm.assume(junk != sibs[k - leaves.length]);
+                sibs[k - leaves.length] = junk;
+            }
         }
 
         (bool valid, bytes32 got) =
             this.computeMultiRootExternal(copy(positions), leaves, width, sibs);
         assertFalse(valid && got == fullRoot, "tampered multiproof reproduced the root");
+    }
+
+    /// Random, full or near-full subset, so tampering also runs where nearly every node pairs.
+    function subsetOfShape(uint256 width, uint256 shape) internal pure returns (uint256[] memory) {
+        if (shape % 3 == 1) return fullRange(width);
+        if (shape % 3 == 2) return omitOne(width, (shape >> 2) % width);
+        return randomSubset(width, shape);
     }
 
     function copy(uint256[] memory a) internal pure returns (uint256[] memory b) {
@@ -310,6 +310,93 @@ contract CompactValidatorProofsTest is Test {
 
         (valid,) = this.computeMultiRootExternal(new uint256[](0), none, 600, none);
         assertFalse(valid, "no leaves");
+
+        (p[0], p[1]) = (0, 1);
+        (valid,) = this.computeMultiRootExternal(p, new bytes32[](1), 600, none);
+        assertFalse(valid, "positions and leaves differ in length");
+    }
+
+    // Dense subsets are almost never hit by `randomSubset` (~1/5 keep rate). Full set means an
+    // empty sibling array and a pure in-tree fold; near-full maximizes pairing. Both must still
+    // reproduce the root and agree with the independent reference sibling oracle.
+    function testFuzz_computeMultiRootFullSet(uint256 wSeed) public view {
+        uint256 width = bound(wSeed, 1, 700);
+        _assertMultiRootForPositions(width, fullRange(width));
+    }
+
+    function testFuzz_computeMultiRootNearFullSet(uint256 wSeed, uint256 omitSeed) public view {
+        uint256 width = bound(wSeed, 2, 700);
+        _assertMultiRootForPositions(width, omitOne(width, omitSeed % width));
+    }
+
+    // A one-leaf multiproof must be byte-equivalent to `computeRoot`: same siblings consumed,
+    // same root. Odd widths exercise the promotion rule on both paths.
+    function testFuzz_computeMultiRootMatchesComputeRoot(uint256 wSeed, uint256 pSeed)
+        public
+        view
+    {
+        uint256 width = bound(wSeed, 1, 700);
+        uint256 position = bound(pSeed, 0, width - 1);
+        (bytes32[][] memory L, bytes32 fullRoot) =
+            MerkleLibSubstrate.buildLevels(MerkleLibSubstrate.genLeaves(width));
+
+        uint256[] memory positions = new uint256[](1);
+        positions[0] = position;
+        bytes32[] memory leaves = leavesAt(L, positions);
+        bytes32[] memory sibs = referenceSiblings(L, positions);
+        bytes32[] memory singlePath = MerkleLibSubstrate.proofFromLevels(L, position);
+
+        assertEq(sibs, singlePath, "single-leaf multiproof siblings != canonical path");
+
+        (bool multiOk, bytes32 multiRoot) =
+            this.computeMultiRootExternal(positions, leaves, width, sibs);
+        (bool singleOk, bytes32 singleRoot) =
+            this.computeRootExternal(leaves[0], position, width, singlePath);
+
+        assertTrue(multiOk && singleOk, "single-leaf proof rejected");
+        assertEq(multiRoot, fullRoot, "multiproof root");
+        assertEq(singleRoot, fullRoot, "computeRoot root");
+        assertEq(multiRoot, singleRoot, "multiproof != computeRoot");
+    }
+
+    function _assertMultiRootForPositions(uint256 width, uint256[] memory positions)
+        internal
+        view
+    {
+        (bytes32[][] memory L, bytes32 fullRoot) =
+            MerkleLibSubstrate.buildLevels(MerkleLibSubstrate.genLeaves(width));
+        bytes32[] memory expected = referenceSiblings(L, positions);
+
+        BeefyClient.ValidatorProof[] memory ps = new BeefyClient.ValidatorProof[](positions.length);
+        for (uint256 i = 0; i < positions.length; i++) {
+            ps[i].index = positions[i];
+            ps[i].proof = MerkleLibSubstrate.proofFromLevels(L, positions[i]);
+        }
+        assertEq(CompactProofLib.multiproof(ps, width), expected, "builder disagrees");
+
+        (bool valid, bytes32 got) =
+            this.computeMultiRootExternal(positions, leavesAt(L, positions), width, expected);
+        assertTrue(valid, "multiproof rejected");
+        assertEq(got, fullRoot, "multiproof root disagrees with full tree");
+        if (positions.length == width) {
+            assertEq(expected.length, 0, "full set must need no siblings");
+        }
+    }
+
+    function fullRange(uint256 width) internal pure returns (uint256[] memory out) {
+        out = new uint256[](width);
+        for (uint256 i = 0; i < width; i++) {
+            out[i] = i;
+        }
+    }
+
+    function omitOne(uint256 width, uint256 omit) internal pure returns (uint256[] memory out) {
+        out = new uint256[](width - 1);
+        uint256 k;
+        for (uint256 i = 0; i < width; i++) {
+            if (i == omit) continue;
+            out[k++] = i;
+        }
     }
 
     /// Siblings a multiproof needs, from the full tree: per layer, each known node's sibling
@@ -375,6 +462,15 @@ contract CompactValidatorProofsTest is Test {
         bytes32[] calldata siblings
     ) external pure returns (bool, bytes32) {
         return SubstrateMerkleProof.computeMultiRoot(positions, leaves, width, siblings);
+    }
+
+    function computeRootExternal(
+        bytes32 leaf,
+        uint256 position,
+        uint256 width,
+        bytes32[] calldata proof
+    ) external pure returns (bool, bytes32) {
+        return SubstrateMerkleProof.computeRoot(leaf, position, width, proof);
     }
 
     // ---- toIndices ----------------------------------------------------------------------
