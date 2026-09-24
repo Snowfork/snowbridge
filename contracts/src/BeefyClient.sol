@@ -116,15 +116,18 @@ contract BeefyClient {
      *    (`Bitfield.toIndices`), which is also why a slot cannot be answered twice;
      *  - `account`, because the signer is recovered from its own signature - a wrong signature
      *    yields a wrong address, a wrong leaf, and a failing Merkle check;
-     *  - each proof's length, because a path's length is fixed by (position, validator set
-     *    size), which `SubstrateMerkleProof.computeRootAt` walks.
+     *  - each proof's length, because the positions and the validator set size fix which
+     *    siblings are needed (`SubstrateMerkleProof.computeMultiRoot`).
+     *
+     * The paths are sent as one multiproof: a sibling that can be computed from other sampled
+     * leaves is left out.
      */
     struct CompactValidatorProofs {
         // Signatures over the commitment hash, ordered by ascending validator index to match
         // `Bitfield.toIndices` of the sample. SIGNATURE_BYTES per entry: r (32) || s (32) || v (1).
         bytes signatures;
-        // Every validator-set Merkle path concatenated, in the same ascending order. Each leaf
-        // consumes exactly its canonical path length; trailing elements are rejected.
+        // Validator-set multiproof: the siblings the sampled leaves need, layer by layer from
+        // the leaves up, by ascending position within a layer. Must be consumed exactly.
         bytes32[] siblings;
     }
 
@@ -730,9 +733,9 @@ contract BeefyClient {
      *  - no duplicate answers: `toIndices` yields each position once;
      *  - honest signer identity: the address is recovered, not supplied.
      *
-     * A proof still cannot alias onto a position it was not built for, because each leaf
-     * consumes exactly its canonical path from `siblings` (`SubstrateMerkleProof.computeRootAt`)
-     * and every sibling must be consumed (see SubstrateMerkleProofAliasing.t.sol).
+     * A leaf still cannot alias onto a position it was not sampled at, because the multiproof
+     * hashes each leaf by its position and must reproduce `vset.root` exactly
+     * (`SubstrateMerkleProof.computeMultiRoot`, see SubstrateMerkleProofAliasing.t.sol).
      */
     function verifySampledSignatures(
         bytes32 commitmentHash,
@@ -745,45 +748,21 @@ contract BeefyClient {
             revert InvalidValidatorProofLength();
         }
 
-        uint256[] memory indices = Bitfield.toIndices(finalbitfield, numRequiredSignatures);
+        uint256[] memory positions = Bitfield.toIndices(finalbitfield, numRequiredSignatures);
 
-        uint256 offset;
+        bytes32[] memory leaves = new bytes32[](numRequiredSignatures);
         for (uint256 i = 0; i < numRequiredSignatures; i++) {
-            offset = verifySampledSignature(commitmentHash, vset, proofs, indices[i], i, offset);
+            leaves[i] = recoverLeaf(commitmentHash, proofs.signatures, i);
         }
 
-        // Every sibling supplied must have been consumed by exactly one leaf.
-        if (offset != proofs.siblings.length) {
-            revert InvalidValidatorProofLength();
-        }
-    }
-
-    /**
-     * @dev Verify the `i`th signature against the validator sampled at `position`, consuming
-     * that leaf's share of the flat `siblings` array starting at `offset`.
-     * @return the offset of the next leaf's share.
-     */
-    function verifySampledSignature(
-        bytes32 commitmentHash,
-        ValidatorSetState storage vset,
-        CompactValidatorProofs calldata proofs,
-        uint256 position,
-        uint256 i,
-        uint256 offset
-    ) internal view returns (uint256) {
-        bytes32 leaf = recoverLeaf(commitmentHash, proofs.signatures, i);
-
-        (bool valid, bytes32 root, uint256 next) = SubstrateMerkleProof.computeRootAt(
-            leaf, position, vset.length, proofs.siblings, offset
-        );
+        (bool valid, bytes32 root) =
+            SubstrateMerkleProof.computeMultiRoot(positions, leaves, vset.length, proofs.siblings);
         if (!valid) {
             revert InvalidValidatorProofLength();
         }
         if (root != vset.root) {
             revert InvalidValidatorProof();
         }
-
-        return next;
     }
 
     /**

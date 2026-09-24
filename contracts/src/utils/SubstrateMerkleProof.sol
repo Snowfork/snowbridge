@@ -93,43 +93,71 @@ library SubstrateMerkleProof {
     }
 
     /**
-     * @notice `computeRoot` for a path carried inside a longer flat array: consume this leaf's
-     *      canonical siblings starting at `offset` and return the offset just past them. The
-     *      geometry, not calldata, decides how many siblings a leaf takes. `valid` is false when
-     *      `position` is out of range or the array ends before the path does; checking that the
-     *      final offset equals the array length is left to the caller.
+     * @notice Root of the tree containing `leaves` at `positions`, sharing siblings between
+     *      paths. Folds one layer at a time: two known siblings are hashed together, otherwise
+     *      the next element of `siblings` is used. `siblings` is therefore ordered layer by
+     *      layer, by ascending position within a layer, and holds only nodes that cannot be
+     *      computed from the leaves. Same promotion rule as `computeRoot`.
+     *
+     *      `valid` is false unless `positions` is non-empty, strictly ascending and below
+     *      `width`, and `siblings` is consumed exactly.
+     *
+     *      Overwrites `positions` and `leaves`.
      */
-    function computeRootAt(
-        bytes32 leaf,
-        uint256 position,
+    function computeMultiRoot(
+        uint256[] memory positions,
+        bytes32[] memory leaves,
         uint256 width,
-        bytes32[] calldata siblings,
-        uint256 offset
-    ) internal pure returns (bool valid, bytes32 root, uint256 next) {
-        if (position >= width) {
-            return (false, bytes32(0), offset);
+        bytes32[] calldata siblings
+    ) internal pure returns (bool valid, bytes32 root) {
+        uint256 n = positions.length;
+        if (n == 0 || n != leaves.length) {
+            return (false, bytes32(0));
         }
-        bytes32 node = leaf;
+        for (uint256 i = 0; i < n; i++) {
+            if (positions[i] >= width || (i > 0 && positions[i] <= positions[i - 1])) {
+                return (false, bytes32(0));
+            }
+        }
+
+        uint256 next;
         unchecked {
             while (width > 1) {
-                // Same promotion rule as `computeRoot`: a lone trailing node of an odd-width
-                // layer is carried up and consumes no sibling.
-                if (!(position + 1 == width && width & 1 == 1)) {
-                    if (offset >= siblings.length) {
-                        return (false, bytes32(0), offset);
-                    }
-                    if (position & 1 == 1) {
-                        node = efficientHash(siblings[offset], node);
+                // Parents of a strictly ascending layer are strictly ascending, so the layer
+                // can be rewritten in place.
+                uint256 m;
+                for (uint256 i = 0; i < n; i++) {
+                    uint256 position = positions[i];
+                    bytes32 node = leaves[i];
+                    if (position + 1 == width && width & 1 == 1) {
+                        // Lone trailing node of an odd-width layer: promoted unchanged.
+                    } else if (position & 1 == 0 && i + 1 < n && positions[i + 1] == position + 1)
+                    {
+                        node = efficientHash(node, leaves[i + 1]);
+                        i++;
                     } else {
-                        node = efficientHash(node, siblings[offset]);
+                        if (next >= siblings.length) {
+                            return (false, bytes32(0));
+                        }
+                        if (position & 1 == 1) {
+                            node = efficientHash(siblings[next], node);
+                        } else {
+                            node = efficientHash(node, siblings[next]);
+                        }
+                        next++;
                     }
-                    offset++;
+                    positions[m] = position >> 1;
+                    leaves[m] = node;
+                    m++;
                 }
-                position = position >> 1;
+                n = m;
                 width = ((width - 1) >> 1) + 1;
             }
         }
-        return (true, node, offset);
+        if (n != 1 || next != siblings.length) {
+            return (false, bytes32(0));
+        }
+        return (true, leaves[0]);
     }
 
     function efficientHash(bytes32 a, bytes32 b) internal pure returns (bytes32 value) {

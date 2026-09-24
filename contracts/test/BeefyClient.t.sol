@@ -201,7 +201,7 @@ contract BeefyClientTest is Test {
         beefyClient.submitFinal(
             commitment,
             bitfield,
-            CompactProofLib.toCompact(finalValidatorProofs),
+            CompactProofLib.toCompact(finalValidatorProofs, setSize),
             emptyLeaf,
             emptyLeafProofs,
             emptyLeafProofOrder
@@ -249,7 +249,7 @@ contract BeefyClientTest is Test {
         // make an invalid signature
         vm.expectRevert(BeefyClient.InvalidValidatorProofLength.selector);
         beefyClient.submitFinal(
-            commitment, bitfield, CompactProofLib.toCompact(finalValidatorProofs), mmrLeaf, mmrLeafProofs, leafProofOrder
+            commitment, bitfield, CompactProofLib.toCompact(finalValidatorProofs, setSize), mmrLeaf, mmrLeafProofs, leafProofOrder
         );
     }
 
@@ -275,7 +275,7 @@ contract BeefyClientTest is Test {
         beefyClient.submitFinal(
             commitment,
             bitfield,
-            CompactProofLib.toCompact(finalValidatorProofs),
+            CompactProofLib.toCompact(finalValidatorProofs, setSize),
             emptyLeaf,
             emptyLeafProofs,
             emptyLeafProofOrder
@@ -301,7 +301,7 @@ contract BeefyClientTest is Test {
         beefyClient.submitFinal(
             commitment,
             bitfield,
-            CompactProofLib.withSubstitutedSigner(finalValidatorProofs, 0, 1),
+            CompactProofLib.withSubstitutedSigner(finalValidatorProofs, setSize, 0, 1),
             emptyLeaf,
             emptyLeafProofs,
             emptyLeafProofOrder
@@ -327,7 +327,7 @@ contract BeefyClientTest is Test {
         beefyClient.submitFinal(
             commitment,
             bitfield,
-            CompactProofLib.toCompact(finalValidatorProofs),
+            CompactProofLib.toCompact(finalValidatorProofs, setSize),
             emptyLeaf,
             emptyLeafProofs,
             emptyLeafProofOrder
@@ -351,7 +351,7 @@ contract BeefyClientTest is Test {
         beefyClient.submitFinal(
             commitment,
             bitfield,
-            CompactProofLib.toCompact(finalValidatorProofs),
+            CompactProofLib.toCompact(finalValidatorProofs, setSize),
             emptyLeaf,
             emptyLeafProofs,
             emptyLeafProofOrder
@@ -392,7 +392,7 @@ contract BeefyClientTest is Test {
         beefyClient.submitFinal(
             commitment,
             bitfield,
-            CompactProofLib.toCompact(finalValidatorProofs),
+            CompactProofLib.toCompact(finalValidatorProofs, setSize),
             emptyLeaf,
             emptyLeafProofs,
             emptyLeafProofOrder
@@ -444,7 +444,7 @@ contract BeefyClientTest is Test {
         createFinalProofs();
 
         beefyClient.submitFinal(
-            commitment, bitfield, CompactProofLib.toCompact(finalValidatorProofs), mmrLeaf, mmrLeafProofs, leafProofOrder
+            commitment, bitfield, CompactProofLib.toCompact(finalValidatorProofs, setSize), mmrLeaf, mmrLeafProofs, leafProofOrder
         );
         assertEq(beefyClient.latestBeefyBlock(), blockNumber);
         assertEq(beefyClient.getValidatorCounter(false, finalValidatorProofs[0].index), 1);
@@ -471,7 +471,7 @@ contract BeefyClientTest is Test {
         createFinalProofs();
 
         beefyClient.submitFinal(
-            commitment, bitfield, CompactProofLib.toCompact(finalValidatorProofs), mmrLeaf, mmrLeafProofs, leafProofOrder
+            commitment, bitfield, CompactProofLib.toCompact(finalValidatorProofs, setSize), mmrLeaf, mmrLeafProofs, leafProofOrder
         );
         assertEq(beefyClient.latestBeefyBlock(), blockNumber);
         assertEq(beefyClient.getValidatorCounter(false, finalValidatorProofs[0].index), 1);
@@ -508,7 +508,7 @@ contract BeefyClientTest is Test {
 
         vm.expectRevert(BeefyClient.InvalidValidatorProofLength.selector);
         beefyClient.submitFinal(
-            commitment, bitfield, CompactProofLib.toCompact(finalValidatorProofs), mmrLeaf, mmrLeafProofs, leafProofOrder
+            commitment, bitfield, CompactProofLib.toCompact(finalValidatorProofs, setSize), mmrLeaf, mmrLeafProofs, leafProofOrder
         );
     }
 
@@ -520,7 +520,7 @@ contract BeefyClientTest is Test {
 
         vm.expectRevert(BeefyClient.PrevRandaoNotCaptured.selector);
         beefyClient.submitFinal(
-            commitment, bitfield, CompactProofLib.toCompact(finalValidatorProofs), mmrLeaf, mmrLeafProofs, leafProofOrder
+            commitment, bitfield, CompactProofLib.toCompact(finalValidatorProofs, setSize), mmrLeaf, mmrLeafProofs, leafProofOrder
         );
     }
 
@@ -543,7 +543,7 @@ contract BeefyClientTest is Test {
         beefyClient.submitFinal(
             commitment,
             bitfield,
-            CompactProofLib.toCompact(finalValidatorProofs),
+            CompactProofLib.toCompact(finalValidatorProofs, setSize),
             emptyLeaf,
             emptyLeafProofs,
             emptyLeafProofOrder
@@ -622,7 +622,7 @@ contract BeefyClientTest is Test {
         //submit will be reverted with InvalidCommitment
         vm.expectRevert(BeefyClient.InvalidCommitment.selector);
         beefyClient.submitFinal(
-            commitment, bitfield, CompactProofLib.toCompact(finalValidatorProofs), mmrLeaf, mmrLeafProofs, leafProofOrder
+            commitment, bitfield, CompactProofLib.toCompact(finalValidatorProofs, setSize), mmrLeaf, mmrLeafProofs, leafProofOrder
         );
     }
 
@@ -642,7 +642,7 @@ contract BeefyClientTest is Test {
         //submit will be reverted with InvalidCommitment
         vm.expectRevert(BeefyClient.InvalidCommitment.selector);
         beefyClient.submitFinal(
-            commitment, bitfield, CompactProofLib.toCompact(finalValidatorProofs), mmrLeaf, mmrLeafProofs, leafProofOrder
+            commitment, bitfield, CompactProofLib.toCompact(finalValidatorProofs, setSize), mmrLeaf, mmrLeafProofs, leafProofOrder
         );
     }
 
@@ -662,7 +662,7 @@ contract BeefyClientTest is Test {
         //submit will be reverted with InvalidTicket
         vm.expectRevert(BeefyClient.InvalidTicket.selector);
         beefyClient.submitFinal(
-            _commitment, bitfield, CompactProofLib.toCompact(finalValidatorProofs), mmrLeaf, mmrLeafProofs, leafProofOrder
+            _commitment, bitfield, CompactProofLib.toCompact(finalValidatorProofs, setSize), mmrLeaf, mmrLeafProofs, leafProofOrder
         );
     }
 
@@ -685,7 +685,7 @@ contract BeefyClientTest is Test {
         //submit will be reverted with InvalidMMRLeaf
         vm.expectRevert(BeefyClient.InvalidMMRLeaf.selector);
         beefyClient.submitFinal(
-            commitment, bitfield, CompactProofLib.toCompact(finalValidatorProofs), mmrLeaf, mmrLeafProofs, leafProofOrder
+            commitment, bitfield, CompactProofLib.toCompact(finalValidatorProofs, setSize), mmrLeaf, mmrLeafProofs, leafProofOrder
         );
     }
 
@@ -705,7 +705,7 @@ contract BeefyClientTest is Test {
         mmrLeaf.nextAuthoritySetID = uint64(setId > 0 ? setId - 1 : 0);
         vm.expectRevert(BeefyClient.InvalidMMRLeaf.selector);
         beefyClient.submitFinal(
-            commitment, bitfield, CompactProofLib.toCompact(finalValidatorProofs), mmrLeaf, mmrLeafProofs, leafProofOrder
+            commitment, bitfield, CompactProofLib.toCompact(finalValidatorProofs, setSize), mmrLeaf, mmrLeafProofs, leafProofOrder
         );
     }
 
@@ -718,7 +718,7 @@ contract BeefyClientTest is Test {
         mmrLeaf.nextAuthoritySetID = uint64(setId > 0 ? setId - 1 : 0);
         vm.expectRevert(BeefyClient.InvalidMMRLeaf.selector);
         beefyClient.submitFiatShamir(
-            commitment, bitfield, CompactProofLib.toCompact(fiatShamirValidatorProofs), mmrLeaf, mmrLeafProofs, leafProofOrder
+            commitment, bitfield, CompactProofLib.toCompact(fiatShamirValidatorProofs, setSize), mmrLeaf, mmrLeafProofs, leafProofOrder
         );
     }
 
@@ -739,7 +739,7 @@ contract BeefyClientTest is Test {
         //submit will be reverted with InvalidMMRLeafProof
         vm.expectRevert(BeefyClient.InvalidMMRLeafProof.selector);
         beefyClient.submitFinal(
-            commitment, bitfield, CompactProofLib.toCompact(finalValidatorProofs), mmrLeaf, mmrLeafProofs, leafProofOrder
+            commitment, bitfield, CompactProofLib.toCompact(finalValidatorProofs, setSize), mmrLeaf, mmrLeafProofs, leafProofOrder
         );
     }
 
@@ -849,7 +849,7 @@ contract BeefyClientTest is Test {
         beefyClient.submitFiatShamir(
             commitment,
             bitfield,
-            CompactProofLib.toCompact(fiatShamirValidatorProofs),
+            CompactProofLib.toCompact(fiatShamirValidatorProofs, setSize),
             emptyLeaf,
             emptyLeafProofs,
             emptyLeafProofOrder
@@ -864,7 +864,7 @@ contract BeefyClientTest is Test {
         BeefyClient.Commitment memory commitment = initialize(setId - 1);
 
         beefyClient.submitFiatShamir(
-            commitment, bitfield, CompactProofLib.toCompact(fiatShamirValidatorProofs), mmrLeaf, mmrLeafProofs, leafProofOrder
+            commitment, bitfield, CompactProofLib.toCompact(fiatShamirValidatorProofs, setSize), mmrLeaf, mmrLeafProofs, leafProofOrder
         );
         assertEq(beefyClient.latestBeefyBlock(), blockNumber);
     }
@@ -886,7 +886,7 @@ contract BeefyClientTest is Test {
         beefyClient.submitFiatShamir(
             commitment,
             bitfield,
-            CompactProofLib.toCompact(fiatShamirValidatorProofs),
+            CompactProofLib.toCompact(fiatShamirValidatorProofs, setSize),
             emptyLeaf,
             emptyLeafProofs,
             emptyLeafProofOrder
@@ -898,7 +898,7 @@ contract BeefyClientTest is Test {
         beefyClient.submitFinal(
             commitment,
             bitfield,
-            CompactProofLib.toCompact(finalValidatorProofs),
+            CompactProofLib.toCompact(finalValidatorProofs, setSize),
             emptyLeaf,
             emptyLeafProofs,
             emptyLeafProofOrder
@@ -916,7 +916,7 @@ contract BeefyClientTest is Test {
 
         vm.expectRevert(BeefyClient.InvalidCommitment.selector);
         beefyClient.submitFiatShamir(
-            commitment, bitfield, CompactProofLib.toCompact(fiatShamirValidatorProofs), mmrLeaf, mmrLeafProofs, leafProofOrder
+            commitment, bitfield, CompactProofLib.toCompact(fiatShamirValidatorProofs, setSize), mmrLeaf, mmrLeafProofs, leafProofOrder
         );
     }
 

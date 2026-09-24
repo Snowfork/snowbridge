@@ -167,7 +167,7 @@ contract BeefyClientAdvancedTest is Test {
         BeefyClient.ValidatorProof[] memory finalProofs =
             _generateFinalProofs(commitmentHash, bitfield, MIN_REQ_SIGS - 1);
         vm.expectRevert(BeefyClient.InvalidValidatorProofLength.selector);
-        beefyClient.submitFinal(commitment, bitfield, CompactProofLib.toCompact(finalProofs), dummyLeaf2, new bytes32[](0), 0);
+        beefyClient.submitFinal(commitment, bitfield, CompactProofLib.toCompact(finalProofs, VSET_LEN), dummyLeaf2, new bytes32[](0), 0);
 
         console.log("submit final proof with wrong signatures");
         finalProofs = _generateFinalProofs(commitmentHash, bitfield, MIN_REQ_SIGS);
@@ -177,7 +177,7 @@ contract BeefyClientAdvancedTest is Test {
         beefyClient.submitFinal(
             commitment,
             bitfield,
-            CompactProofLib.withSubstitutedSigner(finalProofs, 0, 1),
+            CompactProofLib.withSubstitutedSigner(finalProofs, VSET_LEN, 0, 1),
             dummyLeaf2,
             new bytes32[](0),
             0
@@ -185,7 +185,7 @@ contract BeefyClientAdvancedTest is Test {
 
         console.log("submit final proof with sufficient signatures");
         finalProofs = _generateFinalProofs(commitmentHash, bitfield, MIN_REQ_SIGS);
-        beefyClient.submitFinal(commitment, bitfield, CompactProofLib.toCompact(finalProofs), dummyLeaf2, new bytes32[](0), 0);
+        beefyClient.submitFinal(commitment, bitfield, CompactProofLib.toCompact(finalProofs, VSET_LEN), dummyLeaf2, new bytes32[](0), 0);
         assertEq(beefyClient.latestMMRRoot(), MMRRoot, "MMR root updated");
     }
 
@@ -216,7 +216,7 @@ contract BeefyClientAdvancedTest is Test {
             "final bitfield has insufficient set bits"
         );
         beefyClient.submitFiatShamir(
-            commitment, bitfield, CompactProofLib.toCompact(finalProofs), dummyLeaf2, new bytes32[](0), 0
+            commitment, bitfield, CompactProofLib.toCompact(finalProofs, VSET_LEN), dummyLeaf2, new bytes32[](0), 0
         );
         assertEq(beefyClient.latestMMRRoot(), MMRRoot, "MMR root updated");
     }
@@ -240,7 +240,7 @@ contract BeefyClientAdvancedTest is Test {
             _generateFiatShamirProofs(commitment, commitmentHash, bitfield, insufficientSignatures);
         vm.expectRevert(BeefyClient.InvalidValidatorProofLength.selector);
         beefyClient.submitFiatShamir(
-            commitment, bitfield, CompactProofLib.toCompact(finalProofs), dummyLeaf2, new bytes32[](0), 0
+            commitment, bitfield, CompactProofLib.toCompact(finalProofs, VSET_LEN), dummyLeaf2, new bytes32[](0), 0
         );
     }
 
@@ -266,7 +266,7 @@ contract BeefyClientAdvancedTest is Test {
         beefyClient.submitFiatShamir(
             commitment,
             bitfield,
-            CompactProofLib.withSubstitutedSigner(finalProofs, 0, 1),
+            CompactProofLib.withSubstitutedSigner(finalProofs, VSET_LEN, 0, 1),
             dummyLeaf2,
             new bytes32[](0),
             0
@@ -305,7 +305,7 @@ contract BeefyClientAdvancedTest is Test {
         }
         vm.expectRevert(BeefyClient.InvalidBitfield.selector);
         beefyClient.submitFiatShamir(
-            commitment, bitfield2, CompactProofLib.toCompact(finalProofs), dummyLeaf2, new bytes32[](0), 0
+            commitment, bitfield2, CompactProofLib.toCompact(finalProofs, VSET_LEN), dummyLeaf2, new bytes32[](0), 0
         );
     }
 
@@ -356,7 +356,7 @@ contract BeefyClientAdvancedTest is Test {
 
         // Submit using Fiat-Shamir path with a real non-empty leaf proof
         beefyClient.submitFiatShamir(
-            commitment, bitfield, CompactProofLib.toCompact(finalProofs), leaf, leafProof, leafProofOrder
+            commitment, bitfield, CompactProofLib.toCompact(finalProofs, VSET_LEN), leaf, leafProof, leafProofOrder
         );
         assertEq(beefyClient.latestMMRRoot(), mmrRoot, "MMR root updated");
         assertEq(beefyClient.latestBeefyBlock(), uint64(1), "beefy block updated");
@@ -403,7 +403,7 @@ contract BeefyClientAdvancedTest is Test {
         );
 
         beefyClient.submitFiatShamir(
-            commitment, bitfield, CompactProofLib.toCompact(finalProofs), leaf, leafProof, leafProofOrder
+            commitment, bitfield, CompactProofLib.toCompact(finalProofs, VSET_LEN), leaf, leafProof, leafProofOrder
         );
         assertEq(beefyClient.latestMMRRoot(), mmrRoot, "MMR root updated");
         assertEq(beefyClient.latestBeefyBlock(), uint64(1), "beefy block updated");

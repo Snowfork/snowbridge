@@ -72,11 +72,13 @@ contract FiatShamirPaddingBitsGrindTest is Test {
         assertTrue(
             !_sampleIsExactlyFirstK(sampled0, 6), "baseline unexpectedly matches attacker set"
         );
-        vm.expectRevert(BeefyClient.InvalidValidatorProof.selector);
+        // The multiproof is built for [0..5], not the sampled positions, so the contract runs
+        // out of siblings before it reaches a root.
+        vm.expectRevert(BeefyClient.InvalidValidatorProofLength.selector);
         beefy.submitFiatShamir(
             commitment,
             bitfield0,
-            CompactProofLib.toCompact(attackerProofs),
+            CompactProofLib.toCompact(attackerProofs, N),
             BeefyClient.MMRLeaf({
                 version: 0,
                 parentNumber: 0,
@@ -118,7 +120,7 @@ contract FiatShamirPaddingBitsGrindTest is Test {
         beefy.submitFiatShamir(
             commitment,
             grindedBitfield,
-            CompactProofLib.toCompact(attackerProofs),
+            CompactProofLib.toCompact(attackerProofs, N),
             BeefyClient.MMRLeaf({
                 version: 0,
                 parentNumber: 0,

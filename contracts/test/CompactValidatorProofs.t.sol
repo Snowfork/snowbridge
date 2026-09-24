@@ -9,9 +9,8 @@ pragma solidity 0.8.34;
 //   3. "does the signature match the claimed account?" -- the account is recovered, not supplied
 //
 // A structural argument is only as good as the thing enforcing it, so this file attacks each
-// one directly. It also covers the two new framing invariants that replace the per-proof
-// length field: every leaf gets exactly its canonical path, and the flat sibling array must be
-// consumed exactly.
+// one directly. It also covers the multiproof that replaces the per-proof paths: it must
+// reproduce the root from the sampled positions, and its sibling array must be consumed exactly.
 
 import {Test} from "forge-std/Test.sol";
 import {stdJson} from "forge-std/StdJson.sol";
@@ -20,6 +19,7 @@ import {BeefyClientMock} from "./mocks/BeefyClientMock.sol";
 import {Bitfield} from "../src/utils/Bitfield.sol";
 import {SubstrateMerkleProof} from "../src/utils/SubstrateMerkleProof.sol";
 import {CompactProofLib} from "./utils/CompactProofLib.sol";
+import {MerkleLibSubstrate} from "./utils/MerkleLib.sol";
 
 contract CompactValidatorProofsTest is Test {
     using stdJson for string;
@@ -122,7 +122,7 @@ contract CompactValidatorProofsTest is Test {
 
     function testCompactHappyPath() public {
         BeefyClient.Commitment memory c = _reachSubmitFinal();
-        _submit(c, CompactProofLib.toCompact(finalValidatorProofs));
+        _submit(c, CompactProofLib.toCompact(finalValidatorProofs, setSize));
         assertEq(beefyClient.latestBeefyBlock(), blockNumber);
     }
 
@@ -131,7 +131,7 @@ contract CompactValidatorProofsTest is Test {
     function testRejectsSignatureFromAValidatorTheSampleDidNotSelect() public {
         BeefyClient.Commitment memory c = _reachSubmitFinal();
         vm.expectRevert(BeefyClient.InvalidValidatorProof.selector);
-        _submit(c, CompactProofLib.withSubstitutedSigner(finalValidatorProofs, 0, 1));
+        _submit(c, CompactProofLib.withSubstitutedSigner(finalValidatorProofs, setSize, 0, 1));
     }
 
     // ---- structural guarantee 2: a sampled slot cannot be answered twice -----------------
@@ -146,7 +146,7 @@ contract CompactValidatorProofsTest is Test {
         ps[1].s = ps[0].s;
         ps[1].proof = ps[0].proof;
         vm.expectRevert();
-        _submit(c, CompactProofLib.toCompact(ps));
+        _submit(c, CompactProofLib.toCompact(ps, setSize));
     }
 
     // ---- structural guarantee 1: ordering is fixed by the sample -------------------------
@@ -162,7 +162,7 @@ contract CompactValidatorProofsTest is Test {
             rev[i] = ps[n - 1 - i];
         }
         vm.expectRevert();
-        _submit(c, CompactProofLib.toCompact(rev));
+        _submit(c, CompactProofLib.toCompact(rev, setSize));
     }
 
     // ---- framing: the sibling array must be consumed exactly -----------------------------
@@ -170,7 +170,7 @@ contract CompactValidatorProofsTest is Test {
     function testRejectsTrailingSiblings() public {
         BeefyClient.Commitment memory c = _reachSubmitFinal();
         BeefyClient.CompactValidatorProofs memory p =
-            CompactProofLib.toCompact(finalValidatorProofs);
+            CompactProofLib.toCompact(finalValidatorProofs, setSize);
         bytes32[] memory padded = new bytes32[](p.siblings.length + 1);
         for (uint256 i = 0; i < p.siblings.length; i++) {
             padded[i] = p.siblings[i];
@@ -183,7 +183,7 @@ contract CompactValidatorProofsTest is Test {
     function testRejectsTruncatedSiblings() public {
         BeefyClient.Commitment memory c = _reachSubmitFinal();
         BeefyClient.CompactValidatorProofs memory p =
-            CompactProofLib.toCompact(finalValidatorProofs);
+            CompactProofLib.toCompact(finalValidatorProofs, setSize);
         bytes32[] memory short_ = new bytes32[](p.siblings.length - 1);
         for (uint256 i = 0; i < short_.length; i++) {
             short_[i] = p.siblings[i];
@@ -196,97 +196,185 @@ contract CompactValidatorProofsTest is Test {
     function testRejectsWrongSignatureCount() public {
         BeefyClient.Commitment memory c = _reachSubmitFinal();
         BeefyClient.CompactValidatorProofs memory p =
-            CompactProofLib.toCompact(finalValidatorProofs);
+            CompactProofLib.toCompact(finalValidatorProofs, setSize);
         p.signatures = bytes.concat(p.signatures, hex"00");
         vm.expectRevert(BeefyClient.InvalidValidatorProofLength.selector);
         _submit(c, p);
     }
 
-    // ---- computeRootAt must consume exactly the canonical path, same root as computeRoot ----
+    // ---- computeMultiRoot: same root as the full tree, siblings consumed exactly --------
 
-    function testFuzz_computeRootAtMatchesComputeRoot(
-        uint256 wSeed,
-        uint256 pSeed,
-        bytes32 leaf,
-        uint256 extraSeed
-    ) public view {
-        uint256 width = bound(wSeed, 1, 1024);
-        uint256 position = bound(pSeed, 0, width - 1);
-        uint256 expected = canonicalPathLength(position, width);
-        // A flat array with trailing siblings that belong to the next leaf.
-        bytes32[] memory flat = siblings(leaf, expected + bound(extraSeed, 0, 5));
-
-        (bool valid, bytes32 root, uint256 next) =
-            this.computeRootAtExternal(leaf, position, width, flat, 0);
-        assertTrue(valid, "canonical path rejected");
-        assertEq(next, expected, "computeRootAt consumed a non-canonical number of siblings");
-        assertEq(
-            root, referenceRoot(leaf, position, width, expected), "disagrees with computeRoot"
-        );
-    }
-
-    function referenceRoot(bytes32 leaf, uint256 position, uint256 width, uint256 len)
-        internal
-        view
-        returns (bytes32)
-    {
-        (bool valid, bytes32 root) =
-            this.computeRootExternal(leaf, position, width, siblings(leaf, len));
-        assertTrue(valid, "computeRoot rejected the canonical path");
-        return root;
-    }
-
-    function siblings(bytes32 seed, uint256 n) internal pure returns (bytes32[] memory out) {
-        out = new bytes32[](n);
-        for (uint256 i = 0; i < n; i++) {
-            out[i] = keccak256(abi.encode(seed, i));
-        }
-    }
-
-    function canonicalPathLength(uint256 p, uint256 w) internal pure returns (uint256 n) {
-        while (w > 1) {
-            if (!(p + 1 == w && w & 1 == 1)) {
-                n++;
-            }
-            p >>= 1;
-            w = ((w - 1) >> 1) + 1;
-        }
-    }
-
-    function testFuzz_computeRootAtRejectsOutOfRangePosition(uint256 wSeed, uint256 over)
+    function testFuzz_computeMultiRootMatchesFullTree(uint256 wSeed, uint256 subsetSeed)
         public
         view
     {
         uint256 width = bound(wSeed, 1, 700);
-        uint256 position = width + bound(over, 0, 1000);
-        (bool valid,,) =
-            this.computeRootAtExternal(bytes32(uint256(1)), position, width, new bytes32[](0), 0);
-        assertFalse(valid);
+        (bytes32[][] memory L, bytes32 fullRoot) =
+            MerkleLibSubstrate.buildLevels(MerkleLibSubstrate.genLeaves(width));
+        uint256[] memory positions = randomSubset(width, subsetSeed);
+        bytes32[] memory expected = referenceSiblings(L, positions);
+
+        // The test builder, fed per-leaf paths, must produce the same siblings.
+        BeefyClient.ValidatorProof[] memory ps = new BeefyClient.ValidatorProof[](positions.length);
+        for (uint256 i = 0; i < positions.length; i++) {
+            ps[i].index = positions[i];
+            ps[i].proof = MerkleLibSubstrate.proofFromLevels(L, positions[i]);
+        }
+        assertEq(CompactProofLib.multiproof(ps, width), expected, "builder disagrees");
+
+        (bool valid, bytes32 got) =
+            this.computeMultiRootExternal(positions, leavesAt(L, positions), width, expected);
+        assertTrue(valid, "multiproof rejected");
+        assertEq(got, fullRoot, "multiproof root disagrees with full tree");
     }
 
-    function testComputeRootAtRejectsTruncatedPath() public view {
-        (bool valid,,) =
-            this.computeRootAtExternal(bytes32(uint256(1)), 0, 600, new bytes32[](3), 0);
-        assertFalse(valid);
+    function testFuzz_computeMultiRootRejectsBadFraming(uint256 wSeed, uint256 subsetSeed)
+        public
+        view
+    {
+        uint256 width = bound(wSeed, 2, 700);
+        (bytes32[][] memory L,) =
+            MerkleLibSubstrate.buildLevels(MerkleLibSubstrate.genLeaves(width));
+        uint256[] memory positions = randomSubset(width, subsetSeed);
+        bytes32[] memory leaves = leavesAt(L, positions);
+        bytes32[] memory sibs = referenceSiblings(L, positions);
+
+        bytes32[] memory longer = new bytes32[](sibs.length + 1);
+        for (uint256 i = 0; i < sibs.length; i++) {
+            longer[i] = sibs[i];
+        }
+        (bool valid,) = this.computeMultiRootExternal(positions, leaves, width, longer);
+        assertFalse(valid, "trailing sibling accepted");
+
+        if (sibs.length > 0) {
+            bytes32[] memory shorter = new bytes32[](sibs.length - 1);
+            for (uint256 i = 0; i < shorter.length; i++) {
+                shorter[i] = sibs[i];
+            }
+            (valid,) = this.computeMultiRootExternal(positions, leaves, width, shorter);
+            assertFalse(valid, "truncated siblings accepted");
+        }
     }
 
-    function computeRootAtExternal(
-        bytes32 leaf,
-        uint256 position,
+    function testFuzz_computeMultiRootRejectsTampering(
+        uint256 wSeed,
+        uint256 subsetSeed,
+        uint256 pick,
+        bytes32 junk
+    ) public view {
+        uint256 width = bound(wSeed, 2, 700);
+        (bytes32[][] memory L, bytes32 fullRoot) =
+            MerkleLibSubstrate.buildLevels(MerkleLibSubstrate.genLeaves(width));
+        uint256[] memory positions = randomSubset(width, subsetSeed);
+        bytes32[] memory leaves = leavesAt(L, positions);
+        bytes32[] memory sibs = referenceSiblings(L, positions);
+
+        // Replace one leaf or one sibling with a different value.
+        uint256 k = pick % (leaves.length + sibs.length);
+        if (k < leaves.length) {
+            vm.assume(junk != leaves[k]);
+            leaves[k] = junk;
+        } else {
+            vm.assume(junk != sibs[k - leaves.length]);
+            sibs[k - leaves.length] = junk;
+        }
+
+        (bool valid, bytes32 got) =
+            this.computeMultiRootExternal(copy(positions), leaves, width, sibs);
+        assertFalse(valid && got == fullRoot, "tampered multiproof reproduced the root");
+    }
+
+    function copy(uint256[] memory a) internal pure returns (uint256[] memory b) {
+        b = new uint256[](a.length);
+        for (uint256 i = 0; i < a.length; i++) {
+            b[i] = a[i];
+        }
+    }
+
+    function testComputeMultiRootRejectsBadPositions() public view {
+        bytes32[] memory two = new bytes32[](2);
+        bytes32[] memory none = new bytes32[](0);
+        uint256[] memory p = new uint256[](2);
+
+        (p[0], p[1]) = (0, 600);
+        (bool valid,) = this.computeMultiRootExternal(p, two, 600, none);
+        assertFalse(valid, "out-of-range position");
+
+        (p[0], p[1]) = (5, 5);
+        (valid,) = this.computeMultiRootExternal(p, two, 600, none);
+        assertFalse(valid, "duplicate position");
+
+        (p[0], p[1]) = (6, 5);
+        (valid,) = this.computeMultiRootExternal(p, two, 600, none);
+        assertFalse(valid, "descending positions");
+
+        (valid,) = this.computeMultiRootExternal(new uint256[](0), none, 600, none);
+        assertFalse(valid, "no leaves");
+    }
+
+    /// Siblings a multiproof needs, from the full tree: per layer, each known node's sibling
+    /// unless that sibling is known too.
+    function referenceSiblings(bytes32[][] memory L, uint256[] memory positions)
+        internal
+        pure
+        returns (bytes32[] memory out)
+    {
+        out = new bytes32[](positions.length * L.length);
+        uint256 k;
+        bool[] memory known = new bool[](L[0].length);
+        for (uint256 i = 0; i < positions.length; i++) {
+            known[positions[i]] = true;
+        }
+        for (uint256 l = 0; l + 1 < L.length; l++) {
+            uint256 w = L[l].length;
+            bool[] memory up = new bool[](L[l + 1].length);
+            for (uint256 p = 0; p < w; p++) {
+                if (!known[p]) continue;
+                up[p / 2] = true;
+                if (p == w - 1 && w % 2 == 1) continue;
+                if (!known[p ^ 1]) out[k++] = L[l][p ^ 1];
+            }
+            known = up;
+        }
+        assembly {
+            mstore(out, k)
+        }
+    }
+
+    function randomSubset(uint256 width, uint256 seed)
+        internal
+        pure
+        returns (uint256[] memory out)
+    {
+        out = new uint256[](width);
+        uint256 n;
+        for (uint256 p = 0; p < width; p++) {
+            if (uint256(keccak256(abi.encode(seed, p))) % 5 == 0) out[n++] = p;
+        }
+        if (n == 0) out[n++] = seed % width;
+        assembly {
+            mstore(out, n)
+        }
+    }
+
+    function leavesAt(bytes32[][] memory L, uint256[] memory positions)
+        internal
+        pure
+        returns (bytes32[] memory leaves)
+    {
+        leaves = new bytes32[](positions.length);
+        for (uint256 i = 0; i < positions.length; i++) {
+            leaves[i] = L[0][positions[i]];
+        }
+    }
+
+    function computeMultiRootExternal(
+        uint256[] memory positions,
+        bytes32[] memory leaves,
         uint256 width,
-        bytes32[] calldata siblings,
-        uint256 offset
-    ) external pure returns (bool, bytes32, uint256) {
-        return SubstrateMerkleProof.computeRootAt(leaf, position, width, siblings, offset);
-    }
-
-    function computeRootExternal(
-        bytes32 leaf,
-        uint256 position,
-        uint256 width,
-        bytes32[] calldata proof
+        bytes32[] calldata siblings
     ) external pure returns (bool, bytes32) {
-        return SubstrateMerkleProof.computeRoot(leaf, position, width, proof);
+        return SubstrateMerkleProof.computeMultiRoot(positions, leaves, width, siblings);
     }
 
     // ---- toIndices ----------------------------------------------------------------------

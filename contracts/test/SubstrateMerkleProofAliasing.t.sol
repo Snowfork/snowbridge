@@ -362,6 +362,8 @@ contract BeefyClientForgeRejectionTest is Test {
         bc.commitPrevRandao(ch);
 
         uint256[] memory sampled = _subsample(PREVRANDAO_SEED, bf, REQUIRED_SIGS);
+        // Answer in the contract's (ascending) order, as a real attacker would.
+        MerkleLibSubstrate.sort(sampled);
         proofs = new BeefyClient.ValidatorProof[](REQUIRED_SIGS);
         for (uint256 j = 0; j < REQUIRED_SIGS; j++) {
             proofs[j] = _answer(sampled[j]);
@@ -376,7 +378,7 @@ contract BeefyClientForgeRejectionTest is Test {
         bytes32[] memory empty = new bytes32[](0);
         // FIX: the aliased proofs no longer pass isValidatorInSet -> submitFinal reverts.
         vm.expectRevert(BeefyClient.InvalidValidatorProof.selector);
-        bc.submitFinal(_commit(), bf, CompactProofLib.toCompact(proofs), leaf, empty, 0);
+        bc.submitFinal(_commit(), bf, CompactProofLib.toCompact(proofs, N), leaf, empty, 0);
 
         assertTrue(bc.latestMMRRoot() != forged, "root of trust NOT forged");
         assertEq(bc.latestMMRRoot(), bytes32(0), "latestMMRRoot unchanged (forge rejected)");
@@ -590,6 +592,7 @@ contract FiatShamirForgeRejectionTest is Test {
             require(tries < GRIND_BUDGET, "grind budget");
         }
 
+        MerkleLibSubstrate.sort(sampled);
         BeefyClient.ValidatorProof[] memory proofs = new BeefyClient.ValidatorProof[](FS_SIGS);
         for (uint256 j = 0; j < FS_SIGS; j++) {
             proofs[j] = _answer(sampled[j]);
@@ -600,7 +603,7 @@ contract FiatShamirForgeRejectionTest is Test {
         // FIX: even with a winning grind and a quorum-satisfying bitfield, the aliased proofs are
         // rejected -> the single-tx forge reverts.
         vm.expectRevert(BeefyClient.InvalidValidatorProof.selector);
-        bc.submitFiatShamir(_commit(bn), bitfield, CompactProofLib.toCompact(proofs), leaf, empty, 0);
+        bc.submitFiatShamir(_commit(bn), bitfield, CompactProofLib.toCompact(proofs, N), leaf, empty, 0);
 
         assertTrue(bc.latestMMRRoot() != forged, "single-tx FS forge rejected");
         emit log_named_uint("grind found a biasing blockNumber after tries", tries);
