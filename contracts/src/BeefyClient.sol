@@ -215,6 +215,18 @@ contract BeefyClient {
     uint256 public constant trustingPeriod = 14 days;
 
     /**
+     * @dev How many sessions past the current set a skip-ahead may reach. Polkadot has 6
+     * sessions per era, so a skip never spans more than one era's worth of sessions.
+     *
+     * The contract cannot see the membership of the skipped-to set, so a skip trusts the current
+     * set to sign under a later set id. Polkadot can only slash a BEEFY vote if the signer is in
+     * the set of the vote's id (pallet-beefy checks `SetIdSession` and a key-ownership proof for
+     * that session), and it cannot slash a vote under an id it has not reached yet. Keeping the
+     * target close keeps it among sets the current signers are likely still part of.
+     */
+    uint256 public constant maxSkipAheadSessions = 5;
+
+    /**
      * @dev Minimum delay in number of blocks that a relayer must wait between calling
      * submitInitial and commitPrevRandao. In production this should be set to MAX_SEED_LOOKAHEAD:
      * https://eth2book.info/altair/part3/config/preset#max_seed_lookahead
@@ -434,6 +446,12 @@ contract BeefyClient {
             if (!canSkipAhead(commitment.validatorSetID)) {
                 revert InvalidCommitment();
             }
+        }
+
+        // submitInitial checked the quorum against a set of the ticket's length. After a skip,
+        // a handover can make the same commitment id resolve to a different set by now.
+        if (tickets[ticketID].validatorSetLen != vset.length) {
+            revert InvalidTicket();
         }
 
         // Validate that all padding bits (beyond vset.length) are zero
@@ -658,9 +676,11 @@ contract BeefyClient {
     /**
      * @dev Returns true if a commitment from `validatorSetID` may be authenticated against the
      * current validator set as a non-consecutive skip-ahead update. This is safe only when:
-     *  (a) the id is strictly ahead of the next set (a genuine skip past known sessions),
-     *  (b) the era is confirmed stable (current and next share the same membership root), so the
-     *      signatures legitimately verify against the current root, and
+     *  (a) the id is strictly ahead of the next set, and at most `maxSkipAheadSessions` ahead of
+     *      the current set,
+     *  (b) current and next share the same membership root. This does not prove the skipped-to
+     *      set shares it too: if membership changed in between, honest signatures fail against
+     *      the current root and the skip reverts, and
      *  (c) the current set is still within its trusting period, i.e. the client has witnessed a
      *      handover recently enough that the set is unlikely to be unbonded. This is a staleness
      *      bound only, not a proof of bondedness — see the note on `trustingPeriod`. Safety here
@@ -673,6 +693,7 @@ contract BeefyClient {
     function canSkipAhead(uint64 validatorSetID) internal view returns (bool) {
         if (
             validatorSetID <= nextValidatorSet.id
+                || validatorSetID > uint256(currentValidatorSet.id) + maxSkipAheadSessions
                 || currentValidatorSet.root != nextValidatorSet.root
         ) {
             return false;
@@ -698,8 +719,8 @@ contract BeefyClient {
         bytes32[] calldata leafProof,
         uint256 leafProofOrder
     ) internal {
-        // Validator set ids must remain strictly increasing.
-        if (leaf.nextAuthoritySetID <= validatorSetID) {
+        // Any leaf from set `validatorSetID` announces set `validatorSetID + 1`.
+        if (leaf.nextAuthoritySetID != validatorSetID + 1) {
             revert InvalidMMRLeaf();
         }
         bool leafIsValid = MMRProof.verifyLeafProof(

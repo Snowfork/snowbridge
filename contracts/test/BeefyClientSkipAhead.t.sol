@@ -178,8 +178,8 @@ contract BeefyClientSkipAheadTest is BeefyClientTest {
         );
     }
 
-    /// @dev applySkip enforces strictly increasing ids: the leaf's nextAuthoritySetID must be
-    /// greater than the skipped-to commitment id, else InvalidMMRLeaf. Driven through the real
+    /// @dev applySkip requires the leaf's nextAuthoritySetID to be exactly the skipped-to
+    /// commitment id + 1, else InvalidMMRLeaf. Driven through the real
     /// interactive submitFinal so the gate is exercised end-to-end (its subsample is prevRandao-
     /// seeded, so the cached fixtures replay correctly for a skip).
     function testSkipAheadRevertsWithInvalidMMRLeaf() public {
@@ -213,6 +213,78 @@ contract BeefyClientSkipAheadTest is BeefyClientTest {
         // no longer matches the proof.
         mmrLeaf.parentNumber = 1;
         vm.expectRevert(BeefyClient.InvalidMMRLeafProof.selector);
+        beefyClient.submitFinal(
+            commitment, bitfield, finalValidatorProofs, mmrLeaf, mmrLeafProofs, leafProofOrder
+        );
+    }
+
+    /// @dev A skip may reach at most `maxSkipAheadSessions` past the current set: one further
+    /// is an ordinary InvalidCommitment, even inside the trusting window.
+    function testSkipAheadRejectsIdBeyondMaxDistance() public {
+        uint32 maxSkip = uint32(beefyClient.maxSkipAheadSessions());
+        BeefyClient.Commitment memory commitment = initialize(setId - maxSkip - 1);
+
+        vm.expectRevert(BeefyClient.InvalidCommitment.selector);
+        beefyClient.submitFiatShamir(
+            commitment, bitfield, fiatShamirValidatorProofs, mmrLeaf, mmrLeafProofs, leafProofOrder
+        );
+
+        vm.expectRevert(BeefyClient.InvalidCommitment.selector);
+        beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
+    }
+
+    /// @dev Exactly `maxSkipAheadSessions` past the current set is still a valid skip.
+    function testSkipAheadAcceptsIdAtMaxDistance() public {
+        uint32 maxSkip = uint32(beefyClient.maxSkipAheadSessions());
+        BeefyClient.Commitment memory commitment = initialize(setId - maxSkip);
+
+        beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
+        vm.roll(block.number + randaoCommitDelay);
+        commitPrevRandao();
+        createFinalProofs();
+        beefyClient.submitFinal(
+            commitment, bitfield, finalValidatorProofs, mmrLeaf, mmrLeafProofs, leafProofOrder
+        );
+
+        (uint128 curId,,,) = beefyClient.currentValidatorSet();
+        assertEq(uint256(curId), uint256(setId), "current id advanced to skipped id");
+    }
+
+    /// @dev A ticket opened as a skip checks its quorum against the current set. If a handover
+    /// then makes the commitment id resolve to a set of a different length, the claimed bitfield
+    /// is no longer a proven quorum of that set, so submitFinal must reject the ticket.
+    function testSkipAheadTicketRejectedWhenSetLengthChanges() public {
+        BeefyClient.Commitment memory commitment = initialize(setId - 3);
+        beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
+        vm.roll(block.number + randaoCommitDelay);
+        commitPrevRandao();
+        createFinalProofs();
+
+        // A handover lands in between: setId is now the next set, with a larger membership.
+        beefyClient.initialize_public(
+            0,
+            BeefyClient.ValidatorSet(setId - 1, setSize, root),
+            BeefyClient.ValidatorSet(setId, setSize + 1, root)
+        );
+
+        vm.expectRevert(BeefyClient.InvalidTicket.selector);
+        beefyClient.submitFinal(
+            commitment, bitfield, finalValidatorProofs, mmrLeaf, mmrLeafProofs, leafProofOrder
+        );
+    }
+
+    /// @dev Every leaf from set X announces set X + 1, so a leaf announcing anything later is
+    /// not from the skipped-to session and must be rejected.
+    function testSkipAheadRevertsWithLeafFromLaterSession() public {
+        BeefyClient.Commitment memory commitment = initialize(setId - 3);
+
+        beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
+        vm.roll(block.number + randaoCommitDelay);
+        commitPrevRandao();
+        createFinalProofs();
+
+        mmrLeaf.nextAuthoritySetID = setId + 2;
+        vm.expectRevert(BeefyClient.InvalidMMRLeaf.selector);
         beefyClient.submitFinal(
             commitment, bitfield, finalValidatorProofs, mmrLeaf, mmrLeafProofs, leafProofOrder
         );
