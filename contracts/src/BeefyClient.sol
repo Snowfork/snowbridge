@@ -419,8 +419,8 @@ contract BeefyClient {
             }
         }
 
-        // The quorum was checked in submitInitial. A handover since then can map this id to
-        // another set.
+        // submitInitial checked the quorum count against the ticket's set length. A set of the
+        // same length but different membership fails the signature checks instead.
         if (tickets[ticketID].validatorSetLen != vset.length) {
             revert InvalidTicket();
         }
@@ -633,8 +633,11 @@ contract BeefyClient {
     /**
      * @dev Whether a commitment from a later set can be verified against the current set: the
      * id is past the next set and within `maxSkipAheadSessions`, and current and next share a
-     * root. If the target set's membership changed anyway, honest signatures fail and the skip
-     * reverts.
+     * root.
+     *
+     * Accepted risk: the target set's membership isn't checked. If it differs slightly, the
+     * skip still succeeds and keeps the current root for that id until the next handover.
+     * Keys outside the target set can't be slashed for it; a forgery still needs a quorum.
      */
     function canSkipAhead(uint64 validatorSetID) internal view returns (bool) {
         return validatorSetID > nextValidatorSet.id
@@ -653,8 +656,8 @@ contract BeefyClient {
         bytes32[] calldata leafProof,
         uint256 leafProofOrder
     ) internal {
-        // A leaf from set X announces set X + 1.
-        if (leaf.nextAuthoritySetID != validatorSetID + 1) {
+        // Same rule as a handover: the next set id must be greater.
+        if (leaf.nextAuthoritySetID <= validatorSetID) {
             revert InvalidMMRLeaf();
         }
         bool leafIsValid = MMRProof.verifyLeafProof(

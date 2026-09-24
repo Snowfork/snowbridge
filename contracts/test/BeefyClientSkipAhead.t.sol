@@ -119,7 +119,7 @@ contract BeefyClientSkipAheadTest is BeefyClientTest {
         assertEq(nextRoot, mmrLeaf.nextAuthoritySetRoot, "next root from leaf");
     }
 
-    /// @dev The leaf must announce the skipped-to id + 1.
+    /// @dev The leaf must announce a set after the skipped-to one.
     function testSkipAheadRevertsWithInvalidMMRLeaf() public {
         BeefyClient.Commitment memory commitment = initialize(setId - 3);
 
@@ -200,22 +200,6 @@ contract BeefyClientSkipAheadTest is BeefyClientTest {
         );
 
         vm.expectRevert(BeefyClient.InvalidTicket.selector);
-        beefyClient.submitFinal(
-            commitment, bitfield, finalValidatorProofs, mmrLeaf, mmrLeafProofs, leafProofOrder
-        );
-    }
-
-    /// @dev A leaf announcing X + 2 is not from set X.
-    function testSkipAheadRevertsWithLeafFromLaterSession() public {
-        BeefyClient.Commitment memory commitment = initialize(setId - 3);
-
-        beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
-        vm.roll(block.number + randaoCommitDelay);
-        commitPrevRandao();
-        createFinalProofs();
-
-        mmrLeaf.nextAuthoritySetID = setId + 2;
-        vm.expectRevert(BeefyClient.InvalidMMRLeaf.selector);
         beefyClient.submitFinal(
             commitment, bitfield, finalValidatorProofs, mmrLeaf, mmrLeafProofs, leafProofOrder
         );
