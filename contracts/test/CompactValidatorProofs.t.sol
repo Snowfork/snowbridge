@@ -14,6 +14,7 @@ pragma solidity 0.8.34;
 
 import {Test} from "forge-std/Test.sol";
 import {stdJson} from "forge-std/StdJson.sol";
+import {ECDSA} from "openzeppelin/utils/cryptography/ECDSA.sol";
 import {BeefyClient} from "../src/BeefyClient.sol";
 import {BeefyClientMock} from "./mocks/BeefyClientMock.sol";
 import {Bitfield} from "../src/utils/Bitfield.sol";
@@ -23,6 +24,9 @@ import {MerkleLibSubstrate} from "./utils/MerkleLib.sol";
 
 contract CompactValidatorProofsTest is Test {
     using stdJson for string;
+
+    uint256 constant SECP256K1_N =
+        0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141;
 
     BeefyClientMock beefyClient;
     uint8 randaoCommitDelay = 3;
@@ -78,9 +82,8 @@ contract CompactValidatorProofsTest is Test {
             BeefyClient.ValidatorSet(1, 0, 0x0)
         );
         bitfield = beefyClient.createInitialBitfield(bitSetArray, setSize);
-        requiredSignatures = beefyClient.computeNumRequiredSignatures_public(
-            setSize, 0, minNumRequiredSignatures
-        );
+        requiredSignatures =
+            beefyClient.computeNumRequiredSignatures_public(setSize, 0, minNumRequiredSignatures);
 
         string memory pr =
             vm.readFile(string.concat(vm.projectRoot(), "/test/data/beefy-final-proof.json"));
@@ -202,6 +205,62 @@ contract CompactValidatorProofsTest is Test {
         _submit(c, p);
     }
 
+    // ---- end-to-end mutation: any single change to genuine calldata must be rejected -------
+
+    function testFuzz_rejectsAnyCorruptedSignatureByte(uint256 offset, uint8 flip) public {
+        vm.assume(flip != 0);
+        BeefyClient.Commitment memory c = _reachSubmitFinal();
+        BeefyClient.CompactValidatorProofs memory p =
+            CompactProofLib.toCompact(finalValidatorProofs, setSize);
+        offset %= p.signatures.length;
+        p.signatures[offset] = p.signatures[offset] ^ bytes1(flip);
+        vm.expectRevert();
+        _submit(c, p);
+    }
+
+    function testFuzz_rejectsAnyCorruptedSibling(uint256 idx, bytes32 junk) public {
+        BeefyClient.Commitment memory c = _reachSubmitFinal();
+        BeefyClient.CompactValidatorProofs memory p =
+            CompactProofLib.toCompact(finalValidatorProofs, setSize);
+        idx %= p.siblings.length;
+        vm.assume(junk != p.siblings[idx]);
+        p.siblings[idx] = junk;
+        vm.expectRevert(BeefyClient.InvalidValidatorProof.selector);
+        _submit(c, p);
+    }
+
+    /// Two genuine sampled validators swap signatures: every signer is in the set and in the
+    /// sample, but neither answers its own slot.
+    function testFuzz_rejectsSignersSwappedBetweenAnySlots(uint256 a, uint256 b) public {
+        uint256 n = finalValidatorProofs.length;
+        a %= n;
+        b %= n;
+        vm.assume(a != b);
+        BeefyClient.Commitment memory c = _reachSubmitFinal();
+        vm.expectRevert(BeefyClient.InvalidValidatorProof.selector);
+        _submit(c, CompactProofLib.withSubstitutedSigner(_copy(), setSize, a, b));
+    }
+
+    // The malleated twin (s' = N - s, v flipped) recovers the same signer, so it cannot answer
+    // another slot; it and a raw 0/1 recovery id must still be rejected so that each sampled
+    // signature has exactly one accepted encoding.
+    function testFuzz_rejectsNonCanonicalSignatureEncoding(uint256 slot, bool rawV) public {
+        BeefyClient.Commitment memory c = _reachSubmitFinal();
+        BeefyClient.ValidatorProof[] memory ps = _copy();
+        slot %= ps.length;
+        if (rawV) {
+            ps[slot].v -= 27;
+            vm.expectRevert(ECDSA.ECDSAInvalidSignature.selector);
+        } else {
+            ps[slot].s = bytes32(SECP256K1_N - uint256(ps[slot].s));
+            ps[slot].v = ps[slot].v == 27 ? 28 : 27;
+            vm.expectRevert(
+                abi.encodeWithSelector(ECDSA.ECDSAInvalidSignatureS.selector, ps[slot].s)
+            );
+        }
+        _submit(c, CompactProofLib.toCompact(ps, setSize));
+    }
+
     // ---- computeMultiRoot: same root as the full tree, siblings consumed exactly --------
 
     function testFuzz_computeMultiRootMatchesFullTree(uint256 wSeed, uint256 subsetSeed)
@@ -272,9 +331,95 @@ contract CompactValidatorProofsTest is Test {
             }
         }
 
-        (bool valid, bytes32 got) =
-            this.computeMultiRootExternal(copy(positions), leaves, width, sibs);
+        (bool valid, bytes32 got) = this.computeMultiRootExternal(positions, leaves, width, sibs);
         assertFalse(valid && got == fullRoot, "tampered multiproof reproduced the root");
+    }
+
+    /// Two genuine leaves at different sampled positions trade places.
+    function testFuzz_computeMultiRootRejectsSwappedLeaves(
+        uint256 wSeed,
+        uint256 shape,
+        uint256 pick
+    ) public view {
+        uint256 width = bound(wSeed, 2, 700);
+        (bytes32[][] memory L, bytes32 fullRoot) =
+            MerkleLibSubstrate.buildLevels(MerkleLibSubstrate.genLeaves(width));
+        uint256[] memory positions = subsetOfShape(width, shape);
+        vm.assume(positions.length >= 2);
+        bytes32[] memory leaves = leavesAt(L, positions);
+        bytes32[] memory sibs = referenceSiblings(L, positions);
+
+        uint256 i = pick % leaves.length;
+        uint256 j = (i + 1 + (pick >> 128) % (leaves.length - 1)) % leaves.length;
+        (leaves[i], leaves[j]) = (leaves[j], leaves[i]);
+
+        (bool valid, bytes32 got) = this.computeMultiRootExternal(positions, leaves, width, sibs);
+        assertFalse(valid && got == fullRoot, "swapped leaves reproduced the root");
+    }
+
+    /// Position aliasing: the sample picks `positions`, but the attacker holds a key at an
+    /// unsampled position `q`. It answers slot `k` with its own genuine leaf and sends the
+    /// honest multiproof for the position set it actually belongs to (`positions` with slot `k`
+    /// moved to `q`). Every value supplied is a real node of the tree; only the geometry is
+    /// wrong, so the fold must not reach the root.
+    function testFuzz_computeMultiRootRejectsProofForNeighbouringPositionSet(
+        uint256 wSeed,
+        uint256 shape,
+        uint256 kSeed,
+        uint256 qSeed
+    ) public view {
+        uint256 width = bound(wSeed, 2, 700);
+        (bytes32[][] memory L, bytes32 fullRoot) =
+            MerkleLibSubstrate.buildLevels(MerkleLibSubstrate.genLeaves(width));
+        uint256[] memory positions = subsetOfShape(width, shape);
+        vm.assume(positions.length < width);
+
+        uint256 k = kSeed % positions.length;
+        uint256 q = unsampledPosition(positions, width, qSeed);
+
+        uint256[] memory claimed = copy(positions);
+        claimed[k] = q;
+        MerkleLibSubstrate.sort(claimed);
+
+        bytes32[] memory leaves = leavesAt(L, positions);
+        leaves[k] = L[0][q];
+
+        // Both leaf orders: slot-for-slot, and the order the attacker's own set would list them.
+        bytes32[] memory claimedSibs = referenceSiblings(L, claimed);
+        bytes32[] memory sampledSibs = referenceSiblings(L, positions);
+        _assertNotRoot(positions, leaves, width, claimedSibs, fullRoot);
+        _assertNotRoot(positions, leavesAt(L, claimed), width, claimedSibs, fullRoot);
+        _assertNotRoot(positions, leaves, width, sampledSibs, fullRoot);
+    }
+
+    function _assertNotRoot(
+        uint256[] memory positions,
+        bytes32[] memory leaves,
+        uint256 width,
+        bytes32[] memory sibs,
+        bytes32 fullRoot
+    ) internal view {
+        // An external call gets its own copy of the arrays, so the caller's stay intact.
+        (bool valid, bytes32 got) = this.computeMultiRootExternal(positions, leaves, width, sibs);
+        assertFalse(valid && got == fullRoot, "aliased position reproduced the root");
+    }
+
+    function unsampledPosition(uint256[] memory positions, uint256 width, uint256 seed)
+        internal
+        pure
+        returns (uint256)
+    {
+        uint256 skip = seed % (width - positions.length);
+        uint256 j;
+        for (uint256 p = 0; p < width; p++) {
+            if (j < positions.length && positions[j] == p) {
+                j++;
+                continue;
+            }
+            if (skip == 0) return p;
+            skip--;
+        }
+        revert("unreachable");
     }
 
     /// Random, full or near-full subset, so tampering also runs where nearly every node pairs.
@@ -313,7 +458,7 @@ contract CompactValidatorProofsTest is Test {
             leaves[i] = keccak256(abi.encode(seed, "leaf", i));
         }
         MerkleLibSubstrate.sort(positions);
-        bytes32[] memory sibs = siblings(bytes32(seed), sibSeed);
+        bytes32[] memory sibs = junkNodes(bytes32(seed), sibSeed);
 
         this.computeMultiRootExternal(positions, leaves, width, sibs);
     }
@@ -326,7 +471,7 @@ contract CompactValidatorProofsTest is Test {
     ) public view {
         width = bound(width, 1, type(uint256).max);
         uint256 position = pSeed % 4 == 0 ? width - 1 : bound(pSeed, 0, width - 1);
-        bytes32[] memory path = siblings(leaf, pathLength(position, width));
+        bytes32[] memory path = junkNodes(leaf, pathLength(position, width));
 
         uint256[] memory positions = new uint256[](1);
         positions[0] = position;
@@ -340,7 +485,7 @@ contract CompactValidatorProofsTest is Test {
         assertEq(multiRoot, singleRoot, "multiproof != computeRoot");
     }
 
-    function siblings(bytes32 seed, uint256 n) internal pure returns (bytes32[] memory out) {
+    function junkNodes(bytes32 seed, uint256 n) internal pure returns (bytes32[] memory out) {
         out = new bytes32[](n);
         for (uint256 i = 0; i < n; i++) {
             out[i] = keccak256(abi.encode(seed, "sibling", i));
@@ -575,6 +720,26 @@ contract CompactValidatorProofsTest is Test {
             if (Bitfield.isSet(bf, i)) {
                 assertEq(idx[k], i, "toIndices disagrees with naive scan");
                 k++;
+            }
+        }
+    }
+
+    /// `lowestSetBit` is a hand-written binary search; random words almost always have a low
+    /// bit set, so pin every bit position explicitly, alone and with every higher bit set.
+    function testToIndicesEveryBitPosition() public pure {
+        for (uint256 b = 0; b < 256; b++) {
+            uint256[] memory bf = new uint256[](2);
+            bf[0] = 1 << b;
+            bf[1] = 1 << (255 - b);
+            uint256[] memory idx = Bitfield.toIndices(bf, 2);
+            assertEq(idx[0], b, "lone bit, word 0");
+            assertEq(idx[1], 256 + 255 - b, "lone bit, word 1");
+
+            bf[0] = type(uint256).max << b;
+            bf[1] = 0;
+            idx = Bitfield.toIndices(bf, 256 - b);
+            for (uint256 i = 0; i < idx.length; i++) {
+                assertEq(idx[i], b + i, "high run");
             }
         }
     }

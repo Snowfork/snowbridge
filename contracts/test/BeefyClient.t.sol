@@ -859,6 +859,20 @@ contract BeefyClientTest is Test {
         return commitment;
     }
 
+    function testFuzz_submitFiatShamirRejectsCorruptedSibling(uint256 idx, bytes32 junk) public {
+        BeefyClient.Commitment memory commitment = initialize(setId);
+        BeefyClient.CompactValidatorProofs memory proofs =
+            CompactProofLib.toCompact(fiatShamirValidatorProofs, setSize);
+        idx %= proofs.siblings.length;
+        vm.assume(junk != proofs.siblings[idx]);
+        proofs.siblings[idx] = junk;
+
+        vm.expectRevert(BeefyClient.InvalidValidatorProof.selector);
+        beefyClient.submitFiatShamir(
+            commitment, bitfield, proofs, emptyLeaf, emptyLeafProofs, emptyLeafProofOrder
+        );
+    }
+
     function testSubmitFiatShamirWithHandOver() public {
         //initialize with previous set
         BeefyClient.Commitment memory commitment = initialize(setId - 1);
