@@ -25,5 +25,5 @@ generate_beefy_gas_report() {
 
 
 if [ -z "${from_benchmark:-}" ]; then
-    generate_beefy_fixture 17
+    generate_beefy_fixture 24
 fi
