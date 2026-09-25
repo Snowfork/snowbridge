@@ -1456,4 +1456,75 @@ contract GatewayV1Test is Test {
         uint256 v = gw.exposed_v1_transactionBaseGas();
         assertGt(v, 21_000);
     }
+
+    function _submitV1Calldata(uint64 nonce, bytes32[] memory leafProof)
+        internal
+        returns (bytes memory)
+    {
+        (Command command, bytes memory params) = makeUnlockTokenCommand(
+            assetHubAgentID, address(0), makeAddr(vm.toString(nonce)), 1
+        );
+        return abi.encodeCall(
+            IGatewayV1.submitV1,
+            (
+                InboundMessage({
+                    channelID: assetHubParaID.into(),
+                    nonce: nonce,
+                    command: command,
+                    params: params,
+                    maxDispatchGas: maxDispatchGas,
+                    maxFeePerGas: maxRefund,
+                    reward: reward,
+                    id: messageID
+                }),
+                leafProof,
+                makeMockProof()
+            )
+        );
+    }
+
+    /// @dev Submit an unlock of 1 wei to a new recipient with `leafProof`, and return what the
+    /// relayer was paid. With `agentFunds` = 0 the dispatch fails fast; the relayer is paid either
+    /// way. A first
+    /// message sets the channel nonce, so the measured one updates it as on mainnet rather than
+    /// creating the slot.
+    function _submitV1RefundPaid(bytes32[] memory leafProof, uint256 agentFunds)
+        internal
+        returns (uint256 paid, uint256 calldataLength)
+    {
+        deal(assetHubAgent, agentFunds);
+        vm.txGasPrice(10 gwei);
+        deal(address(gateway), 50 ether);
+
+        vm.prank(relayer);
+        (bool ok,) = address(gateway).call(_submitV1Calldata(1, proof));
+        assertTrue(ok);
+
+        bytes memory cd = _submitV1Calldata(2, leafProof);
+        calldataLength = cd.length;
+        uint256 before = relayer.balance;
+        vm.prank(relayer);
+        (ok,) = address(gateway).call(cd);
+        assertTrue(ok);
+        paid = relayer.balance - before;
+    }
+
+    /// @dev Large calldata and a dispatch that fails fast: the EIP-7976 floor decides the refund.
+    function testRelayerRefundUsesCalldataFloor() public {
+        bytes32[] memory leafProof = new bytes32[](80);
+        for (uint256 i = 0; i < leafProof.length; i++) {
+            leafProof[i] = keccak256(abi.encode(i));
+        }
+        (uint256 paid, uint256 len) = _submitV1RefundPaid(leafProof, 0);
+        assertGt(len, 3000);
+
+        assertEq(paid, (15_000 + 64 * 3000) * 10 gwei + reward);
+    }
+
+    /// @dev Small calldata: execution decides the refund, above the floor.
+    function testRelayerRefundAboveFloorWhenExecutionDominates() public {
+        (uint256 paid, uint256 len) = _submitV1RefundPaid(proof, 2);
+
+        assertGt(paid, (15_000 + 64 * len) * 10 gwei + reward);
+    }
 }
