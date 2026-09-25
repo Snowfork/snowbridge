@@ -114,47 +114,103 @@ library SubstrateMerkleProof {
         if (n == 0 || n != leaves.length) {
             return (false, bytes32(0));
         }
-        for (uint256 i = 0; i < n; i++) {
-            if (positions[i] >= width || (i > 0 && positions[i] <= positions[i - 1])) {
-                return (false, bytes32(0));
-            }
-        }
-
+        // Reference implementation; the assembly below computes exactly this:
+        //
+        //     for (uint256 i = 0; i < n; i++) {
+        //         if (positions[i] >= width || (i > 0 && positions[i] <= positions[i - 1])) {
+        //             return (false, bytes32(0));
+        //         }
+        //     }
+        //     uint256 next;
+        //     while (width > 1) {
+        //         uint256 m;
+        //         for (uint256 i = 0; i < n; i++) {
+        //             uint256 position = positions[i];
+        //             bytes32 node = leaves[i];
+        //             if (position + 1 == width && width & 1 == 1) {
+        //                 // Lone trailing node of an odd-width layer: promoted unchanged.
+        //             } else if (position & 1 == 0 && i + 1 < n && positions[i + 1] == position + 1) {
+        //                 node = efficientHash(node, leaves[i + 1]);
+        //                 i++;
+        //             } else {
+        //                 if (next >= siblings.length) return (false, bytes32(0));
+        //                 node = position & 1 == 1
+        //                     ? efficientHash(siblings[next], node)
+        //                     : efficientHash(node, siblings[next]);
+        //                 next++;
+        //             }
+        //             positions[m] = position >> 1;
+        //             leaves[m] = node;
+        //             m++;
+        //         }
+        //         n = m;
+        //         width = ((width - 1) >> 1) + 1;
+        //     }
+        //     if (n != 1 || next != siblings.length) return (false, bytes32(0));
+        //
+        // `n`, `i` and `m` are byte offsets. Reads stay in bounds: `i < n`, `m <= i`, and `next`
+        // is checked before each sibling read. A bad position zeroes `n` and `width`; a missing
+        // sibling sets `next` to `type(uint256).max`. Both fail the final check.
         uint256 next;
-        unchecked {
-            while (width > 1) {
+        /// @solidity memory-safe-assembly
+        assembly {
+            n := shl(5, n)
+            // Positions must be strictly ascending and below `width`. `last` is the previous
+            // position plus one, so the first position needs no special case.
+            let last := 0
+            for { let i := 0 } lt(i, n) { i := add(i, 0x20) } {
+                let p := add(mload(add(add(positions, 0x20), i)), 1)
+                if or(gt(p, width), iszero(gt(p, last))) {
+                    n := 0
+                    width := 0
+                    break
+                }
+                last := p
+            }
+            for {} gt(width, 1) {} {
                 // Parents of a strictly ascending layer are strictly ascending, so the layer
                 // can be rewritten in place.
-                uint256 m;
-                for (uint256 i = 0; i < n; i++) {
-                    uint256 position = positions[i];
-                    bytes32 node = leaves[i];
-                    if (position + 1 == width && width & 1 == 1) {
-                        // Lone trailing node of an odd-width layer: promoted unchanged.
-                    } else if (position & 1 == 0 && i + 1 < n && positions[i + 1] == position + 1)
-                    {
-                        node = efficientHash(node, leaves[i + 1]);
-                        i++;
-                    } else {
-                        if (next >= siblings.length) {
-                            return (false, bytes32(0));
+                let m := 0
+                for { let i := 0 } lt(i, n) { i := add(i, 0x20) } {
+                    let position := mload(add(add(positions, 0x20), i))
+                    let node := mload(add(add(leaves, 0x20), i))
+                    // Lone trailing node of an odd-width layer: promoted unchanged.
+                    if iszero(and(and(width, 1), eq(add(position, 1), width))) {
+                        switch and(
+                            and(iszero(and(position, 1)), lt(add(i, 0x20), n)),
+                            eq(mload(add(add(positions, 0x40), i)), add(position, 1))
+                        )
+                        case 1 {
+                            mstore(0x00, node)
+                            mstore(0x20, mload(add(add(leaves, 0x40), i)))
+                            node := keccak256(0x00, 0x40)
+                            i := add(i, 0x20)
                         }
-                        if (position & 1 == 1) {
-                            node = efficientHash(siblings[next], node);
-                        } else {
-                            node = efficientHash(node, siblings[next]);
+                        default {
+                            if iszero(lt(next, siblings.length)) {
+                                next := not(0)
+                                break
+                            }
+                            // A right child (odd position) hashes as (sibling, node).
+                            mstore(shl(5, and(position, 1)), node)
+                            mstore(
+                                xor(shl(5, and(position, 1)), 0x20),
+                                calldataload(add(siblings.offset, shl(5, next)))
+                            )
+                            node := keccak256(0x00, 0x40)
+                            next := add(next, 1)
                         }
-                        next++;
                     }
-                    positions[m] = position >> 1;
-                    leaves[m] = node;
-                    m++;
+                    mstore(add(add(positions, 0x20), m), shr(1, position))
+                    mstore(add(add(leaves, 0x20), m), node)
+                    m := add(m, 0x20)
                 }
-                n = m;
-                width = ((width - 1) >> 1) + 1;
+                if eq(next, not(0)) { break }
+                n := m
+                width := add(shr(1, sub(width, 1)), 1)
             }
         }
-        if (n != 1 || next != siblings.length) {
+        if (n != 0x20 || next != siblings.length) {
             return (false, bytes32(0));
         }
         return (true, leaves[0]);

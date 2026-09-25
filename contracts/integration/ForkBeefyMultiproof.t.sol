@@ -1,29 +1,62 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.34;
 
-// Fork-mainnet replay of a REAL production `submitFinal` through the multiproof BeefyClient.
-//
-// Source transaction:
-//   0xe8eb06c8e18879418408e255b0fd0e9cc72b9c668638f324735b98a0cb045936  (block 26,046,024)
-// It carries 28 legacy `ValidatorProof`s signed by validator set 5688, the *next* set at the
-// fork block, so it also covers the handover path. We fork one block BEFORE the tx, write the
-// locally-compiled BeefyClient over the live contract's code (keeping its storage: the ticket,
-// the validator sets), reassemble the proofs into the multiproof format, and replay the call
-// from the original relayer. It must succeed and advance the MMR root.
+// Fork-mainnet replay of real BEEFY submissions (see `MainnetBeefyFixture`) through the
+// multiproof BeefyClient. For each, fork one block before the tx, write the local BeefyClient
+// over the live code (keeping its storage: the ticket, the validator sets), re-encode the
+// proofs as a multiproof and replay the call from the original relayer. It must succeed and
+// advance the MMR root.
 //
 // Run (needs an archive RPC; a public default is used if MAINNET_RPC_URL is unset):
 //   FOUNDRY_PROFILE=integration forge test --match-contract ForkBeefyMultiproof -vv
 
 import {BeefyClient} from "../src/BeefyClient.sol";
 import {CompactProofLib} from "../test/utils/CompactProofLib.sol";
-import {MainnetSubmitFinalFixture} from "../test/MainnetSubmitFinalMultiproof.t.sol";
+import {MainnetBeefyFixture} from "../test/MainnetSubmitFinalMultiproof.t.sol";
 
-contract ForkBeefyMultiproofTest is MainnetSubmitFinalFixture {
+contract ForkBeefyMultiproofTest is MainnetBeefyFixture {
     function testMainnetSubmitFinalSucceedsAfterMultiproofEtch() public {
+        _replay(finalE8eb06());
+    }
+
+    function testMainnetSubmitFinal992ebbSucceedsAfterMultiproofEtch() public {
+        _replay(final992ebb());
+    }
+
+    function testMainnetSubmitFiatShamirSucceedsAfterMultiproofEtch() public {
+        _replay(fiatShamir0a9f5a());
+    }
+
+    function _replay(MainnetTx memory t) internal {
         // Default is a public archive endpoint; override with MAINNET_RPC_URL.
         string memory rpc = vm.envOr("MAINNET_RPC_URL", string("https://eth.drpc.org"));
-        vm.createSelectFork(rpc, FINAL_BLOCK - 1);
+        vm.createSelectFork(rpc, t.blockNumber - 1);
 
+        (uint128 id, uint128 len, bytes32 root,) =
+            t.handover ? BeefyClient(BC).nextValidatorSet() : BeefyClient(BC).currentValidatorSet();
+        assertEq(id, t.vsetId, "set id");
+        assertEq(len, t.vsetLength, "set length");
+        assertEq(root, t.vsetRoot, "set root");
+
+        (bytes memory multiproofCd, uint64 beefyBlock) = _multiproofCalldata(t);
+
+        bytes32 mmrBefore = BeefyClient(BC).latestMMRRoot();
+        _etchMultiproof();
+        vm.roll(t.blockNumber);
+        vm.prank(RELAYER);
+        (bool ok, bytes memory ret) = BC.call(multiproofCd);
+        assertTrue(ok, string.concat(t.name, " reverted: ", vm.toString(ret)));
+
+        assertEq(BeefyClient(BC).latestBeefyBlock(), beefyBlock, "beefy block");
+        assertTrue(BeefyClient(BC).latestMMRRoot() != mmrBefore, "MMR root must advance");
+    }
+
+    /// The fixture's call with the proofs re-encoded as a multiproof.
+    function _multiproofCalldata(MainnetTx memory t)
+        internal
+        view
+        returns (bytes memory cd, uint64 beefyBlock)
+    {
         (
             BeefyClient.Commitment memory commitment,
             uint256[] memory bitfield,
@@ -31,32 +64,19 @@ contract ForkBeefyMultiproofTest is MainnetSubmitFinalFixture {
             BeefyClient.MMRLeaf memory leaf,
             bytes32[] memory leafProof,
             uint256 leafProofOrder
-        ) = _load();
-
-        (uint128 nid, uint128 nlen, bytes32 nroot,) = BeefyClient(BC).nextValidatorSet();
-        assertEq(nid, VSET_ID, "next set id");
-        assertEq(nlen, VSET_LENGTH, "next set length");
-        assertEq(nroot, VSET_ROOT, "next set root");
-
-        bytes memory multiproofCd = abi.encodeWithSelector(
-            BeefyClient.submitFinal.selector,
+        ) = _load(t);
+        cd = abi.encodeWithSelector(
+            t.fiatShamir
+                ? BeefyClient.submitFiatShamir.selector
+                : BeefyClient.submitFinal.selector,
             commitment,
             bitfield,
-            CompactProofLib.toCompact(proofs, VSET_LENGTH),
+            CompactProofLib.toCompact(proofs, t.vsetLength),
             leaf,
             leafProof,
             leafProofOrder
         );
-
-        bytes32 mmrBefore = BeefyClient(BC).latestMMRRoot();
-        _etchMultiproof();
-        vm.roll(FINAL_BLOCK);
-        vm.prank(RELAYER);
-        (bool ok, bytes memory ret) = BC.call(multiproofCd);
-        assertTrue(ok, string.concat("submitFinal reverted: ", vm.toString(ret)));
-
-        assertEq(BeefyClient(BC).latestBeefyBlock(), commitment.blockNumber, "beefy block");
-        assertTrue(BeefyClient(BC).latestMMRRoot() != mmrBefore, "MMR root must advance");
+        beefyBlock = commitment.blockNumber;
     }
 
     function _etchMultiproof() internal {

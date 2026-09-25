@@ -5,6 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
 import {ECDSA} from "openzeppelin/utils/cryptography/ECDSA.sol";
 import {BeefyClient} from "../src/BeefyClient.sol";
+import {Bitfield} from "../src/utils/Bitfield.sol";
 import {SubstrateMerkleProof} from "../src/utils/SubstrateMerkleProof.sol";
 import {CompactProofLib} from "./utils/CompactProofLib.sol";
 
@@ -28,28 +29,93 @@ contract MerkleHarness {
     }
 }
 
-/// @dev A real mainnet `submitFinal` in the legacy `ValidatorProof[]` format, shared by the
-/// offline test below and the fork replay in integration/ForkBeefyMultiproof.t.sol.
+/// @dev Real mainnet submissions in the legacy `ValidatorProof[]` format, shared with
+/// integration/ForkBeefyMultiproof.t.sol.
 ///
-/// Tx: https://etherscan.io/tx/0xe8eb06c8e18879418408e255b0fd0e9cc72b9c668638f324735b98a0cb045936
 /// BeefyClient: 0x7cfc5C8b341991993080Af67D940B6aD19a010E1
 ///
-/// `test/data/mainnet_submitFinal_e8eb06.hex` is that tx's calldata, unmodified.
-abstract contract MainnetSubmitFinalFixture is Test {
+/// Each `test/data/mainnet_*.hex` is the calldata of the call to BeefyClient, unmodified. The
+/// Fiat-Shamir one is the inner call of a Multicall3 `aggregate3`. Validator sets are as held
+/// by BeefyClient at `blockNumber - 1`.
+abstract contract MainnetBeefyFixture is Test {
     address constant BC = 0x7cfc5C8b341991993080Af67D940B6aD19a010E1;
     address constant RELAYER = 0xBa9bC9a8Aa87872f7B990031bde984A00b9CEd49;
-    uint256 constant FINAL_BLOCK = 26_046_024;
-    string constant FINAL_FILE = "test/data/mainnet_submitFinal_e8eb06.hex";
 
-    // The commitment is signed by validator set 5688, which was the *next* set at
-    // FINAL_BLOCK - 1 (`nextValidatorSet()` on the live contract). Every legacy path in the tx
-    // must verify against this root, so a wrong constant fails the test.
-    uint64 constant VSET_ID = 5688;
-    uint256 constant VSET_LENGTH = 600;
-    bytes32 constant VSET_ROOT =
-        0x3318c64b0931ea8df8f30ee9d6d890009899c0596f6446770c27bac21bab964e;
+    struct MainnetTx {
+        string name;
+        string file;
+        uint256 blockNumber;
+        bool fiatShamir;
+        // Signed by the next validator set.
+        bool handover;
+        uint64 vsetId;
+        uint256 vsetLength;
+        bytes32 vsetRoot;
+    }
 
-    function decodeFinal(bytes calldata cd)
+    /// https://etherscan.io/tx/0xe8eb06c8e18879418408e255b0fd0e9cc72b9c668638f324735b98a0cb045936
+    /// `submitFinal`, 28 proofs, handover to set 5688.
+    function finalE8eb06() internal pure returns (MainnetTx memory) {
+        return MainnetTx({
+            name: "submitFinal e8eb06",
+            file: "test/data/mainnet_submitFinal_e8eb06.hex",
+            blockNumber: 26_046_024,
+            fiatShamir: false,
+            handover: true,
+            vsetId: 5688,
+            vsetLength: 600,
+            vsetRoot: 0x3318c64b0931ea8df8f30ee9d6d890009899c0596f6446770c27bac21bab964e
+        });
+    }
+
+    /// https://etherscan.io/tx/0x992ebb00fd02356eed88924625d19ff9b2c3aba1a892f0dbdee4d0727485a544
+    /// `submitFinal`, 28 proofs, handover to set 5693.
+    function final992ebb() internal pure returns (MainnetTx memory) {
+        return MainnetTx({
+            name: "submitFinal 992ebb",
+            file: "test/data/mainnet_submitFinal_992ebb.hex",
+            blockNumber: 26_051_984,
+            fiatShamir: false,
+            handover: true,
+            vsetId: 5693,
+            vsetLength: 600,
+            vsetRoot: 0xf4284b693365c3127227bacb694bcaf610eed8bb79182537489d784377b8c56f
+        });
+    }
+
+    /// https://etherscan.io/tx/0x0a9f5a3c4f0ef26f0914312ffbf7608e8b56a2821dd16daba8895bc6cd683ff2
+    /// `submitFiatShamir` via Multicall3, 111 proofs, current set 5694.
+    function fiatShamir0a9f5a() internal pure returns (MainnetTx memory) {
+        return MainnetTx({
+            name: "submitFiatShamir 0a9f5a",
+            file: "test/data/mainnet_submitFiatShamir_0a9f5a.hex",
+            blockNumber: 26_053_670,
+            fiatShamir: true,
+            handover: false,
+            vsetId: 5694,
+            vsetLength: 600,
+            vsetRoot: 0xf4284b693365c3127227bacb694bcaf610eed8bb79182537489d784377b8c56f
+        });
+    }
+
+    /// `nextValidatorSet()` at the Fiat-Shamir fixture's block.
+    function nextOf5694() internal pure returns (BeefyClient.ValidatorSet memory) {
+        return BeefyClient.ValidatorSet({
+            id: 5695,
+            length: 600,
+            root: 0x4b79641cb341e45f54e4fd644b676628c5afd3b60ca7972577e5ec210d59fbb9
+        });
+    }
+
+    function mainnetTxs() internal pure returns (MainnetTx[] memory txs) {
+        txs = new MainnetTx[](3);
+        txs[0] = finalE8eb06();
+        txs[1] = final992ebb();
+        txs[2] = fiatShamir0a9f5a();
+    }
+
+    /// `submitFinal` and `submitFiatShamir` share the legacy argument layout.
+    function decodeLegacy(bytes calldata cd)
         external
         pure
         returns (
@@ -74,7 +140,7 @@ abstract contract MainnetSubmitFinalFixture is Test {
         );
     }
 
-    function _load()
+    function _load(MainnetTx memory t)
         internal
         view
         returns (
@@ -86,9 +152,9 @@ abstract contract MainnetSubmitFinalFixture is Test {
             uint256 leafProofOrder
         )
     {
-        bytes memory legacyCd = vm.parseBytes(vm.readFile(FINAL_FILE));
+        bytes memory legacyCd = vm.parseBytes(vm.readFile(t.file));
         (commitment, bitfield, proofs, leaf, leafProof, leafProofOrder) =
-            this.decodeFinal(legacyCd);
+            this.decodeLegacy(legacyCd);
     }
 
     function _deploy() internal returns (BeefyClient) {
@@ -101,7 +167,7 @@ abstract contract MainnetSubmitFinalFixture is Test {
 }
 
 /// Can the legacy proofs be reassembled into a multiproof the contract accepts? Runs offline.
-contract MainnetSubmitFinalMultiproofTest is MainnetSubmitFinalFixture {
+contract MainnetSubmitFinalMultiproofTest is MainnetBeefyFixture {
     MerkleHarness harness;
 
     function setUp() public {
@@ -111,11 +177,62 @@ contract MainnetSubmitFinalMultiproofTest is MainnetSubmitFinalFixture {
     /// Offline: every real legacy path verifies, and the same leaves -- derived from the
     /// recovered signers, as the contract does -- reproduce the root as one multiproof.
     function testMainnetMultiproofLibraryAcceptsRealProofs() public {
+        MainnetTx[] memory txs = mainnetTxs();
+        for (uint256 t = 0; t < txs.length; t++) {
+            _checkLibrary(txs[t]);
+        }
+    }
+
+    /// Replays the Fiat-Shamir tx on a fresh BeefyClient. It needs no ticket, so no fork.
+    function testMainnetFiatShamirReplaysOffline() public {
+        MainnetTx memory t = fiatShamir0a9f5a();
+        (
+            BeefyClient.Commitment memory commitment,
+            uint256[] memory bitfield,
+            BeefyClient.ValidatorProof[] memory proofs,
+            BeefyClient.MMRLeaf memory leaf,
+            bytes32[] memory leafProof,
+            uint256 leafProofOrder
+        ) = _load(t);
+
+        BeefyClient bc = new BeefyClient(
+            3,
+            8,
+            16,
+            111,
+            0,
+            BeefyClient.ValidatorSet({
+                id: t.vsetId, length: uint128(t.vsetLength), root: t.vsetRoot
+            }),
+            nextOf5694()
+        );
+
+        uint256[] memory sample = Bitfield.toIndices(
+            bc.createFiatShamirFinalBitfield(commitment, bitfield), proofs.length
+        );
+        for (uint256 i = 0; i < proofs.length; i++) {
+            assertEq(sample[i], proofs[i].index, "Fiat-Shamir sample differs from mainnet");
+        }
+
+        bc.submitFiatShamir(
+            commitment,
+            bitfield,
+            CompactProofLib.toCompact(proofs, t.vsetLength),
+            leaf,
+            leafProof,
+            leafProofOrder
+        );
+        assertEq(bc.latestBeefyBlock(), commitment.blockNumber, "beefy block");
+    }
+
+    function _checkLibrary(MainnetTx memory t) internal {
         (
             BeefyClient.Commitment memory commitment,,
             BeefyClient.ValidatorProof[] memory proofs,,,
-        ) = _load();
-        assertEq(commitment.validatorSetID, VSET_ID, "commitment signed by another set");
+        ) = _load(t);
+        assertEq(
+            commitment.validatorSetID, t.vsetId, string.concat(t.name, ": signed by another set")
+        );
 
         bytes32 commitmentHash = _deploy().computeCommitmentHash(commitment);
 
@@ -133,23 +250,24 @@ contract MainnetSubmitFinalMultiproofTest is MainnetSubmitFinalFixture {
             leaves[i] = keccak256(abi.encodePacked(signer));
 
             (bool ok, bytes32 got) =
-                harness.computeRoot(leaves[i], proofs[i].index, VSET_LENGTH, proofs[i].proof);
-            assertTrue(ok, "legacy path structurally invalid");
-            assertEq(got, VSET_ROOT, "legacy path root mismatch");
+                harness.computeRoot(leaves[i], proofs[i].index, t.vsetLength, proofs[i].proof);
+            assertTrue(ok, string.concat(t.name, ": legacy path structurally invalid"));
+            assertEq(got, t.vsetRoot, string.concat(t.name, ": legacy path root mismatch"));
             legacySiblingCount += proofs[i].proof.length;
         }
 
         BeefyClient.CompactValidatorProofs memory compact =
-            CompactProofLib.toCompact(proofs, VSET_LENGTH);
+            CompactProofLib.toCompact(proofs, t.vsetLength);
 
         (bool multiOk, bytes32 multiRoot) =
-            harness.computeMultiRoot(positions, leaves, VSET_LENGTH, compact.siblings);
-        assertTrue(multiOk, "multiproof structurally invalid");
-        assertEq(multiRoot, VSET_ROOT, "multiproof root mismatch");
+            harness.computeMultiRoot(positions, leaves, t.vsetLength, compact.siblings);
+        assertTrue(multiOk, string.concat(t.name, ": multiproof structurally invalid"));
+        assertEq(multiRoot, t.vsetRoot, string.concat(t.name, ": multiproof root mismatch"));
 
-        console.log("legacy proofs", proofs.length);
-        console.log("legacy siblings", legacySiblingCount);
-        console.log("multiproof siblings", compact.siblings.length);
+        console.log(t.name);
+        console.log("  legacy proofs", proofs.length);
+        console.log("  legacy siblings", legacySiblingCount);
+        console.log("  multiproof siblings", compact.siblings.length);
         assertLt(compact.siblings.length, legacySiblingCount, "expected sibling compression");
     }
 }
