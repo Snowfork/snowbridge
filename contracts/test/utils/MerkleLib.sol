@@ -218,6 +218,19 @@ library MerkleLibSubstrate {
         }
     }
 
+    /// Insertion sort, ascending, in place.
+    function sort(uint256[] memory a) internal pure {
+        for (uint256 i = 1; i < a.length; i++) {
+            uint256 x = a[i];
+            uint256 j = i;
+            while (j > 0 && a[j - 1] > x) {
+                a[j] = a[j - 1];
+                j--;
+            }
+            a[j] = x;
+        }
+    }
+
     /// Whether position `p`'s length-`kp` proof verifies at index `X` in a width-`n` tree, i.e. the
     /// first `kp` per-level direction bits match. Mirrors `SubstrateMerkleProof.computeRoot`'s
     /// branch logic; pre-fix the library accepted these aliases, post-fix it does not.
