@@ -410,8 +410,8 @@ contract BeefyClient {
      * @dev Submit a commitment and leaf for final verification
      * @param commitment contains the full commitment that was used for the commitmentHash
      * @param bitfield claiming which validators have signed the commitment
-     * @param proofs packed signatures plus the concatenated validator-set Merkle paths,
-     * both ordered by ascending validator index (see `CompactValidatorProofs`)
+     * @param proofs packed signatures, in ascending validator index order, plus one
+     * validator-set multiproof (see `CompactValidatorProofs`)
      * @param leaf an MMR leaf provable using the MMR root in the commitment payload
      * @param leafProof an MMR leaf proof
      * @param leafProofOrder a bitfield describing the order of each item (left vs right)
@@ -560,8 +560,8 @@ contract BeefyClient {
      * @dev Submit a commitment and leaf using the Fiat-Shamir approach
      * @param commitment contains the full commitment that was used for the commitmentHash
      * @param bitfield claiming which validators have signed the commitment
-     * @param proofs packed signatures plus the concatenated validator-set Merkle paths,
-     * both ordered by ascending validator index (see `CompactValidatorProofs`)
+     * @param proofs packed signatures, in ascending validator index order, plus one
+     * validator-set multiproof (see `CompactValidatorProofs`)
      * @param leaf an MMR leaf provable using the MMR root in the commitment payload
      * @param leafProof an MMR leaf proof
      * @param leafProofOrder a bitfield describing the order of each item (left vs right)
