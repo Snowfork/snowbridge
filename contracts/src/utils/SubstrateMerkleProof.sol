@@ -156,16 +156,20 @@ library SubstrateMerkleProof {
         assembly {
             n := shl(5, n)
             // Positions must be strictly ascending and below `width`. `last` is the previous
-            // position plus one, so the first position needs no special case.
-            let last := 0
-            for { let i := 0 } lt(i, n) { i := add(i, 0x20) } {
-                let p := add(mload(add(add(positions, 0x20), i)), 1)
-                if or(gt(p, width), iszero(gt(p, last))) {
-                    n := 0
-                    width := 0
-                    break
+            // position plus one, so the first position needs no special case. The block frees
+            // `last` before the fold; without it, unoptimized builds (`forge coverage`) run out
+            // of stack.
+            {
+                let last := 0
+                for { let i := 0 } lt(i, n) { i := add(i, 0x20) } {
+                    let p := add(mload(add(add(positions, 0x20), i)), 1)
+                    if or(gt(p, width), iszero(gt(p, last))) {
+                        n := 0
+                        width := 0
+                        break
+                    }
+                    last := p
                 }
-                last := p
             }
             for {} gt(width, 1) {} {
                 // Parents of a strictly ascending layer are strictly ascending, so the layer
