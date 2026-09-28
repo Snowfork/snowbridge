@@ -21,6 +21,7 @@ import {
     TransferKind as BaseTransferKind,
 } from "@snowbridge/base-types"
 import type { AddTipInterface } from "./addTip/addTipInterface"
+import type { StablesTransfer } from "./stables"
 import type { AgentCreationInterface } from "./types/registration/agent"
 import type { RegistrationInterface } from "./types/registration/toPolkadot"
 import type { TransferInterface as ForInterParachainTransferInterface } from "./transfers/forInterParachain/transferInterface"
@@ -80,6 +81,7 @@ export * as historyV2 from "./history_v2"
 export { TransferStatus } from "./history_v2"
 export * as subsquidV2 from "./subsquid_v2"
 export * as governance from "./governance"
+export * as stables from "./stables"
 
 export class Context<T extends EthereumProviderTypes> {
     readonly environment: Environment
@@ -506,6 +508,15 @@ export class SnowbridgeApi<P extends EthereumProvider<any>> {
             ) => RegistrationInterface<ProviderTypesFor<P>>
         }
         return new RegisterToken(this.context, this.info.registry)
+    }
+    stables(): StablesTransfer<ProviderTypesFor<P>> {
+        const { StablesTransfer } = require("./stables") as {
+            StablesTransfer: new (
+                info: BridgeInfo,
+                context: Context<ProviderTypesFor<P>>,
+            ) => StablesTransfer<ProviderTypesFor<P>>
+        }
+        return new StablesTransfer(this.info, this.context)
     }
     addTip(): AddTipInterface<ProviderTypesFor<P>> {
         const { AddTip } = require("./addTip/addTip") as {

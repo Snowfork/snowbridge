@@ -533,7 +533,7 @@ export async function dryRunTx(
             result.isOk && result.asOk.executionResult.isErr
                 ? result.asOk.executionResult.asErr.toJSON()
                 : undefined,
-        forwardedXcm: forwardedXcm[1][0],
+        forwardedXcm: forwardedXcm?.[1]?.[0],
     }
 }
 
@@ -549,7 +549,11 @@ async function dryRunXcm(source: ApiPromise, originParachainId: number, xcm: any
 
     const success = result.isOk && result.asOk.executionResult.isComplete
     if (!success) {
-        console.error("Error during dry run on asset hub:", xcm.toHuman(), result.toHuman())
+        console.error(
+            "Error during dry run on asset hub:",
+            xcm.toHuman?.() ?? xcm,
+            result.toHuman(),
+        )
     }
     return {
         success: success,
