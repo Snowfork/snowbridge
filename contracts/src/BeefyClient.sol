@@ -106,19 +106,32 @@ contract BeefyClient {
     }
 
     /**
-     * @dev A ticket tracks working state for the interactive submission of new commitments
+     * @dev A ticket tracks working state for the interactive submission of new commitments.
+     *
+     * Each relayer has one ticket, and its two slots are reused from one submission to the
+     * next. It is never deleted: a used or expired ticket only has `blockNumber` set to zero.
+     * The slots then stay non-zero, so the next ticket updates them instead of creating them,
+     * which is much cheaper once state creation is repriced.
+     *
+     * Slot 0 holds everything that changes during a session, so `commitPrevRandao` writes one
+     * slot. `submitInitial` rewrites slot 0 whole, which resets `seed` to zero: a new ticket
+     * can never use the previous ticket's seed. Slot 1 binds the ticket to its commitment and
+     * bitfield. It must stay a full 256-bit hash: `submitFinal` does not re-check the bitfield
+     * quorum, so a collision would let a relayer swap in a bitfield that claims only
+     * attacker-controlled validators.
      */
     struct Ticket {
-        // The block number this ticket was issued
+        // The block number this ticket was issued. Zero when no ticket is active.
         uint64 blockNumber;
         // Length of the validator set that signed the commitment
         uint32 validatorSetLen;
         // The number of signatures required
         uint32 numRequiredSignatures;
-        // The PREVRANDAO seed selected for this ticket session
-        uint256 prevRandao;
-        // Hash of a bitfield claiming which validators have signed
-        bytes32 bitfieldHash;
+        // Sampling seed: the low 120 bits of PREVRANDAO, never zero once captured. Zero means
+        // `commitPrevRandao` has not run for this ticket.
+        uint120 seed;
+        // keccak256(commitmentHash, keccak256(bitfield)), see `computeClaimHash`
+        bytes32 claimHash;
     }
 
     /// @dev The MMRLeaf describes the leaf structure of the MMR
@@ -179,8 +192,8 @@ contract BeefyClient {
     /// @dev State of the next validator set
     ValidatorSetState public nextValidatorSet;
 
-    /// @dev Pending tickets for commitment submission
-    mapping(bytes32 ticketID => Ticket) public tickets;
+    /// @dev The ticket of each relayer. At most one is active per relayer.
+    mapping(address relayer => Ticket) public tickets;
 
     /* Constants */
 
@@ -327,7 +340,8 @@ contract BeefyClient {
         // This ensures the bitfield was created by createInitialBitfield or equivalent
         Bitfield.validatePadding(bitfield, vset.length);
 
-        tickets[createTicketID(msg.sender, commitmentHash)] = Ticket({
+        // Replaces any ticket this relayer already has, with `seed` reset to zero.
+        tickets[msg.sender] = Ticket({
             blockNumber: uint64(block.number),
             validatorSetLen: uint32(vset.length),
             numRequiredSignatures: uint32(
@@ -335,26 +349,27 @@ contract BeefyClient {
                     vset.length, signatureUsageCount, minNumRequiredSignatures
                 )
             ),
-            prevRandao: 0,
-            bitfieldHash: keccak256(abi.encodePacked(bitfield))
+            seed: 0,
+            claimHash: computeClaimHash(commitmentHash, bitfield)
         });
 
         emit NewTicket(msg.sender, commitment.blockNumber);
     }
 
     /**
-     * @dev Capture PREVRANDAO
-     * @param commitmentHash contains the commitmentHash signed by the validators
+     * @dev Capture PREVRANDAO for the caller's open ticket.
+     *
+     * The parameter is kept for ABI compatibility and is not checked: a relayer has only one
+     * ticket, and `submitFinal` checks the commitment and bitfield against `claimHash`.
      */
-    function commitPrevRandao(bytes32 commitmentHash) external {
-        bytes32 ticketID = createTicketID(msg.sender, commitmentHash);
-        Ticket storage ticket = tickets[ticketID];
+    function commitPrevRandao(bytes32) external {
+        Ticket storage ticket = tickets[msg.sender];
 
         if (ticket.blockNumber == 0) {
             revert InvalidTicket();
         }
 
-        if (ticket.prevRandao != 0) {
+        if (ticket.seed != 0) {
             revert PrevRandaoAlreadyCaptured();
         }
 
@@ -365,13 +380,16 @@ contract BeefyClient {
 
         // relayer can capture within `randaoCommitExpiration` blocks
         if (block.number > ticket.blockNumber + randaoCommitDelay + randaoCommitExpiration) {
-            delete tickets[ticketID];
+            ticket.blockNumber = 0;
             emit TicketExpired();
             return;
         }
 
-        // Post-merge, the difficulty opcode now returns PREVRANDAO
-        ticket.prevRandao = block.prevrandao;
+        // Post-merge, the difficulty opcode now returns PREVRANDAO. 120 bits is ample for a
+        // sampling seed; zero is reserved for "not captured".
+        // forge-lint: disable-next-line(unsafe-typecast)
+        uint120 seed = uint120(block.prevrandao);
+        ticket.seed = seed == 0 ? 1 : seed;
     }
 
     /**
@@ -392,8 +410,7 @@ contract BeefyClient {
         uint256 leafProofOrder
     ) external {
         bytes32 commitmentHash = keccak256(encodeCommitment(commitment));
-        bytes32 ticketID = createTicketID(msg.sender, commitmentHash);
-        validateTicket(ticketID, commitment, bitfield);
+        Ticket storage ticket = validateTicket(commitmentHash, commitment, bitfield);
 
         bool is_next_session = false;
         ValidatorSetState storage vset = currentValidatorSet;
@@ -408,7 +425,7 @@ contract BeefyClient {
         // This ensures the bitfield was created by createInitialBitfield or equivalent
         Bitfield.validatePadding(bitfield, vset.length);
 
-        verifyCommitment(commitmentHash, ticketID, bitfield, vset, proofs);
+        verifyCommitment(commitmentHash, ticket, bitfield, vset, proofs);
 
         bytes32 newMMRRoot = ensureProvidesMMRRoot(commitment);
 
@@ -433,7 +450,9 @@ contract BeefyClient {
 
         latestMMRRoot = newMMRRoot;
         latestBeefyBlock = commitment.blockNumber;
-        delete tickets[ticketID];
+        // Close the ticket but keep its slots non-zero for the relayer's next ticket. The stale
+        // seed is unreachable while `blockNumber` is zero, and `submitInitial` resets it.
+        ticket.blockNumber = 0;
 
         emit NewMMRRoot(newMMRRoot, commitment.blockNumber);
     }
@@ -486,12 +505,12 @@ contract BeefyClient {
         view
         returns (uint256[] memory)
     {
-        Ticket storage ticket = tickets[createTicketID(msg.sender, commitmentHash)];
-        if (ticket.bitfieldHash != keccak256(abi.encodePacked(bitfield))) {
-            revert InvalidBitfield();
+        Ticket storage ticket = claimedTicket(commitmentHash, bitfield);
+        if (ticket.seed == 0) {
+            revert PrevRandaoNotCaptured();
         }
         return Bitfield.subsample(
-            ticket.prevRandao, bitfield, ticket.validatorSetLen, ticket.numRequiredSignatures
+            ticket.seed, bitfield, ticket.validatorSetLen, ticket.numRequiredSignatures
         );
     }
 
@@ -595,17 +614,32 @@ contract BeefyClient {
 
     /* Internal Functions */
 
-    // Creates a unique ticket ID for a new interactive prover-verifier session
-    function createTicketID(address account, bytes32 commitmentHash)
+    /**
+     * @dev The caller's ticket, which must be open and for this commitment and bitfield.
+     */
+    function claimedTicket(bytes32 commitmentHash, uint256[] calldata bitfield)
+        internal
+        view
+        returns (Ticket storage ticket)
+    {
+        ticket = tickets[msg.sender];
+        if (
+            ticket.blockNumber == 0
+                || ticket.claimHash != computeClaimHash(commitmentHash, bitfield)
+        ) {
+            revert InvalidTicket();
+        }
+    }
+
+    /**
+     * @dev Binds a ticket to the commitment and the bitfield claimed in `submitInitial`.
+     */
+    function computeClaimHash(bytes32 commitmentHash, uint256[] calldata bitfield)
         internal
         pure
-        returns (bytes32 value)
+        returns (bytes32)
     {
-        assembly {
-            mstore(0x00, account)
-            mstore(0x20, commitmentHash)
-            value := keccak256(0x0, 0x40)
-        }
+        return keccak256(abi.encode(commitmentHash, keccak256(abi.encodePacked(bitfield))));
     }
 
     /**
@@ -653,12 +687,11 @@ contract BeefyClient {
      */
     function verifyCommitment(
         bytes32 commitmentHash,
-        bytes32 ticketID,
+        Ticket storage ticket,
         uint256[] calldata bitfield,
         ValidatorSetState storage vset,
         ValidatorProof[] calldata proofs
     ) internal view {
-        Ticket storage ticket = tickets[ticketID];
         // Verify that enough signature proofs have been supplied
         uint256 numRequiredSignatures = ticket.numRequiredSignatures;
         if (proofs.length != numRequiredSignatures) {
@@ -667,7 +700,7 @@ contract BeefyClient {
 
         // Generate final bitfield indicating which validators need to be included in the proofs.
         uint256[] memory finalbitfield =
-            Bitfield.subsample(ticket.prevRandao, bitfield, vset.length, numRequiredSignatures);
+            Bitfield.subsample(ticket.seed, bitfield, vset.length, numRequiredSignatures);
 
         for (uint256 i = 0; i < proofs.length; i++) {
             ValidatorProof calldata proof = proofs[i];
@@ -851,18 +884,14 @@ contract BeefyClient {
      * @dev Basic validation of a ticket for submitFinal
      */
     function validateTicket(
-        bytes32 ticketID,
+        bytes32 commitmentHash,
         Commitment calldata commitment,
         uint256[] calldata bitfield
-    ) internal view {
-        Ticket storage ticket = tickets[ticketID];
+    ) internal view returns (Ticket storage ticket) {
+        // Reverts unless submitInitial opened a ticket for this commitment and bitfield
+        ticket = claimedTicket(commitmentHash, bitfield);
 
-        if (ticket.blockNumber == 0) {
-            // submitInitial hasn't been called yet
-            revert InvalidTicket();
-        }
-
-        if (ticket.prevRandao == 0) {
+        if (ticket.seed == 0) {
             // commitPrevRandao hasn't been called yet
             revert PrevRandaoNotCaptured();
         }
@@ -870,12 +899,6 @@ contract BeefyClient {
         if (commitment.blockNumber <= latestBeefyBlock) {
             // ticket is obsolete
             revert StaleCommitment();
-        }
-
-        if (ticket.bitfieldHash != keccak256(abi.encodePacked(bitfield))) {
-            // The provided claims bitfield isn't the same one that was
-            // passed to submitInitial
-            revert InvalidBitfield();
         }
     }
 }

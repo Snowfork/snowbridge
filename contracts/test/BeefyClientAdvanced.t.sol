@@ -91,11 +91,7 @@ contract BeefyClientAdvancedTest is Test {
 
         vm.startPrank(honestRelayer1);
         beefyClient.submitInitial(commitment, bitfield, vproof);
-        bytes32 ticketID1 = beefyClient.createTicketID_public(honestRelayer1, commitmentHash);
-        (
-            ,, /*blockNumber1*/ /*vsetLen1*/
-            uint32 nRequiredBefore,, /*prevRandao1*/ /*bitfieldHash1*/
-        ) = beefyClient.tickets(ticketID1);
+        (,, uint32 nRequiredBefore,,) = beefyClient.tickets(honestRelayer1);
         vm.stopPrank();
 
         vm.startPrank(attacker);
@@ -109,11 +105,7 @@ contract BeefyClientAdvancedTest is Test {
         // -------------------------
         vm.startPrank(honestRelayer2);
         beefyClient.submitInitial(commitment, bitfield, vproof);
-        bytes32 ticketID2 = beefyClient.createTicketID_public(honestRelayer2, commitmentHash);
-        (,, /*blockNumber2*/ /*vsetLen2*/
-            // forge-lint: disable-next-line(unsafe-typecast)
-            uint32 nRequiredAfter,/*prevRandao2*/ /*bfhash2*/,) =
-            beefyClient.tickets(ticketID2);
+        (,, uint32 nRequiredAfter,,) = beefyClient.tickets(honestRelayer2);
         vm.stopPrank();
         // assert protocol-wide grief: ΔN >= 24 and never exceeds quorum
         assertGt(nRequiredAfter, nRequiredBefore, "N did not increase");
