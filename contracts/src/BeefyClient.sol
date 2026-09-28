@@ -286,6 +286,8 @@ contract BeefyClient {
             revert StaleCommitment();
         }
 
+        // `proof.index` is not bounded here. An index at or past `vset.length` fails
+        // `isValidatorInSet` below, which reverts the counter update with it.
         ValidatorSetState storage vset = currentValidatorSet;
         uint16 signatureUsageCount;
         if (commitment.validatorSetID == currentValidatorSet.id) {

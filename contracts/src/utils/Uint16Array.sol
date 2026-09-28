@@ -40,7 +40,8 @@ struct Uint16Array {
 }
 
 /**
- * @dev Gets the counter at the logical index
+ * @dev Gets the counter at the logical index. There is no bound check: the caller must check
+ * `index` against the number of counters.
  * @param self The array.
  * @param index The logical index.
  */
@@ -56,7 +57,8 @@ function get(Uint16Array storage self, uint256 index) view returns (uint16) {
 }
 
 /**
- * @dev Sets the counter at the logical index.
+ * @dev Sets the counter at the logical index. There is no bound check: the caller must check
+ * `index` against the number of counters, or revert the transaction when it is out of range.
  * @param self The array.
  * @param index The logical index of the counter in the array.
  * @param value The value to set the counter to.
