@@ -208,7 +208,8 @@ contract BeefyClientTest is Test {
 
         assertEq(beefyClient.latestBeefyBlock(), blockNumber);
         assertEq(beefyClient.getValidatorCounter(false, finalValidatorProofs[0].index), 1);
-        assertEq(beefyClient.getValidatorCounter(true, finalValidatorProofs[0].index), 0);
+        // Current and next share `root` here, so they share counters.
+        assertEq(beefyClient.getValidatorCounter(true, finalValidatorProofs[0].index), 1);
         return commitment;
     }
 
@@ -429,7 +430,8 @@ contract BeefyClientTest is Test {
         assertEq(beefyClient.getValidatorCounter(false, finalValidatorProofs[0].index), 0);
         assertEq(beefyClient.getValidatorCounter(true, finalValidatorProofs[0].index), 0);
         beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
-        assertEq(beefyClient.getValidatorCounter(false, finalValidatorProofs[0].index), 0);
+        // Current and next share `root` here, so they share counters.
+        assertEq(beefyClient.getValidatorCounter(false, finalValidatorProofs[0].index), 1);
         assertEq(beefyClient.getValidatorCounter(true, finalValidatorProofs[0].index), 1);
 
         vm.roll(block.number + randaoCommitDelay);
@@ -452,11 +454,12 @@ contract BeefyClientTest is Test {
 
         // submit with the first validator
         beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[1]);
-        assertEq(beefyClient.getValidatorCounter(false, finalValidatorProofs[1].index), 0);
+        // Current and next share `root` here, so they share counters.
+        assertEq(beefyClient.getValidatorCounter(false, finalValidatorProofs[1].index), 1);
         assertEq(beefyClient.getValidatorCounter(true, finalValidatorProofs[1].index), 1);
 
         beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
-        assertEq(beefyClient.getValidatorCounter(false, finalValidatorProofs[0].index), 0);
+        assertEq(beefyClient.getValidatorCounter(false, finalValidatorProofs[0].index), 1);
         assertEq(beefyClient.getValidatorCounter(true, finalValidatorProofs[0].index), 1);
 
         vm.roll(block.number + randaoCommitDelay);
@@ -478,6 +481,30 @@ contract BeefyClientTest is Test {
     function testCommitPrevRandaoCalledInSequence() public {
         vm.expectRevert(BeefyClient.InvalidTicket.selector);
         commitPrevRandao();
+    }
+
+    function testUsageCountersAreKeyedByRoot() public {
+        BeefyClient.Commitment memory commitment = initialize(setId);
+        uint256 index = finalValidatorProofs[0].index;
+
+        // A next set with different membership keeps its own counters.
+        beefyClient.initialize_public(
+            0,
+            BeefyClient.ValidatorSet(setId, setSize, root),
+            BeefyClient.ValidatorSet(setId + 1, setSize, bytes32(uint256(root) + 1))
+        );
+        beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
+        assertEq(beefyClient.getValidatorCounter(false, index), 1);
+        assertEq(beefyClient.getValidatorCounter(true, index), 0);
+
+        // A later set with the same root sees the same counters.
+        beefyClient.initialize_public(
+            0,
+            BeefyClient.ValidatorSet(setId + 5, setSize, bytes32(uint256(root) + 1)),
+            BeefyClient.ValidatorSet(setId + 6, setSize, root)
+        );
+        assertEq(beefyClient.getValidatorCounter(false, index), 0);
+        assertEq(beefyClient.getValidatorCounter(true, index), 1);
     }
 
     function testSubmitWithHandoverFailWithInvalidValidatorProofWhenNotProvidingSignatureCount()
@@ -800,10 +827,6 @@ contract BeefyClientTest is Test {
         assertEq(1, result, "B");
         result = beefyClient.computeNumRequiredSignatures_public(1, 0, 0);
         assertEq(1, result, "C");
-    }
-
-    function testStorageToStorageCopies() public {
-        beefyClient.copyCounters();
     }
 
     function testFuzzInitializationValidation(uint128 currentId, uint128 nextId) public {
