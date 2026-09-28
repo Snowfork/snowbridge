@@ -8,8 +8,8 @@ import { blake2AsU8a, decodeAddress } from "@polkadot/util-crypto"
 import { BridgeInfo, EthereumProviderTypes, TransferRoute } from "@snowbridge/base-types"
 import { Context } from "."
 import { DOT_LOCATION } from "./assets_v2"
-import { dryRunTx } from "./forInterParachain"
 import { runEthereumDryRun } from "./dryRunEthereum"
+import { ACCOUNT_ID_32, resolveBeneficiary } from "./crypto"
 import { findTotalOrUndefined } from "./fees"
 import { getOperatingStatus } from "./status"
 import {
@@ -20,10 +20,12 @@ import {
 import { dryRunBridgeHub } from "./toEthereum_v2"
 import type { DeliveryFee, Transfer, ValidationLog } from "./types/toEthereum"
 import { ValidationKind, ValidationReason } from "./types/toEthereum"
-import type { VolumeFeeParams } from "./feeSchedule"
+import { calculateVolumeTipInWei, type VolumeFeeParams } from "./feeSchedule"
+import type { ServiceFee } from "./types/fee"
 
 // Stables moved from Asset Hub to Hydration, swapped, then bridged to Ethereum.
 export const HYDRATION_PARA_ID = 2034
+const ASSET_HUB_PARA_ID = 1000
 const ASSET_HUB_ASSETS_PALLET = 50
 const HYDRATION_DOT_ASSET_ID = 5
 const HYDRATION_NATIVE_ASSET_ID = 0
@@ -152,8 +154,33 @@ export type MoveToHydrationTransfer = {
     sourceAccount: string
     sourceAccountHex: string
     amount: bigint
+    // DOT sent alongside, for step 2 fees on Hydration.
+    dotTopUp: bigint
+    serviceFee?: ServiceFee
     tx: SubmittableExtrinsic<"promise", ISubmittableResult>
 }
+
+// Step 1 fees. The DOT fees are paid on Asset Hub, Hydration execution in the stable.
+// Parts that need a successful Asset Hub dry run are undefined when it fails.
+export type MoveToHydrationFees = {
+    assetHubExecution: bigint
+    assetHubDelivery?: bigint
+    // Hydration execution of the stable transfer, in the stable.
+    hydrationExecution?: bigint
+    // Hydration execution of the DOT top-up, in DOT.
+    hydrationDotExecution?: bigint
+}
+
+// Step 1 volume fee inputs; the fee is paid in DOT on Asset Hub.
+export type MoveToHydrationFeeParams = {
+    txValueUsd: bigint
+    dotToUsdNumerator: bigint
+    dotToUsdDenominator: bigint
+    serviceFeeRecipient: string
+}
+
+// Each step charges half the volume fee, so doing both costs one full fee.
+export const STABLES_FEE_SHARE = { numerator: 1n, denominator: 2n }
 
 export type ValidatedMoveToHydration = MoveToHydrationTransfer & {
     success: boolean
@@ -181,6 +208,7 @@ export type SwapAndBridgeTransfer = {
     sourceAccountHex: string
     beneficiaryAccount: string
     amountIn: bigint
+    amountOut: bigint
     minAmountOut: bigint
     fee: DeliveryFee
     messageId: string
@@ -194,6 +222,8 @@ export type ValidatedSwapAndBridge = SwapAndBridgeTransfer & {
     logs: ValidationLog[]
     data: {
         sourceExecutionFee: bigint
+        // The Hydration tx fee in the account's fee currency.
+        txFee: { amount: bigint; assetId: number; symbol: string; decimals: number }
         sourceDryRunError?: any
         assetHubDryRunError?: any
         bridgeHubDryRunError?: any
@@ -223,6 +253,79 @@ export function stableswapPoolAccountHex(poolId: number): string {
     return u8aToHex(blake2AsU8a(u8aConcat(stringToU8a("sts"), le), 256))
 }
 
+// What Hydration charges, in the stable, to execute the XCM from Asset Hub.
+// Asset Hub assets are addressed from Hydration through Asset Hub; HOLLAR's
+// Asset Hub location is already global.
+function hydrationFeeLocation(stable: HydrationStable): any {
+    return stable.assetHubAssetId !== undefined
+        ? {
+              parents: 1,
+              interior: {
+                  X3: [
+                      { Parachain: ASSET_HUB_PARA_ID },
+                      { PalletInstance: ASSET_HUB_ASSETS_PALLET },
+                      { GeneralIndex: stable.assetHubAssetId },
+                  ],
+              },
+          }
+        : stable.locationOnAssetHub
+}
+
+const DOT_ON_HYDRATION = { parents: 1, interior: { Here: null } }
+
+// What Hydration charges, in the asset at `location`, to execute an XCM.
+async function hydrationXcmExecutionFee(
+    hydration: ApiPromise,
+    xcm: any,
+    location: any,
+): Promise<bigint> {
+    const weight = await hydration.call.xcmPaymentApi.queryXcmWeight(
+        hydration.createType("XcmVersionedXcm", xcm),
+    )
+    const fee = await hydration.call.xcmPaymentApi.queryWeightToAssetFee((weight as any).asOk, {
+        V4: location,
+    })
+    return BigInt((fee as any).asOk.toString())
+}
+
+// Dry runs `tx` on Asset Hub and returns every message it forwards to Hydration,
+// in batch order.
+async function dryRunAssetHubToHydration(
+    assetHub: ApiPromise,
+    tx: SubmittableExtrinsic<"promise", ISubmittableResult>,
+    account: string,
+): Promise<{ success: boolean; error?: any; messages: any[] }> {
+    const origin = { system: { signed: account } }
+    let result: Result<CallDryRunEffects, XcmDryRunApiError>
+    try {
+        result = await assetHub.call.dryRunApi.dryRunCall<
+            Result<CallDryRunEffects, XcmDryRunApiError>
+        >(origin, tx, 4)
+    } catch {
+        result = await assetHub.call.dryRunApi.dryRunCall<
+            Result<CallDryRunEffects, XcmDryRunApiError>
+        >(origin, tx)
+    }
+    if (result.isErr) {
+        return { success: false, error: result.asErr.toJSON(), messages: [] }
+    }
+    if (result.asOk.executionResult.isErr) {
+        return { success: false, error: result.asOk.executionResult.asErr.toJSON(), messages: [] }
+    }
+    const entry = result.asOk.forwardedXcms.find(([dest]) => {
+        const loc = dest.isV5 ? dest.asV5 : dest.isV4 ? dest.asV4 : undefined
+        return (
+            loc !== undefined &&
+            loc.parents.toNumber() === 1 &&
+            loc.interior.isX1 &&
+            loc.interior.asX1[0].isParachain &&
+            loc.interior.asX1[0].asParachain.toNumber() === HYDRATION_PARA_ID
+        )
+    })
+    const messages: any[] = entry ? (entry.toPrimitive() as any[])[1] : []
+    return { success: messages.length > 0, messages }
+}
+
 // Pads the fallback price to cover drift from the oracle price.
 const FEE_CURRENCY_PRICE_PAD = 2n
 
@@ -238,6 +341,26 @@ async function hydrationFeeInCurrency(
         throw new Error(`Hydration does not accept currency ${currency} for fees.`)
     }
     return (hdxFee * BigInt(price.toString()) * FEE_CURRENCY_PRICE_PAD) / 10n ** 18n
+}
+
+async function hydrationExistentialDeposit(
+    hydration: ApiPromise,
+    assetId: number,
+): Promise<bigint> {
+    const asset = (await hydration.query.assetRegistry.assets(assetId)).toPrimitive() as any
+    return BigInt(asset?.existentialDeposit ?? 0)
+}
+
+// A remainder that is neither zero nor at least `minimum` is reaped as dust.
+function leavesDust(balance: bigint, spent: bigint, minimum: bigint): boolean {
+    const remaining = balance - spent
+    return remaining > 0n && remaining < minimum
+}
+
+function formatAmount(value: bigint, decimals: number): string {
+    const base = 10n ** BigInt(decimals)
+    const fraction = (value % base).toString().padStart(decimals, "0").replace(/0+$/, "")
+    return fraction ? `${value / base}.${fraction}` : `${value / base}`
 }
 
 const balanceOf = (x: any): bigint => {
@@ -328,35 +451,106 @@ export class StablesTransfer<T extends EthereumProviderTypes> {
         }
     }
 
-    // Leg 1: Asset Hub -> Hydration; Hydration execution is paid in the stable.
+    // Leg 1: Asset Hub -> Hydration. Each asset pays its own Hydration execution.
+    // HOLLAR's reserve is Hydration and DOT's is Asset Hub, so they cannot share a
+    // transferAssets call; the stable, the DOT top-up and the service fee are batched.
     async moveToHydrationTx(
         sourceAccount: string,
         symbol: HydrationStableSymbol,
         amount: bigint,
+        options?: { volumeFee?: MoveToHydrationFeeParams; dotTopUp?: bigint },
     ): Promise<MoveToHydrationTransfer> {
         const stable = HYDRATION_STABLES[symbol]
+        const dotTopUp = options?.dotTopUp ?? 0n
+        if (amount === 0n && dotTopUp === 0n) {
+            throw new Error("Nothing to send: set an amount or DOT to send.")
+        }
         const assetHub = await this.context.assetHub()
         const sourceAccountHex = toHexAccount(sourceAccount)
-        const tx = assetHub.tx.polkadotXcm.transferAssets(
-            { v4: { parents: 1, interior: { X1: [{ Parachain: HYDRATION_PARA_ID }] } } },
-            {
-                v4: {
-                    parents: 0,
-                    interior: { X1: [{ AccountId32: { network: null, id: sourceAccountHex } }] },
+        const serviceFee = await this.moveToHydrationServiceFee(options?.volumeFee)
+        const transferAssets = (id: any, value: bigint) =>
+            assetHub.tx.polkadotXcm.transferAssets(
+                { v4: { parents: 1, interior: { X1: [{ Parachain: HYDRATION_PARA_ID }] } } },
+                {
+                    v4: {
+                        parents: 0,
+                        interior: {
+                            X1: [{ AccountId32: { network: null, id: sourceAccountHex } }],
+                        },
+                    },
                 },
-            },
-            { v4: [{ id: stable.locationOnAssetHub, fun: { Fungible: amount } }] },
-            0,
-            "Unlimited",
-        )
+                { v4: [{ id, fun: { Fungible: value } }] },
+                0,
+                "Unlimited",
+            )
+        // pallet_xcm cannot infer DOT's reserve for Hydration, so name it: Asset Hub
+        // is the reserve, and the DOT pays its own execution there.
+        const dotTransfer = (value: bigint) =>
+            assetHub.tx.polkadotXcm.transferAssetsUsingTypeAndThen(
+                { v4: { parents: 1, interior: { X1: [{ Parachain: HYDRATION_PARA_ID }] } } },
+                { v4: [{ id: DOT_LOCATION, fun: { Fungible: value } }] },
+                "LocalReserve",
+                { v4: DOT_LOCATION },
+                "LocalReserve",
+                {
+                    v4: [
+                        {
+                            depositAsset: {
+                                assets: { Wild: { AllCounted: 1 } },
+                                beneficiary: {
+                                    parents: 0,
+                                    interior: { X1: [{ AccountId32: { id: sourceAccountHex } }] },
+                                },
+                            },
+                        },
+                    ],
+                },
+                "Unlimited",
+            )
+        const calls = [
+            ...(amount > 0n ? [transferAssets(stable.locationOnAssetHub, amount)] : []),
+            ...(dotTopUp > 0n ? [dotTransfer(dotTopUp)] : []),
+            ...(serviceFee
+                ? [assetHub.tx.balances.transferKeepAlive(serviceFee.recipient, serviceFee.amount)]
+                : []),
+        ]
+        const tx = calls.length === 1 ? calls[0] : assetHub.tx.utility.batchAll(calls)
         return {
             kind: "stables:assethub->hydration",
             stable,
             sourceAccount,
             sourceAccountHex,
             amount,
+            dotTopUp,
+            serviceFee,
             tx,
         }
+    }
+
+    // Step 1 service fee in DOT, floored at the Asset Hub existential deposit so the
+    // transfer to an empty recipient cannot fail.
+    async moveToHydrationServiceFee(
+        params?: MoveToHydrationFeeParams,
+    ): Promise<ServiceFee | undefined> {
+        if (!params) return undefined
+        const { hexAddress, kind } = resolveBeneficiary(params.serviceFeeRecipient)
+        if (kind !== ACCOUNT_ID_32) {
+            throw new Error("Service fee recipient must be a 32-byte Asset Hub account.")
+        }
+        // The schedule works in 18 decimals; DOT has 10.
+        const fee =
+            calculateVolumeTipInWei({
+                txValueUsd: params.txValueUsd,
+                ethToUsdNumerator: params.dotToUsdNumerator,
+                ethToUsdDenominator: params.dotToUsdDenominator,
+                serviceFeeRecipient: params.serviceFeeRecipient,
+                share: STABLES_FEE_SHARE,
+            }) /
+            10n ** 8n
+        if (fee === 0n) return undefined
+        const assetHub = await this.context.assetHub()
+        const ed = BigInt(assetHub.consts.balances.existentialDeposit.toString())
+        return { recipient: hexAddress, amount: fee > ed ? fee : ed }
     }
 
     async validateMoveToHydration(
@@ -379,36 +573,90 @@ export class StablesTransfer<T extends EthereumProviderTypes> {
                 : await assetHub.query.foreignAssets.asset(stable.locationOnAssetHub)
         ).toPrimitive() as any
         const minBalance = BigInt(assetInfo?.minBalance ?? 0)
-        if (transfer.amount < minBalance) {
+        const { decimals, symbol } = stable
+        const sendsStable = transfer.amount > 0n
+        if (sendsStable && transfer.amount < minBalance) {
             logs.push({
                 kind: ValidationKind.Error,
                 reason: ValidationReason.InsufficientTokenBalance,
-                message: `Amount is below the ${stable.symbol} minimum balance of ${minBalance}.`,
+                message: `Amount is below the ${symbol} minimum balance of ${formatAmount(minBalance, decimals)}.`,
             })
         }
-        if (transfer.amount > balances.assetHub[stable.symbol]) {
+        if (transfer.amount > balances.assetHub[symbol]) {
             logs.push({
                 kind: ValidationKind.Error,
                 reason: ValidationReason.InsufficientTokenBalance,
-                message: `Insufficient ${stable.symbol} balance on Asset Hub.`,
+                message: `Insufficient ${symbol} balance on Asset Hub.`,
             })
-        }
-        if (sourceExecutionFee > balances.assetHubDot) {
+        } else if (
+            sendsStable &&
+            leavesDust(balances.assetHub[symbol], transfer.amount, minBalance)
+        ) {
             logs.push({
                 kind: ValidationKind.Error,
-                reason: ValidationReason.InsufficientNativeFee,
-                message: "Insufficient DOT on Asset Hub to pay the transaction fee.",
+                reason: ValidationReason.InsufficientTokenBalance,
+                message: `This leaves less than the ${formatAmount(minBalance, decimals)} ${symbol} minimum on Asset Hub. Send the full balance or leave at least the minimum.`,
             })
+        }
+        // Hydration execution is paid in the stable, so an account that holds none there
+        // needs more than the existential deposit to arrive.
+        const hydrationEd = await hydrationExistentialDeposit(hydration, stable.hydrationAssetId)
+        if (sendsStable && balances.hydration[symbol] === 0n && transfer.amount <= hydrationEd) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.InsufficientTokenBalance,
+                message: `Send more than ${formatAmount(hydrationEd, decimals)} ${symbol}, the Hydration existential deposit, so it arrives after fees.`,
+            })
+        }
+
+        // The top-up pays its own Hydration execution in DOT, so an account that holds
+        // none there needs more than the existential deposit to arrive.
+        if (transfer.dotTopUp > 0n && balances.hydrationDot === 0n) {
+            const hydrationDotEd = await hydrationExistentialDeposit(
+                hydration,
+                HYDRATION_DOT_ASSET_ID,
+            )
+            if (transfer.dotTopUp <= hydrationDotEd) {
+                logs.push({
+                    kind: ValidationKind.Error,
+                    reason: ValidationReason.InsufficientDotFee,
+                    message: `Send more than ${formatAmount(hydrationDotEd, 10)} DOT, the Hydration existential deposit, so it arrives after fees.`,
+                })
+            }
         }
 
         let assetHubDryRunError
         let hydrationDryRunError
-        const dryRunSource = await dryRunTx(
+        const dryRunSource = await dryRunAssetHubToHydration(
             assetHub,
-            HYDRATION_PARA_ID,
             transfer.tx,
             transfer.sourceAccountHex,
         )
+        // DOT must cover the top-up, tx fee, service fee and delivery of every
+        // message, and keep the Asset Hub existential deposit.
+        let deliveryFee = 0n
+        if (dryRunSource.success) {
+            const assetHubImpl = await this.context.paraImplementation(assetHub)
+            for (const message of dryRunSource.messages) {
+                deliveryFee += await assetHubImpl.calculateDeliveryFeeInDOT(
+                    HYDRATION_PARA_ID,
+                    message,
+                )
+            }
+        }
+        const dotEd = BigInt(assetHub.consts.balances.existentialDeposit.toString())
+        const fees = sourceExecutionFee + (transfer.serviceFee?.amount ?? 0n) + deliveryFee
+        const requiredDot = fees + transfer.dotTopUp
+        if (requiredDot + dotEd > balances.assetHubDot) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.InsufficientNativeFee,
+                message: `Insufficient DOT on Asset Hub: ${
+                    transfer.dotTopUp > 0n ? "the DOT and fees" : "fees"
+                } need ${formatAmount(requiredDot, 10)} DOT plus the ${formatAmount(dotEd, 10)} DOT existential deposit.`,
+            })
+        }
+
         if (!dryRunSource.success) {
             assetHubDryRunError = dryRunSource.error
             logs.push({
@@ -417,18 +665,19 @@ export class StablesTransfer<T extends EthereumProviderTypes> {
                 message: "Dry run on Asset Hub failed.",
             })
         } else {
+            // Every message the batch forwards must execute on Hydration.
             const hydrationImpl = await this.context.paraImplementation(hydration)
-            const dryRunDest = await hydrationImpl.dryRunXcm(
-                registry.assetHubParaId,
-                dryRunSource.forwardedXcm,
-            )
-            if (!dryRunDest.success) {
-                hydrationDryRunError = dryRunDest.errorMessage
-                logs.push({
-                    kind: ValidationKind.Error,
-                    reason: ValidationReason.DryRunFailed,
-                    message: "Dry run on Hydration failed.",
-                })
+            for (const message of dryRunSource.messages) {
+                const dryRunDest = await hydrationImpl.dryRunXcm(registry.assetHubParaId, message)
+                if (!dryRunDest.success) {
+                    hydrationDryRunError = dryRunDest.errorMessage
+                    logs.push({
+                        kind: ValidationKind.Error,
+                        reason: ValidationReason.DryRunFailed,
+                        message: "Dry run on Hydration failed.",
+                    })
+                    break
+                }
             }
         }
 
@@ -437,6 +686,47 @@ export class StablesTransfer<T extends EthereumProviderTypes> {
             success: logs.find((l) => l.kind === ValidationKind.Error) === undefined,
             logs,
             data: { sourceExecutionFee, assetHubDryRunError, hydrationDryRunError },
+        }
+    }
+
+    async moveToHydrationFees(transfer: MoveToHydrationTransfer): Promise<MoveToHydrationFees> {
+        const [assetHub, hydration] = await Promise.all([
+            this.context.assetHub(),
+            this.context.parachain(HYDRATION_PARA_ID),
+        ])
+        const paymentInfo = await transfer.tx.paymentInfo(transfer.sourceAccountHex)
+        const assetHubExecution = paymentInfo["partialFee"].toBigInt()
+        const dryRun = await dryRunAssetHubToHydration(
+            assetHub,
+            transfer.tx,
+            transfer.sourceAccountHex,
+        )
+        if (!dryRun.success) return { assetHubExecution }
+        const assetHubImpl = await this.context.paraImplementation(assetHub)
+        // Messages follow batch order: the stable first, then the DOT top-up.
+        const [stableMessage, dotMessage] =
+            transfer.amount > 0n
+                ? [dryRun.messages[0], dryRun.messages[1]]
+                : [undefined, dryRun.messages[0]]
+        const deliveries = await Promise.all(
+            dryRun.messages.map((m) =>
+                assetHubImpl.calculateDeliveryFeeInDOT(HYDRATION_PARA_ID, m),
+            ),
+        )
+        const [hydrationExecution, hydrationDotExecution] = await Promise.all([
+            stableMessage &&
+                hydrationXcmExecutionFee(
+                    hydration,
+                    stableMessage,
+                    hydrationFeeLocation(transfer.stable),
+                ),
+            dotMessage && hydrationXcmExecutionFee(hydration, dotMessage, DOT_ON_HYDRATION),
+        ])
+        return {
+            assetHubExecution,
+            assetHubDelivery: deliveries.reduce((a, b) => a + b, 0n),
+            hydrationExecution: hydrationExecution || undefined,
+            hydrationDotExecution: hydrationDotExecution || undefined,
         }
     }
 
@@ -505,13 +795,15 @@ export class StablesTransfer<T extends EthereumProviderTypes> {
             padFeeByPercentage?: bigint
             slippagePadPercentage?: bigint
             volumeFee?: VolumeFeeParams
+            accelerated?: boolean
         },
     ): Promise<DeliveryFee> {
         return this.#bridgeSender().fee(ETHEREUM_STABLES[toSymbol].token, {
             feeTokenLocation: DOT_LOCATION,
             padFeeByPercentage: options?.padFeeByPercentage,
             slippagePadPercentage: options?.slippagePadPercentage ?? 20n,
-            volumeFee: options?.volumeFee,
+            volumeFee: options?.volumeFee && { ...options.volumeFee, share: STABLES_FEE_SHARE },
+            accelerated: options?.accelerated,
         })
     }
 
@@ -549,6 +841,7 @@ export class StablesTransfer<T extends EthereumProviderTypes> {
             sourceAccountHex: toHexAccount(sourceAccount),
             beneficiaryAccount,
             amountIn,
+            amountOut,
             minAmountOut,
             fee,
             messageId: bridge.computed.messageId!,
@@ -582,13 +875,33 @@ export class StablesTransfer<T extends EthereumProviderTypes> {
                 ? sourceExecutionFee
                 : await hydrationFeeInCurrency(hydration, feeCurrency, sourceExecutionFee)
 
-        const amountIn =
-            transfer.amountIn + (feeCurrency === transfer.from.hydrationAssetId ? txFee : 0n)
-        if (amountIn > balances.hydration[transfer.from.symbol]) {
+        const feeAssetInfo = (
+            await hydration.query.assetRegistry.assets(feeCurrency)
+        ).toPrimitive() as any
+        const feeAsset = {
+            symbol: String(feeAssetInfo?.symbol ?? `asset ${feeCurrency}`),
+            decimals: Number(feeAssetInfo?.decimals ?? 12),
+        }
+        const { from, to } = transfer
+        const [fromEd, toEd, dotEd, hdxEd] = await Promise.all([
+            hydrationExistentialDeposit(hydration, from.hydrationAssetId),
+            hydrationExistentialDeposit(hydration, to.hydrationAssetId),
+            hydrationExistentialDeposit(hydration, HYDRATION_DOT_ASSET_ID),
+            hydrationExistentialDeposit(hydration, HYDRATION_NATIVE_ASSET_ID),
+        ])
+
+        const amountIn = transfer.amountIn + (feeCurrency === from.hydrationAssetId ? txFee : 0n)
+        if (amountIn > balances.hydration[from.symbol]) {
             logs.push({
                 kind: ValidationKind.Error,
                 reason: ValidationReason.InsufficientTokenBalance,
-                message: `Insufficient ${transfer.from.symbol} balance on Hydration.`,
+                message: `Insufficient ${from.symbol} balance on Hydration.`,
+            })
+        } else if (leavesDust(balances.hydration[from.symbol], amountIn, fromEd)) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.InsufficientTokenBalance,
+                message: `This leaves less than the ${formatAmount(fromEd, from.decimals)} ${from.symbol} existential deposit on Hydration. Swap the full balance or leave at least that.`,
             })
         }
         const requiredDot =
@@ -600,13 +913,34 @@ export class StablesTransfer<T extends EthereumProviderTypes> {
                 reason: ValidationReason.InsufficientDotFee,
                 message: "Insufficient DOT on Hydration to pay the bridge fee.",
             })
+        } else if (leavesDust(balances.hydrationDot, requiredDot, dotEd)) {
+            logs.push({
+                kind: ValidationKind.Error,
+                reason: ValidationReason.InsufficientDotFee,
+                message: `The DOT fees leave less than the ${formatAmount(dotEd, 10)} DOT existential deposit on Hydration.`,
+            })
+        }
+        // Surplus above minAmountOut stays on Hydration; below the existential
+        // deposit it is reaped.
+        const toBalance = balanceOf(
+            await hydration.call.currenciesApi.account(
+                to.hydrationAssetId,
+                transfer.sourceAccountHex,
+            ),
+        )
+        if (leavesDust(toBalance + transfer.amountOut, transfer.minAmountOut, toEd)) {
+            logs.push({
+                kind: ValidationKind.Warning,
+                reason: ValidationReason.InsufficientTokenBalance,
+                message: `Swap surplus under ${formatAmount(toEd, to.decimals)} ${to.symbol} would be lost as dust on Hydration.`,
+            })
         }
         if (feeCurrency === HYDRATION_NATIVE_ASSET_ID) {
-            if (txFee > balances.hydrationNative) {
+            if (txFee + hdxEd > balances.hydrationNative) {
                 logs.push({
                     kind: ValidationKind.Error,
                     reason: ValidationReason.InsufficientNativeFee,
-                    message: "Insufficient HDX on Hydration to pay the transaction fee.",
+                    message: `Insufficient HDX on Hydration: the transaction fee plus the ${formatAmount(hdxEd, 12)} HDX existential deposit.`,
                 })
             }
         } else if (
@@ -630,13 +964,22 @@ export class StablesTransfer<T extends EthereumProviderTypes> {
         let assetHubDryRunError
         let bridgeHubDryRunError
         let ethereumDryRunError: string | undefined
-        const dryRunSource = await dryRunOnSourceParachain(
-            hydration,
-            registry.assetHubParaId,
-            registry.bridgeHubParaId,
-            transfer.tx,
-            transfer.sourceAccountHex,
-        )
+        const dryRunSource =
+            (await dryRunWithTxFee(
+                hydration,
+                registry.assetHubParaId,
+                transfer.sourceAccountHex,
+                transfer.tx,
+                feeCurrency,
+                txFee,
+            )) ??
+            (await dryRunOnSourceParachain(
+                hydration,
+                registry.assetHubParaId,
+                registry.bridgeHubParaId,
+                transfer.tx,
+                transfer.sourceAccountHex,
+            ))
         if (!dryRunSource.success || !dryRunSource.assetHubForwarded) {
             sourceDryRunError = dryRunSource.error
             logs.push({
@@ -703,6 +1046,7 @@ export class StablesTransfer<T extends EthereumProviderTypes> {
             logs,
             data: {
                 sourceExecutionFee,
+                txFee: { amount: txFee, assetId: feeCurrency, ...feeAsset },
                 sourceDryRunError,
                 assetHubDryRunError,
                 bridgeHubDryRunError,
@@ -721,6 +1065,56 @@ export class StablesTransfer<T extends EthereumProviderTypes> {
         receipt.messageId = transfer.messageId
         return receipt
     }
+}
+
+// Dry runs `tx` after charging its fee: as Root, deduct the fee, then dispatch `tx`
+// as the account. Returns undefined when the fee currency cannot be debited that way.
+async function dryRunWithTxFee(
+    hydration: ApiPromise,
+    assetHubParaId: number,
+    account: string,
+    tx: SubmittableExtrinsic<"promise", ISubmittableResult>,
+    feeCurrency: number,
+    txFee: bigint,
+): Promise<{ success: boolean; error?: any; assetHubForwarded?: any } | undefined> {
+    const call = hydration.tx.utility.batchAll([
+        hydration.tx.currencies.updateBalance(account, feeCurrency, -txFee),
+        hydration.tx.utility.dispatchAs({ system: { Signed: account } }, tx),
+    ])
+    const result = await hydration.call.dryRunApi.dryRunCall<
+        Result<CallDryRunEffects, XcmDryRunApiError>
+    >({ system: "Root" }, call.inner.toHex(), 5)
+    if (result.isErr) {
+        return { success: false, error: result.asErr.toJSON() }
+    }
+    const effects = result.asOk
+    if (effects.executionResult.isErr) {
+        const err = (effects.executionResult.asErr as any).error
+        if (err.isModule) {
+            const meta = hydration.registry.findMetaError(err.asModule)
+            if (meta.section === "currencies" && meta.name === "NotSupported") return undefined
+        }
+        return { success: false, error: effects.executionResult.asErr.toJSON() }
+    }
+    // dispatchAs succeeds regardless; the batch's own result is in DispatchedAs.
+    const dispatched = effects.emittedEvents.find(
+        (e) => e.section === "utility" && e.method === "DispatchedAs",
+    )
+    const inner = dispatched?.data[0] as any
+    if (!inner || inner.isErr) {
+        return { success: false, error: inner?.asErr.toJSON() }
+    }
+    const assetHubForwarded = effects.forwardedXcms.find(([dest]) => {
+        const loc = dest.isV5 ? dest.asV5 : dest.isV4 ? dest.asV4 : undefined
+        return (
+            loc !== undefined &&
+            loc.parents.toNumber() === 1 &&
+            loc.interior.isX1 &&
+            loc.interior.asX1[0].isParachain &&
+            loc.interior.asX1[0].asParachain.toNumber() === assetHubParaId
+        )
+    })
+    return { success: assetHubForwarded !== undefined, assetHubForwarded }
 }
 
 // Success means no ExtrinsicFailed, as Hydration emits no polkadotXcm.Sent.

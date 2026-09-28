@@ -533,7 +533,7 @@ export async function dryRunTx(
             result.isOk && result.asOk.executionResult.isErr
                 ? result.asOk.executionResult.asErr.toJSON()
                 : undefined,
-        forwardedXcm: forwardedXcm?.[1][0],
+        forwardedXcm: forwardedXcm[1][0],
     }
 }
 
