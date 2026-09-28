@@ -48,7 +48,6 @@
     "transferEthToHydrationV2": "npx ts-node src/transfer_from_e2p_v2.ts 2034 ETH 150000000000000",
     "transferEthFromHydrationV2": "npx ts-node src/transfer_from_p2e_v2.ts 2034 ETH 150000000000000",
     "transferUSDCFromHydrationV2": "npx ts-node src/transfer_from_p2e_v2.ts 2034 USDC 1500000",
-    "stablesDryRun-mainnet": "NODE_ENV=polkadot_mainnet npx ts-node src/stables_dry_run.ts HOLLAR 100 USDT",
     "transferUSDCFromHydrationV2WithDOTAsFee": "npx ts-node src/transfer_from_p2e_v2_with_fee.ts 2034 USDC 0 1500000",
     "transferEthFromAcalaV2": "npx ts-node src/transfer_from_p2e_v2.ts 2000 ETH 150000000000000",
     "transferWndToEthereumV2": "npx ts-node src/transfer_from_p2e_v2.ts 1000 WND 2000000000",
