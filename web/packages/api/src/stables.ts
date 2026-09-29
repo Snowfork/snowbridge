@@ -54,6 +54,9 @@ export type EthereumStable = {
 
 export type Trade = { pool: any; assetIn: number; assetOut: number }
 
+// Hydration asset and pool ids. Asset ids are keys of `assetRegistry.assets` on
+// Hydration; stableswap pool ids are keys of `stableswap.pools`, with their assets
+// listed in the value. Both are browsable on polkadot.js apps (chain state) or Subscan.
 const HOLLAR_ID = 222
 const AH_USDT_ID = 10
 const AH_USDC_ID = 22
@@ -119,6 +122,9 @@ export const ETHEREUM_STABLES: Record<EthereumStableSymbol, EthereumStable> = {
 }
 
 // Explicit router trades; Hydration has no on-chain routes for these pairs.
+// Every route ends in pool 103, which pairs the Ethereum stables with aUSDT, so each
+// source is first turned into aUSDT. `{ Aave: null }` is not a liquidity pool: it
+// supplies USDT to Hydration's Aave money market and receives aUSDT 1:1.
 const toEthStables = (via: Trade[]): Record<EthereumStableSymbol, Trade[]> => ({
     USDT: [
         ...via,
