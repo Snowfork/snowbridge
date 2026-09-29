@@ -25,8 +25,6 @@ export type VolumeFeeParams = {
     ethToUsdDenominator: bigint
     // Asset Hub account the fee is deposited to. Must be a 32-byte AccountId32.
     serviceFeeRecipient: string
-    // Fraction of the scheduled fee to charge, for flows that split it across steps.
-    share?: { numerator: bigint; denominator: bigint }
 }
 
 // The volume fee, as a deposit for the message to make on Asset Hub. It is never
@@ -73,9 +71,8 @@ export function calculateVolumeTipInWei(params: VolumeFeeParams): bigint {
     }
     const { numerator: feeNum, denominator: feeDen } = lookupFeeRatio(params.txValueUsd)
     const WEI = 1_000_000_000_000_000_000n
-    const share = params.share ?? { numerator: 1n, denominator: 1n }
     return (
-        (params.txValueUsd * feeNum * WEI * params.ethToUsdDenominator * share.numerator) /
-        (feeDen * params.ethToUsdNumerator * share.denominator)
+        (params.txValueUsd * feeNum * WEI * params.ethToUsdDenominator) /
+        (feeDen * params.ethToUsdNumerator)
     )
 }

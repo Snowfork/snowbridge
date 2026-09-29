@@ -21,8 +21,9 @@ import {
 import { dryRunBridgeHub } from "./toEthereum_v2"
 import type { DeliveryFee, Transfer, ValidationLog } from "./types/toEthereum"
 import { ValidationKind, ValidationReason } from "./types/toEthereum"
-import { calculateVolumeTipInWei, type VolumeFeeParams } from "./feeSchedule"
+import type { VolumeFeeParams } from "./feeSchedule"
 import type { ServiceFee } from "./types/fee"
+import type { ParachainBase } from "./parachains/parachainBase"
 
 // Stables moved from Asset Hub to Hydration, swapped, then bridged to Ethereum.
 export const HYDRATION_PARA_ID = 2034
@@ -179,16 +180,15 @@ export type MoveToHydrationFees = {
     hydrationDotExecution?: bigint
 }
 
-// Step 1 volume fee inputs; the fee is paid in DOT on Asset Hub.
+// Step 1 service fee inputs; the fee is paid in DOT on Asset Hub.
 export type MoveToHydrationFeeParams = {
-    txValueUsd: bigint
     dotToUsdNumerator: bigint
     dotToUsdDenominator: bigint
     serviceFeeRecipient: string
 }
 
-// Each step charges half the volume fee, so doing both costs one full fee.
-export const STABLES_FEE_SHARE = { numerator: 1n, denominator: 2n }
+// Step 1 charges a fixed service fee; step 2 charges the full volume fee.
+export const MOVE_TO_HYDRATION_FEE_USD = 1n
 
 export type ValidatedMoveToHydration = MoveToHydrationTransfer & {
     success: boolean
@@ -393,6 +393,19 @@ async function hydrationExistentialDeposit(
     return BigInt(asset?.existentialDeposit ?? 0)
 }
 
+// What an account can spend and stay alive. Frozen funds and the existential deposit
+// overlap, so only the larger of the two is held back.
+async function spendableKeepAlive(
+    impl: ParachainBase,
+    account: string,
+    existentialDeposit: bigint,
+): Promise<bigint> {
+    const { free, frozen, reserved } = (await impl.getNativeAccount(account)).data
+    const locked = frozen > reserved ? frozen - reserved : 0n
+    const held = locked > existentialDeposit ? locked : existentialDeposit
+    return free > held ? free - held : 0n
+}
+
 // A remainder that is neither zero nor at least `minimum` is reaped as dust.
 function leavesDust(balance: bigint, spent: bigint, minimum: bigint): boolean {
     const remaining = balance - spent
@@ -575,8 +588,8 @@ export class StablesTransfer<T extends EthereumProviderTypes> {
         }
     }
 
-    // Step 1 service fee in DOT, floored at the Asset Hub existential deposit so the
-    // transfer to an empty recipient cannot fail.
+    // Step 1 service fee: MOVE_TO_HYDRATION_FEE_USD in DOT, floored at the Asset Hub
+    // existential deposit so the transfer to an empty recipient cannot fail.
     async moveToHydrationServiceFee(
         params?: MoveToHydrationFeeParams,
     ): Promise<ServiceFee | undefined> {
@@ -585,17 +598,12 @@ export class StablesTransfer<T extends EthereumProviderTypes> {
         if (kind !== ACCOUNT_ID_32) {
             throw new Error("Service fee recipient must be a 32-byte Asset Hub account.")
         }
-        // The schedule works in 18 decimals; DOT has 10.
+        if (params.dotToUsdNumerator <= 0n || params.dotToUsdDenominator <= 0n) {
+            throw new Error("DOT to USD rate must be positive.")
+        }
         const fee =
-            calculateVolumeTipInWei({
-                txValueUsd: params.txValueUsd,
-                ethToUsdNumerator: params.dotToUsdNumerator,
-                ethToUsdDenominator: params.dotToUsdDenominator,
-                serviceFeeRecipient: params.serviceFeeRecipient,
-                share: STABLES_FEE_SHARE,
-            }) /
-            10n ** 8n
-        if (fee === 0n) return undefined
+            (MOVE_TO_HYDRATION_FEE_USD * 10n ** 10n * params.dotToUsdDenominator) /
+            params.dotToUsdNumerator
         const assetHub = await this.context.assetHub()
         const ed = BigInt(assetHub.consts.balances.existentialDeposit.toString())
         return { recipient: hexAddress, amount: fee > ed ? fee : ed }
@@ -683,13 +691,18 @@ export class StablesTransfer<T extends EthereumProviderTypes> {
             (transfer.serviceFee?.amount ?? 0n) +
             (fees.assetHubDelivery ?? 0n) +
             transfer.dotTopUp
-        if (requiredDot + dotEd > balances.assetHubDot) {
+        const spendableDot = await spendableKeepAlive(
+            await this.context.paraImplementation(assetHub),
+            transfer.sourceAccountHex,
+            dotEd,
+        )
+        if (requiredDot > spendableDot) {
             logs.push({
                 kind: ValidationKind.Error,
                 reason: ValidationReason.InsufficientNativeFee,
                 message: `Insufficient DOT on Asset Hub: ${
                     transfer.dotTopUp > 0n ? "the DOT and fees" : "fees"
-                } need ${formatAmount(requiredDot, 10)} DOT plus the ${formatAmount(dotEd, 10)} DOT existential deposit.`,
+                } need ${formatAmount(requiredDot, 10)} DOT, and ${formatAmount(dotEd, 10)} DOT or any locked DOT must stay in the account.`,
             })
         }
 
@@ -847,32 +860,40 @@ export class StablesTransfer<T extends EthereumProviderTypes> {
             feeTokenLocation: DOT_LOCATION,
             padFeeByPercentage: options?.padFeeByPercentage,
             slippagePadPercentage: options?.slippagePadPercentage ?? 20n,
-            volumeFee: options?.volumeFee && { ...options.volumeFee, share: STABLES_FEE_SHARE },
+            volumeFee: options?.volumeFee,
             accelerated: options?.accelerated,
         })
     }
 
-    // DOT to send in leg 1 so leg 2 can pay `fee` on Hydration: the padded bridge fee
-    // plus the Hydration DOT existential deposit, less what the account already holds,
-    // plus the top-up's own Hydration execution. Excludes the leg 2 transaction fee,
-    // which is charged in the account's Hydration fee currency.
+    // DOT to send in leg 1 so leg 2 can pay `fee` on Hydration: the padded bridge fee,
+    // `txFee` when the account pays Hydration fees in DOT, and the Hydration DOT
+    // existential deposit, less what the account already holds, plus the top-up's own
+    // Hydration execution. `txFee` is an estimate the caller supplies, as leg 2's tx
+    // does not exist yet.
     async dotTopUp(
         account: string,
         fee: DeliveryFee,
-        options?: { padPercentage?: bigint },
+        options?: { padPercentage?: bigint; txFee?: bigint },
     ): Promise<bigint> {
         const accountHex = toHexAccount(account)
         const hydration = await this.context.parachain(HYDRATION_PARA_ID)
-        const [held, dotEd, execution] = await Promise.all([
+        const [held, dotEd, execution, feeCurrency] = await Promise.all([
             hydration.query.tokens.accounts(accountHex, HYDRATION_DOT_ASSET_ID).then(balanceOf),
             hydrationExistentialDeposit(hydration, HYDRATION_DOT_ASSET_ID),
             hydrationXcmExecutionFee(hydration, dotTopUpXcm(accountHex), DOT_ON_HYDRATION),
+            hydration.query.multiTransactionPayment
+                .accountCurrencyMap(accountHex)
+                .then((c) => c.toPrimitive()),
         ])
         const bridgeDot = padFeeByPercentage(
             findTotalOrUndefined(fee, "DOT") ?? 0n,
             options?.padPercentage ?? 10n,
         )
-        const needed = bridgeDot + dotEd
+        const txFeeInDot =
+            Number(feeCurrency ?? HYDRATION_NATIVE_ASSET_ID) === HYDRATION_DOT_ASSET_ID
+                ? (options?.txFee ?? 0n)
+                : 0n
+        const needed = bridgeDot + txFeeInDot + dotEd
         return needed > held ? needed - held + execution : 0n
     }
 
@@ -966,10 +987,16 @@ export class StablesTransfer<T extends EthereumProviderTypes> {
         const amountIn =
             transfer.amountIn + (feeCurrency === from.hydrationAssetId ? (txFee ?? 0n) : 0n)
         if (amountIn > balances.hydration[from.symbol]) {
+            // The amount alone may fit; the fee paid in the same stable pushes it over.
+            const feeInSource =
+                feeCurrency === from.hydrationAssetId &&
+                transfer.amountIn <= balances.hydration[from.symbol]
             logs.push({
                 kind: ValidationKind.Error,
                 reason: ValidationReason.InsufficientTokenBalance,
-                message: `Insufficient ${from.symbol} balance on Hydration.`,
+                message: feeInSource
+                    ? `The transaction fee (about ${formatAmount(txFee ?? 0n, from.decimals)} ${from.symbol}) is paid in ${from.symbol}, so lower the amount to leave that on Hydration.`
+                    : `Insufficient ${from.symbol} balance on Hydration.`,
             })
         } else if (leavesDust(balances.hydration[from.symbol], amountIn, fromEd)) {
             // With the fee paid in the source stable, the full balance cannot be swapped.
@@ -1015,11 +1042,16 @@ export class StablesTransfer<T extends EthereumProviderTypes> {
             })
         }
         if (feeCurrency === HYDRATION_NATIVE_ASSET_ID) {
-            if (sourceExecutionFee + hdxEd > balances.hydrationNative) {
+            const spendableHdx = await spendableKeepAlive(
+                await this.context.paraImplementation(hydration),
+                transfer.sourceAccountHex,
+                hdxEd,
+            )
+            if (sourceExecutionFee > spendableHdx) {
                 logs.push({
                     kind: ValidationKind.Error,
                     reason: ValidationReason.InsufficientNativeFee,
-                    message: `Insufficient HDX on Hydration: the transaction fee plus the ${formatAmount(hdxEd, 12)} HDX existential deposit.`,
+                    message: `Insufficient HDX on Hydration for the transaction fee; ${formatAmount(hdxEd, 12)} HDX or any locked HDX must stay in the account.`,
                 })
             }
         } else if (
