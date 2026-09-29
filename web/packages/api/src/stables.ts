@@ -231,8 +231,9 @@ export type ValidatedSwapAndBridge = SwapAndBridgeTransfer & {
     logs: ValidationLog[]
     data: {
         sourceExecutionFee: bigint
-        // The Hydration tx fee in the account's fee currency.
-        txFee: { amount: bigint; assetId: number; symbol: string; decimals: number }
+        // The Hydration tx fee in the account's fee currency; amount is unset when
+        // that currency cannot be priced.
+        txFee: { amount?: bigint; assetId: number; symbol: string; decimals: number }
         sourceDryRunError?: any
         assetHubDryRunError?: any
         bridgeHubDryRunError?: any
@@ -370,17 +371,17 @@ async function dryRunAssetHubToHydration(
 // Pads the fallback price to cover drift from the oracle price.
 const FEE_CURRENCY_PRICE_PAD = 2n
 
+// Undefined for a currency without a fallback price: Hydration prices it from the
+// oracle, or swaps it to DOT when the asset is insufficient.
 async function hydrationFeeInCurrency(
     hydration: ApiPromise,
     currency: number,
     hdxFee: bigint,
-): Promise<bigint> {
+): Promise<bigint | undefined> {
     const price = (
         await hydration.query.multiTransactionPayment.acceptedCurrencies(currency)
     ).toPrimitive()
-    if (price === null || price === undefined) {
-        throw new Error(`Hydration does not accept currency ${currency} for fees.`)
-    }
+    if (price === null || price === undefined) return undefined
     return (hdxFee * BigInt(price.toString()) * FEE_CURRENCY_PRICE_PAD) / 10n ** 18n
 }
 
@@ -961,7 +962,9 @@ export class StablesTransfer<T extends EthereumProviderTypes> {
             hydrationExistentialDeposit(hydration, HYDRATION_NATIVE_ASSET_ID),
         ])
 
-        const amountIn = transfer.amountIn + (feeCurrency === from.hydrationAssetId ? txFee : 0n)
+        // The source stable and DOT always have a fallback price, so txFee is set for them.
+        const amountIn =
+            transfer.amountIn + (feeCurrency === from.hydrationAssetId ? (txFee ?? 0n) : 0n)
         if (amountIn > balances.hydration[from.symbol]) {
             logs.push({
                 kind: ValidationKind.Error,
@@ -982,7 +985,7 @@ export class StablesTransfer<T extends EthereumProviderTypes> {
         }
         const requiredDot =
             (findTotalOrUndefined(transfer.fee, "DOT") ?? 0n) +
-            (feeCurrency === HYDRATION_DOT_ASSET_ID ? txFee : 0n)
+            (feeCurrency === HYDRATION_DOT_ASSET_ID ? (txFee ?? 0n) : 0n)
         if (requiredDot > balances.hydrationDot) {
             logs.push({
                 kind: ValidationKind.Error,
@@ -1012,7 +1015,7 @@ export class StablesTransfer<T extends EthereumProviderTypes> {
             })
         }
         if (feeCurrency === HYDRATION_NATIVE_ASSET_ID) {
-            if (txFee + hdxEd > balances.hydrationNative) {
+            if (sourceExecutionFee + hdxEd > balances.hydrationNative) {
                 logs.push({
                     kind: ValidationKind.Error,
                     reason: ValidationReason.InsufficientNativeFee,
@@ -1023,15 +1026,36 @@ export class StablesTransfer<T extends EthereumProviderTypes> {
             feeCurrency !== transfer.from.hydrationAssetId &&
             feeCurrency !== HYDRATION_DOT_ASSET_ID
         ) {
-            const feeBalance = balanceOf(
-                await hydration.call.currenciesApi.account(feeCurrency, transfer.sourceAccountHex),
-            )
-            if (txFee > feeBalance) {
+            // The batch does not spend this currency, so an unpriced fee cannot break it:
+            // too low a balance makes Hydration reject the transaction before inclusion.
+            if (txFee === undefined) {
                 logs.push({
-                    kind: ValidationKind.Error,
+                    kind: ValidationKind.Warning,
                     reason: ValidationReason.InsufficientNativeFee,
-                    message: `Insufficient balance of fee currency ${feeCurrency} on Hydration to pay the transaction fee.`,
+                    message: `The Hydration transaction fee is paid in ${feeAsset.symbol}, which could not be priced. If your ${feeAsset.symbol} balance is too low, the transaction is rejected and nothing is sent.`,
                 })
+            } else {
+                const [feeBalance, feeEd] = await Promise.all([
+                    hydration.call.currenciesApi
+                        .account(feeCurrency, transfer.sourceAccountHex)
+                        .then(balanceOf),
+                    hydrationExistentialDeposit(hydration, feeCurrency),
+                ])
+                if (txFee > feeBalance) {
+                    logs.push({
+                        kind: ValidationKind.Error,
+                        reason: ValidationReason.InsufficientNativeFee,
+                        message: `Insufficient ${feeAsset.symbol} on Hydration to pay the transaction fee.`,
+                    })
+                } else if (leavesDust(feeBalance, txFee, feeEd)) {
+                    // Fees are withdrawn allowing death, so a remainder under the
+                    // existential deposit is reaped.
+                    logs.push({
+                        kind: ValidationKind.Warning,
+                        reason: ValidationReason.InsufficientNativeFee,
+                        message: `The transaction fee may leave less than the ${formatAmount(feeEd, feeAsset.decimals)} ${feeAsset.symbol} existential deposit on Hydration, which would be lost.`,
+                    })
+                }
             }
         }
 
@@ -1041,14 +1065,16 @@ export class StablesTransfer<T extends EthereumProviderTypes> {
         let bridgeHubDryRunError
         let ethereumDryRunError: string | undefined
         const dryRunSource =
-            (await dryRunWithTxFee(
-                hydration,
-                registry.assetHubParaId,
-                transfer.sourceAccountHex,
-                transfer.tx,
-                feeCurrency,
-                txFee,
-            )) ??
+            (txFee !== undefined
+                ? await dryRunWithTxFee(
+                      hydration,
+                      registry.assetHubParaId,
+                      transfer.sourceAccountHex,
+                      transfer.tx,
+                      feeCurrency,
+                      txFee,
+                  )
+                : undefined) ??
             (await dryRunOnSourceParachain(
                 hydration,
                 registry.assetHubParaId,
