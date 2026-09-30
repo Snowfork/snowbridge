@@ -724,8 +724,8 @@ contract CompactValidatorProofsTest is Test {
         }
     }
 
-    /// `lowestSetBit` is a hand-written binary search; random words almost always have a low
-    /// bit set, so pin every bit position explicitly, alone and with every higher bit set.
+    /// `lowestSetBit` uses `clz`; random words almost always have a low bit set, so pin every
+    /// bit position explicitly, alone and with every higher bit set.
     function testToIndicesEveryBitPosition() public pure {
         for (uint256 b = 0; b < 256; b++) {
             uint256[] memory bf = new uint256[](2);
