@@ -299,12 +299,12 @@ contract BeefyClientTest is Test {
         );
     }
 
-    /// A PREVRANDAO whose low 120 bits are zero is stored as 1, so it still counts as captured.
+    /// A PREVRANDAO whose low 128 bits are zero is stored as 1, so it still counts as captured.
     function testZeroTruncatedSeedIsStillCaptured() public {
         BeefyClient.Commitment memory commitment = initialize(setId);
         beefyClient.submitInitial(commitment, bitfield, finalValidatorProofs[0]);
         vm.roll(block.number + randaoCommitDelay);
-        vm.prevrandao(bytes32(uint256(1) << 120));
+        vm.prevrandao(bytes32(uint256(1) << 128));
         beefyClient.commitPrevRandao(commitHash);
         assertEq(beefyClient.getTicket(commitHash).seed, 1);
 

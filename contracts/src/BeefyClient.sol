@@ -127,9 +127,9 @@ contract BeefyClient {
         uint32 validatorSetLen;
         // The number of signatures required
         uint32 numRequiredSignatures;
-        // Sampling seed: the low 120 bits of PREVRANDAO, never zero once captured. Zero means
+        // Sampling seed: the low 128 bits of PREVRANDAO, never zero once captured. Zero means
         // `commitPrevRandao` has not run for this ticket.
-        uint120 seed;
+        uint128 seed;
         // keccak256(commitmentHash, keccak256(bitfield)), see `computeClaimHash`
         bytes32 claimHash;
     }
@@ -385,10 +385,10 @@ contract BeefyClient {
             return;
         }
 
-        // Post-merge, the difficulty opcode now returns PREVRANDAO. 120 bits is ample for a
+        // Post-merge, the difficulty opcode now returns PREVRANDAO. 128 bits is ample for a
         // sampling seed; zero is reserved for "not captured".
         // forge-lint: disable-next-line(unsafe-typecast)
-        uint120 seed = uint120(block.prevrandao);
+        uint128 seed = uint128(block.prevrandao);
         ticket.seed = seed == 0 ? 1 : seed;
     }
 

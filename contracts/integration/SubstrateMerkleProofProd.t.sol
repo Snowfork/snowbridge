@@ -14,7 +14,7 @@ pragma solidity 0.8.34;
 //      takes a single `ValidatorProof` and is replayed as-is. For `submitFinal`, the live ticket
 //      is copied into the per-relayer two-slot layout and must sample from the claimed bitfield.
 //      The historical proofs are not replayed: they answer a sample drawn from the full 256-bit
-//      PREVRANDAO, while this client samples from its low 120 bits.
+//      PREVRANDAO, while this client samples from its low 128 bits.
 //
 //   BeefyClient 0x7cfc5C8b341991993080Af67D940B6aD19a010E1; all pairs from relayer 0xBa9b...Ed49.
 //
@@ -214,8 +214,8 @@ contract SubstrateMerkleProofProdTest is Test {
         assertTrue(prevRandao != 0, "live ticket has no captured PREVRANDAO");
 
         // Slot 0 keeps blockNumber / validatorSetLen / numRequiredSignatures in its low 128 bits
-        // and takes the 120-bit seed above them. Slot 1 is the claim hash.
-        uint256 seed = uint256(uint120(uint256(prevRandao)));
+        // and takes the 128-bit seed above them. Slot 1 is the claim hash.
+        uint256 seed = uint256(uint128(uint256(prevRandao)));
         if (seed == 0) {
             seed = 1;
         }
@@ -223,7 +223,7 @@ contract SubstrateMerkleProofProdTest is Test {
         vm.store(BC, bytes32(newBase), bytes32(uint256(packed) | (seed << 128)));
         vm.store(BC, bytes32(newBase + 1), claim);
 
-        (uint64 blockNumber,,, uint120 stored, bytes32 storedClaim) =
+        (uint64 blockNumber,,, uint128 stored, bytes32 storedClaim) =
             BeefyClient(BC).tickets(RELAYER);
         assertTrue(blockNumber != 0, "ticket block number");
         assertEq(stored, seed, "ticket seed");
@@ -324,7 +324,7 @@ contract SubstrateMerkleProofProdTest is Test {
     /// `createFinalBitfield` accepts it and samples `numRequiredSignatures` validators from the
     /// claimed bitfield. The historical `submitFinal` proofs cannot be replayed: they answer the
     /// sample drawn from the full 256-bit PREVRANDAO, while this client samples from its low
-    /// 120 bits. The multiproof itself is replayed on real data in #1813.
+    /// 128 bits. The multiproof itself is replayed on real data in #1813.
     function _checkMigratedTicketSamples(bytes32 commitmentHash, uint256[] memory bf) internal {
         (,, uint32 required,,) = BeefyClient(BC).tickets(RELAYER);
         vm.prank(RELAYER);
