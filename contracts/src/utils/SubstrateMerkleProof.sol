@@ -114,39 +114,10 @@ library SubstrateMerkleProof {
         if (n == 0 || n != leaves.length) {
             return (false, bytes32(0));
         }
-        // Reference implementation; the assembly below computes exactly this:
-        //
-        //     for (uint256 i = 0; i < n; i++) {
-        //         if (positions[i] >= width || (i > 0 && positions[i] <= positions[i - 1])) {
-        //             return (false, bytes32(0));
-        //         }
-        //     }
-        //     uint256 next;
-        //     while (width > 1) {
-        //         uint256 m;
-        //         for (uint256 i = 0; i < n; i++) {
-        //             uint256 position = positions[i];
-        //             bytes32 node = leaves[i];
-        //             if (position + 1 == width && width & 1 == 1) {
-        //                 // Lone trailing node of an odd-width layer: promoted unchanged.
-        //             } else if (position & 1 == 0 && i + 1 < n && positions[i + 1] == position + 1) {
-        //                 node = efficientHash(node, leaves[i + 1]);
-        //                 i++;
-        //             } else {
-        //                 if (next >= siblings.length) return (false, bytes32(0));
-        //                 node = position & 1 == 1
-        //                     ? efficientHash(siblings[next], node)
-        //                     : efficientHash(node, siblings[next]);
-        //                 next++;
-        //             }
-        //             positions[m] = position >> 1;
-        //             leaves[m] = node;
-        //             m++;
-        //         }
-        //         n = m;
-        //         width = ((width - 1) >> 1) + 1;
-        //     }
-        //     if (n != 1 || next != siblings.length) return (false, bytes32(0));
+        // The assembly below computes exactly `ReferenceMultiRoot.computeMultiRoot`
+        // (test/utils/ReferenceMultiRoot.sol), the plain-Solidity version.
+        // SubstrateMerkleProofAssembly.t.sol checks that the two agree, by fuzzing and on every
+        // position subset of widths 1..11.
         //
         // `n`, `i` and `m` are byte offsets. Reads stay in bounds: `i < n`, `m <= i`, and `next`
         // is checked before each sibling read. A bad position zeroes `n` and `width`; a missing

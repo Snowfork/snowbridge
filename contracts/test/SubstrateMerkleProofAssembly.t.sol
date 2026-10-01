@@ -2,7 +2,8 @@
 pragma solidity 0.8.34;
 
 // Tests for the assembly in `SubstrateMerkleProof.computeMultiRoot`: agreement with the
-// Solidity reference, the `position + 1` wrap at `type(uint256).max`, and memory safety.
+// Solidity reference (fuzzed, and exhaustively for widths 1..11), the `position + 1` wrap at
+// `type(uint256).max`, and memory safety.
 
 import {Test} from "forge-std/Test.sol";
 import {SubstrateMerkleProof} from "../src/utils/SubstrateMerkleProof.sol";
@@ -93,6 +94,50 @@ contract SubstrateMerkleProofAssemblyTest is Test {
         }
         MerkleLibSubstrate.sort(positions);
         assertMatchesReference(positions, leaves, width, junk(bytes32(seed), sibSeed));
+    }
+
+    // ---- exhaustive ---------------------------------------------------------------------
+
+    /// Every non-empty position subset of every width 1..11 (4,083 cases) on a real tree, always
+    /// in agreement with the reference: the honest multiproof gives the tree root, a changed
+    /// sibling gives a different root, and one sibling too many or too few is rejected.
+    function testExhaustiveSmallWidths() public view {
+        for (uint256 width = 1; width <= 11; width++) {
+            (bytes32[][] memory L, bytes32 fullRoot) =
+                MerkleLibSubstrate.buildLevels(MerkleLibSubstrate.genLeaves(width));
+            for (uint256 mask = 1; mask < (1 << width); mask++) {
+                uint256[] memory positions = positionsOf(mask, width);
+                bytes32[] memory leaves = new bytes32[](positions.length);
+                for (uint256 i = 0; i < positions.length; i++) {
+                    leaves[i] = L[0][positions[i]];
+                }
+                bytes32[] memory siblings = siblingsFor(L, positions);
+
+                (bool valid, bytes32 root) =
+                    assertMatchesReference(positions, leaves, width, siblings);
+                assertTrue(valid, "honest multiproof rejected");
+                assertEq(root, fullRoot, "honest multiproof gives the wrong root");
+
+                (valid,) = assertMatchesReference(
+                    positions, leaves, width, append(siblings, keccak256("extra"))
+                );
+                assertFalse(valid, "extra sibling accepted");
+
+                if (siblings.length > 0) {
+                    bytes32 kept = siblings[0];
+                    siblings[0] = keccak256("changed");
+                    (valid, root) = assertMatchesReference(positions, leaves, width, siblings);
+                    assertTrue(valid && root != fullRoot, "changed sibling gives the tree root");
+                    siblings[0] = kept;
+
+                    assembly {
+                        mstore(siblings, sub(mload(siblings), 1))
+                    }
+                    (valid,) = assertMatchesReference(positions, leaves, width, siblings);
+                    assertFalse(valid, "missing sibling accepted");
+                }
+            }
+        }
     }
 
     // ---- type(uint256).max --------------------------------------------------------------
@@ -353,6 +398,22 @@ contract SubstrateMerkleProofAssemblyTest is Test {
         out = new bytes32[](n);
         for (uint256 i = 0; i < n; i++) {
             out[i] = keccak256(abi.encode(leaf, i));
+        }
+    }
+
+    /// The set bits of `mask`, in ascending order.
+    function positionsOf(uint256 mask, uint256 width)
+        internal
+        pure
+        returns (uint256[] memory out)
+    {
+        out = new uint256[](width);
+        uint256 n;
+        for (uint256 p = 0; p < width; p++) {
+            if (mask & (1 << p) != 0) out[n++] = p;
+        }
+        assembly {
+            mstore(out, n)
         }
     }
 
