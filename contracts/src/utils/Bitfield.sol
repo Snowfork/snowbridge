@@ -56,24 +56,28 @@ library Bitfield {
         }
 
         outputBitfield = new uint256[](priorBitfield.length);
-        uint256 found = 0;
 
-        for (uint256 i = 0; found < n;) {
-            uint256 index = makeIndex(seed, i, priorBitfieldSize);
-
-            // require randomly selected bit to be set in priorBitfield and not yet set in bitfield
-            if (!isSet(priorBitfield, index) || isSet(outputBitfield, index)) {
-                unchecked {
-                    i++;
+        // Same draws as `makeIndex(seed, i, priorBitfieldSize)`: keep index i when it is set in
+        // `priorBitfield` and not yet in the output. Indices are below `priorBitfieldSize`, so
+        // every word read is in bounds. With `priorBitfieldSize == 0`, `n` is 0 and nothing runs.
+        /// @solidity memory-safe-assembly
+        assembly {
+            let prior := add(priorBitfield, 0x20)
+            let out := add(outputBitfield, 0x20)
+            let found := 0
+            for { let i := 0 } lt(found, n) { i := add(i, 1) } {
+                mstore(0x00, seed)
+                mstore(0x20, i)
+                let index := mod(keccak256(0x00, 0x40), priorBitfieldSize)
+                let offset := shl(5, shr(8, index))
+                let mask := shl(and(index, 0xff), 1)
+                let word := mload(add(out, offset))
+                if iszero(and(word, mask)) {
+                    if and(mload(add(prior, offset)), mask) {
+                        mstore(add(out, offset), or(word, mask))
+                        found := add(found, 1)
+                    }
                 }
-                continue;
-            }
-
-            set(outputBitfield, index);
-
-            unchecked {
-                found++;
-                i++;
             }
         }
     }
