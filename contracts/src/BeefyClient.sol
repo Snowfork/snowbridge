@@ -775,10 +775,17 @@ contract BeefyClient {
     function recoverLeaf(bytes32 commitmentHash, bytes calldata signatures, uint256 i)
         internal
         pure
-        returns (bytes32)
+        returns (bytes32 leaf)
     {
         (uint8 v, bytes32 r, bytes32 s) = signatureAt(signatures, i);
-        return keccak256(abi.encodePacked(ECDSA.recover(commitmentHash, v, r, s)));
+        address signer = ECDSA.recover(commitmentHash, v, r, s);
+        // keccak256(abi.encodePacked(signer)), hashed in scratch space to skip a memory
+        // allocation per signature.
+        /// @solidity memory-safe-assembly
+        assembly {
+            mstore(0x00, shl(96, signer))
+            leaf := keccak256(0x00, 0x14)
+        }
     }
 
     /**
