@@ -295,6 +295,13 @@ export const buildToEthereumTransferResult = (transfer: any): ToEthereumTransfer
             txHash: toEthereumL2Delivered.txHash,
         }
         result.status = TransferStatus.Complete
+    } else if (
+        transfer.destinationNetwork === "ethereum_l2" &&
+        result.status === TransferStatus.Pending &&
+        (transfer.status === TransferStatus.Complete || transfer.status === TransferStatus.Failed)
+    ) {
+        // Fill logs are not indexed. Postprocess records the Across result on the status column.
+        result.status = transfer.status
     }
     return result
 }
