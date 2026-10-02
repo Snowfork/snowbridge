@@ -1,15 +1,21 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.34;
 
-// Tests for the assembly in `SubstrateMerkleProof.computeMultiRoot`: agreement with the
-// Solidity reference (fuzzed, and exhaustively for widths 1..11), the `position + 1` wrap at
-// `type(uint256).max`, and memory safety.
+// Tests for the assembly in `SubstrateMerkleProof.computeMultiRoot`: agreement with two
+// Solidity models (fuzzed, and exhaustively for widths 1..11), the `position + 1` wrap at
+// `type(uint256).max`, and memory safety. `ReferenceMultiRoot` is the fold the assembly
+// replaced; `SpecMultiRoot` is built like the consensus-spec multiproof, so a flaw in the fold's
+// design shows up as a disagreement.
 
 import {Test} from "forge-std/Test.sol";
 import {SubstrateMerkleProof} from "../src/utils/SubstrateMerkleProof.sol";
 import {MerkleLibSubstrate} from "./utils/MerkleLib.sol";
 import {ReferenceMultiRoot} from "./utils/ReferenceMultiRoot.sol";
+import {SpecMultiRoot} from "./utils/SpecMultiRoot.sol";
+import {MultiproofAttacks} from "./utils/MultiproofAttacks.sol";
 
+/// forge-config: default.fuzz.runs = 1024
+/// forge-config: production.fuzz.runs = 1024
 contract SubstrateMerkleProofAssemblyTest is Test {
     uint256 constant MAX = type(uint256).max;
     uint256 constant GUARD_WORDS = 4;
@@ -33,6 +39,15 @@ contract SubstrateMerkleProofAssemblyTest is Test {
         return ReferenceMultiRoot.computeMultiRoot(positions, leaves, width, siblings);
     }
 
+    function specMultiRootExternal(
+        uint256[] memory positions,
+        bytes32[] memory leaves,
+        uint256 width,
+        bytes32[] calldata siblings
+    ) external pure returns (bool, bytes32) {
+        return SpecMultiRoot.computeMultiRoot(positions, leaves, width, siblings);
+    }
+
     function assertMatchesReference(
         uint256[] memory positions,
         bytes32[] memory leaves,
@@ -42,6 +57,10 @@ contract SubstrateMerkleProofAssemblyTest is Test {
         (bool refValid, bytes32 refRoot) = this.referenceMultiRootExternal(
             positions, leaves, width, siblings
         );
+        (bool specValid, bytes32 specRoot) =
+            this.specMultiRootExternal(positions, leaves, width, siblings);
+        assertEq(refValid, specValid, "reference and spec model disagree on valid");
+        assertEq(refRoot, specRoot, "reference and spec model disagree on root");
         (valid, root) = this.computeMultiRootExternal(positions, leaves, width, siblings);
         assertEq(valid, refValid, "valid differs from reference");
         assertEq(root, refRoot, "root differs from reference");
@@ -138,6 +157,111 @@ contract SubstrateMerkleProofAssemblyTest is Test {
                 }
             }
         }
+    }
+
+    // ---- attacks on an honest multiproof (MultiproofAttacks) -----------------------------
+
+    /// A second leaf at a sampled position, forged with padded siblings or real with the honest
+    /// siblings, is rejected.
+    function testFuzz_rejectsDuplicateLeafWithPaddedSiblings(
+        uint256 wSeed,
+        uint256 shape,
+        uint256 i,
+        bytes32 fake,
+        bytes32 pad
+    ) public view {
+        (uint256[] memory positions, bytes32[] memory leaves, uint256 width, bytes32[] memory s,) =
+            realCase(wSeed, shape, 0);
+        i = bound(i, 0, positions.length - 1);
+        assertRejectedDuplicate(
+            positions, leaves, width, MultiproofAttacks.padSiblings(s, pad), i, fake
+        );
+        assertRejectedDuplicate(positions, leaves, width, s, i, leaves[i]);
+    }
+
+    function assertRejectedDuplicate(
+        uint256[] memory positions,
+        bytes32[] memory leaves,
+        uint256 width,
+        bytes32[] memory siblings,
+        uint256 i,
+        bytes32 leaf
+    ) internal view {
+        (uint256[] memory p, bytes32[] memory l) =
+            MultiproofAttacks.duplicateLeaf(positions, leaves, i, leaf);
+        (bool valid,) = assertMatchesReference(p, l, width, siblings);
+        assertFalse(valid, "duplicate leaf accepted");
+    }
+
+    function testFuzz_rejectsShuffledSiblings(uint256 wSeed, uint256 shape, uint256 seed)
+        public
+        view
+    {
+        (
+            uint256[] memory positions,
+            bytes32[] memory leaves,
+            uint256 width,
+            bytes32[] memory siblings,
+            bytes32 fullRoot
+        ) = realCase(wSeed, shape, 0);
+        bytes32[] memory shuffled = MultiproofAttacks.shuffle(siblings, seed);
+        vm.assume(!MultiproofAttacks.sameOrder(shuffled, siblings));
+        assertNotTreeRoot(positions, leaves, width, shuffled, fullRoot, "shuffled siblings");
+    }
+
+    /// An extra leaf at an unsampled position, with a forged or its real hash.
+    function testFuzz_rejectsAnInsertedLeaf(
+        uint256 wSeed,
+        uint256 shape,
+        uint256 start,
+        bytes32 fake
+    ) public view {
+        (bytes32[][] memory L, bytes32 fullRoot) = MerkleLibSubstrate.buildLevels(
+            MerkleLibSubstrate.genLeaves(bound(wSeed, 1, 700))
+        );
+        uint256 width = L[0].length;
+        uint256[] memory positions = sample(width, shape);
+        uint256 x = MultiproofAttacks.unsampled(positions, width, start);
+        vm.assume(x < width);
+        bytes32[] memory siblings = siblingsFor(L, positions);
+        bytes32[] memory leaves = new bytes32[](positions.length);
+        for (uint256 i = 0; i < positions.length; i++) {
+            leaves[i] = L[0][positions[i]];
+        }
+
+        (uint256[] memory p, bytes32[] memory l) =
+            MultiproofAttacks.insertLeaf(positions, leaves, x, fake);
+        assertNotTreeRoot(p, l, width, siblings, fullRoot, "inserted forged leaf");
+        (p, l) = MultiproofAttacks.insertLeaf(positions, leaves, x, L[0][x]);
+        assertNotTreeRoot(p, l, width, siblings, fullRoot, "inserted real leaf");
+    }
+
+    function testFuzz_rejectsAMissingLeaf(uint256 wSeed, uint256 shape, uint256 i) public view {
+        (
+            uint256[] memory positions,
+            bytes32[] memory leaves,
+            uint256 width,
+            bytes32[] memory siblings,
+            bytes32 fullRoot
+        ) = realCase(wSeed, shape, 0);
+        vm.assume(positions.length > 1);
+        (uint256[] memory p, bytes32[] memory l) =
+            MultiproofAttacks.removeLeaf(positions, leaves, bound(i, 0, positions.length - 1));
+        assertNotTreeRoot(p, l, width, siblings, fullRoot, "missing leaf");
+    }
+
+    /// Siblings are the unknown layer of a proof, so a changed multiproof may still be
+    /// well-formed; it must never give the tree root.
+    function assertNotTreeRoot(
+        uint256[] memory positions,
+        bytes32[] memory leaves,
+        uint256 width,
+        bytes32[] memory siblings,
+        bytes32 fullRoot,
+        string memory what
+    ) internal view {
+        (bool valid, bytes32 root) = assertMatchesReference(positions, leaves, width, siblings);
+        assertFalse(valid && root == fullRoot, string.concat(what, " gives the tree root"));
     }
 
     // ---- type(uint256).max --------------------------------------------------------------

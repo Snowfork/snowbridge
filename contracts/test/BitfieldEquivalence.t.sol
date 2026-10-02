@@ -3,10 +3,17 @@ pragma solidity 0.8.34;
 
 import {Test} from "forge-std/Test.sol";
 import {Bitfield} from "../src/utils/Bitfield.sol";
+import {SpecSubsample} from "./utils/SpecSubsample.sol";
 
 /// @dev `subsample` (assembly) and `toIndices` must match the previous Solidity versions bit for
-/// bit: relayers and the Fiat-Shamir fixtures depend on the exact sample.
+/// bit: relayers and the Fiat-Shamir fixtures depend on the exact sample. `subsample` is also
+/// checked against `SpecSubsample`, a model written from the sampling rule, so a flaw shared by
+/// the library and the old loop shows up as a disagreement.
+/// forge-config: default.fuzz.runs = 4096
+/// forge-config: production.fuzz.runs = 4096
 contract BitfieldEquivalenceTest is Test {
+    /// The loop deployed on mainnet before the assembly (67b9407e^), kept verbatim, on the
+    /// library's own `makeIndex`, `isSet` and `set`.
     function referenceSubsample(uint256 seed, uint256[] memory prior, uint256 size, uint256 n)
         internal
         pure
@@ -14,15 +21,39 @@ contract BitfieldEquivalenceTest is Test {
     {
         out = new uint256[](prior.length);
         uint256 found = 0;
-        for (uint256 i = 0; found < n; i++) {
-            uint256 index = uint256(keccak256(abi.encode(seed, i))) % size;
-            uint256 bit = uint256(1) << (index & 0xff);
-            if (prior[index >> 8] & bit == 0 || out[index >> 8] & bit != 0) {
+
+        for (uint256 i = 0; found < n;) {
+            uint256 index = Bitfield.makeIndex(seed, i, size);
+
+            // require randomly selected bit to be set in priorBitfield and not yet set in bitfield
+            if (!Bitfield.isSet(prior, index) || Bitfield.isSet(out, index)) {
+                unchecked {
+                    i++;
+                }
                 continue;
             }
-            out[index >> 8] |= bit;
-            found++;
+
+            Bitfield.set(out, index);
+
+            unchecked {
+                found++;
+                i++;
+            }
         }
+    }
+
+    /// The library, the pre-assembly loop and the model all give the same sample.
+    function assertSubsampleAgrees(uint256 seed, uint256[] memory prior, uint256 size, uint256 n)
+        internal
+        pure
+        returns (uint256[] memory got)
+    {
+        uint256[] memory want = referenceSubsample(seed, prior, size, n);
+        (bool ok, uint256[] memory model) = SpecSubsample.subsample(seed, prior, size, n);
+        assertTrue(ok, "model rejected valid parameters");
+        assertEq(model, want, "model and reference disagree");
+        got = Bitfield.subsample(seed, prior, size, n);
+        assertEq(got, want, "library and reference disagree");
     }
 
     function referenceToIndices(uint256[] memory self) internal pure returns (uint256[] memory) {
@@ -60,10 +91,36 @@ contract BitfieldEquivalenceTest is Test {
         vm.assume(set > 0);
         uint256 n = bound(rawN, 0, set < 128 ? set : 128);
 
-        uint256[] memory got = Bitfield.subsample(seed, prior, size, n);
-        uint256[] memory want = referenceSubsample(seed, prior, size, n);
-        assertEq(got, want);
-        assertEq(Bitfield.toIndices(got, n), referenceToIndices(want));
+        uint256[] memory got = assertSubsampleAgrees(seed, prior, size, n);
+        assertEq(Bitfield.toIndices(got, n), referenceToIndices(got));
+    }
+
+    /// Properties checked without the reference, so a bug shared by both is still caught: the
+    /// sample has exactly `n` distinct bits, all claimed and all below `size`, even when the
+    /// claim carries padding bits past `size`.
+    function testFuzzSubsampleProperties(
+        uint256 seed,
+        uint256 entropy,
+        uint16 rawSize,
+        uint8 rawN,
+        uint256 padding
+    ) public pure {
+        uint256 size = bound(rawSize, 1, 1000);
+        uint256[] memory prior = claim(entropy, size);
+        uint256 set = Bitfield.countSetBits(prior, size);
+        vm.assume(set > 0);
+        uint256 n = bound(rawN, 0, set < 128 ? set : 128);
+        if (size % 256 != 0) {
+            prior[prior.length - 1] |= padding << (size % 256);
+        }
+
+        uint256[] memory got = assertSubsampleAgrees(seed, prior, size, n);
+        assertEq(got.length, prior.length, "length");
+        assertEq(Bitfield.countSetBits(got), n, "count");
+        for (uint256 w = 0; w < got.length; w++) {
+            assertEq(got[w] & ~prior[w], 0, "unclaimed bit");
+        }
+        assertEq(Bitfield.countSetBits(got, size), n, "bit past size");
     }
 
     /// Claims barely larger than the sample (n + 0..3 bits), so the rejection loop runs long
@@ -88,8 +145,42 @@ contract BitfieldEquivalenceTest is Test {
             prior[i >> 8] |= uint256(1) << (i & 0xff);
         }
 
-        uint256[] memory got = Bitfield.subsample(seed, prior, size, n);
-        assertEq(got, referenceSubsample(seed, prior, size, n));
+        assertSubsampleAgrees(seed, prior, size, n);
+    }
+
+    function subsampleExternal(uint256 seed, uint256[] memory prior, uint256 size, uint256 n)
+        external
+        pure
+        returns (uint256[] memory)
+    {
+        return Bitfield.subsample(seed, prior, size, n);
+    }
+
+    /// Wrong container length or too few claims: the library reverts exactly when the model
+    /// reports invalid parameters, and otherwise they agree.
+    function testFuzzSubsampleRejectsTheSameParametersAsTheModel(
+        uint256 seed,
+        uint256 entropy,
+        uint16 rawSize,
+        uint8 rawLength,
+        uint16 rawN
+    ) public view {
+        uint256 size = bound(rawSize, 0, 1000);
+        uint256 length = bound(rawLength, 0, 5);
+        uint256[] memory prior = new uint256[](length);
+        for (uint256 w = 0; w < length; w++) {
+            prior[w] = uint256(keccak256(abi.encode(entropy, w)));
+        }
+        uint256 n = bound(rawN, 0, size + 2);
+
+        (bool ok, uint256[] memory model) = SpecSubsample.subsample(seed, prior, size, n);
+        try this.subsampleExternal(seed, prior, size, n) returns (uint256[] memory got) {
+            assertTrue(ok, "library accepted parameters the model rejects");
+            assertEq(got, model, "library and model disagree");
+        } catch (bytes memory reason) {
+            assertFalse(ok, "library rejected parameters the model accepts");
+            assertEq(bytes4(reason), Bitfield.InvalidSamplingParams.selector, "revert reason");
+        }
     }
 
     /// The assembly writes only scratch space and its own output: the claimed bitfield and the

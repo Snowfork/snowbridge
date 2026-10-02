@@ -115,8 +115,9 @@ library SubstrateMerkleProof {
             return (false, bytes32(0));
         }
         // The assembly below computes exactly `ReferenceMultiRoot.computeMultiRoot`
-        // (test/utils/ReferenceMultiRoot.sol), the plain-Solidity version.
-        // SubstrateMerkleProofAssembly.t.sol checks that the two agree, by fuzzing and on every
+        // (test/utils/ReferenceMultiRoot.sol), the plain-Solidity version, and
+        // `SpecMultiRoot.computeMultiRoot`, a model built like the consensus-spec multiproof.
+        // SubstrateMerkleProofAssembly.t.sol checks that all three agree, by fuzzing and on every
         // position subset of widths 1..11.
         //
         // `n`, `i` and `m` are byte offsets. Reads stay in bounds: `i < n`, `m <= i`, and `next`

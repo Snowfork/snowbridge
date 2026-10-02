@@ -436,10 +436,10 @@ contract CompactValidatorProofsTest is Test {
         }
     }
 
-    // Polytope's multiproof verifier was forged (solidity-merkle-trees#57) with a leaf count
-    // above 2^255: leaves started on different layers, the walk stopped at the root, and a
-    // forged subtree was never folded in. Here every node stays on one layer and the loop is
-    // bounded by `width`, so even at the largest widths the call must terminate cleanly.
+    // A multiproof walk that lets leaves start on different layers, or stops once one node
+    // reaches the root, can skip a forged subtree at huge widths. Here every node stays on one
+    // layer and the loop is bounded by `width`, so even at the largest widths the call must
+    // terminate cleanly.
 
     /// Arbitrary input at any width: returns instead of panicking (a revert fails the test).
     function testFuzz_computeMultiRootHugeWidthTerminates(

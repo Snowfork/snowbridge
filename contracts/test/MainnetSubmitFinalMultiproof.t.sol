@@ -8,6 +8,9 @@ import {BeefyClient} from "../src/BeefyClient.sol";
 import {Bitfield} from "../src/utils/Bitfield.sol";
 import {SubstrateMerkleProof} from "../src/utils/SubstrateMerkleProof.sol";
 import {CompactProofLib} from "./utils/CompactProofLib.sol";
+import {ReferenceMultiRoot} from "./utils/ReferenceMultiRoot.sol";
+import {SpecMultiRoot} from "./utils/SpecMultiRoot.sol";
+import {MultiproofAttacks} from "./utils/MultiproofAttacks.sol";
 
 /// memory->calldata bridge for the on-chain library.
 contract MerkleHarness {
@@ -26,6 +29,24 @@ contract MerkleHarness {
         bytes32[] calldata siblings
     ) external pure returns (bool, bytes32) {
         return SubstrateMerkleProof.computeMultiRoot(positions, leaves, width, siblings);
+    }
+
+    function referenceMultiRoot(
+        uint256[] memory positions,
+        bytes32[] memory leaves,
+        uint256 width,
+        bytes32[] calldata siblings
+    ) external pure returns (bool, bytes32) {
+        return ReferenceMultiRoot.computeMultiRoot(positions, leaves, width, siblings);
+    }
+
+    function specMultiRoot(
+        uint256[] memory positions,
+        bytes32[] memory leaves,
+        uint256 width,
+        bytes32[] calldata siblings
+    ) external pure returns (bool, bytes32) {
+        return SpecMultiRoot.computeMultiRoot(positions, leaves, width, siblings);
     }
 }
 
@@ -225,6 +246,87 @@ contract MainnetSubmitFinalMultiproofTest is MainnetBeefyFixture {
         assertEq(bc.latestBeefyBlock(), commitment.blockNumber, "beefy block");
     }
 
+    /// The attacks of `MultiproofAttacks` on each real multiproof: none gives the live root,
+    /// in the on-chain library or either reference.
+    function testMainnetMultiproofAttacksFail() public {
+        MainnetTx[] memory txs = mainnetTxs();
+        for (uint256 t = 0; t < txs.length; t++) {
+            _attack(txs[t]);
+        }
+    }
+
+    function _attack(MainnetTx memory t) internal {
+        (uint256[] memory positions, bytes32[] memory leaves, bytes32[] memory siblings) =
+            _realMultiproof(t);
+        uint256 n = positions.length;
+        uint256 width = t.vsetLength;
+        uint256[] memory p;
+        bytes32[] memory l;
+
+        for (uint256 k = 0; k < 3; k++) {
+            uint256 i = k * (n - 1) / 2;
+            (p, l) = MultiproofAttacks.duplicateLeaf(positions, leaves, i, keccak256("forged"));
+            _assertNotRoot(
+                t, p, l, MultiproofAttacks.padSiblings(siblings, keccak256("pad")), "duplicate"
+            );
+            (p, l) = MultiproofAttacks.duplicateLeaf(positions, leaves, i, leaves[i]);
+            _assertNotRoot(t, p, l, siblings, "duplicate of a real leaf");
+
+            uint256 x = MultiproofAttacks.unsampled(positions, width, k * width / 3);
+            (p, l) = MultiproofAttacks.insertLeaf(positions, leaves, x, keccak256("forged"));
+            _assertNotRoot(t, p, l, siblings, "inserted leaf");
+        }
+        for (uint256 seed = 1; seed <= 4; seed++) {
+            _assertNotRoot(
+                t, positions, leaves, MultiproofAttacks.shuffle(siblings, seed), "shuffled"
+            );
+        }
+        for (uint256 i = 0; i < n; i++) {
+            (p, l) = MultiproofAttacks.removeLeaf(positions, leaves, i);
+            _assertNotRoot(t, p, l, siblings, "missing leaf");
+        }
+    }
+
+    function _assertNotRoot(
+        MainnetTx memory t,
+        uint256[] memory p,
+        bytes32[] memory l,
+        bytes32[] memory s,
+        string memory what
+    ) internal view {
+        (bool ok, bytes32 root) = harness.computeMultiRoot(p, l, t.vsetLength, s);
+        assertFalse(ok && root == t.vsetRoot, string.concat(t.name, ": ", what));
+        (bool refOk, bytes32 refRoot) = harness.referenceMultiRoot(p, l, t.vsetLength, s);
+        (bool specOk, bytes32 specRoot) = harness.specMultiRoot(p, l, t.vsetLength, s);
+        assertTrue(
+            ok == refOk && ok == specOk && root == refRoot && root == specRoot,
+            string.concat(t.name, ": implementations disagree on ", what)
+        );
+    }
+
+    /// The real proofs as one multiproof, with leaves from the recovered signers.
+    function _realMultiproof(MainnetTx memory t)
+        internal
+        returns (uint256[] memory positions, bytes32[] memory leaves, bytes32[] memory siblings)
+    {
+        (
+            BeefyClient.Commitment memory commitment,,
+            BeefyClient.ValidatorProof[] memory proofs,,,
+        ) = _load(t);
+        bytes32 commitmentHash = _deploy().computeCommitmentHash(commitment);
+        positions = new uint256[](proofs.length);
+        leaves = new bytes32[](proofs.length);
+        for (uint256 i = 0; i < proofs.length; i++) {
+            positions[i] = proofs[i].index;
+            leaves[i] = keccak256(
+                abi.encodePacked(
+                    ECDSA.recover(commitmentHash, proofs[i].v, proofs[i].r, proofs[i].s)
+                )
+            );
+        }
+        siblings = CompactProofLib.toCompact(proofs, t.vsetLength).siblings;
+    }
+
     function _checkLibrary(MainnetTx memory t) internal {
         (
             BeefyClient.Commitment memory commitment,,
@@ -263,6 +365,12 @@ contract MainnetSubmitFinalMultiproofTest is MainnetBeefyFixture {
             harness.computeMultiRoot(positions, leaves, t.vsetLength, compact.siblings);
         assertTrue(multiOk, string.concat(t.name, ": multiproof structurally invalid"));
         assertEq(multiRoot, t.vsetRoot, string.concat(t.name, ": multiproof root mismatch"));
+        (multiOk, multiRoot) =
+            harness.referenceMultiRoot(positions, leaves, t.vsetLength, compact.siblings);
+        assertTrue(multiOk && multiRoot == t.vsetRoot, string.concat(t.name, ": reference"));
+        (multiOk, multiRoot) =
+            harness.specMultiRoot(positions, leaves, t.vsetLength, compact.siblings);
+        assertTrue(multiOk && multiRoot == t.vsetRoot, string.concat(t.name, ": spec model"));
 
         console.log(t.name);
         console.log("  legacy proofs", proofs.length);
