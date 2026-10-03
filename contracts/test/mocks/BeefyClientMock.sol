@@ -50,19 +50,18 @@ contract BeefyClientMock is BeefyClient {
         ValidatorSet calldata _nextValidatorSet
     ) external {
         latestBeefyBlock = _initialBeefyBlock;
-        currentValidatorSet.id = _initialValidatorSet.id;
-        currentValidatorSet.length = _initialValidatorSet.length;
-        currentValidatorSet.root = _initialValidatorSet.root;
-        nextValidatorSet.id = _nextValidatorSet.id;
-        nextValidatorSet.length = _nextValidatorSet.length;
-        nextValidatorSet.root = _nextValidatorSet.root;
+        currentSetIndex = 0;
+        validatorSets[0] = ValidatorSetState(
+            _initialValidatorSet.id, _initialValidatorSet.length, _initialValidatorSet.root
+        );
+        validatorSets[1] = ValidatorSetState(
+            _nextValidatorSet.id, _nextValidatorSet.length, _nextValidatorSet.root
+        );
     }
 
     function getValidatorCounter(bool next, uint256 index) public view returns (uint16) {
-        if (next) {
-            return usageCounters[nextValidatorSet.root].get(index);
-        }
-        return usageCounters[currentValidatorSet.root].get(index);
+        uint8 current = currentSetIndex;
+        return usageCounters[validatorSets[next ? current ^ 1 : current].root].get(index);
     }
 
     function computeNumRequiredSignatures_public(
