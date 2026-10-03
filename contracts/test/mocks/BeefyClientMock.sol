@@ -37,7 +37,7 @@ contract BeefyClientMock is BeefyClient {
     }
 
     function setLatestBeefyBlock(uint32 _latestBeefyBlock) external {
-        latestBeefyBlock = _latestBeefyBlock;
+        head.latestBeefyBlock = _latestBeefyBlock;
     }
 
     function setLatestMMRRoot(bytes32 _latestMMRRoot) external {
@@ -49,19 +49,21 @@ contract BeefyClientMock is BeefyClient {
         ValidatorSet calldata _initialValidatorSet,
         ValidatorSet calldata _nextValidatorSet
     ) external {
-        latestBeefyBlock = _initialBeefyBlock;
-        currentSetIndex = 0;
-        validatorSets[0] = ValidatorSetState(
-            _initialValidatorSet.id, _initialValidatorSet.length, _initialValidatorSet.root
+        head = Head(
+            uint32(_initialBeefyBlock),
+            0,
+            uint64(_initialValidatorSet.id),
+            uint32(_initialValidatorSet.length),
+            uint64(_nextValidatorSet.id),
+            uint32(_nextValidatorSet.length)
         );
-        validatorSets[1] = ValidatorSetState(
-            _nextValidatorSet.id, _nextValidatorSet.length, _nextValidatorSet.root
-        );
+        validatorSetRoots[0] = _initialValidatorSet.root;
+        validatorSetRoots[1] = _nextValidatorSet.root;
     }
 
     function getValidatorCounter(bool next, uint256 index) public view returns (uint16) {
-        uint8 current = currentSetIndex;
-        return usageCounters[validatorSets[next ? current ^ 1 : current].root].get(index);
+        uint8 current = head.currentSetIndex;
+        return usageCounters[validatorSetRoots[next ? current ^ 1 : current]].get(index);
     }
 
     function computeNumRequiredSignatures_public(
