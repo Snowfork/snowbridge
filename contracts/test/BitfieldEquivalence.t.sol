@@ -263,4 +263,59 @@ contract BitfieldEquivalenceTest is Test {
         vm.expectRevert(Bitfield.InvalidSamplingParams.selector);
         this.toIndicesExternal(bf, 4);
     }
+
+    /// Across several words, `toIndices` succeeds exactly when `n` is the number of set bits.
+    function testFuzzToIndicesRejectsEveryWrongCount(
+        uint256 a,
+        uint256 b,
+        uint256 c,
+        uint256 delta,
+        bool above
+    ) public {
+        uint256[] memory bf = new uint256[](3);
+        (bf[0], bf[1], bf[2]) = (a, b, c);
+        uint256 count = Bitfield.countSetBits(bf);
+        assertEq(this.toIndicesExternal(bf, count), referenceToIndices(bf));
+        delta = bound(delta, 1, 8);
+        if (!above && count < delta) return;
+        vm.expectRevert(Bitfield.InvalidSamplingParams.selector);
+        this.toIndicesExternal(bf, above ? count + delta : count - delta);
+    }
+
+    /// On success, `toIndices` writes only its own output; with more set bits than `n` it reverts.
+    function testFuzzToIndicesLeavesSurroundingMemoryIntact(uint256 a, uint256 b, uint8 rawN)
+        public
+        view
+    {
+        uint256[] memory bf = new uint256[](2);
+        (bf[0], bf[1]) = (a, b);
+        uint256 n = bound(rawN, 0, Bitfield.countSetBits(bf));
+        try this.toIndicesGuarded(bf, n) {}
+        catch (bytes memory reason) {
+            // More set bits than `n` is a clean revert; anything else is a failed guard.
+            assertEq(bytes4(reason), Bitfield.InvalidSamplingParams.selector, "guard failed");
+            assertLt(n, Bitfield.countSetBits(bf), "valid count reverted");
+        }
+    }
+
+    function toIndicesGuarded(uint256[] memory bf, uint256 n) external pure {
+        uint256 sentinel = uint256(keccak256("sentinel"));
+        uint256 free;
+        assembly {
+            free := mload(0x40)
+            for { let o := 0 } lt(o, 0x2400) { o := add(o, 0x20) } {
+                mstore(add(free, o), sentinel)
+            }
+        }
+        uint256[] memory out = Bitfield.toIndices(bf, n);
+        bool intact = true;
+        assembly {
+            for { let p := add(out, shl(5, add(mload(out), 1))) } lt(p, add(free, 0x2400)) {
+                p := add(p, 0x20)
+            } {
+                if iszero(eq(mload(p), sentinel)) { intact := false }
+            }
+        }
+        require(intact, "memory past the output changed");
+    }
 }

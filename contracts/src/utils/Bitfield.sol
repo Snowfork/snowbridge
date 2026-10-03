@@ -198,31 +198,29 @@ library Bitfield {
         returns (uint256[] memory indices)
     {
         indices = new uint256[](n);
-        uint256 found;
-        for (uint256 w = 0; w < self.length; w++) {
-            uint256 word = self[w];
-            while (word != 0) {
-                if (found == n) {
-                    revert InvalidSamplingParams();
-                }
-                indices[found] = (w << 8) | lowestSetBit(word);
-                unchecked {
-                    word &= word - 1;
-                    found++;
-                }
-            }
-        }
-        if (found != n) {
-            revert InvalidSamplingParams();
-        }
-    }
-
-    /// @dev Index of the lowest set bit of a non-zero `word`: isolate the bit, then take 255 minus
-    /// its leading zeros (the EIP-7939 CLZ opcode, Osaka and later).
-    function lowestSetBit(uint256 word) private pure returns (uint256 r) {
+        bool exact;
+        // For each set bit, lowest first: its index is 256 * word + the bit's position, where
+        // `and(word, sub(0, word))` isolates the lowest set bit and 255 - CLZ (EIP-7939, Osaka)
+        // gives its position. `word & (word - 1)` then clears it. With more set bits than `n`,
+        // the extra writes land past `indices` in unallocated memory, which memory-safe assembly
+        // may use as scratch, and the count check below reverts.
         /// @solidity memory-safe-assembly
         assembly {
-            r := sub(255, clz(and(word, sub(0, word))))
+            let p := add(indices, 0x20)
+            let end := add(p, shl(5, n))
+            let words := add(self, 0x20)
+            for { let w := 0 } lt(w, mload(self)) { w := add(w, 1) } {
+                for { let word := mload(add(words, shl(5, w))) } word {
+                    word := and(word, sub(word, 1))
+                } {
+                    mstore(p, or(shl(8, w), sub(255, clz(and(word, sub(0, word))))))
+                    p := add(p, 0x20)
+                }
+            }
+            exact := eq(p, end)
+        }
+        if (!exact) {
+            revert InvalidSamplingParams();
         }
     }
 
