@@ -56,24 +56,28 @@ library Bitfield {
         }
 
         outputBitfield = new uint256[](priorBitfield.length);
-        uint256 found = 0;
 
-        for (uint256 i = 0; found < n;) {
-            uint256 index = makeIndex(seed, i, priorBitfieldSize);
-
-            // require randomly selected bit to be set in priorBitfield and not yet set in bitfield
-            if (!isSet(priorBitfield, index) || isSet(outputBitfield, index)) {
-                unchecked {
-                    i++;
+        // Same draws as `makeIndex(seed, i, priorBitfieldSize)`: keep index i when it is set in
+        // `priorBitfield` and not yet in the output. Indices are below `priorBitfieldSize`, so
+        // every word read is in bounds. With `priorBitfieldSize == 0`, `n` is 0 and nothing runs.
+        /// @solidity memory-safe-assembly
+        assembly {
+            let prior := add(priorBitfield, 0x20)
+            let out := add(outputBitfield, 0x20)
+            let found := 0
+            for { let i := 0 } lt(found, n) { i := add(i, 1) } {
+                mstore(0x00, seed)
+                mstore(0x20, i)
+                let index := mod(keccak256(0x00, 0x40), priorBitfieldSize)
+                let offset := shl(5, shr(8, index))
+                let mask := shl(and(index, 0xff), 1)
+                let word := mload(add(out, offset))
+                if iszero(and(word, mask)) {
+                    if and(mload(add(prior, offset)), mask) {
+                        mstore(add(out, offset), or(word, mask))
+                        found := add(found, 1)
+                    }
                 }
-                continue;
-            }
-
-            set(outputBitfield, index);
-
-            unchecked {
-                found++;
-                i++;
             }
         }
     }
@@ -173,6 +177,50 @@ library Bitfield {
             }
 
             return count;
+        }
+    }
+
+    /**
+     * @dev Enumerate the positions of the set bits in `self`, in ascending order.
+     *
+     * Used to turn a bitfield the contract derived itself (a subsample) into the canonical
+     * ordered index list that a compact proof set is checked against. Because the list comes
+     * from the sample rather than from calldata, the indices are inherently in range, strictly
+     * ascending and duplicate-free, so a caller cannot answer one sampled slot twice.
+     *
+     * @param self the bitfield to enumerate
+     * @param n the expected number of set bits. Reverts unless exactly `n` bits are set, so a
+     *        bitfield that does not match the count it was sampled for can never be used.
+     */
+    function toIndices(uint256[] memory self, uint256 n)
+        internal
+        pure
+        returns (uint256[] memory indices)
+    {
+        indices = new uint256[](n);
+        bool exact;
+        // For each set bit, lowest first: its index is 256 * word + the bit's position, where
+        // `and(word, sub(0, word))` isolates the lowest set bit and 255 - CLZ (EIP-7939, Osaka)
+        // gives its position. `word & (word - 1)` then clears it. With more set bits than `n`,
+        // the extra writes land past `indices` in unallocated memory, which memory-safe assembly
+        // may use as scratch, and the count check below reverts.
+        /// @solidity memory-safe-assembly
+        assembly {
+            let p := add(indices, 0x20)
+            let end := add(p, shl(5, n))
+            let words := add(self, 0x20)
+            for { let w := 0 } lt(w, mload(self)) { w := add(w, 1) } {
+                for { let word := mload(add(words, shl(5, w))) } word {
+                    word := and(word, sub(word, 1))
+                } {
+                    mstore(p, or(shl(8, w), sub(255, clz(and(word, sub(0, word))))))
+                    p := add(p, 0x20)
+                }
+            }
+            exact := eq(p, end)
+        }
+        if (!exact) {
+            revert InvalidSamplingParams();
         }
     }
 

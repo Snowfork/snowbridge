@@ -3,6 +3,7 @@ import {Test} from "forge-std/Test.sol";
 import {BeefyClient} from "../src/BeefyClient.sol";
 import {Bitfield} from "../src/utils/Bitfield.sol";
 import {ScaleCodec} from "../src/utils/ScaleCodec.sol";
+import {CompactProofLib} from "./utils/CompactProofLib.sol";
 
 contract FiatShamirPaddingBitsGrindTest is Test {
     using Bitfield for uint256[];
@@ -71,11 +72,13 @@ contract FiatShamirPaddingBitsGrindTest is Test {
         assertTrue(
             !_sampleIsExactlyFirstK(sampled0, 6), "baseline unexpectedly matches attacker set"
         );
-        vm.expectRevert(BeefyClient.InvalidValidatorProof.selector);
+        // The multiproof is built for [0..5], not the sampled positions, so the contract runs
+        // out of siblings before it reaches a root.
+        vm.expectRevert(BeefyClient.InvalidValidatorProofLength.selector);
         beefy.submitFiatShamir(
             commitment,
             bitfield0,
-            attackerProofs,
+            CompactProofLib.toCompact(attackerProofs, N),
             BeefyClient.MMRLeaf({
                 version: 0,
                 parentNumber: 0,
@@ -117,7 +120,7 @@ contract FiatShamirPaddingBitsGrindTest is Test {
         beefy.submitFiatShamir(
             commitment,
             grindedBitfield,
-            attackerProofs,
+            CompactProofLib.toCompact(attackerProofs, N),
             BeefyClient.MMRLeaf({
                 version: 0,
                 parentNumber: 0,

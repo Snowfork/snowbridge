@@ -4,6 +4,7 @@ pragma solidity 0.8.34;
 import {BeefyClient} from "../src/BeefyClient.sol";
 import {BeefyClientMock} from "../test/mocks/BeefyClientMock.sol";
 import {BeefyClientForgeRejectionTest} from "../test/SubstrateMerkleProofAliasing.t.sol";
+import {CompactProofLib} from "../test/utils/CompactProofLib.sol";
 
 contract SubstrateMerkleProofAliasingForkTest is BeefyClientForgeRejectionTest {
     function test_fix_forgeRejectedAtLiveValidatorCount() public {
@@ -17,7 +18,7 @@ contract SubstrateMerkleProofAliasingForkTest is BeefyClientForgeRejectionTest {
         BeefyClient.MMRLeaf memory leaf;
         bytes32[] memory empty = new bytes32[](0);
         vm.expectRevert(BeefyClient.InvalidValidatorProof.selector);
-        bc.submitFinal(_commit(), bf, proofs, leaf, empty, 0);
+        bc.submitFinal(_commit(), bf, CompactProofLib.toCompact(proofs, N), leaf, empty, 0);
 
         assertTrue(
             bc.latestMMRRoot() != forged, "patched contract at live count rejects the forge"

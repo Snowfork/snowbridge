@@ -1,38 +1,29 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.34;
 
-// Production verification for the SubstrateMerkleProof aliasing fix.
+// Production verification for the SubstrateMerkleProof / BeefyClient multiproof stack.
 //
-// This file merges the former ProdParity + ProdReplay suites. For each real (submitInitial,
-// submitFinal) pair captured from mainnet it forks once and runs TWO complementary checks:
+// For each real (submitInitial, submitFinal) pair captured from mainnet it forks once and runs
+// TWO complementary checks:
 //
 //   1. PARITY (library layer): decode the validator merkle proofs from the real calldata and run
-//      each through BOTH the inlined ORIGINAL (pre-fix) verify and the PATCHED verify, asserting
-//      they behave IDENTICALLY (both true). This proves the fix does not regress valid proofs. The
-//      genuine validator-set root/length are read from the live contract on the fork (selected by
-//      the commitment's validatorSetID), so no constants need to be maintained per pair.
+//      each through BOTH the inlined ORIGINAL (pre-aliasing-fix) verify and the current
+//      `SubstrateMerkleProof.verify`, asserting they behave IDENTICALLY (both true).
 //
-//   2. REPLAY (contract layer): replace the live BeefyClient's CODE with the PATCHED build via
-//      vm.etch (real storage — validator set, tickets, prevRandao — is preserved) and replay the
-//      exact production calldata end-to-end, asserting it still succeeds (and that submitFinal
-//      advances latestMMRRoot).
+//   2. REPLAY (contract layer): etch the current BeefyClient over live storage. `submitInitial`
+//      still takes a single `ValidatorProof` and is replayed as-is. `submitFinal` now takes
+//      `CompactValidatorProofs`; the captured legacy `ValidatorProof[]` is reassembled into that
+//      multiproof format and then submitted.
 //
 //   BeefyClient 0x7cfc5C8b341991993080Af67D940B6aD19a010E1; all pairs from relayer 0xBa9b...Ed49.
 //
-// Pairs (beefy block -> mainnet tx):
-//   25236612/25236743 (legacy seed pair, validatorSetID 5011)
-//   31600743: 0x5916adcf... / 0x0471a218...
-//   31598364: 0xd04c15dc... / 0xf41aaee0...
-//   31593578: 0xb1951dee... / 0xbca8dd30...
-//   31591200: 0x7d8092ca... / 0xdc38e280...
-//   31588809: 0xdaac6076... / 0x64812b93...
-//
 // Needs an archive RPC for the fork. Run:
-//   forge test --match-path test/SubstrateMerkleProofProd.t.sol -vv
+//   FOUNDRY_PROFILE=integration forge test --match-contract SubstrateMerkleProofProd -vv
 
 import {Test} from "forge-std/Test.sol";
 import {SubstrateMerkleProof} from "../src/utils/SubstrateMerkleProof.sol";
 import {BeefyClient} from "../src/BeefyClient.sol";
+import {CompactProofLib} from "../test/utils/CompactProofLib.sol";
 
 /// Inlined copy of the ORIGINAL (pre-fix) verify/computeRoot, to diff against the patched library.
 library OldSubstrateMerkleProof {
@@ -182,11 +173,15 @@ contract SubstrateMerkleProofProdTest is Test {
     function decodeFinal(bytes calldata cd)
         external
         pure
-        returns (BeefyClient.Commitment memory c, uint256[] memory bf, BeefyClient.ValidatorProof[] memory ps)
+        returns (
+            BeefyClient.Commitment memory c,
+            uint256[] memory bf,
+            BeefyClient.ValidatorProof[] memory ps,
+            BeefyClient.MMRLeaf memory leaf,
+            bytes32[] memory leafProof,
+            uint256 order
+        )
     {
-        BeefyClient.MMRLeaf memory leaf;
-        bytes32[] memory leafProof;
-        uint256 order;
         (c, bf, ps, leaf, leafProof, order) = abi.decode(
             cd[4:],
             (
@@ -270,7 +265,14 @@ contract SubstrateMerkleProofProdTest is Test {
         // prevRandao are already in storage, so the full flow's state is present.
         vm.createSelectFork(RPC, p.finalBlock - 1);
         bytes memory cd = vm.parseBytes(vm.readFile(p.finalFile));
-        (BeefyClient.Commitment memory c,, BeefyClient.ValidatorProof[] memory ps) = this.decodeFinal(cd);
+        (
+            BeefyClient.Commitment memory c,
+            uint256[] memory bf,
+            BeefyClient.ValidatorProof[] memory ps,
+            BeefyClient.MMRLeaf memory leaf,
+            bytes32[] memory leafProof,
+            uint256 order
+        ) = this.decodeFinal(cd);
         assertGt(ps.length, 0, "expected validator proofs");
 
         // 1. Parity at the merkle-proof layer for every validator proof in the call.
@@ -279,12 +281,22 @@ contract SubstrateMerkleProofProdTest is Test {
             _assertProofParity(root, width, keccak256(abi.encodePacked(ps[k].account)), ps[k].index, ps[k].proof);
         }
 
-        // 2. End-to-end replay of the full submitFinal call on the patched code.
+        // 2. Replay on the multiproof ABI: reassemble legacy paths into CompactValidatorProofs.
+        bytes memory multiproofCd = abi.encodeWithSelector(
+            BeefyClient.submitFinal.selector,
+            c,
+            bf,
+            CompactProofLib.toCompact(ps, width),
+            leaf,
+            leafProof,
+            order
+        );
+
         _etchPatched();
         vm.roll(p.finalBlock);
         bytes32 rootBefore = BeefyClient(BC).latestMMRRoot();
         vm.prank(RELAYER);
-        (bool ok, bytes memory ret) = BC.call(cd);
+        (bool ok, bytes memory ret) = BC.call(multiproofCd);
         assertTrue(
             ok, string.concat("submitFinal must succeed on patched code (", p.finalTx, "): ", _revertReason(ret))
         );

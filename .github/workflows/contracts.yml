@@ -27,6 +27,11 @@ jobs:
       - name: Test
         working-directory: contracts
         run: forge test
+      - name: Test assembly against its references on the deployed build
+        working-directory: contracts
+        run: >-
+          FOUNDRY_PROFILE=production forge test --match-path
+          'test/{BitfieldEquivalence,SubstrateMerkleProofAssembly,BeefyClientCompactAttack}.t.sol'
       - name: Coverage
         working-directory: contracts
         run: forge coverage --exclude-tests --report=lcov
