@@ -197,6 +197,13 @@ contract BeefyClient {
     bytes2 public constant MMR_ROOT_ID = bytes2("mh");
 
     /**
+     * @dev How far past the current set id a skip-ahead may reach (Polkadot has 6 sessions per
+     * era). Polkadot only slashes a BEEFY vote from a member of the vote's set, so keep the
+     * target close to sets the current signers belong to.
+     */
+    uint256 public constant maxSkipAheadSessions = 5;
+
+    /**
      * @dev Minimum delay in number of blocks that a relayer must wait between calling
      * submitInitial and commitPrevRandao. In production this should be set to MAX_SEED_LOOKAHEAD:
      * https://eth2book.info/altair/part3/config/preset#max_seed_lookahead
@@ -295,6 +302,11 @@ contract BeefyClient {
             signatureUsageCount = nextValidatorSet.usageCounters.get(proof.index);
             nextValidatorSet.usageCounters.set(proof.index, signatureUsageCount.saturatingAdd(1));
             vset = nextValidatorSet;
+        } else if (canSkipAhead(commitment.validatorSetID)) {
+            // Skip-ahead: verified against the current set.
+            signatureUsageCount = currentValidatorSet.usageCounters.get(proof.index);
+            currentValidatorSet.usageCounters
+                .set(proof.index, signatureUsageCount.saturatingAdd(1));
         } else {
             revert InvalidCommitment();
         }
@@ -401,7 +413,16 @@ contract BeefyClient {
             is_next_session = true;
             vset = nextValidatorSet;
         } else if (commitment.validatorSetID != currentValidatorSet.id) {
-            revert InvalidCommitment();
+            // Skip-ahead: verified against the current set.
+            if (!canSkipAhead(commitment.validatorSetID)) {
+                revert InvalidCommitment();
+            }
+        }
+
+        // submitInitial checked the quorum count against the ticket's set length. A set of the
+        // same length but different membership fails the signature checks instead.
+        if (tickets[ticketID].validatorSetLen != vset.length) {
+            revert InvalidTicket();
         }
 
         // Validate that all padding bits (beyond vset.length) are zero
@@ -429,6 +450,9 @@ contract BeefyClient {
             nextValidatorSet.length = leaf.nextAuthoritySetLen;
             nextValidatorSet.root = leaf.nextAuthoritySetRoot;
             nextValidatorSet.usageCounters = createUint16Array(leaf.nextAuthoritySetLen);
+        } else if (commitment.validatorSetID != currentValidatorSet.id) {
+            // Skip-ahead, checked by canSkipAhead above.
+            applySkip(commitment.validatorSetID, newMMRRoot, leaf, leafProof, leafProofOrder);
         }
 
         latestMMRRoot = newMMRRoot;
@@ -508,7 +532,10 @@ contract BeefyClient {
         if (commitment.validatorSetID == nextValidatorSet.id) {
             vset = nextValidatorSet;
         } else if (commitment.validatorSetID != currentValidatorSet.id) {
-            revert InvalidCommitment();
+            // Skip-ahead: verified against the current set.
+            if (!canSkipAhead(commitment.validatorSetID)) {
+                revert InvalidCommitment();
+            }
         }
 
         if (
@@ -550,7 +577,12 @@ contract BeefyClient {
             is_next_session = true;
             vset = nextValidatorSet;
         } else if (commitment.validatorSetID != currentValidatorSet.id) {
-            revert InvalidCommitment();
+            // Skip-ahead: verified against the current set. The Fiat-Shamir seed uses the current
+            // set id, as createFiatShamirFinalBitfield does. The signed commitment still binds
+            // the skipped-to id.
+            if (!canSkipAhead(commitment.validatorSetID)) {
+                revert InvalidCommitment();
+            }
         }
 
         if (
@@ -585,6 +617,9 @@ contract BeefyClient {
             nextValidatorSet.length = leaf.nextAuthoritySetLen;
             nextValidatorSet.root = leaf.nextAuthoritySetRoot;
             nextValidatorSet.usageCounters = createUint16Array(leaf.nextAuthoritySetLen);
+        } else if (commitment.validatorSetID != currentValidatorSet.id) {
+            // Skip-ahead, checked by canSkipAhead above.
+            applySkip(commitment.validatorSetID, newMMRRoot, leaf, leafProof, leafProofOrder);
         }
 
         latestMMRRoot = newMMRRoot;
@@ -594,6 +629,51 @@ contract BeefyClient {
     }
 
     /* Internal Functions */
+
+    /**
+     * @dev Whether a commitment from a later set can be verified against the current set: the
+     * id is past the next set and within `maxSkipAheadSessions`, and current and next share a
+     * root.
+     *
+     * Accepted risk: the target set's membership isn't checked. If it differs slightly, the
+     * skip still succeeds and keeps the current root for that id until the next handover.
+     * Keys outside the target set can't be slashed for it; a forgery still needs a quorum.
+     */
+    function canSkipAhead(uint64 validatorSetID) internal view returns (bool) {
+        return validatorSetID > nextValidatorSet.id
+            && validatorSetID <= uint256(currentValidatorSet.id) + maxSkipAheadSessions
+            && currentValidatorSet.root == nextValidatorSet.root;
+    }
+
+    /**
+     * @dev Move the current set to the skipped-to id, keeping its root, and load the next set from
+     * the MMR leaf.
+     */
+    function applySkip(
+        uint64 validatorSetID,
+        bytes32 newMMRRoot,
+        MMRLeaf calldata leaf,
+        bytes32[] calldata leafProof,
+        uint256 leafProofOrder
+    ) internal {
+        // Same rule as a handover: the next set id must be greater.
+        if (leaf.nextAuthoritySetID <= validatorSetID) {
+            revert InvalidMMRLeaf();
+        }
+        bool leafIsValid = MMRProof.verifyLeafProof(
+            newMMRRoot, keccak256(encodeMMRLeaf(leaf)), leafProof, leafProofOrder
+        );
+        if (!leafIsValid) {
+            revert InvalidMMRLeafProof();
+        }
+        // Keep usageCounters: the validators are the same, and resetting them would undo the
+        // signature cost repeated submitInitial calls have built up.
+        currentValidatorSet.id = validatorSetID;
+        nextValidatorSet.id = leaf.nextAuthoritySetID;
+        nextValidatorSet.length = leaf.nextAuthoritySetLen;
+        nextValidatorSet.root = leaf.nextAuthoritySetRoot;
+        nextValidatorSet.usageCounters = createUint16Array(leaf.nextAuthoritySetLen);
+    }
 
     // Creates a unique ticket ID for a new interactive prover-verifier session
     function createTicketID(address account, bytes32 commitmentHash)
