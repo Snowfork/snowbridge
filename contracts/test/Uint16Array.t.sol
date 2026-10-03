@@ -4,55 +4,20 @@ pragma solidity 0.8.34;
 import {Test} from "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
 
-import {Uint16Array, createUint16Array, IndexOutOfBounds} from "../src/utils/Uint16Array.sol";
+import {Uint16Array} from "../src/utils/Uint16Array.sol";
 
 contract Uint16ArrayTest is Test {
     Uint16Array counters;
 
-    function setUp() public {
-        delete counters;
-    }
-
-    function testCounterCreatedInitializationRoundsUp() public {
-        // 33 uint16s will require 3 uint256s
-        uint256[] memory expected = new uint256[](3);
-        counters = createUint16Array(33);
-        assertEq(counters.data, expected);
-    }
-
-    function testCounterWithLengthNotMultipleOf16() public {
-        // 33 uint16s will require 3 uint256s
-        uint256[] memory expected = new uint256[](3);
-        expected[2] = 1;
-
-        counters = createUint16Array(33);
-        counters.set(32, counters.get(32) + 1);
-        assertEq(counters.data, expected);
-    }
-
-    function testCounterCreatedAsZeroed() public {
-        uint256[] memory expected = new uint256[](2);
-        counters = createUint16Array(16);
-        counters.data[0] = 0xABABABAB;
-        counters = createUint16Array(32);
-        assertEq(counters.data, expected);
-    }
-
     function testCounterSet() public {
-        uint256[] memory expected = new uint256[](2);
-
-        // Manually set the 16th index to 2.
-        expected[1] = 2;
-
-        counters = createUint16Array(32);
         counters.set(16, 2);
 
-        assertEq(counters.data, expected);
+        // The 16th index is the lowest counter of the second word.
+        assertEq(counters.data[0], 0);
+        assertEq(counters.data[1], 2);
     }
 
     function testCounterGet() public {
-        counters = createUint16Array(32);
-
         // Manually set the 16th index to 2.
         counters.data[1] = 2;
 
@@ -60,7 +25,6 @@ contract Uint16ArrayTest is Test {
     }
 
     function testCounterGetAndSetAlongEntireRange() public {
-        counters = createUint16Array(32);
         for (uint16 index = 0; index < 32; index++) {
             // Should be zero as the initial value.
             uint16 value = counters.get(index);
@@ -91,7 +55,6 @@ contract Uint16ArrayTest is Test {
     }
 
     function testCounterGetAndSetWithTwoIterations() public {
-        counters = createUint16Array(300);
         uint256 index = 0;
         uint16 value = 11;
         counters.set(index, value);
@@ -105,17 +68,12 @@ contract Uint16ArrayTest is Test {
         assertEq(value, new_value);
     }
 
-    /// forge-config: default.allow_internal_expect_revert = true
-    function testCounterGetOutOfBounds() public {
-        counters = createUint16Array(17);
-        vm.expectRevert(IndexOutOfBounds.selector);
-        counters.get(17);
-    }
-
-    /// forge-config: default.allow_internal_expect_revert = true
-    function testCounterSetOutOfBounds() public {
-        counters = createUint16Array(17);
-        vm.expectRevert(IndexOutOfBounds.selector);
-        counters.set(17, 1);
+    function testCounterWordsNeedNoAllocation() public {
+        // Any index is usable without creating the array first; unused words stay zero.
+        counters.set(599, 7);
+        assertEq(counters.get(599), 7);
+        assertEq(counters.get(598), 0);
+        // Index 599 is counter 7 of word 37.
+        assertEq(counters.data[37], uint256(7) << (16 * 7));
     }
 }

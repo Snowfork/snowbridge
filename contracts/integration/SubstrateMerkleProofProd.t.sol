@@ -91,6 +91,8 @@ contract SubstrateMerkleProofProdTest is Test {
     string constant RPC = "https://eth-mainnet.public.blastapi.io"; // archive
     address constant BC = 0x7cfc5C8b341991993080Af67D940B6aD19a010E1;
     address constant RELAYER = 0xBa9bC9a8Aa87872f7B990031bde984A00b9CEd49;
+    uint256 constant LIVE_TICKETS_SLOT = 10;
+    uint256 constant TICKETS_SLOT = 4;
 
     NewVerifyHarness newH;
 
@@ -202,6 +204,35 @@ contract SubstrateMerkleProofProdTest is Test {
 
     // Replace the live contract's code with a freshly-compiled PATCHED BeefyClient that carries the
     // same immutables (read from the live contract), preserving the live storage layout/state.
+    /// Mainnet keeps `latestBeefyBlock` in slot 1 and each validator set in four slots (2-5 and
+    /// 6-9), id and length packed in the first. This branch packs the block, the current-set
+    /// index and both sets' ids and lengths into slot 1 (`Head`), and the roots into slots 2-3.
+    function _remapLiveValidatorSets() internal {
+        uint256 blockNumber = uint256(vm.load(BC, bytes32(uint256(1)))) & type(uint32).max;
+        uint256 current = uint256(vm.load(BC, bytes32(uint256(2))));
+        uint256 next = uint256(vm.load(BC, bytes32(uint256(6))));
+        bytes32 currentRoot = vm.load(BC, bytes32(uint256(3)));
+        bytes32 nextRoot = vm.load(BC, bytes32(uint256(7)));
+        uint256 packed = blockNumber | (uint256(uint64(current)) << 40)
+            | ((current >> 128 & type(uint32).max) << 104) | (uint256(uint64(next)) << 136)
+            | ((next >> 128 & type(uint32).max) << 200);
+        vm.store(BC, bytes32(uint256(1)), bytes32(packed));
+        vm.store(BC, bytes32(uint256(2)), currentRoot);
+        vm.store(BC, bytes32(uint256(3)), nextRoot);
+    }
+
+    /// The ticket struct is unchanged, but the `tickets` mapping moves from slot 10 to slot 4.
+    /// Copy the relayer's live ticket for this commitment.
+    function _migrateLiveTicket(bytes32 commitmentHash) internal {
+        bytes32 ticketID = keccak256(abi.encode(RELAYER, commitmentHash));
+        uint256 oldBase = uint256(keccak256(abi.encode(ticketID, LIVE_TICKETS_SLOT)));
+        uint256 newBase = uint256(keccak256(abi.encode(ticketID, TICKETS_SLOT)));
+        assertTrue(vm.load(BC, bytes32(oldBase)) != 0, "no live ticket for the relayer");
+        for (uint256 k = 0; k < 3; k++) {
+            vm.store(BC, bytes32(newBase + k), vm.load(BC, bytes32(oldBase + k)));
+        }
+    }
+
     function _etchPatched() internal {
         BeefyClient live = BeefyClient(BC);
         uint256 delay = live.randaoCommitDelay();
@@ -215,6 +246,7 @@ contract SubstrateMerkleProofProdTest is Test {
         BeefyClient patched = new BeefyClient(delay, expiry, minSigs, fsSigs, 0, d0, d1);
 
         vm.etch(BC, address(patched).code);
+        _remapLiveValidatorSets();
         // Sanity: the etched patched code reads the live immutables/state unchanged.
         assertEq(BeefyClient(BC).randaoCommitDelay(), delay, "immutables preserved after etch");
     }
@@ -227,8 +259,8 @@ contract SubstrateMerkleProofProdTest is Test {
     // Resolve the genuine validator-set (root, length) that a commitment was verified against, by
     // matching its validatorSetID to the current or next set read from the live contract on the fork.
     function _setForCommitment(uint64 vsetID) internal view returns (bytes32 root, uint256 width) {
-        (uint128 cid, uint128 clen, bytes32 croot,) = BeefyClient(BC).currentValidatorSet();
-        (uint128 nid, uint128 nlen, bytes32 nroot,) = BeefyClient(BC).nextValidatorSet();
+        (uint128 cid, uint128 clen, bytes32 croot) = BeefyClient(BC).currentValidatorSet();
+        (uint128 nid, uint128 nlen, bytes32 nroot) = BeefyClient(BC).nextValidatorSet();
         if (vsetID == cid) return (croot, clen);
         if (vsetID == nid) return (nroot, nlen);
         revert("commitment validatorSetID matches neither current nor next validator set");
@@ -281,6 +313,7 @@ contract SubstrateMerkleProofProdTest is Test {
 
         // 2. End-to-end replay of the full submitFinal call on the patched code.
         _etchPatched();
+        _migrateLiveTicket(BeefyClient(BC).computeCommitmentHash(c));
         vm.roll(p.finalBlock);
         bytes32 rootBefore = BeefyClient(BC).latestMMRRoot();
         vm.prank(RELAYER);

@@ -5,7 +5,7 @@ pragma solidity 0.8.34;
 import {ECDSA} from "openzeppelin/utils/cryptography/ECDSA.sol";
 import {SubstrateMerkleProof} from "./utils/SubstrateMerkleProof.sol";
 import {Bitfield} from "./utils/Bitfield.sol";
-import {Uint16Array, createUint16Array} from "./utils/Uint16Array.sol";
+import {Uint16Array} from "./utils/Uint16Array.sol";
 import {Math} from "./utils/Math.sol";
 import {MMRProof} from "./utils/MMRProof.sol";
 import {ScaleCodec} from "./utils/ScaleCodec.sol";
@@ -152,17 +152,19 @@ contract BeefyClient {
     }
 
     /**
-     * @dev The ValidatorSetState describes a BEEFY validator set along with signature usage counters
+     * @dev The latest block and the ids and lengths of both validator sets, in one slot. Every
+     * update reads it for the stale check and writes it with the new block, so finding a
+     * validator set and handing over need no other slot except a root.
      */
-    struct ValidatorSetState {
-        // Identifier for the set
-        uint128 id;
-        // Number of validators in the set
-        uint128 length;
-        // Merkle root of BEEFY validator addresses
-        bytes32 root;
-        // Number of times a validator signature has been used
-        Uint16Array usageCounters;
+    struct Head {
+        // The relay chain block in which the latest MMR root was emitted
+        uint32 latestBeefyBlock;
+        // Which of the two sets is current; the other is next
+        uint8 currentSetIndex;
+        uint64 id0;
+        uint32 length0;
+        uint64 id1;
+        uint32 length1;
     }
 
     /* State */
@@ -170,17 +172,20 @@ contract BeefyClient {
     /// @dev The latest verified MMR root
     bytes32 public latestMMRRoot;
 
-    /// @dev The block number in the relay chain in which the latest MMR root was emitted
-    uint64 public latestBeefyBlock;
+    /// @dev See `Head`.
+    Head internal head;
 
-    /// @dev State of the current validator set
-    ValidatorSetState public currentValidatorSet;
-
-    /// @dev State of the next validator set
-    ValidatorSetState public nextValidatorSet;
+    /// @dev Merkle roots of the two validator sets, indexed like the sets in `head`. A handover
+    /// writes the new next set over the outgoing current one and flips `currentSetIndex`.
+    bytes32[2] internal validatorSetRoots;
 
     /// @dev Pending tickets for commitment submission
     mapping(bytes32 ticketID => Ticket) public tickets;
+
+    /// @dev Number of times a validator signature has been used, keyed by validator set root.
+    /// Sets with the same membership share counters, which only raises the counts. A handover
+    /// needs no copy and no zeroing.
+    mapping(bytes32 root => Uint16Array) internal usageCounters;
 
     /* Constants */
 
@@ -257,18 +262,50 @@ contract BeefyClient {
         randaoCommitExpiration = _randaoCommitExpiration;
         minNumRequiredSignatures = _minNumRequiredSignatures;
         fiatShamirRequiredSignatures = _fiatShamirRequiredSignatures;
-        latestBeefyBlock = _initialBeefyBlock;
-        currentValidatorSet.id = _initialValidatorSet.id;
-        currentValidatorSet.length = _initialValidatorSet.length;
-        currentValidatorSet.root = _initialValidatorSet.root;
-        currentValidatorSet.usageCounters = createUint16Array(currentValidatorSet.length);
-        nextValidatorSet.id = _nextValidatorSet.id;
-        nextValidatorSet.length = _nextValidatorSet.length;
-        nextValidatorSet.root = _nextValidatorSet.root;
-        nextValidatorSet.usageCounters = createUint16Array(nextValidatorSet.length);
+        if (
+            _initialBeefyBlock > type(uint32).max || _nextValidatorSet.id > type(uint64).max
+                || _initialValidatorSet.length > type(uint32).max
+                || _nextValidatorSet.length > type(uint32).max
+        ) {
+            revert("invalid-constructor-params");
+        }
+        // forge-lint: disable-next-item(unsafe-typecast)
+        head = Head(
+            uint32(_initialBeefyBlock),
+            0,
+            uint64(_initialValidatorSet.id),
+            uint32(_initialValidatorSet.length),
+            uint64(_nextValidatorSet.id),
+            uint32(_nextValidatorSet.length)
+        );
+        validatorSetRoots[0] = _initialValidatorSet.root;
+        validatorSetRoots[1] = _nextValidatorSet.root;
     }
 
     /* External Functions */
+
+    /// @dev The relay chain block in which the latest MMR root was emitted.
+    function latestBeefyBlock() external view returns (uint64) {
+        return head.latestBeefyBlock;
+    }
+
+    /// @dev The current validator set.
+    function currentValidatorSet()
+        external
+        view
+        returns (uint128 id, uint128 length, bytes32 root)
+    {
+        Head memory h = head;
+        ValidatorSet memory vset = validatorSetAt(h, h.currentSetIndex);
+        return (vset.id, vset.length, vset.root);
+    }
+
+    /// @dev The next validator set.
+    function nextValidatorSet() external view returns (uint128 id, uint128 length, bytes32 root) {
+        Head memory h = head;
+        ValidatorSet memory vset = validatorSetAt(h, h.currentSetIndex ^ 1);
+        return (vset.id, vset.length, vset.root);
+    }
 
     /**
      * @dev Begin submission of commitment
@@ -281,23 +318,16 @@ contract BeefyClient {
         uint256[] calldata bitfield,
         ValidatorProof calldata proof
     ) external {
-        if (commitment.blockNumber <= latestBeefyBlock) {
+        Head memory h = head;
+        if (commitment.blockNumber <= h.latestBeefyBlock) {
             revert StaleCommitment();
         }
 
-        ValidatorSetState storage vset = currentValidatorSet;
-        uint16 signatureUsageCount;
-        if (commitment.validatorSetID == currentValidatorSet.id) {
-            signatureUsageCount = currentValidatorSet.usageCounters.get(proof.index);
-            currentValidatorSet.usageCounters
-                .set(proof.index, signatureUsageCount.saturatingAdd(1));
-        } else if (commitment.validatorSetID == nextValidatorSet.id) {
-            signatureUsageCount = nextValidatorSet.usageCounters.get(proof.index);
-            nextValidatorSet.usageCounters.set(proof.index, signatureUsageCount.saturatingAdd(1));
-            vset = nextValidatorSet;
-        } else {
-            revert InvalidCommitment();
-        }
+        // `proof.index` is not bounded here. An index at or past `vset.length` fails
+        // `isValidatorInSet` below, which reverts the counter update with it.
+        (ValidatorSet memory vset,) = validatorSetFor(h, commitment.validatorSetID);
+        uint16 signatureUsageCount = usageCounters[vset.root].get(proof.index);
+        usageCounters[vset.root].set(proof.index, signatureUsageCount.saturatingAdd(1));
 
         // Check if merkle proof is valid based on the validatorSetRoot and if proof is included in bitfield
         if (
@@ -391,49 +421,20 @@ contract BeefyClient {
         bytes32[] calldata leafProof,
         uint256 leafProofOrder
     ) external {
-        bytes32 commitmentHash = keccak256(encodeCommitment(commitment));
-        bytes32 ticketID = createTicketID(msg.sender, commitmentHash);
-        validateTicket(ticketID, commitment, bitfield);
-
-        bool is_next_session = false;
-        ValidatorSetState storage vset = currentValidatorSet;
-        if (commitment.validatorSetID == nextValidatorSet.id) {
-            is_next_session = true;
-            vset = nextValidatorSet;
-        } else if (commitment.validatorSetID != currentValidatorSet.id) {
-            revert InvalidCommitment();
-        }
-
-        // Validate that all padding bits (beyond vset.length) are zero
-        // This ensures the bitfield was created by createInitialBitfield or equivalent
-        Bitfield.validatePadding(bitfield, vset.length);
-
-        verifyCommitment(commitmentHash, ticketID, bitfield, vset, proofs);
+        Head memory h = head;
+        (ValidatorSet memory vset, bool is_next_session) =
+            verifyFinal(h, commitment, bitfield, proofs);
 
         bytes32 newMMRRoot = ensureProvidesMMRRoot(commitment);
 
         if (is_next_session) {
-            // The id for candidate nextValidatorSet should be greater than the current
-            // nextValidatorSet id
-            if (leaf.nextAuthoritySetID <= nextValidatorSet.id) {
-                revert InvalidMMRLeaf();
-            }
-            bool leafIsValid = MMRProof.verifyLeafProof(
-                newMMRRoot, keccak256(encodeMMRLeaf(leaf)), leafProof, leafProofOrder
-            );
-            if (!leafIsValid) {
-                revert InvalidMMRLeafProof();
-            }
-            currentValidatorSet = nextValidatorSet;
-            nextValidatorSet.id = leaf.nextAuthoritySetID;
-            nextValidatorSet.length = leaf.nextAuthoritySetLen;
-            nextValidatorSet.root = leaf.nextAuthoritySetRoot;
-            nextValidatorSet.usageCounters = createUint16Array(leaf.nextAuthoritySetLen);
+            checkHandoverLeaf(newMMRRoot, vset.id, leaf, leafProof, leafProofOrder);
+            rotateValidatorSets(h, leaf);
         }
 
         latestMMRRoot = newMMRRoot;
-        latestBeefyBlock = commitment.blockNumber;
-        delete tickets[ticketID];
+        h.latestBeefyBlock = commitment.blockNumber;
+        head = h;
 
         emit NewMMRRoot(newMMRRoot, commitment.blockNumber);
     }
@@ -504,12 +505,7 @@ contract BeefyClient {
         Commitment calldata commitment,
         uint256[] calldata bitfield
     ) external view returns (uint256[] memory) {
-        ValidatorSetState storage vset = currentValidatorSet;
-        if (commitment.validatorSetID == nextValidatorSet.id) {
-            vset = nextValidatorSet;
-        } else if (commitment.validatorSetID != currentValidatorSet.id) {
-            revert InvalidCommitment();
-        }
+        (ValidatorSet memory vset,) = validatorSetFor(head, commitment.validatorSetID);
 
         if (
             bitfield.length != Bitfield.containerLength(vset.length)
@@ -540,18 +536,13 @@ contract BeefyClient {
         bytes32[] calldata leafProof,
         uint256 leafProofOrder
     ) external {
-        if (commitment.blockNumber <= latestBeefyBlock) {
+        Head memory h = head;
+        if (commitment.blockNumber <= h.latestBeefyBlock) {
             revert StaleCommitment();
         }
 
-        bool is_next_session = false;
-        ValidatorSetState storage vset = currentValidatorSet;
-        if (commitment.validatorSetID == nextValidatorSet.id) {
-            is_next_session = true;
-            vset = nextValidatorSet;
-        } else if (commitment.validatorSetID != currentValidatorSet.id) {
-            revert InvalidCommitment();
-        }
+        (ValidatorSet memory vset, bool is_next_session) =
+            validatorSetFor(h, commitment.validatorSetID);
 
         if (
             bitfield.length != Bitfield.containerLength(vset.length)
@@ -569,31 +560,109 @@ contract BeefyClient {
         verifyFiatShamirCommitment(commitmentHash, bitfield, vset, proofs);
 
         if (is_next_session) {
-            // The id for candidate nextValidatorSet should be greater than the current
-            // nextValidatorSet id
-            if (leaf.nextAuthoritySetID <= nextValidatorSet.id) {
-                revert InvalidMMRLeaf();
-            }
-            bool leafIsValid = MMRProof.verifyLeafProof(
-                newMMRRoot, keccak256(encodeMMRLeaf(leaf)), leafProof, leafProofOrder
-            );
-            if (!leafIsValid) {
-                revert InvalidMMRLeafProof();
-            }
-            currentValidatorSet = nextValidatorSet;
-            nextValidatorSet.id = leaf.nextAuthoritySetID;
-            nextValidatorSet.length = leaf.nextAuthoritySetLen;
-            nextValidatorSet.root = leaf.nextAuthoritySetRoot;
-            nextValidatorSet.usageCounters = createUint16Array(leaf.nextAuthoritySetLen);
+            checkHandoverLeaf(newMMRRoot, vset.id, leaf, leafProof, leafProofOrder);
+            rotateValidatorSets(h, leaf);
         }
 
         latestMMRRoot = newMMRRoot;
-        latestBeefyBlock = commitment.blockNumber;
+        h.latestBeefyBlock = commitment.blockNumber;
+        head = h;
 
         emit NewMMRRoot(newMMRRoot, commitment.blockNumber);
     }
 
     /* Internal Functions */
+
+    /**
+     * @dev The validator set that signs commitments with id `validatorSetID`, and whether it is
+     * the next set. Reverts for any other id. Reads only the chosen set's root.
+     */
+    function validatorSetFor(Head memory h, uint64 validatorSetID)
+        internal
+        view
+        returns (ValidatorSet memory vset, bool isNext)
+    {
+        uint8 index = h.currentSetIndex;
+        if (validatorSetID != (index == 0 ? h.id0 : h.id1)) {
+            index ^= 1;
+            if (validatorSetID != (index == 0 ? h.id0 : h.id1)) {
+                revert InvalidCommitment();
+            }
+            isNext = true;
+        }
+        vset = validatorSetAt(h, index);
+    }
+
+    function validatorSetAt(Head memory h, uint8 index)
+        internal
+        view
+        returns (ValidatorSet memory)
+    {
+        return index == 0
+            ? ValidatorSet(h.id0, h.length0, validatorSetRoots[0])
+            : ValidatorSet(h.id1, h.length1, validatorSetRoots[1]);
+    }
+
+    /**
+     * @dev `submitFinal`'s checks: the caller's ticket for this commitment and bitfield, then the
+     * sampled signatures from the commitment's validator set, which it returns. Closes the ticket.
+     */
+    function verifyFinal(
+        Head memory h,
+        Commitment calldata commitment,
+        uint256[] calldata bitfield,
+        ValidatorProof[] calldata proofs
+    ) internal returns (ValidatorSet memory vset, bool isNext) {
+        bytes32 commitmentHash = keccak256(encodeCommitment(commitment));
+        bytes32 ticketID = createTicketID(msg.sender, commitmentHash);
+        validateTicket(ticketID, commitment, bitfield, h.latestBeefyBlock);
+
+        (vset, isNext) = validatorSetFor(h, commitment.validatorSetID);
+
+        // Validate that all padding bits (beyond vset.length) are zero
+        // This ensures the bitfield was created by createInitialBitfield or equivalent
+        Bitfield.validatePadding(bitfield, vset.length);
+
+        verifyCommitment(commitmentHash, ticketID, bitfield, vset, proofs);
+        delete tickets[ticketID];
+    }
+
+    /**
+     * @dev Reverts unless `leaf` names a set after the next set `nextSetId` and is in `mmrRoot`.
+     */
+    function checkHandoverLeaf(
+        bytes32 mmrRoot,
+        uint256 nextSetId,
+        MMRLeaf calldata leaf,
+        bytes32[] calldata leafProof,
+        uint256 leafProofOrder
+    ) internal pure {
+        if (leaf.nextAuthoritySetID <= nextSetId) {
+            revert InvalidMMRLeaf();
+        }
+        if (!MMRProof.verifyLeafProof(
+                mmrRoot, keccak256(encodeMMRLeaf(leaf)), leafProof, leafProofOrder
+            )) {
+            revert InvalidMMRLeafProof();
+        }
+    }
+
+    /**
+     * @dev Handover in `h`: the next set becomes current, and `leaf`'s set takes the outgoing
+     * current set's place. The caller writes `h` back.
+     */
+    function rotateValidatorSets(Head memory h, MMRLeaf calldata leaf) internal {
+        uint8 index = h.currentSetIndex;
+        if (index == 0) {
+            h.id0 = leaf.nextAuthoritySetID;
+            h.length0 = leaf.nextAuthoritySetLen;
+        } else {
+            h.id1 = leaf.nextAuthoritySetID;
+            h.length1 = leaf.nextAuthoritySetLen;
+        }
+        validatorSetRoots[index] = leaf.nextAuthoritySetRoot;
+        h.currentSetIndex = index ^ 1;
+    }
 
     // Creates a unique ticket ID for a new interactive prover-verifier session
     function createTicketID(address account, bytes32 commitmentHash)
@@ -655,7 +724,7 @@ contract BeefyClient {
         bytes32 commitmentHash,
         bytes32 ticketID,
         uint256[] calldata bitfield,
-        ValidatorSetState storage vset,
+        ValidatorSet memory vset,
         ValidatorProof[] calldata proofs
     ) internal view {
         Ticket storage ticket = tickets[ticketID];
@@ -698,7 +767,7 @@ contract BeefyClient {
     function verifyFiatShamirCommitment(
         bytes32 commitmentHash,
         uint256[] calldata bitfield,
-        ValidatorSetState storage vset,
+        ValidatorSet memory vset,
         ValidatorProof[] calldata proofs
     ) internal view {
         uint256 requiredSignatures = Math.min(
@@ -736,7 +805,7 @@ contract BeefyClient {
     function createFiatShamirHash(
         bytes32 commitmentHash,
         bytes32 bitFieldHash,
-        ValidatorSetState storage vset
+        ValidatorSet memory vset
     ) internal view returns (bytes32) {
         return sha256(
             bytes.concat(
@@ -763,7 +832,7 @@ contract BeefyClient {
     function fiatShamirFinalBitfield(
         bytes32 commitmentHash,
         uint256[] calldata bitfield,
-        ValidatorSetState storage vset
+        ValidatorSet memory vset
     ) internal view returns (uint256[] memory) {
         bytes32 bitFieldHash = keccak256(abi.encodePacked(bitfield));
         bytes32 fiatShamirHash = createFiatShamirHash(commitmentHash, bitFieldHash, vset);
@@ -838,7 +907,7 @@ contract BeefyClient {
      * @return true if the validator is in the set
      */
     function isValidatorInSet(
-        ValidatorSetState storage vset,
+        ValidatorSet memory vset,
         address account,
         uint256 index,
         bytes32[] calldata proof
@@ -853,7 +922,8 @@ contract BeefyClient {
     function validateTicket(
         bytes32 ticketID,
         Commitment calldata commitment,
-        uint256[] calldata bitfield
+        uint256[] calldata bitfield,
+        uint32 latestBlock
     ) internal view {
         Ticket storage ticket = tickets[ticketID];
 
@@ -867,7 +937,7 @@ contract BeefyClient {
             revert PrevRandaoNotCaptured();
         }
 
-        if (commitment.blockNumber <= latestBeefyBlock) {
+        if (commitment.blockNumber <= latestBlock) {
             // ticket is obsolete
             revert StaleCommitment();
         }

@@ -3,11 +3,12 @@
 pragma solidity 0.8.34;
 
 /**
- * @title A utility library for 16 bit counters packed in 256 bit array.
+ * @title A utility library for 16 bit counters packed in 256 bit words.
  * @dev The BeefyClient needs to store a count of how many times a validators signature is used. In solidity
  * a uint16 would take up as much space as a uin256 in storage, making storing counters for 1000 validators
  * expensive in terms of gas. The BeefyClient only needs 16 bits per counter. This library allows us to pack
- * 16 uint16 into a single uint256 and save 16x storage.
+ * 16 uint16 into a single uint256 and save 16x storage. Words live in a mapping, so an array needs no
+ * allocation and unused words cost nothing.
  *
  * Layout of 32 counters (2 uint256)
  * We store all counts in a single large uint256 array and convert from index from the logical uint16 array
@@ -31,35 +32,20 @@ pragma solidity 0.8.34;
  */
 using {get, set} for Uint16Array global;
 
-error IndexOutOfBounds();
-
 /**
- * @dev stores the backing array and the length.
+ * @dev stores the backing words. There is no length: callers bound the index.
  */
 struct Uint16Array {
-    uint256[] data;
-    uint256 length;
+    mapping(uint256 => uint256) data;
 }
 
 /**
- * @dev Creates a new counter which can store at least `length` counters.
- * @param length The amount of counters.
- */
-function createUint16Array(uint256 length) pure returns (Uint16Array memory) {
-    // create space for `length` elements and round up if needed.
-    uint256 bufferLength = length / 16 + (length % 16 == 0 ? 0 : 1);
-    return Uint16Array({data: new uint256[](bufferLength), length: length});
-}
-
-/**
- * @dev Gets the counter at the logical index
+ * @dev Gets the counter at the logical index. There is no bound check: the caller must check
+ * `index` against the number of counters.
  * @param self The array.
  * @param index The logical index.
  */
 function get(Uint16Array storage self, uint256 index) view returns (uint16) {
-    if (index >= self.length) {
-        revert IndexOutOfBounds();
-    }
     // Right-shift the index by 4. This truncates the first 4 bits (bit-index) leaving us with the index
     // into the array.
     uint256 element = index >> 4;
@@ -71,15 +57,13 @@ function get(Uint16Array storage self, uint256 index) view returns (uint16) {
 }
 
 /**
- * @dev Sets the counter at the logical index.
+ * @dev Sets the counter at the logical index. There is no bound check: the caller must check
+ * `index` against the number of counters, or revert the transaction when it is out of range.
  * @param self The array.
  * @param index The logical index of the counter in the array.
  * @param value The value to set the counter to.
  */
 function set(Uint16Array storage self, uint256 index, uint16 value) {
-    if (index >= self.length) {
-        revert IndexOutOfBounds();
-    }
     // Right-shift the index by 4. This truncates the first 4 bits (bit-index) leaving us with the index
     // into the array.
     uint256 element = index >> 4;

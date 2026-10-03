@@ -2,7 +2,6 @@
 pragma solidity 0.8.34;
 
 import {BeefyClient} from "../../src/BeefyClient.sol";
-import {createUint16Array} from "../../src/utils/Uint16Array.sol";
 
 contract BeefyClientMock is BeefyClient {
     constructor(
@@ -38,7 +37,7 @@ contract BeefyClientMock is BeefyClient {
     }
 
     function setLatestBeefyBlock(uint32 _latestBeefyBlock) external {
-        latestBeefyBlock = _latestBeefyBlock;
+        head.latestBeefyBlock = _latestBeefyBlock;
     }
 
     function setLatestMMRRoot(bytes32 _latestMMRRoot) external {
@@ -50,43 +49,21 @@ contract BeefyClientMock is BeefyClient {
         ValidatorSet calldata _initialValidatorSet,
         ValidatorSet calldata _nextValidatorSet
     ) external {
-        latestBeefyBlock = _initialBeefyBlock;
-        currentValidatorSet.id = _initialValidatorSet.id;
-        currentValidatorSet.length = _initialValidatorSet.length;
-        currentValidatorSet.root = _initialValidatorSet.root;
-        currentValidatorSet.usageCounters = createUint16Array(currentValidatorSet.length);
-        nextValidatorSet.id = _nextValidatorSet.id;
-        nextValidatorSet.length = _nextValidatorSet.length;
-        nextValidatorSet.root = _nextValidatorSet.root;
-        nextValidatorSet.usageCounters = createUint16Array(nextValidatorSet.length);
-    }
-
-    // Used to verify integrity of storage to storage copies
-    function copyCounters() external {
-        currentValidatorSet.usageCounters = createUint16Array(1000);
-        for (uint256 i = 0; i < 1000; i++) {
-            currentValidatorSet.usageCounters.set(i, 5);
-        }
-        nextValidatorSet.usageCounters = createUint16Array(800);
-        for (uint256 i = 0; i < 800; i++) {
-            nextValidatorSet.usageCounters.set(i, 7);
-        }
-
-        // Perform the copy
-        currentValidatorSet = nextValidatorSet;
-
-        assert(
-            currentValidatorSet.usageCounters.data.length
-                == nextValidatorSet.usageCounters.data.length
+        head = Head(
+            uint32(_initialBeefyBlock),
+            0,
+            uint64(_initialValidatorSet.id),
+            uint32(_initialValidatorSet.length),
+            uint64(_nextValidatorSet.id),
+            uint32(_nextValidatorSet.length)
         );
-        assert(currentValidatorSet.usageCounters.get(799) == 7);
+        validatorSetRoots[0] = _initialValidatorSet.root;
+        validatorSetRoots[1] = _nextValidatorSet.root;
     }
 
     function getValidatorCounter(bool next, uint256 index) public view returns (uint16) {
-        if (next) {
-            return nextValidatorSet.usageCounters.get(index);
-        }
-        return currentValidatorSet.usageCounters.get(index);
+        uint8 current = head.currentSetIndex;
+        return usageCounters[validatorSetRoots[next ? current ^ 1 : current]].get(index);
     }
 
     function computeNumRequiredSignatures_public(
