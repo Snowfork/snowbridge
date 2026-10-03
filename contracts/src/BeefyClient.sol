@@ -152,18 +152,6 @@ contract BeefyClient {
     }
 
     /**
-     * @dev The ValidatorSetState describes a BEEFY validator set
-     */
-    struct ValidatorSetState {
-        // Identifier for the set
-        uint128 id;
-        // Number of validators in the set
-        uint128 length;
-        // Merkle root of BEEFY validator addresses
-        bytes32 root;
-    }
-
-    /**
      * @dev The latest block and the ids and lengths of both validator sets, in one slot. Every
      * update reads it for the stale check and writes it with the new block, so finding a
      * validator set and handing over need no other slot except a root.
@@ -308,14 +296,14 @@ contract BeefyClient {
         returns (uint128 id, uint128 length, bytes32 root)
     {
         Head memory h = head;
-        ValidatorSetState memory vset = validatorSetAt(h, h.currentSetIndex);
+        ValidatorSet memory vset = validatorSetAt(h, h.currentSetIndex);
         return (vset.id, vset.length, vset.root);
     }
 
     /// @dev The next validator set.
     function nextValidatorSet() external view returns (uint128 id, uint128 length, bytes32 root) {
         Head memory h = head;
-        ValidatorSetState memory vset = validatorSetAt(h, h.currentSetIndex ^ 1);
+        ValidatorSet memory vset = validatorSetAt(h, h.currentSetIndex ^ 1);
         return (vset.id, vset.length, vset.root);
     }
 
@@ -337,7 +325,7 @@ contract BeefyClient {
 
         // `proof.index` is not bounded here. An index at or past `vset.length` fails
         // `isValidatorInSet` below, which reverts the counter update with it.
-        (ValidatorSetState memory vset,) = validatorSetFor(h, commitment.validatorSetID);
+        (ValidatorSet memory vset,) = validatorSetFor(h, commitment.validatorSetID);
         uint16 signatureUsageCount = usageCounters[vset.root].get(proof.index);
         usageCounters[vset.root].set(proof.index, signatureUsageCount.saturatingAdd(1));
 
@@ -434,7 +422,7 @@ contract BeefyClient {
         uint256 leafProofOrder
     ) external {
         Head memory h = head;
-        (ValidatorSetState memory vset, bool is_next_session) =
+        (ValidatorSet memory vset, bool is_next_session) =
             verifyFinal(h, commitment, bitfield, proofs);
 
         bytes32 newMMRRoot = ensureProvidesMMRRoot(commitment);
@@ -517,7 +505,7 @@ contract BeefyClient {
         Commitment calldata commitment,
         uint256[] calldata bitfield
     ) external view returns (uint256[] memory) {
-        (ValidatorSetState memory vset,) = validatorSetFor(head, commitment.validatorSetID);
+        (ValidatorSet memory vset,) = validatorSetFor(head, commitment.validatorSetID);
 
         if (
             bitfield.length != Bitfield.containerLength(vset.length)
@@ -553,7 +541,7 @@ contract BeefyClient {
             revert StaleCommitment();
         }
 
-        (ValidatorSetState memory vset, bool is_next_session) =
+        (ValidatorSet memory vset, bool is_next_session) =
             validatorSetFor(h, commitment.validatorSetID);
 
         if (
@@ -592,7 +580,7 @@ contract BeefyClient {
     function validatorSetFor(Head memory h, uint64 validatorSetID)
         internal
         view
-        returns (ValidatorSetState memory vset, bool isNext)
+        returns (ValidatorSet memory vset, bool isNext)
     {
         uint8 index = h.currentSetIndex;
         if (validatorSetID != (index == 0 ? h.id0 : h.id1)) {
@@ -608,11 +596,11 @@ contract BeefyClient {
     function validatorSetAt(Head memory h, uint8 index)
         internal
         view
-        returns (ValidatorSetState memory)
+        returns (ValidatorSet memory)
     {
         return index == 0
-            ? ValidatorSetState(h.id0, h.length0, validatorSetRoots[0])
-            : ValidatorSetState(h.id1, h.length1, validatorSetRoots[1]);
+            ? ValidatorSet(h.id0, h.length0, validatorSetRoots[0])
+            : ValidatorSet(h.id1, h.length1, validatorSetRoots[1]);
     }
 
     /**
@@ -624,7 +612,7 @@ contract BeefyClient {
         Commitment calldata commitment,
         uint256[] calldata bitfield,
         ValidatorProof[] calldata proofs
-    ) internal returns (ValidatorSetState memory vset, bool isNext) {
+    ) internal returns (ValidatorSet memory vset, bool isNext) {
         bytes32 commitmentHash = keccak256(encodeCommitment(commitment));
         bytes32 ticketID = createTicketID(msg.sender, commitmentHash);
         validateTicket(ticketID, commitment, bitfield, h.latestBeefyBlock);
@@ -736,7 +724,7 @@ contract BeefyClient {
         bytes32 commitmentHash,
         bytes32 ticketID,
         uint256[] calldata bitfield,
-        ValidatorSetState memory vset,
+        ValidatorSet memory vset,
         ValidatorProof[] calldata proofs
     ) internal view {
         Ticket storage ticket = tickets[ticketID];
@@ -779,7 +767,7 @@ contract BeefyClient {
     function verifyFiatShamirCommitment(
         bytes32 commitmentHash,
         uint256[] calldata bitfield,
-        ValidatorSetState memory vset,
+        ValidatorSet memory vset,
         ValidatorProof[] calldata proofs
     ) internal view {
         uint256 requiredSignatures = Math.min(
@@ -817,7 +805,7 @@ contract BeefyClient {
     function createFiatShamirHash(
         bytes32 commitmentHash,
         bytes32 bitFieldHash,
-        ValidatorSetState memory vset
+        ValidatorSet memory vset
     ) internal view returns (bytes32) {
         return sha256(
             bytes.concat(
@@ -844,7 +832,7 @@ contract BeefyClient {
     function fiatShamirFinalBitfield(
         bytes32 commitmentHash,
         uint256[] calldata bitfield,
-        ValidatorSetState memory vset
+        ValidatorSet memory vset
     ) internal view returns (uint256[] memory) {
         bytes32 bitFieldHash = keccak256(abi.encodePacked(bitfield));
         bytes32 fiatShamirHash = createFiatShamirHash(commitmentHash, bitFieldHash, vset);
@@ -919,7 +907,7 @@ contract BeefyClient {
      * @return true if the validator is in the set
      */
     function isValidatorInSet(
-        ValidatorSetState memory vset,
+        ValidatorSet memory vset,
         address account,
         uint256 index,
         bytes32[] calldata proof
