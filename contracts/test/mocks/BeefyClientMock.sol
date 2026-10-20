@@ -33,8 +33,8 @@ contract BeefyClientMock is BeefyClient {
         return encodeCommitment(commitment);
     }
 
-    function setTicketValidatorSetLen(bytes32 commitmentHash, uint32 validatorSetLen) external {
-        tickets[createTicketID(msg.sender, commitmentHash)].validatorSetLen = validatorSetLen;
+    function setTicketValidatorSetLen(bytes32, uint32 validatorSetLen) external {
+        tickets[msg.sender].validatorSetLen = validatorSetLen;
     }
 
     function setLatestBeefyBlock(uint32 _latestBeefyBlock) external {
@@ -109,15 +109,19 @@ contract BeefyClientMock is BeefyClient {
         return computeMaxRequiredSignatures(numValidators);
     }
 
-    function getTicket(bytes32 commitmentHash) public view returns (Ticket memory) {
-        return tickets[createTicketID(msg.sender, commitmentHash)];
+    /// @dev Leave the caller with a closed ticket whose slots are all non-zero, as after an
+    /// earlier submission. Used to measure the cost of reusing ticket storage.
+    function seedClosedTicket() external {
+        tickets[msg.sender] = Ticket({
+            blockNumber: 0,
+            validatorSetLen: 1,
+            numRequiredSignatures: 1,
+            seed: 1,
+            claimHash: bytes32(uint256(1))
+        });
     }
 
-    function createTicketID_public(address relayer, bytes32 commitmentHash)
-        public
-        pure
-        returns (bytes32)
-    {
-        return createTicketID(relayer, commitmentHash);
+    function getTicket(bytes32) public view returns (Ticket memory) {
+        return tickets[msg.sender];
     }
 }
