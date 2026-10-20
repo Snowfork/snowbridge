@@ -3,6 +3,7 @@ package store
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -217,4 +218,34 @@ func TestFindBeaconStateWithinRange(t *testing.T) {
 
 	require.Equal(t, int(pair1AttestedSlot), int(beaconData.AttestedSlot))
 	require.Equal(t, int(pair1FinalizedSlot), int(beaconData.FinalizedSlot))
+}
+
+// The finality watcher and periodic saver both write the latest finalized update. When the saver runs later
+// in the same finalized epoch, the attested slot has advanced and is usually not epoch aligned.
+func TestWriteEntryDuplicateFinalizedSlotDoesNotLeakFiles(t *testing.T) {
+	location := t.TempDir()
+	store := New(location, 10, *protocol.New(config.SpecSettings{
+		SlotsInEpoch:                 32,
+		EpochsPerSyncCommitteePeriod: 256,
+		ForkVersions: config.ForkVersions{
+			Deneb:   0,
+			Electra: 800000,
+		},
+	}, MaxRedundancy))
+	require.NoError(t, store.Connect())
+	defer store.Close()
+
+	for i := uint64(0); i < 50; i++ {
+		finalizedSlot := 15000000 + i*32
+		// finality watcher
+		require.NoError(t, store.WriteEntry(finalizedSlot+64, finalizedSlot, []byte("a"), []byte("f")))
+		// periodic saver, later in the epoch
+		require.NoError(t, store.WriteEntry(finalizedSlot+64+(i%31)+1, finalizedSlot, []byte("a2"), []byte("f")))
+		_, err := store.PruneOldStates()
+		require.NoError(t, err)
+	}
+
+	files, err := os.ReadDir(filepath.Join(location, BeaconStateDir))
+	require.NoError(t, err)
+	require.LessOrEqual(t, len(files), 20)
 }

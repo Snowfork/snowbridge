@@ -151,7 +151,18 @@ func (s *Store) GetBeaconStateData(slot uint64) ([]byte, error) {
 }
 
 func (s *Store) WriteEntry(attestedSlot, finalizedSlot uint64, attestedStateData, finalizedStateData []byte) error {
-	err := s.writeStateFile(attestedSlot, attestedStateData)
+	// finalized_slot is unique and the insert ignores duplicates, so writing files for an already stored
+	// finalized slot would leave the attested state file orphaned and never pruned.
+	var id uint64
+	err := s.db.QueryRow(`SELECT id FROM beacon_state WHERE finalized_slot = ?`, finalizedSlot).Scan(&id)
+	if err == nil {
+		return nil
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return fmt.Errorf("query finalized slot: %w", err)
+	}
+
+	err = s.writeStateFile(attestedSlot, attestedStateData)
 	if err != nil {
 		return err
 	}
@@ -294,7 +305,7 @@ func (s *Store) PruneOldStates() ([]uint64, error) {
 			SELECT id FROM beacon_state
 			WHERE id NOT IN (
 				SELECT id FROM beacon_state
-				ORDER BY timestamp DESC
+				ORDER BY attested_slot DESC
 				LIMIT %d
 			)
 		)`, s.maxEntries)
