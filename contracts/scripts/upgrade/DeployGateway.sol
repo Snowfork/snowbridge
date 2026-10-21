@@ -3,7 +3,7 @@
 pragma solidity 0.8.34;
 
 import {AgentExecutor} from "../../src/AgentExecutor.sol";
-import {Gateway202602} from "../../src/upgrade/Gateway202602.sol";
+import {Gateway202610} from "../../src/upgrade/Gateway202610.sol";
 import {GatewaySepolia202603} from "../../src/upgrade/Gateway202603.sepolia.sol";
 import {Gateway} from "../../src/Gateway.sol";
 import {Script} from "forge-std/Script.sol";
@@ -23,7 +23,7 @@ contract DeployGateway is Script {
                 == keccak256(abi.encodePacked("polkadot_mainnet"))
         ) {
             address beefyClient = 0x7cfc5C8b341991993080Af67D940B6aD19a010E1;
-            gatewayLogic = new Gateway202602(address(beefyClient), address(executor));
+            gatewayLogic = new Gateway202610(beefyClient, address(executor));
         } else if (
             keccak256(abi.encodePacked(vm.envString("SNOWBRIDGE_DEPLOY_STAGE")))
                 == keccak256(abi.encodePacked("westend_sepolia"))
