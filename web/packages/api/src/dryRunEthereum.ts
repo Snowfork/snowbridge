@@ -454,14 +454,32 @@ export async function runEthereumDryRun<T extends EthereumProviderTypes>(
         }
     } catch (e) {
         console.error("Ethereum dry-run transaction simulation failed:", e)
+        // A revert means the transfer would fail on Ethereum. Anything else (RPC down,
+        // auth, timeout) says nothing about the transfer, so it stays a warning.
+        const reverted = isContractRevert(e)
         ethereumDryRunError =
-            "Ethereum dry-run transaction simulation failed: " +
+            (reverted
+                ? "Ethereum dry run reverted: "
+                : "Ethereum dry-run transaction simulation failed: ") +
             String((e as Error).message || e)
         logs.push({
-            kind: ValidationKind.Warning,
+            kind: reverted ? ValidationKind.Error : ValidationKind.Warning,
             reason: ValidationReason.DryRunFailed,
             message: ethereumDryRunError,
         })
     }
     return { ethereumDryRunError }
+}
+
+// ethers labels every failed eth_estimateGas as CALL_EXCEPTION, RPC faults included, so
+// only revert data or the node's own "execution reverted" counts as a revert.
+function isContractRevert(e: unknown): boolean {
+    const err = e as any
+    const data = err?.data ?? err?.info?.error?.data ?? err?.error?.data
+    if (err?.code === "CALL_EXCEPTION" && typeof data === "string" && data.length > 2) {
+        return true
+    }
+    const nodeMessages = [err?.info?.error?.message, err?.error?.message]
+    if (err?.code !== "CALL_EXCEPTION") nodeMessages.push(err?.shortMessage, err?.message)
+    return /execution reverted/i.test(nodeMessages.filter(Boolean).join(" "))
 }
