@@ -377,8 +377,9 @@ contract GatewayV2Test is Test {
 
         vm.expectRevert(IGatewayV2.InsufficientGasLimit.selector);
         vm.prank(relayer);
-        IGatewayV2(address(gateway))
-        .v2_submit{gas: gasLimit}(message, proof, makeMockProof(), relayerRewardAddress);
+        IGatewayV2(address(gateway)).v2_submit{gas: gasLimit}(
+            message, proof, makeMockProof(), relayerRewardAddress
+        );
     }
 
     function mockNativeTokenForSend(address user, uint128 amount)
@@ -449,8 +450,9 @@ contract GatewayV2Test is Test {
         );
 
         hoax(user1);
-        IGatewayV2(payable(address(gateway)))
-        .v2_sendMessage{value: 1 ether}("", assets, "", 0.1 ether, 0.4 ether);
+        IGatewayV2(payable(address(gateway))).v2_sendMessage{value: 1 ether}(
+            "", assets, "", 0.1 ether, 0.4 ether
+        );
 
         // Verify asset balances
         assertEq(assetHubAgent.balance, 1 ether);
@@ -475,8 +477,9 @@ contract GatewayV2Test is Test {
 
         vm.expectRevert();
         hoax(user1);
-        IGatewayV2(payable(address(gateway)))
-        .v2_sendMessage{value: 1 ether}("", assets, "", 0.1 ether, 0.4 ether);
+        IGatewayV2(payable(address(gateway))).v2_sendMessage{value: 1 ether}(
+            "", assets, "", 0.1 ether, 0.4 ether
+        );
 
         assertEq(feeToken.balanceOf(assetHubAgent), 0);
     }
@@ -484,16 +487,18 @@ contract GatewayV2Test is Test {
     function testSendMessageFailsWithInsufficentValue() public {
         vm.expectRevert(IGatewayV2.InsufficientValue.selector);
         hoax(user1, 1 ether);
-        IGatewayV2(payable(address(gateway)))
-        .v2_sendMessage{value: 0.4 ether}("", new bytes[](0), "", 0.1 ether, 0.4 ether);
+        IGatewayV2(payable(address(gateway))).v2_sendMessage{value: 0.4 ether}(
+            "", new bytes[](0), "", 0.1 ether, 0.4 ether
+        );
     }
 
     function testSendMessageFailsWithExceededMaximumValue() public {
         vm.expectRevert(IGatewayV2.ExceededMaximumValue.selector);
         uint256 value = uint256(type(uint128).max) + 1;
         hoax(user1, value);
-        IGatewayV2(payable(address(gateway)))
-        .v2_sendMessage{value: value}("", new bytes[](0), "", 0.1 ether, 0.4 ether);
+        IGatewayV2(payable(address(gateway))).v2_sendMessage{value: value}(
+            "", new bytes[](0), "", 0.1 ether, 0.4 ether
+        );
     }
 
     function testUnlockWethSuccess() public {
@@ -580,7 +585,8 @@ contract GatewayV2Test is Test {
         vm.expectEmit(true, false, false, true);
         emit IGatewayV2.InboundMessageDispatched(1, topic, true, relayerRewardAddress);
 
-        address bridgeHubAgent = IGatewayV2(address(gateway)).agentOf(Constants.BRIDGE_HUB_AGENT_ID);
+        address bridgeHubAgent =
+            IGatewayV2(address(gateway)).agentOf(Constants.BRIDGE_HUB_AGENT_ID);
         vm.deal(bridgeHubAgent, 1 ether);
         hoax(relayer, 1 ether);
         IGatewayV2(address(gateway))
@@ -665,18 +671,16 @@ contract GatewayV2Test is Test {
         bytes memory data =
             abi.encode(CallContractParams({target: address(helloWorld), data: "", value: 0}));
         vm.expectRevert(IGatewayBase.Unauthorized.selector);
-        MockGateway(address(gateway)).exposed_callContract(
-            Constants.ASSET_HUB_AGENT_ID, address(this), data
-        );
+        MockGateway(address(gateway))
+            .exposed_callContract(Constants.ASSET_HUB_AGENT_ID, address(this), data);
     }
 
     function testCallContract_UnregisteredRevertsAgentDoesNotExist() public {
         bytes memory data =
             abi.encode(CallContractParams({target: address(helloWorld), data: "", value: 0}));
         vm.expectRevert(IGatewayBase.AgentDoesNotExist.selector);
-        MockGateway(address(gateway)).exposed_callContract(
-            bytes32(uint256(0xdeadbeef)), address(this), data
-        );
+        MockGateway(address(gateway))
+            .exposed_callContract(bytes32(uint256(0xdeadbeef)), address(this), data);
     }
 
     // (3) No-state-leak assertions on the AssetHub-rejected path.
@@ -719,8 +723,12 @@ contract GatewayV2Test is Test {
             }
         }
 
-        assertEq(assetHubAgent.balance, agentBalanceBefore, "AssetHub agent balance must be unchanged");
-        assertEq(address(helloWorld).balance, targetBalanceBefore, "target balance must be unchanged");
+        assertEq(
+            assetHubAgent.balance, agentBalanceBefore, "AssetHub agent balance must be unchanged"
+        );
+        assertEq(
+            address(helloWorld).balance, targetBalanceBefore, "target balance must be unchanged"
+        );
         assertEq(
             IGatewayV2(address(gateway)).agentOf(Constants.ASSET_HUB_AGENT_ID),
             agentBefore,
@@ -736,8 +744,9 @@ contract GatewayV2Test is Test {
         bytes memory data =
             abi.encode(CallContractParams({target: address(helloWorld), data: "", value: 0}));
         try MockGateway(address(gateway)).exposed_callContract(id, address(this), data) {
-            // ok
-        } catch (bytes memory reason) {
+        // ok
+        }
+        catch (bytes memory reason) {
             assertTrue(
                 bytes4(reason) != IGatewayBase.Unauthorized.selector,
                 "non-AssetHub ids must never be rejected as privileged"
@@ -813,14 +822,18 @@ contract GatewayV2Test is Test {
         commands[0] = CommandV2({
             kind: CommandKind.CallContract,
             gas: 500_000,
-            payload: abi.encode(CallContractParams({target: address(helloWorld), data: data, value: 0}))
+            payload: abi.encode(
+                CallContractParams({target: address(helloWorld), data: data, value: 0})
+            )
         });
         // Index 1: same callContract, but we'll submit this in a second
         // message from the user agent below to prove it would have worked.
         commands[1] = CommandV2({
             kind: CommandKind.CallContract,
             gas: 500_000,
-            payload: abi.encode(CallContractParams({target: address(helloWorld), data: data, value: 0}))
+            payload: abi.encode(
+                CallContractParams({target: address(helloWorld), data: data, value: 0})
+            )
         });
 
         bytes32 topic = keccak256("topic-multi");
@@ -857,10 +870,7 @@ contract GatewayV2Test is Test {
         IGatewayV2(address(gateway))
             .v2_submit(
                 InboundMessageV2({
-                    origin: userAgentId,
-                    nonce: 2,
-                    topic: topic2,
-                    commands: commands
+                    origin: userAgentId, nonce: 2, topic: topic2, commands: commands
                 }),
                 proof,
                 makeMockProof(),
@@ -908,10 +918,9 @@ contract GatewayV2Test is Test {
         uint256 totalRequired = executionFee + relayerFee;
 
         hoax(user1, totalRequired);
-        IGatewayV2(payable(address(gateway)))
-        .v2_registerToken{
-            value: totalRequired
-        }(validTokenContract, uint8(0), executionFee, relayerFee);
+        IGatewayV2(payable(address(gateway))).v2_registerToken{value: totalRequired}(
+            validTokenContract, uint8(0), executionFee, relayerFee
+        );
 
         // Verify the token is registered
         assertTrue(IGatewayV2(address(gateway)).isTokenRegistered(validTokenContract));
@@ -928,10 +937,9 @@ contract GatewayV2Test is Test {
 
         vm.expectRevert(IGatewayV2.InsufficientValue.selector);
         hoax(user1, totalRequired);
-        IGatewayV2(payable(address(gateway)))
-        .v2_registerToken{
-            value: totalRequired - 1
-        }(validTokenContract, uint8(0), executionFee, relayerFee);
+        IGatewayV2(payable(address(gateway))).v2_registerToken{value: totalRequired - 1}(
+            validTokenContract, uint8(0), executionFee, relayerFee
+        );
 
         // Verify token still is not registered after the failed attempt
         assertFalse(IGatewayV2(address(gateway)).isTokenRegistered(validTokenContract));
@@ -948,8 +956,9 @@ contract GatewayV2Test is Test {
         vm.expectRevert(IGatewayV2.ExceededMaximumValue.selector);
         uint256 value = uint256(type(uint128).max) + 1;
         hoax(user1, value);
-        IGatewayV2(payable(address(gateway)))
-        .v2_registerToken{value: value}(validTokenContract, uint8(0), executionFee, relayerFee);
+        IGatewayV2(payable(address(gateway))).v2_registerToken{value: value}(
+            validTokenContract, uint8(0), executionFee, relayerFee
+        );
 
         // Verify token still is not registered after the failed attempt
         assertFalse(IGatewayV2(address(gateway)).isTokenRegistered(validTokenContract));

@@ -275,9 +275,7 @@ contract BeefyClientForgeRejectionTest is Test {
     function _commit() internal view returns (BeefyClient.Commitment memory c) {
         BeefyClient.PayloadItem[] memory pl = new BeefyClient.PayloadItem[](1);
         pl[0] = BeefyClient.PayloadItem({payloadID: hex"6d68", data: abi.encodePacked(forged)});
-        c = BeefyClient.Commitment({
-            blockNumber: blockNum, validatorSetID: setId, payload: pl
-        });
+        c = BeefyClient.Commitment({blockNumber: blockNum, validatorSetID: setId, payload: pl});
     }
 
     // Builds an aliased proof: claims controlled validator i sits at index X.
@@ -499,9 +497,7 @@ contract FiatShamirForgeRejectionTest is Test {
     function _commit(uint32 bn) internal view returns (BeefyClient.Commitment memory c) {
         BeefyClient.PayloadItem[] memory pl = new BeefyClient.PayloadItem[](1);
         pl[0] = BeefyClient.PayloadItem({payloadID: hex"6d68", data: abi.encodePacked(forged)});
-        c = BeefyClient.Commitment({
-            blockNumber: bn, validatorSetID: SET_ID, payload: pl
-        });
+        c = BeefyClient.Commitment({blockNumber: bn, validatorSetID: SET_ID, payload: pl});
     }
 
     function _answer(uint256 X) internal view returns (BeefyClient.ValidatorProof memory) {

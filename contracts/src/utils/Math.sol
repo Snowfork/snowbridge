@@ -13,7 +13,6 @@ library Math {
         Ceil, // Toward positive infinity
         Trunc, // Toward zero
         Expand // Away from zero
-
     }
 
     /**

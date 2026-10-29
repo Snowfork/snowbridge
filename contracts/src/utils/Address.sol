@@ -10,6 +10,7 @@ library Address {
         // https://eips.ethereum.org/EIPS/eip-1052
         // keccak256('') == 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470
         return account.codehash != bytes32(0)
-            && account.codehash != 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470;
+            && account.codehash
+                != 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470;
     }
 }

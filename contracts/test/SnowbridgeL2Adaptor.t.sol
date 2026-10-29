@@ -6,7 +6,9 @@ import {SnowbridgeL2Adaptor} from "../src/l2-integration/SnowbridgeL2Adaptor.sol
 import {SendParams} from "../src/l2-integration/Types.sol";
 
 contract SnowbridgeL2AdaptorMock is SnowbridgeL2Adaptor {
-    constructor() SnowbridgeL2Adaptor(address(1), address(2), address(3), address(4), address(5)) {}
+    constructor()
+        SnowbridgeL2Adaptor(address(1), address(2), address(3), address(4), address(5))
+    {}
 
     function gatewayValue(SendParams calldata sendParams) external pure returns (uint256) {
         return _gatewayValue(sendParams);
@@ -33,7 +35,11 @@ contract SnowbridgeL2AdaptorTest is Test {
         assertEq(mock.gatewayValue(params), 600);
     }
 
-    function testFuzzGatewayValue(uint128 executionFee, uint128 relayerFee, uint128 destinationExecutionFee) public {
+    function testFuzzGatewayValue(
+        uint128 executionFee,
+        uint128 relayerFee,
+        uint128 destinationExecutionFee
+    ) public {
         SendParams memory params = SendParams({
             xcm: "",
             assets: new bytes[](0),
@@ -43,7 +49,8 @@ contract SnowbridgeL2AdaptorTest is Test {
             destinationExecutionFee: destinationExecutionFee
         });
 
-        uint256 expectedValue = uint256(executionFee) + uint256(relayerFee) + uint256(destinationExecutionFee);
+        uint256 expectedValue =
+            uint256(executionFee) + uint256(relayerFee) + uint256(destinationExecutionFee);
         assertEq(mock.gatewayValue(params), expectedValue);
     }
 }

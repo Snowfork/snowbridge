@@ -137,9 +137,7 @@ library Functions {
         return token;
     }
 
-    function mintForeignToken(bytes32 foreignTokenID, address recipient, uint128 amount)
-        internal
-    {
+    function mintForeignToken(bytes32 foreignTokenID, address recipient, uint128 amount) internal {
         address token = _ensureTokenAddressOf(foreignTokenID);
         Token(token).mint(recipient, amount);
     }

@@ -266,7 +266,7 @@ contract BeefyClientTest is Test {
 
         // make an invalid signature
         finalValidatorProofs[0].r =
-            0xb5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c;
+        0xb5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c;
         vm.expectRevert(BeefyClient.InvalidSignature.selector);
         beefyClient.submitFinal(
             commitment,
@@ -800,6 +800,13 @@ contract BeefyClientTest is Test {
         assertEq(1, result, "B");
         result = beefyClient.computeNumRequiredSignatures_public(1, 0, 0);
         assertEq(1, result, "C");
+    }
+
+    function testNumRequiredSignaturesBySignatureUsage() public view {
+        assertEq(beefyClient.computeNumRequiredSignatures_public(600, 0, 20), 31);
+        assertEq(beefyClient.computeNumRequiredSignatures_public(600, 1, 20), 33);
+        assertEq(beefyClient.computeNumRequiredSignatures_public(600, 2, 20), 35);
+        assertEq(beefyClient.computeNumRequiredSignatures_public(600, 3, 20), 35);
     }
 
     function testStorageToStorageCopies() public {

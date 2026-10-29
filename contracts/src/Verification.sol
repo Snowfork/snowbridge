@@ -128,9 +128,8 @@ library Verification {
         bytes32 leafHash = createMMRLeaf(proof.leafPartial, parachainHeadsRoot);
 
         // Verify that the MMR leaf is part of the MMR maintained by the BEEFY light client
-        return BeefyClient(beefyClient).verifyMMRLeafProof(
-            leafHash, proof.leafProof, proof.leafProofOrder
-        );
+        return BeefyClient(beefyClient)
+            .verifyMMRLeafProof(leafHash, proof.leafProof, proof.leafProofOrder);
     }
 
     // Verify that a message commitment is in the header digest
@@ -139,15 +138,18 @@ library Verification {
         ParachainHeader calldata header,
         bool isV2
     ) internal pure returns (bool) {
-        bytes1 digestItemOtherKind = isV2 ? DIGEST_ITEM_OTHER_SNOWBRIDGE_V2 : DIGEST_ITEM_OTHER_SNOWBRIDGE;
+        bytes1 digestItemOtherKind = isV2
+            ? DIGEST_ITEM_OTHER_SNOWBRIDGE_V2
+            : DIGEST_ITEM_OTHER_SNOWBRIDGE;
 
         for (uint256 i = 0; i < header.digestItems.length; i++) {
             // First check if the digest item is of the correct kind (DIGEST_ITEM_OTHER)
             // and has the correct length (33 bytes)
-            if (header.digestItems[i].kind == DIGEST_ITEM_OTHER &&
-                header.digestItems[i].data.length == 33 &&
-                header.digestItems[i].data[0] == digestItemOtherKind &&
-                commitment == bytes32(header.digestItems[i].data[1:])
+            if (
+                header.digestItems[i].kind == DIGEST_ITEM_OTHER
+                    && header.digestItems[i].data.length == 33
+                    && header.digestItems[i].data[0] == digestItemOtherKind
+                    && commitment == bytes32(header.digestItems[i].data[1:])
             ) {
                 return true;
             }
@@ -196,7 +198,8 @@ library Verification {
         } else if (digestItem.kind == DIGEST_ITEM_RUNTIME_ENVIRONMENT_UPDATED) {
             return bytes.concat(
                 // forge-lint: disable-next-line(unsafe-typecast) // digest item kind is a small constant
-                bytes1(uint8(DIGEST_ITEM_RUNTIME_ENVIRONMENT_UPDATED)));
+                bytes1(uint8(DIGEST_ITEM_RUNTIME_ENVIRONMENT_UPDATED))
+            );
         } else {
             revert InvalidParachainHeader();
         }
