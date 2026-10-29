@@ -22,7 +22,7 @@ contract DeployGateway is Script {
             keccak256(abi.encodePacked(vm.envString("SNOWBRIDGE_DEPLOY_STAGE")))
                 == keccak256(abi.encodePacked("polkadot_mainnet"))
         ) {
-            address beefyClient = 0x7cfc5C8b341991993080Af67D940B6aD19a010E1;
+            address beefyClient = 0xbCBEbc20a0FDF9EfD53B5852a71869b0cF25283f;
             gatewayLogic = new Gateway202610(beefyClient, address(executor));
         } else if (
             keccak256(abi.encodePacked(vm.envString("SNOWBRIDGE_DEPLOY_STAGE")))

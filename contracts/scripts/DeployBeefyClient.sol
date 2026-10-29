@@ -33,19 +33,17 @@ contract DeployBeefyClient is Script {
     }
 
     function mainnetConfig() internal pure returns (Config memory config) {
-        // Checkpoint generated using the script `./beefy-checkpoint.js` script in Polkadot-JS.
-        // Finalized block hash: 0x0640f7b4bdd4f0a699603c6bcae5da68b2f938d37822c8a28f955c50852485ed
         config = Config({
-            startBlock: 33_534_003,
+            startBlock: 33_643_033,
             current: BeefyClient.ValidatorSet({
-                id: 5853,
+                id: 5899,
                 length: 600,
-                root: 0xebc2c8781cd643c529e97cd7fb0e1956313a8787b3a353ca1ca34c2b01b637d0
+                root: 0x0d0fdaefb1c8e7b0ecc2f82742eda356fbaada01190650ea0552fa2fe4185e5f
             }),
             next: BeefyClient.ValidatorSet({
-                id: 5854,
+                id: 5900,
                 length: 600,
-                root: 0xebc2c8781cd643c529e97cd7fb0e1956313a8787b3a353ca1ca34c2b01b637d0
+                root: 0x0d0fdaefb1c8e7b0ecc2f82742eda356fbaada01190650ea0552fa2fe4185e5f
             }),
             randaoCommitDelay: 128,
             randaoCommitExpiration: 12,
