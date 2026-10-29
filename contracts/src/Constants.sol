@@ -14,7 +14,8 @@ library Constants {
         0x03170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c111314;
 
     // ChannelIDs
-    ChannelID internal constant PRIMARY_GOVERNANCE_CHANNEL_ID = ChannelID.wrap(bytes32(uint256(1)));
+    ChannelID internal constant PRIMARY_GOVERNANCE_CHANNEL_ID =
+        ChannelID.wrap(bytes32(uint256(1)));
     ChannelID internal constant SECONDARY_GOVERNANCE_CHANNEL_ID =
         ChannelID.wrap(bytes32(uint256(2)));
 }

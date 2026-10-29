@@ -13,7 +13,7 @@ contract HighGasToken is IERC20 {
     uint8 public decimals = 18;
 
     constructor() {
-        _totalSupply = 1000000 * 10**decimals;
+        _totalSupply = 1_000_000 * 10 ** decimals;
         _balances[msg.sender] = _totalSupply;
     }
 
@@ -39,7 +39,11 @@ contract HighGasToken is IERC20 {
         return true;
     }
 
-    function transferFrom(address from, address to, uint256 amount) external override returns (bool) {
+    function transferFrom(address from, address to, uint256 amount)
+        external
+        override
+        returns (bool)
+    {
         uint256 currentAllowance = _allowances[from][msg.sender];
         if (currentAllowance != type(uint256).max) {
             if (currentAllowance < amount) {
@@ -63,7 +67,7 @@ contract HighGasToken is IERC20 {
         }
 
         // drain gas
-        while(gasleft() > startGas - gasAmount) {
+        while (gasleft() > startGas - gasAmount) {
             counter++;
         }
 

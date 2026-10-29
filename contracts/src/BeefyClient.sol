@@ -472,7 +472,11 @@ contract BeefyClient {
      * @dev Compute the hash of a commitment
      * @param commitment the commitment to hash
      */
-    function computeCommitmentHash(Commitment calldata commitment) external pure returns (bytes32) {
+    function computeCommitmentHash(Commitment calldata commitment)
+        external
+        pure
+        returns (bytes32)
+    {
         return keccak256(encodeCommitment(commitment));
     }
 
@@ -627,7 +631,7 @@ contract BeefyClient {
         // Add signatures based on the number of validators in the validator set.
         numRequiredSignatures += Math.log2(validatorSetLen, Math.Rounding.Ceil);
         // Add signatures based on the signature usage count.
-        numRequiredSignatures += 1 + (2 * Math.log2(signatureUsageCount, Math.Rounding.Ceil));
+        numRequiredSignatures += 1 + (2 * Math.log2(signatureUsageCount + 1, Math.Rounding.Ceil));
         // Never require more signatures than 1/3 + 1, which is sufficient to ensure at least one honest validator.
         return Math.min(numRequiredSignatures, computeMaxRequiredSignatures(validatorSetLen));
     }

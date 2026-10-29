@@ -27,11 +27,13 @@ import {MerkleLibSubstrate} from "./utils/MerkleLib.sol";
 
 /// memory->calldata bridge so the fuzzer exercises the REAL on-chain library code.
 contract Harness {
-    function verify(bytes32 root, bytes32 leaf, uint256 pos, uint256 width, bytes32[] calldata proof)
-        external
-        pure
-        returns (bool)
-    {
+    function verify(
+        bytes32 root,
+        bytes32 leaf,
+        uint256 pos,
+        uint256 width,
+        bytes32[] calldata proof
+    ) external pure returns (bool) {
         return SubstrateMerkleProof.verify(root, leaf, pos, width, proof);
     }
 
@@ -65,7 +67,9 @@ contract SubstrateMerkleProofFuzzTest is Test {
         (bytes32[][] memory L, bytes32 root) = MerkleLibSubstrate.buildLevels(leaves);
         bytes32[] memory proof = MerkleLibSubstrate.proofFromLevels(L, p);
 
-        assertTrue(h.verify(root, leaves[p], p, n, proof), "canonical proof must verify at its index");
+        assertTrue(
+            h.verify(root, leaves[p], p, n, proof), "canonical proof must verify at its index"
+        );
 
         (bool valid, bytes32 got) = h.computeRoot(leaves[p], p, n, proof);
         assertTrue(valid, "canonical proof must be structurally valid");
@@ -93,10 +97,12 @@ contract SubstrateMerkleProofFuzzTest is Test {
     }
 
     // 3a. MUTATION — flipping any single byte of a sibling breaks verification.
-    function testFuzz_flippedSiblingRejected(uint256 nSeed, uint256 pSeed, uint256 jSeed, uint256 bitSeed)
-        public
-        view
-    {
+    function testFuzz_flippedSiblingRejected(
+        uint256 nSeed,
+        uint256 pSeed,
+        uint256 jSeed,
+        uint256 bitSeed
+    ) public view {
         uint256 n = bound(nSeed, 2, MAX_WIDTH);
         uint256 p = bound(pSeed, 0, n - 1);
 
@@ -112,7 +118,10 @@ contract SubstrateMerkleProofFuzzTest is Test {
     }
 
     // 3b. MUTATION — wrong-length proofs (one short, one long) are rejected as structurally invalid.
-    function testFuzz_wrongLengthRejected(uint256 nSeed, uint256 pSeed, bytes32 extra) public view {
+    function testFuzz_wrongLengthRejected(uint256 nSeed, uint256 pSeed, bytes32 extra)
+        public
+        view
+    {
         uint256 n = bound(nSeed, 2, MAX_WIDTH);
         uint256 p = bound(pSeed, 0, n - 1);
 
@@ -178,7 +187,9 @@ contract SubstrateMerkleProofFuzzTest is Test {
 
         // any position > 0 is out of range -> false
         uint256 pos = bound(posSeed, 1, type(uint256).max);
-        assertFalse(h.verify(leaf, leaf, pos, 1, empty), "single leaf: position > 0 is out of range");
+        assertFalse(
+            h.verify(leaf, leaf, pos, 1, empty), "single leaf: position > 0 is out of range"
+        );
 
         // a wrong expected root never verifies
         vm.assume(wrongRoot != leaf);

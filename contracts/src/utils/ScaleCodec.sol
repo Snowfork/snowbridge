@@ -144,7 +144,7 @@ library ScaleCodec {
         }
 
         // 3) up to 2^30 - 1
-        if (value <= 0x3FFF_FFFF) {
+        if (value <= 0x3FFFFFFF) {
             // four bytes = (value << 2) + 0x02
             // (lowest two bits = 10)
             // forge-lint: disable-next-line(unsafe-typecast)

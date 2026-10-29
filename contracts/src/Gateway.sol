@@ -210,8 +210,9 @@ contract Gateway is IGatewayBase, IGatewayV1, IGatewayV2, IInitializable, IUpgra
                 success = false;
             }
         } else if (message.command == CommandV1.MintForeignToken) {
-            try Gateway(this)
-            .v1_handleMintForeignToken{gas: maxDispatchGas}(message.channelID, message.params) {}
+            try Gateway(this).v1_handleMintForeignToken{gas: maxDispatchGas}(
+                message.channelID, message.params
+            ) {}
             catch {
                 success = false;
             }

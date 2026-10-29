@@ -57,11 +57,11 @@ contract BeefyClientAdvancedTest is Test {
         proofIndex0 = vProofs[0];
 
         BeefyClient.ValidatorSet memory cur =
-            // forge-lint: disable-next-line(unsafe-typecast)
-            BeefyClient.ValidatorSet({id: VSET_ID, length: uint128(VSET_LEN), root: vsetRoot});
+        // forge-lint: disable-next-line(unsafe-typecast)
+        BeefyClient.ValidatorSet({id: VSET_ID, length: uint128(VSET_LEN), root: vsetRoot});
         BeefyClient.ValidatorSet memory nxt =
-            // forge-lint: disable-next-line(unsafe-typecast)
-            BeefyClient.ValidatorSet({id: VSET_ID + 1, length: uint128(VSET_LEN), root: vsetRoot});
+        // forge-lint: disable-next-line(unsafe-typecast)
+        BeefyClient.ValidatorSet({id: VSET_ID + 1, length: uint128(VSET_LEN), root: vsetRoot});
 
         beefyClient = new BeefyClientMock({
             _randaoCommitDelay: RANDAO_DELAY,
@@ -110,10 +110,11 @@ contract BeefyClientAdvancedTest is Test {
         vm.startPrank(honestRelayer2);
         beefyClient.submitInitial(commitment, bitfield, vproof);
         bytes32 ticketID2 = beefyClient.createTicketID_public(honestRelayer2, commitmentHash);
-        (,, /*blockNumber2*/ /*vsetLen2*/
+        (
+            ,, /*blockNumber2*/ /*vsetLen2*/
             // forge-lint: disable-next-line(unsafe-typecast)
-            uint32 nRequiredAfter,/*prevRandao2*/ /*bfhash2*/,) =
-            beefyClient.tickets(ticketID2);
+            uint32 nRequiredAfter,/*prevRandao2*/ /*bfhash2*/,
+        ) = beefyClient.tickets(ticketID2);
         vm.stopPrank();
         // assert protocol-wide grief: ΔN >= 24 and never exceeds quorum
         assertGt(nRequiredAfter, nRequiredBefore, "N did not increase");

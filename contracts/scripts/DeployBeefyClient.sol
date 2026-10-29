@@ -48,9 +48,9 @@ contract DeployBeefyClient is Script {
                 root: 0xebc2c8781cd643c529e97cd7fb0e1956313a8787b3a353ca1ca34c2b01b637d0
             }),
             randaoCommitDelay: 128,
-            randaoCommitExpiration: 24,
-            minimumSignatures: 17,
-            fiatShamirRequiredSignatures: 111
+            randaoCommitExpiration: 12,
+            minimumSignatures: 20,
+            fiatShamirRequiredSignatures: 103
         });
     }
 

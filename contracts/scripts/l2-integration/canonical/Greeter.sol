@@ -4,11 +4,7 @@ pragma solidity ^0.8.0;
 interface ICrossDomainMessenger {
     function xDomainMessageSender() external view returns (address);
 
-    function sendMessage(
-        address _target,
-        bytes calldata _message,
-        uint32 _gasLimit
-    ) external;
+    function sendMessage(address _target, bytes calldata _message, uint32 _gasLimit) external;
 }
 
 contract Greeter {
@@ -16,10 +12,7 @@ contract Greeter {
     Greeter public immutable OTHER_GREETER;
     mapping(address => string) public greetings;
 
-    constructor(
-        ICrossDomainMessenger _messenger,
-        Greeter _otherGreeter
-    ) {
+    constructor(ICrossDomainMessenger _messenger, Greeter _otherGreeter) {
         MESSENGER = _messenger;
         OTHER_GREETER = _otherGreeter;
     }
@@ -27,14 +20,8 @@ contract Greeter {
     function sendGreeting(string memory _greeting) public {
         MESSENGER.sendMessage(
             address(OTHER_GREETER),
-            abi.encodeCall(
-                this.setGreeting,
-                (
-                    msg.sender,
-                    _greeting
-                )
-            ),
-            200000
+            abi.encodeCall(this.setGreeting, (msg.sender, _greeting)),
+            200_000
         );
     }
 

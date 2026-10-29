@@ -35,7 +35,13 @@ contract VerificationParachainProofTest is Test {
 
     function setUp() public {
         beefyClient = new BeefyClientMock(
-            3, 8, 16, 101, 0, BeefyClient.ValidatorSet(0, 0, 0x0), BeefyClient.ValidatorSet(1, 0, 0x0)
+            3,
+            8,
+            16,
+            101,
+            0,
+            BeefyClient.ValidatorSet(0, 0, 0x0),
+            BeefyClient.ValidatorSet(1, 0, 0x0)
         );
         encodedParachainID = ScaleCodec.encodeU32(BRIDGE_HUB_PARA_ID);
         wrapper = new VerificationWrapper();
@@ -51,9 +57,7 @@ contract VerificationParachainProofTest is Test {
         // Header carrying the commitment as a v1 Snowbridge DIGEST_ITEM_OTHER (0x00 ++ commitment).
         Verification.DigestItem[] memory digestItems = new Verification.DigestItem[](1);
         digestItems[0] = Verification.DigestItem({
-            kind: 0,
-            consensusEngineID: 0x00000000,
-            data: bytes.concat(hex"00", commitment)
+            kind: 0, consensusEngineID: 0x00000000, data: bytes.concat(hex"00", commitment)
         });
         Verification.ParachainHeader memory header = Verification.ParachainHeader({
             parentHash: keccak256("parent"),
@@ -96,7 +100,11 @@ contract VerificationParachainProofTest is Test {
         });
     }
 
-    function _verify(Verification.Proof memory proof, bytes32 commitment) internal view returns (bool) {
+    function _verify(Verification.Proof memory proof, bytes32 commitment)
+        internal
+        view
+        returns (bool)
+    {
         return Verification.verifyCommitment(
             address(beefyClient), encodedParachainID, commitment, proof, false
         );
@@ -162,6 +170,8 @@ contract VerificationParachainProofTest is Test {
         padded[full.length] = bytes32(0);
         proof.headProof.proof = padded;
 
-        assertFalse(_verify(proof, commitment), "padded lone-promoted parachain proof must be rejected");
+        assertFalse(
+            _verify(proof, commitment), "padded lone-promoted parachain proof must be rejected"
+        );
     }
 }

@@ -36,16 +36,15 @@ library Call {
     function safeCall(address target, bytes memory data, uint256 value) internal returns (bool) {
         bool success;
         assembly {
-            success :=
-                call(
-                    gas(), // gas
-                    target, // recipient
-                    value, // ether value
-                    add(data, 0x20), // inloc
-                    mload(data), // inlen
-                    0, // outloc
-                    0 // outlen
-                )
+            success := call(
+                gas(), // gas
+                target, // recipient
+                value, // ether value
+                add(data, 0x20), // inloc
+                mload(data), // inlen
+                0, // outloc
+                0 // outlen
+            )
         }
         return success;
     }
