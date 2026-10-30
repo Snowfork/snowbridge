@@ -198,10 +198,14 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
                 feePadPercentage ?? 50n,
             )
         } else if (feeAsset == ether) {
-            destinationExecutionFeeEther = padFeeByPercentage(
-                await destinationImpl.calculateXcmFee(destinationXcm, ether),
-                feePadPercentage ?? 50n,
-            )
+            destinationExecutionFeeEther =
+                padFeeByPercentage(
+                    await destinationImpl.calculateXcmFee(destinationXcm, ether),
+                    feePadPercentage ?? 50n,
+                ) +
+                // Same as the AssetHub side: the destination ether surplus is
+                // deposited to the recipient and must clear its min_balance.
+                (destParachain.assets[ETHER_TOKEN_ADDRESS]?.minimumBalance ?? 0n)
         } else {
             throw Error(`Unsupported fee asset`)
         }

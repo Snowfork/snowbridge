@@ -261,10 +261,15 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
             DOT_LOCATION,
             destinationDeliveryFeeDOT,
         )
-        const destinationExecutionFeeEther = padFeeByPercentage(
+        let destinationExecutionFeeEther = padFeeByPercentage(
             await destinationImpl.calculateXcmFee(destinationXcm, ether),
             feePadPercentage ?? 50n,
         )
+        // Same for the destination: the ether surplus must clear its min_balance.
+        if (tokenAddress !== ETHER_TOKEN_ADDRESS) {
+            destinationExecutionFeeEther +=
+                destParachain.assets[ETHER_TOKEN_ADDRESS]?.minimumBalance ?? 0n
+        }
 
         const { relayerFee, extrinsicFeeDot, extrinsicFeeEther } = await calculateRelayerFee(
             assetHubImpl,
