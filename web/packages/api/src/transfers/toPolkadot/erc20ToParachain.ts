@@ -209,6 +209,14 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
                 await destinationImpl.calculateXcmFee(destinationXcm, ether),
                 feePadPercentage ?? 50n,
             )
+            // Same as the AssetHub side: for non-ether transfers the destination
+            // RefundSurplus → DepositAsset(AllCounted(1)) deposits the unused ether
+            // fee, which fails with FailedToTransactAsset if below the destination's
+            // ether min_balance (e.g. Hydration).
+            if (tokenAddress !== ETHER_TOKEN_ADDRESS) {
+                destinationExecutionFeeEther +=
+                    destParachain.assets[ETHER_TOKEN_ADDRESS]?.minimumBalance ?? 0n
+            }
         } else {
             throw Error(`Unsupported fee asset`)
         }
