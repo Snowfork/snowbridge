@@ -28,6 +28,6 @@
   },
   "dependencies": {
     "@snowbridge/base-types": "workspace:*",
-    "viem": "^2.38.5"
+    "viem": "^2.57.13"
   }
 }

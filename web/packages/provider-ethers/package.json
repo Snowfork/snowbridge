@@ -28,6 +28,6 @@
   },
   "dependencies": {
     "@snowbridge/base-types": "workspace:*",
-    "ethers": "6.16.0"
+    "ethers": "6.17.0"
   }
 }

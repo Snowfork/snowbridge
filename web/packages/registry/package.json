@@ -17,7 +17,7 @@
     "format": "prettier src --write && prettier scripts --write"
   },
   "devDependencies": {
-    "@polkadot/api": "16.5.4",
+    "@polkadot/api": "17.0.2",
     "@polkadot/util": "14.0.3",
     "@snowbridge/api": "workspace:*",
     "@snowbridge/contract-types": "workspace:*",
@@ -28,7 +28,7 @@
     "dotenv": "^17.2.3",
     "eslint": "9.37.0",
     "eslint-config-prettier": "10.1.8",
-    "ethers": "6.16.0",
+    "ethers": "6.17.0",
     "prettier": "3.6.2",
     "ts-node": "10.9.2",
     "tsconfig-paths": "4.2.0",
