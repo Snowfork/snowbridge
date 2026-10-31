@@ -1,4 +1,4 @@
-endpoint: wss://bridge-hub-polkadot-rpc.dwellir.com
+endpoint: wss://polkadot-bridge-hub-rpc.polkadot.io
 mock-signature-host: true
 block: ${env.POLKADOT_BRIDGEHUB_BLOCK_NUMBER}
 db: ./bridgehub.sqlite
