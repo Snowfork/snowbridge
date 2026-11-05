@@ -1,15 +1,29 @@
-x-logging: &awslogs
-  driver: awslogs
+x-logging: &fluentd
+  driver: fluentd
   options:
-    awslogs-region: ${AWS_REGION}
-    awslogs-group: snowbridge/${ENVIRONMENT:-prod}
-    awslogs-create-group: "true"
+    fluentd-address: 127.0.0.1:24224
+    fluentd-async: "true"
 
 x-image: &image
-  image: ghcr.io/snowfork/snowbridge-relay:${IMAGE_TAG:-latest}
+  image: ghcr.io/snowfork/${IMAGE_NAME}:${IMAGE_TAG:-latest}
   platform: linux/amd64
 
 services:
+  fluent-bit:
+    image: public.ecr.aws/aws-observability/aws-for-fluent-bit:stable
+    command: ["/fluent-bit/bin/fluent-bit", "-c", "/fluent-bit/etc/fluent-bit.conf"]
+    ports:
+      - "24224:24224"
+      - "24224:24224/udp"
+    environment:
+      - AWS_REGION=${AWS_REGION}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - ENVIRONMENT=${ENVIRONMENT:-prod}
+    volumes:
+      - ./fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
+    restart: on-failure
+
   beacon-state-service:
     <<: *image
     command: run beacon-state-service --config /config/beacon-state-service.json
@@ -22,6 +36,7 @@ services:
       - FORK_DENEB=${FORK_DENEB}
       - FORK_ELECTRA=${FORK_ELECTRA}
       - FORK_FULU=${FORK_FULU}
+      - FORK_GLOAS=${FORK_GLOAS}
     restart: on-failure
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
@@ -30,51 +45,20 @@ services:
       retries: 5
       start_period: 10s
     logging:
-      <<: *awslogs
+      <<: *fluentd
       options:
-        awslogs-region: ${AWS_REGION}
-        awslogs-group: snowbridge/${ENVIRONMENT:-prod}
-        awslogs-stream: beacon-state-service
-        awslogs-create-group: "true"
+        fluentd-address: 127.0.0.1:24224
+        fluentd-async: "true"
+        tag: beacon-state-service
 
-  beacon:
+  ethereum-v3:
     <<: *image
-    profiles:
-      - consensus
     command: >
-      run beacon
-      --config /config/beacon.json
-      --substrate.private-key-id ${BEACON_RELAY_SUBSTRATE_KEY_ID}
+      run ethereum-v3
+      --config /config/ethereum-v3.json
+      --substrate.private-key-id ${ETHEREUM_V3_RELAY_SUBSTRATE_KEY_ID}
     volumes:
-      - beacon-data:/data
-    environment:
-      - AWS_REGION=${AWS_REGION}
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - BEACON_ENDPOINT=${BEACON_ENDPOINT}
-      - BRIDGEHUB_ENDPOINT=${BRIDGEHUB_ENDPOINT}
-      - FORK_DENEB=${FORK_DENEB}
-      - FORK_ELECTRA=${FORK_ELECTRA}
-      - FORK_FULU=${FORK_FULU}
-      - MAX_WATCHED_EXTRINSICS=${MAX_WATCHED_EXTRINSICS:-200}
-    restart: on-failure
-    depends_on:
-      beacon-state-service:
-        condition: service_healthy
-    logging:
-      <<: *awslogs
-      options:
-        awslogs-region: ${AWS_REGION}
-        awslogs-group: snowbridge/${ENVIRONMENT:-prod}
-        awslogs-stream: beacon-relay
-        awslogs-create-group: "true"
-
-  ethereum-v2:
-    <<: *image
-    command: >
-      run ethereum-v2
-      --config /config/ethereum-v2.json
-      --substrate.private-key-id ${ETHEREUM_V2_RELAY_SUBSTRATE_KEY_ID}
+      - ethereum-v3-data:/data
     environment:
       - AWS_REGION=${AWS_REGION}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
@@ -86,88 +70,50 @@ services:
       - FORK_DENEB=${FORK_DENEB}
       - FORK_ELECTRA=${FORK_ELECTRA}
       - FORK_FULU=${FORK_FULU}
-      - GATEWAY_CONTRACT=${GATEWAY_CONTRACT}
-      - MAX_WATCHED_EXTRINSICS=${MAX_WATCHED_EXTRINSICS:-200}
-      - CHAINALYSIS_API_KEY=${CHAINALYSIS_API_KEY}
-      - OFAC_ENABLED=${OFAC_ENABLED:-false}
-    restart: on-failure
-    depends_on:
-      beacon-state-service:
-        condition: service_healthy
-    logging:
-      <<: *awslogs
-      options:
-        awslogs-region: ${AWS_REGION}
-        awslogs-group: snowbridge/${ENVIRONMENT:-prod}
-        awslogs-stream: ethereum-v2-relay
-        awslogs-create-group: "true"
-
-  ethereum:
-    <<: *image
-    command: >
-      run ethereum
-      --config /config/ethereum.json
-      --substrate.private-key-id ${ETHEREUM_RELAY_SUBSTRATE_KEY_ID}
-    environment:
-      - AWS_REGION=${AWS_REGION}
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - BEACON_ENDPOINT=${BEACON_ENDPOINT}
-      - ETHEREUM_ENDPOINT=${ETHEREUM_ENDPOINT}
-      - BRIDGEHUB_ENDPOINT=${BRIDGEHUB_ENDPOINT}
-      - FORK_DENEB=${FORK_DENEB}
-      - FORK_ELECTRA=${FORK_ELECTRA}
-      - FORK_FULU=${FORK_FULU}
+      - FORK_GLOAS=${FORK_GLOAS}
       - GATEWAY_CONTRACT=${GATEWAY_CONTRACT}
       - CHANNEL_ID=${CHANNEL_ID}
       - SS58_PREFIX=${SS58_PREFIX:-0}
       - MAX_WATCHED_EXTRINSICS=${MAX_WATCHED_EXTRINSICS:-200}
       - CHAINALYSIS_API_KEY=${CHAINALYSIS_API_KEY}
       - OFAC_ENABLED=${OFAC_ENABLED:-false}
+      - GAS_ESTIMATION_ENABLED=${GAS_ESTIMATION_ENABLED:-true}
+      - SERVICE_FEE_RECIPIENTS=${SERVICE_FEE_RECIPIENTS:-[]}
+      - ETH_GETLOGS_BLOCK_RANGE=${ETH_GETLOGS_BLOCK_RANGE:-10}
+      - ETH_GETLOGS_PAGE_DELAY_MS=${ETH_GETLOGS_PAGE_DELAY_MS:-0}
+      - PROFITABILITY_REWARD_RATE=${PROFITABILITY_REWARD_RATE:-0.0002}
+      - PROFITABILITY_MAX_DELAY_SECS=${PROFITABILITY_MAX_DELAY_SECS:-14400} # 4 hours
+      - LLAMA_PRICE_CACHE_TTL_SECONDS=${LLAMA_PRICE_CACHE_TTL_SECONDS:-14400}
+      - PRICE_INDEXER_API_URL=${PRICE_INDEXER_API_URL:-https://subsquid.snowbridge.network/graphql}
+      - ETHEREUM_V3_IGNORE_NONCES=${ETHEREUM_V3_IGNORE_NONCES:-[]}
+      - ETHEREUM_V3_DEAD_NONCES_PATH=${ETHEREUM_V3_DEAD_NONCES_PATH:-/data/dead-nonces.json}
+      - ETHEREUM_V3_MIN_MESSAGE_RELAYER_FEE_WEI=${ETHEREUM_V3_MIN_MESSAGE_RELAYER_FEE_WEI:-156250000000000}
+      - ETHEREUM_V3_TIP=${ETHEREUM_V3_TIP:-0}
     restart: on-failure
     depends_on:
       beacon-state-service:
         condition: service_healthy
     logging:
-      <<: *awslogs
+      <<: *fluentd
       options:
-        awslogs-region: ${AWS_REGION}
-        awslogs-group: snowbridge/${ENVIRONMENT:-prod}
-        awslogs-stream: ethereum-relay
-        awslogs-create-group: "true"
+        fluentd-address: 127.0.0.1:24224
+        fluentd-async: "true"
+        tag: ethereum-v3-relay
 
-  beefy:
+  parachain-v3:
     <<: *image
-    profiles:
-      - consensus
-    command: >
-      run beefy
-      --config /config/beefy.json
-      --ethereum.private-key-id ${BEEFY_RELAY_ETHEREUM_KEY_ID}
-    environment:
-      - AWS_REGION=${AWS_REGION}
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - POLKADOT_ENDPOINT=${POLKADOT_ENDPOINT}
-      - BRIDGEHUB_ENDPOINT=${BRIDGEHUB_ENDPOINT}
-      - ETHEREUM_ENDPOINT=${ETHEREUM_ENDPOINT}
-      - GATEWAY_CONTRACT=${GATEWAY_CONTRACT}
-      - BEEFY_CLIENT_CONTRACT=${BEEFY_CLIENT_CONTRACT}
-    restart: on-failure
-    logging:
-      <<: *awslogs
-      options:
-        awslogs-region: ${AWS_REGION}
-        awslogs-group: snowbridge/${ENVIRONMENT:-prod}
-        awslogs-stream: beefy-relay
-        awslogs-create-group: "true"
-
-  parachain-v2:
-    <<: *image
-    command: >
-      run parachain-v2
-      --config /config/parachain-v2.json
-      --ethereum.private-key-id ${PARACHAIN_V2_RELAY_ETHEREUM_KEY_ID}
+    entrypoint: ["/bin/sh", "-lc"]
+    command:
+      - |
+        mkdir -p /tmp/config &&
+        envsubst < /config/parachain-v3.json > /tmp/config/parachain-v3.json &&
+        envsubst < /config/beefy.json > /tmp/config/beefy.json &&
+        exec /usr/local/bin/snowbridge-relay run parachain-v3 \
+          --config /tmp/config/parachain-v3.json \
+          --beefy.config /tmp/config/beefy.json \
+          --ethereum.private-key-id ${PARACHAIN_V2_RELAY_ETHEREUM_KEY_ID}
+    volumes:
+      - parachain-v3-data:/data
     environment:
       - AWS_REGION=${AWS_REGION}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
@@ -176,19 +122,88 @@ services:
       - POLKADOT_ENDPOINT=${POLKADOT_ENDPOINT}
       - BRIDGEHUB_ENDPOINT=${BRIDGEHUB_ENDPOINT}
       - FLASHBOTS_ENDPOINT=${FLASHBOTS_ENDPOINT}
+      - DRY_RUN_RPC_URL=${DRY_RUN_RPC_URL:-https://fork-mainnet.snowbridge.network}
+      - FORKED_PROVIDER_API_KEY=${FORKED_PROVIDER_API_KEY}
       - GATEWAY_CONTRACT=${GATEWAY_CONTRACT}
       - BEEFY_CLIENT_CONTRACT=${BEEFY_CLIENT_CONTRACT}
+      - MULTICALL3_CONTRACT=${MULTICALL3_CONTRACT}
       - REWARD_ADDRESS=${REWARD_ADDRESS}
       - CHAINALYSIS_API_KEY=${CHAINALYSIS_API_KEY}
       - OFAC_ENABLED=${OFAC_ENABLED:-false}
+      - FETCH_INTERVAL=${FETCH_INTERVAL:-180}
+      - PARACHAIN_V3_IGNORE_NONCES=${PARACHAIN_V3_IGNORE_NONCES:-[]}
+      - PARACHAIN_V3_DEAD_NONCES_PATH=${PARACHAIN_V3_DEAD_NONCES_PATH:-/data/dead-nonces.json}
+      - HIGH_GAS_PRICE_THRESHOLD_WEI=${HIGH_GAS_PRICE_THRESHOLD_WEI:-250000000} # 0.25 gwei
+      - RELAY_SKIP_MAX_LAG_SECS=${RELAY_SKIP_MAX_LAG_SECS:-28800} # 8 hours
+      - PROFITABILITY_REWARD_RATE=${PROFITABILITY_REWARD_RATE:-0.0002}
+      - PROFITABILITY_MAX_DELAY_SECS=${PROFITABILITY_MAX_DELAY_SECS:-14400} # 4 hours
+      - LLAMA_PRICE_CACHE_TTL_SECONDS=${LLAMA_PRICE_CACHE_TTL_SECONDS:-14400}
+      - PRICE_INDEXER_API_URL=${PRICE_INDEXER_API_URL:-https://subsquid.snowbridge.network/graphql}
     restart: on-failure
     logging:
-      <<: *awslogs
+      <<: *fluentd
       options:
-        awslogs-region: ${AWS_REGION}
-        awslogs-group: snowbridge/${ENVIRONMENT:-prod}
-        awslogs-stream: parachain-v2-relay
-        awslogs-create-group: "true"
+        fluentd-address: 127.0.0.1:24224
+        fluentd-async: "true"
+        tag: parachain-v3-relay
+
+  parachain-v3-fastpath:
+    <<: *image
+    entrypoint: ["/bin/sh", "-lc"]
+    command:
+      - |
+        mkdir -p /tmp/config &&
+        envsubst < /config/parachain-v3-fastpath.json > /tmp/config/parachain-v3-fastpath.json &&
+        envsubst < /config/beefy.json > /tmp/config/beefy.json &&
+        exec /usr/local/bin/snowbridge-relay run parachain-v3 \
+          --config /tmp/config/parachain-v3-fastpath.json \
+          --beefy.config /tmp/config/beefy.json \
+          --ethereum.private-key-id ${PARACHAIN_V3_FASTPATH_RELAY_ETHEREUM_KEY_ID}
+    volumes:
+      - parachain-v3-fastpath-data:/data
+    environment:
+      - AWS_REGION=${AWS_REGION}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - ETHEREUM_ENDPOINT=${ETHEREUM_ENDPOINT}
+      # source.ethereum ConnectWithHeartBeat interval (public multi-RPC failover)
+      - ETHEREUM_HEARTBEAT_SECS=${ETHEREUM_HEARTBEAT_SECS:-90}
+      - POLKADOT_ENDPOINT=${POLKADOT_ENDPOINT}
+      - BRIDGEHUB_ENDPOINT=${BRIDGEHUB_ENDPOINT}
+      - FLASHBOTS_ENDPOINT=${FLASHBOTS_ENDPOINT}
+      # Submit-only private builders; empty disables. Not dial/heartbeat sinks.
+      # Titan and Quasar use eth_sendBundle and are rebundled on each new head.
+      - TITAN_ENDPOINT=${TITAN_ENDPOINT:-https://eu.rpc.titanbuilder.xyz}
+      - QUASAR_ENDPOINT=${QUASAR_ENDPOINT:-https://rpc.quasar.win}
+      - DRY_RUN_RPC_URL=${DRY_RUN_RPC_URL:-https://fork-mainnet.snowbridge.network}
+      - FORKED_PROVIDER_API_KEY=${FORKED_PROVIDER_API_KEY}
+      - FAST_PATH_DRY_RUN=${FAST_PATH_DRY_RUN:-false}
+      # Static-gas profitability BEEFY burn (limit floor stays BASE_BEEFY_FIAT_SHAMIR_GAS=2M).
+      - BASE_BEEFY_FIAT_SHAMIR_FEE_GAS=${BASE_BEEFY_FIAT_SHAMIR_FEE_GAS:-1850000}
+      - FAST_PATH_BASE_FEE_MARGIN_BPS=${FAST_PATH_BASE_FEE_MARGIN_BPS:-1250}
+      - PENDING_TX_TIMEOUT_SECS=${PENDING_TX_TIMEOUT_SECS:-60}
+      - GATEWAY_CONTRACT=${GATEWAY_CONTRACT}
+      - BEEFY_CLIENT_CONTRACT=${BEEFY_CLIENT_CONTRACT}
+      - MULTICALL3_CONTRACT=${MULTICALL3_CONTRACT}
+      - REWARD_ADDRESS=${REWARD_ADDRESS}
+      - CHAINALYSIS_API_KEY=${CHAINALYSIS_API_KEY}
+      - OFAC_ENABLED=${OFAC_ENABLED:-false}
+      - FETCH_INTERVAL=${FETCH_INTERVAL:-180}
+      - PARACHAIN_V3_IGNORE_NONCES=${PARACHAIN_V3_IGNORE_NONCES:-[]}
+      - PARACHAIN_V3_DEAD_NONCES_PATH=${PARACHAIN_V3_DEAD_NONCES_PATH:-/data/dead-nonces.json}
+      - HIGH_GAS_PRICE_THRESHOLD_WEI=${HIGH_GAS_PRICE_THRESHOLD_WEI:-250000000} # 0.25 gwei
+      - RELAY_SKIP_MAX_LAG_SECS=${RELAY_SKIP_MAX_LAG_SECS:-28800} # 8 hours
+      - PROFITABILITY_REWARD_RATE=${PROFITABILITY_REWARD_RATE:-0.0002}
+      - PROFITABILITY_MAX_DELAY_SECS=${PROFITABILITY_MAX_DELAY_SECS:-14400} # 4 hours
+      - LLAMA_PRICE_CACHE_TTL_SECONDS=${LLAMA_PRICE_CACHE_TTL_SECONDS:-14400}
+      - PRICE_INDEXER_API_URL=${PRICE_INDEXER_API_URL:-https://subsquid.snowbridge.network/graphql}
+    restart: on-failure
+    logging:
+      <<: *fluentd
+      options:
+        fluentd-address: 127.0.0.1:24224
+        fluentd-async: "true"
+        tag: parachain-v3-fastpath-relay
 
   reward:
     <<: *image
@@ -196,6 +211,8 @@ services:
       run reward
       --config /config/reward.json
       --substrate.private-key-id ${REWARD_RELAY_SUBSTRATE_KEY_ID}
+    volumes:
+      - reward-data:/data
     environment:
       - AWS_REGION=${AWS_REGION}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
@@ -206,132 +223,27 @@ services:
       - FORK_DENEB=${FORK_DENEB}
       - FORK_ELECTRA=${FORK_ELECTRA}
       - FORK_FULU=${FORK_FULU}
+      - FORK_GLOAS=${FORK_GLOAS}
       - GATEWAY_CONTRACT=${GATEWAY_CONTRACT}
       - MAX_WATCHED_EXTRINSICS=${MAX_WATCHED_EXTRINSICS:-200}
       - REWARD_ADDRESS=${REWARD_ADDRESS}
+      - REWARD_DEAD_NONCES_PATH=${REWARD_DEAD_NONCES_PATH:-/data/dead-nonces.json}
+      - ETH_GETLOGS_BLOCK_RANGE=${ETH_GETLOGS_BLOCK_RANGE:-10}
+      - ETH_GETLOGS_PAGE_DELAY_MS=${ETH_GETLOGS_PAGE_DELAY_MS:-0}
     restart: on-failure
     depends_on:
       beacon-state-service:
         condition: service_healthy
     logging:
-      <<: *awslogs
+      <<: *fluentd
       options:
-        awslogs-region: ${AWS_REGION}
-        awslogs-group: snowbridge/${ENVIRONMENT:-prod}
-        awslogs-stream: reward-relay
-        awslogs-create-group: "true"
-
-  parachain:
-    <<: *image
-    command: >
-      run parachain
-      --config /config/parachain.json
-      --ethereum.private-key-id ${PARACHAIN_RELAY_ETHEREUM_KEY_ID}
-    environment:
-      - AWS_REGION=${AWS_REGION}
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - ETHEREUM_ENDPOINT=${ETHEREUM_ENDPOINT}
-      - POLKADOT_ENDPOINT=${POLKADOT_ENDPOINT}
-      - BRIDGEHUB_ENDPOINT=${BRIDGEHUB_ENDPOINT}
-      - FLASHBOTS_ENDPOINT=${FLASHBOTS_ENDPOINT}
-      - GATEWAY_CONTRACT=${GATEWAY_CONTRACT}
-      - BEEFY_CLIENT_CONTRACT=${BEEFY_CLIENT_CONTRACT}
-      - CHANNEL_ID=${CHANNEL_ID}
-      - CHAINALYSIS_API_KEY=${CHAINALYSIS_API_KEY}
-      - OFAC_ENABLED=${OFAC_ENABLED:-false}
-    restart: on-failure
-    logging:
-      <<: *awslogs
-      options:
-        awslogs-region: ${AWS_REGION}
-        awslogs-group: snowbridge/${ENVIRONMENT:-prod}
-        awslogs-stream: parachain-relay
-        awslogs-create-group: "true"
-
-  primary-governance:
-    <<: *image
-    command: >
-      run parachain
-      --config /config/primary-governance.json
-      --ethereum.private-key-id ${PRIMARY_GOVERNANCE_RELAY_ETHEREUM_KEY_ID}
-    environment:
-      - AWS_REGION=${AWS_REGION}
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - ETHEREUM_ENDPOINT=${ETHEREUM_ENDPOINT}
-      - POLKADOT_ENDPOINT=${POLKADOT_ENDPOINT}
-      - BRIDGEHUB_ENDPOINT=${BRIDGEHUB_ENDPOINT}
-      - FLASHBOTS_ENDPOINT=${FLASHBOTS_ENDPOINT}
-      - GATEWAY_CONTRACT=${GATEWAY_CONTRACT}
-      - BEEFY_CLIENT_CONTRACT=${BEEFY_CLIENT_CONTRACT}
-      - PRIMARY_GOVERNANCE_CHANNEL_ID=${PRIMARY_GOVERNANCE_CHANNEL_ID}
-      - CHAINALYSIS_API_KEY=${CHAINALYSIS_API_KEY}
-      - OFAC_ENABLED=${OFAC_ENABLED:-false}
-    restart: on-failure
-    logging:
-      <<: *awslogs
-      options:
-        awslogs-region: ${AWS_REGION}
-        awslogs-group: snowbridge/${ENVIRONMENT:-prod}
-        awslogs-stream: primary-governance-relay
-        awslogs-create-group: "true"
-
-  secondary-governance:
-    <<: *image
-    command: >
-      run parachain
-      --config /config/secondary-governance.json
-      --ethereum.private-key-id ${SECONDARY_GOVERNANCE_RELAY_ETHEREUM_KEY_ID}
-    environment:
-      - AWS_REGION=${AWS_REGION}
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - ETHEREUM_ENDPOINT=${ETHEREUM_ENDPOINT}
-      - POLKADOT_ENDPOINT=${POLKADOT_ENDPOINT}
-      - BRIDGEHUB_ENDPOINT=${BRIDGEHUB_ENDPOINT}
-      - FLASHBOTS_ENDPOINT=${FLASHBOTS_ENDPOINT}
-      - GATEWAY_CONTRACT=${GATEWAY_CONTRACT}
-      - BEEFY_CLIENT_CONTRACT=${BEEFY_CLIENT_CONTRACT}
-      - SECONDARY_GOVERNANCE_CHANNEL_ID=${SECONDARY_GOVERNANCE_CHANNEL_ID}
-      - CHAINALYSIS_API_KEY=${CHAINALYSIS_API_KEY}
-      - OFAC_ENABLED=${OFAC_ENABLED:-false}
-    restart: on-failure
-    logging:
-      <<: *awslogs
-      options:
-        awslogs-region: ${AWS_REGION}
-        awslogs-group: snowbridge/${ENVIRONMENT:-prod}
-        awslogs-stream: secondary-governance-relay
-        awslogs-create-group: "true"
-
-  beefy-on-demand:
-    <<: *image
-    profiles:
-      - consensus
-    command: >
-      run beefy
-      --config /config/beefy.json
-      --ethereum.private-key-id ${BEEFY_ON_DEMAND_RELAY_ETHEREUM_KEY_ID}
-      --on-demand
-    environment:
-      - AWS_REGION=${AWS_REGION}
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - POLKADOT_ENDPOINT=${POLKADOT_ENDPOINT}
-      - BRIDGEHUB_ENDPOINT=${BRIDGEHUB_ENDPOINT}
-      - ETHEREUM_ENDPOINT=${ETHEREUM_ENDPOINT}
-      - GATEWAY_CONTRACT=${GATEWAY_CONTRACT}
-      - BEEFY_CLIENT_CONTRACT=${BEEFY_CLIENT_CONTRACT}
-    restart: on-failure
-    logging:
-      <<: *awslogs
-      options:
-        awslogs-region: ${AWS_REGION}
-        awslogs-group: snowbridge/${ENVIRONMENT:-prod}
-        awslogs-stream: beefy-on-demand-relay
-        awslogs-create-group: "true"
+        fluentd-address: 127.0.0.1:24224
+        fluentd-async: "true"
+        tag: reward-relay
 
 volumes:
   beacon-state-data:
-  beacon-data:
+  ethereum-v3-data:
+  parachain-v3-data:
+  parachain-v3-fastpath-data:
+  reward-data:

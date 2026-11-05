@@ -30,7 +30,19 @@ func (m *Writer) GetFinalizedBeaconRootByIndex(index uint32) (types.H256, error)
 	return m.FinalizedBeaconRootByIndex[index], nil
 }
 
+func (m *Writer) GetLatestSyncCommitteeUpdatePeriod() (uint64, error) {
+	return 0, nil
+}
+
+func (m *Writer) HasNextSyncCommittee() (bool, error) {
+	return false, nil
+}
+
 func (m *Writer) BatchCall(ctx context.Context, extrinsic []string, calls []interface{}) error {
+	return nil
+}
+
+func (m *Writer) ForceBatch(ctx context.Context, extrinsic []string, calls []interface{}) error {
 	return nil
 }
 
@@ -78,6 +90,10 @@ func (m *Writer) GetFinalizedHeaderStateByBlockRoot(blockRoot types.H256) (state
 
 func (m *Writer) HasPendingExtrinsic(extrinsicName string) (bool, error) {
 	return false, nil
+}
+
+func (m *Writer) MaxWatchedExtrinsics() int64 {
+	return 32
 }
 
 func (m *Writer) FindCheckPointBackward(slot uint64) (state.FinalizedHeader, error) {

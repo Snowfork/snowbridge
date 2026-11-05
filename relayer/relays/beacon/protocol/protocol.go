@@ -82,12 +82,18 @@ const (
 	Deneb   ForkVersion = "Deneb"
 	Electra ForkVersion = "Electra"
 	Fulu    ForkVersion = "Fulu"
+	Gloas   ForkVersion = "Gloas"
 )
 
 func (p *Protocol) ForkVersion(slot uint64) ForkVersion {
 	epoch := p.ComputeEpochAtSlot(slot)
 	var fv ForkVersion
-	if epoch >= p.Settings.ForkVersions.Fulu {
+	// An unset gloas epoch decodes as 0, which would make every slot Gloas and break every
+	// existing config. Gloas cannot activate at genesis on any real network, so treat 0 as
+	// "not scheduled".
+	if p.Settings.ForkVersions.Gloas != 0 && epoch >= p.Settings.ForkVersions.Gloas {
+		fv = Gloas
+	} else if epoch >= p.Settings.ForkVersions.Fulu {
 		fv = Fulu
 	} else if epoch >= p.Settings.ForkVersions.Electra {
 		fv = Electra
@@ -99,6 +105,9 @@ func (p *Protocol) ForkVersion(slot uint64) ForkVersion {
 
 func (p *Protocol) BlockRootGeneralizedIndex(slot uint64) int {
 	forkVersion := p.ForkVersion(slot)
+	if forkVersion == Gloas {
+		return GloasBlockRootGeneralizedIndex
+	}
 	if forkVersion == Fulu || forkVersion == Electra {
 		return ElectraBlockRootGeneralizedIndex
 	}
@@ -107,6 +116,9 @@ func (p *Protocol) BlockRootGeneralizedIndex(slot uint64) int {
 
 func (p *Protocol) FinalizedCheckpointGeneralizedIndex(slot uint64) int {
 	forkVersion := p.ForkVersion(slot)
+	if forkVersion == Gloas {
+		return GloasFinalizedCheckpointGeneralizedIndex
+	}
 	if forkVersion == Fulu || forkVersion == Electra {
 		return ElectraFinalizedCheckpointGeneralizedIndex
 	}
@@ -115,6 +127,9 @@ func (p *Protocol) FinalizedCheckpointGeneralizedIndex(slot uint64) int {
 
 func (p *Protocol) CurrentSyncCommitteeGeneralizedIndex(slot uint64) int {
 	forkVersion := p.ForkVersion(slot)
+	if forkVersion == Gloas {
+		return GloasCurrentSyncCommitteeGeneralizedIndex
+	}
 	if forkVersion == Fulu || forkVersion == Electra {
 		return ElectraCurrentSyncCommitteeGeneralizedIndex
 	}
@@ -123,6 +138,9 @@ func (p *Protocol) CurrentSyncCommitteeGeneralizedIndex(slot uint64) int {
 
 func (p *Protocol) NextSyncCommitteeGeneralizedIndex(slot uint64) int {
 	forkVersion := p.ForkVersion(slot)
+	if forkVersion == Gloas {
+		return GloasNextSyncCommitteeGeneralizedIndex
+	}
 	if forkVersion == Fulu || forkVersion == Electra {
 		return ElectraNextSyncCommitteeGeneralizedIndex
 	}
@@ -131,6 +149,9 @@ func (p *Protocol) NextSyncCommitteeGeneralizedIndex(slot uint64) int {
 
 func (p *Protocol) ExecutionPayloadGeneralizedIndex(slot uint64) int {
 	forkVersion := p.ForkVersion(slot)
+	if forkVersion == Gloas {
+		return GloasExecutionPayloadGeneralizedIndex
+	}
 	if forkVersion == Fulu || forkVersion == Electra {
 		return ElectraExecutionPayloadGeneralizedIndex
 	}

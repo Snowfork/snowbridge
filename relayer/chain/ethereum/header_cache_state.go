@@ -4,9 +4,11 @@
 package ethereum
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"math"
+	"sync"
 
 	gethCommon "github.com/ethereum/go-ethereum/common"
 	gethRawDB "github.com/ethereum/go-ethereum/core/rawdb"
@@ -15,6 +17,31 @@ import (
 	gethTrieDB "github.com/ethereum/go-ethereum/triedb"
 	"golang.org/x/sync/errgroup"
 )
+
+// receiptTrieHasher adapts *gethTrie.Trie to gethTypes.ListHasher.
+// go-ethereum v1.16+ requires Reset() on ListHasher; *Trie only has unexported reset().
+type receiptTrieHasher struct {
+	db   *gethTrieDB.Database
+	trie *gethTrie.Trie
+}
+
+func newReceiptTrieHasher() *receiptTrieHasher {
+	return &receiptTrieHasher{
+		db: gethTrieDB.NewDatabase(gethRawDB.NewMemoryDatabase(), nil),
+	}
+}
+
+func (h *receiptTrieHasher) Reset() {
+	h.trie = gethTrie.NewEmpty(h.db)
+}
+
+func (h *receiptTrieHasher) Update(key []byte, value []byte) error {
+	return h.trie.Update(bytes.Clone(key), bytes.Clone(value))
+}
+
+func (h *receiptTrieHasher) Hash() gethCommon.Hash {
+	return h.trie.Hash()
+}
 
 type BlockLoader interface {
 	GetBlock(ctx context.Context, hash gethCommon.Hash) (*gethTypes.Block, error)
@@ -34,12 +61,14 @@ func (d *DefaultBlockLoader) GetAllReceipts(ctx context.Context, block *gethType
 }
 
 // Keeps the blocks and receipts for the latest block heights / numbers
-// in memory (up to `capacity` block numbers)
+// in memory (up to `capacity` block numbers). Safe for concurrent use
+// (ethereum-v3 tip + catch-up share one HeaderCache).
 type BlockCache struct {
 	capacity       int
 	hashesByNumber map[uint64][]string
 	blocks         map[string]*gethTypes.Block
 	receiptTries   map[string]*gethTrie.Trie
+	mu             sync.Mutex
 }
 
 func NewBlockCache(capacity int) *BlockCache {
@@ -52,6 +81,9 @@ func NewBlockCache(capacity int) *BlockCache {
 }
 
 func (bc *BlockCache) Insert(block *gethTypes.Block, receiptTrie *gethTrie.Trie) {
+	bc.mu.Lock()
+	defer bc.mu.Unlock()
+
 	hash := block.Hash().Hex()
 	_, exists := bc.blocks[hash]
 	if exists {
@@ -88,6 +120,9 @@ func (bc *BlockCache) Insert(block *gethTypes.Block, receiptTrie *gethTrie.Trie)
 }
 
 func (bc *BlockCache) Get(hash gethCommon.Hash) (*gethTypes.Block, *gethTrie.Trie, bool) {
+	bc.mu.Lock()
+	defer bc.mu.Unlock()
+
 	hashHex := hash.Hex()
 	block, exists := bc.blocks[hashHex]
 	if exists {
@@ -141,9 +176,9 @@ func (s *HeaderCache) GetReceiptTrie(ctx context.Context, hash gethCommon.Hash) 
 		return nil, fmt.Errorf("get all receipts: %w", err)
 	}
 
-	receiptTrie = gethTrie.NewEmpty(gethTrieDB.NewDatabase(gethRawDB.NewMemoryDatabase(), nil))
-
-	gethTypes.DeriveSha(receipts, receiptTrie)
+	hasher := newReceiptTrieHasher()
+	gethTypes.DeriveSha(receipts, hasher)
+	receiptTrie = hasher.trie
 
 	if receiptTrie.Hash() != block.ReceiptHash() {
 		return nil, fmt.Errorf("receipt trie does not match block receipt hash")

@@ -93,21 +93,3 @@ func (p *ProofV2JSON) RemoveLeadingZeroHashes() {
 func (p *ProofDataV2JSON) RemoveLeadingZeroHashes() {
 	p.Values = removeLeadingZeroHashForSlice(p.Values)
 }
-
-func ConvertToV2Message(inboundMsg *Message) (*MessageV2, error) {
-	if inboundMsg == nil {
-		return nil, nil
-	}
-	proofV2 := ProofV2{
-		ExecutionProof: inboundMsg.Proof.ExecutionProof,
-	}
-	if inboundMsg.Proof.ReceiptProof != nil {
-		proofV2.ReceiptProof = &ProofDataV2{
-			Values: inboundMsg.Proof.ReceiptProof.Values,
-		}
-	}
-	return &MessageV2{
-		EventLog: inboundMsg.EventLog,
-		Proof:    proofV2,
-	}, nil
-}

@@ -6,6 +6,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
+	"github.com/snowfork/snowbridge/relayer/config"
 	"github.com/snowfork/snowbridge/relayer/crypto/keccak"
 	"github.com/snowfork/snowbridge/relayer/crypto/merkle"
 	"github.com/spf13/cobra"
@@ -49,7 +50,7 @@ func LeafFn(cmd *cobra.Command, _ []string) error {
 
 	ctx := cmd.Context()
 
-	conn := relaychain.NewConnection(url, nil)
+	conn := relaychain.NewConnection(config.ParseEndpoints(url), nil)
 	err := conn.Connect(ctx)
 	if err != nil {
 		log.Error(err)

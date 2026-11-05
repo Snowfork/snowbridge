@@ -3,6 +3,8 @@ package config
 import (
 	"errors"
 	"fmt"
+
+	"github.com/snowfork/snowbridge/relayer/config"
 )
 
 type Config struct {
@@ -21,10 +23,18 @@ type ForkVersions struct {
 	Deneb   uint64 `mapstructure:"deneb"`
 	Electra uint64 `mapstructure:"electra"`
 	Fulu    uint64 `mapstructure:"fulu"`
+	Gloas   uint64 `mapstructure:"gloas"`
 }
 
 type SourceConfig struct {
 	Beacon BeaconConfig `mapstructure:"beacon"`
+	// Execution is required from Gloas. The beacon block no longer carries the execution
+	// payload, so the execution header has to be read from an execution node.
+	Execution ExecutionConfig `mapstructure:"execution"`
+}
+
+type ExecutionConfig struct {
+	Endpoint string `mapstructure:"endpoint"`
 }
 
 type DataStore struct {
@@ -61,6 +71,11 @@ func (c Config) Validate() error {
 	err = c.Sink.Parachain.Validate()
 	if err != nil {
 		return fmt.Errorf("sink parachain config: %w", err)
+	}
+	// A zero epoch means Gloas is not scheduled on this network, so existing configs stay
+	// valid without an execution endpoint.
+	if c.Source.Beacon.Spec.ForkVersions.Gloas != 0 && c.Source.Execution.Endpoint == "" {
+		return errors.New("source execution setting [endpoint] is required when gloas is scheduled")
 	}
 	if c.Sink.UpdateSlotInterval == 0 {
 		return errors.New("parachain [updateSlotInterval] config is not set")
@@ -112,6 +127,14 @@ func (b BeaconConfig) validateCommon() error {
 		return errors.New("source beacon setting [endpoint] is not set")
 	}
 	return nil
+}
+
+func (b BeaconConfig) ParseEndpoints() []string {
+	return config.ParseEndpoints(b.Endpoint)
+}
+
+func (p ParachainConfig) ParseEndpoints() []string {
+	return config.ParseEndpoints(p.Endpoint)
 }
 
 func (p ParachainConfig) Validate() error {

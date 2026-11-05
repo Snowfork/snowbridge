@@ -2,6 +2,8 @@ package beacon
 
 import (
 	"context"
+	"fmt"
+	"github.com/ethereum/go-ethereum/rpc"
 	"time"
 
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
@@ -36,7 +38,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	specSettings := r.config.Source.Beacon.Spec
 	log.WithField("spec", specSettings).Info("spec settings")
 
-	paraconn := parachain.NewConnection(r.config.Sink.Parachain.Endpoint, r.keypair.AsKeyringPair())
+	paraconn := parachain.NewConnection(r.config.Sink.Parachain.ParseEndpoints(), r.keypair.AsKeyringPair())
 
 	err := paraconn.ConnectWithHeartBeat(ctx, eg, time.Second*time.Duration(r.config.Sink.Parachain.HeartbeatSecs))
 	if err != nil {
@@ -55,7 +57,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		return err
 	}
 
-	beaconAPI := api.NewBeaconClient(r.config.Source.Beacon.Endpoint)
+	beaconAPI := api.NewBeaconClient(r.config.Source.Beacon.ParseEndpoints())
 
 	var stateServiceClient syncer.StateServiceClient
 	if r.config.Source.Beacon.StateServiceEndpoint != "" {
@@ -71,6 +73,18 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		r.config.Sink.UpdateSlotInterval,
 		stateServiceClient,
 	)
+
+	// Gloas proofs need the execution header, which the beacon block no longer carries. The
+	// config is validated to require this endpoint once Gloas is scheduled.
+	if endpoint := r.config.Source.Execution.Endpoint; endpoint != "" {
+		executionClient, err := rpc.DialContext(ctx, endpoint)
+		if err != nil {
+			return fmt.Errorf("dial execution endpoint: %w", err)
+		}
+		defer executionClient.Close()
+		headers = headers.WithExecutionClient(executionClient)
+		log.WithField("endpoint", endpoint).Info("Using execution endpoint for gloas execution proofs")
+	}
 
 	return headers.Sync(ctx, eg)
 }

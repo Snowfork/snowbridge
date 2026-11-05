@@ -8,7 +8,8 @@
       "forkVersions": {
         "deneb": ${FORK_DENEB},
         "electra": ${FORK_ELECTRA},
-        "fulu": ${FORK_FULU}
+        "fulu": ${FORK_FULU},
+          "gloas": ${FORK_GLOAS}
       }
     },
     "datastore": {
