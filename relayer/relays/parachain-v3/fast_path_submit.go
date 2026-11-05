@@ -24,21 +24,16 @@ import (
 	"github.com/snowfork/snowbridge/relayer/crypto/secp256k1"
 )
 
-// fastPathProfitabilityBasisFeeWei inflates estimated execution cost by
-// FastPathBaseFeeMarginBps (default 12.5% = one EIP-1559 max base-fee uptick) so a
-// typical next-block inclusion still break-even if base fee rises fully.
+// Inflates estimated cost by FastPathBaseFeeMarginBps for next-block base-fee rise.
 func fastPathProfitabilityBasisFeeWei(estimatedFeeWei *big.Int) *big.Int {
 	if estimatedFeeWei == nil {
 		return nil
 	}
-	// basis = estimated * (10000 + bps) / 10000
 	scaled := new(big.Int).Mul(estimatedFeeWei, new(big.Int).SetUint64(10_000+FastPathBaseFeeMarginBps))
 	return scaled.Div(scaled, big.NewInt(10_000))
 }
 
-// evaluateStaticFiatShamirProfitability prices the aggregate3 batch at live mainnet base
-// fee × static fee gas (no fork eth_call / eth_estimateGas). Profitability requires
-// collected fee ≥ estimated cost after FastPathBaseFeeMarginBps.
+// Static fast-path profitability: live base fee × static fee gas (no fork dry-run).
 func (li *BeefyInstantSyncer) evaluateStaticFiatShamirProfitability(
 	ctx context.Context,
 	minSubmitProofGasSum uint64,
@@ -65,16 +60,8 @@ func (li *BeefyInstantSyncer) evaluateStaticFiatShamirProfitability(
 	return metrics, profitable, nil
 }
 
-// submitAggregate3FastPath signs once under submitMu (nonce-safe), broadcasts the same
-// raw tx to Flashbots and optional private builders, then waits for the receipt outside
-// the lock so catch-up / handover / instant can interleave.
-//
-// While waiting, Titan and Quasar eth_sendBundle are re-submitted whenever the public head
-// advances: both target only the current block by default and do not auto-retry missed bundles.
-//
-// Public mempool dual-submit is intentionally omitted: after a lost race, public inclusion
-// of a stale BEEFY+message tx can land a paid revert; private builders drop simulated
-// reverts instead.
+// Signs under submitMu, broadcasts to Flashbots/private builders, waits for receipt outside the lock.
+// Rebundles on new head (builders target current block only). No public mempool — stale txs can revert on-chain.
 func (li *BeefyInstantSyncer) submitAggregate3FastPath(
 	ctx context.Context,
 	txOpts *bind.TransactOpts,
@@ -107,7 +94,6 @@ func (li *BeefyInstantSyncer) submitAggregate3FastPath(
 	return tx, nil
 }
 
-// broadcastAggregate3FastPath builds+signs+broadcasts under submitMu. Caller waits outside.
 func (li *BeefyInstantSyncer) broadcastAggregate3FastPath(
 	ctx context.Context,
 	txOpts *bind.TransactOpts,
@@ -148,9 +134,7 @@ func (li *BeefyInstantSyncer) broadcastAggregate3FastPath(
 	return tx, bundleEndpoints, bundleSigner, nil
 }
 
-// titanRebundlePoll is how often we sample public head for Titan/Quasar eth_sendBundle refresh.
-// Kept shorter than ethereum.PollInterval (receipt wait): builder auctions close within a
-// ~12s slot, so a 12s rebundle tick often joins late. 3s is early enough without hammering RPC.
+// Rebundle tick shorter than receipt poll so builder bundles stay on the current slot.
 const titanRebundlePoll = 3 * time.Second
 
 type headerByNumber interface {
@@ -161,14 +145,11 @@ type transactionSender interface {
 	SendTransaction(ctx context.Context, tx *gethTypes.Transaction) error
 }
 
-// shouldRebundleTitan reports whether head has advanced past the block we last bundled for.
 func shouldRebundleTitan(headBlock, lastBundleBlock uint64) bool {
 	return headBlock > lastBundleBlock
 }
 
-// rebundleTitanOnNewBlocks re-sends the same signed tx via eth_sendBundle whenever the
-// public head advances, until ctx is cancelled (receipt seen or wait aborted).
-// Titan and Quasar both default the bundle to the current block and do not carry it forward.
+// Re-sends eth_sendBundle on each new public head until ctx ends.
 func rebundleTitanOnNewBlocks(
 	ctx context.Context,
 	headerSource headerByNumber,
@@ -181,8 +162,7 @@ func rebundleTitanOnNewBlocks(
 	}
 	var lastBundleBlock uint64
 	if header, err := headerSource.HeaderByNumber(ctx, nil); err == nil && header != nil && header.Number != nil {
-		// Seed to current head so we do not immediately duplicate the initial submit slot.
-		lastBundleBlock = header.Number.Uint64()
+		lastBundleBlock = header.Number.Uint64() // avoid duplicating the initial bundle slot
 	}
 
 	ticker := time.NewTicker(titanRebundlePoll)
@@ -224,8 +204,6 @@ func rebundleTitanOnNewBlocks(
 	}
 }
 
-// broadcastSignedTx injects a pre-signed transaction into the given connection's pool.
-// Benign "already known" responses (e.g. second path after the first) are treated as success.
 func broadcastSignedTx(ctx context.Context, conn *ethereum.Connection, tx *gethTypes.Transaction, path string) error {
 	if conn == nil || conn.Client() == nil {
 		return fmt.Errorf("%s connection unavailable", path)
@@ -233,8 +211,7 @@ func broadcastSignedTx(ctx context.Context, conn *ethereum.Connection, tx *gethT
 	return sendSignedTx(ctx, conn.Client(), tx, path)
 }
 
-// broadcastSignedTxToURL dials a submit-only HTTP/WS endpoint (no NetworkID/heartbeat) and
-// sends the signed tx. Used for builder RPCs like Titan that reject eth_chainId.
+// Submit-only dial for builders that reject eth_chainId.
 func broadcastSignedTxToURL(ctx context.Context, endpoint string, tx *gethTypes.Transaction, path string) error {
 	if strings.TrimSpace(endpoint) == "" {
 		return fmt.Errorf("%s endpoint empty", path)
@@ -269,15 +246,11 @@ func sendSignedTx(ctx context.Context, client transactionSender, tx *gethTypes.T
 	return nil
 }
 
-// titanSendBundleResult is the eth_sendBundle success payload from Titan.
 type titanSendBundleResult struct {
 	BundleHash string `json:"bundleHash"`
 }
 
-// broadcastSignedTxBundleToURL submits a single-tx eth_sendBundle (no blockNumber,
-// no revertingTxHashes) so the builder drops on simulation revert instead of mining a paid revert.
-// extraFields are merged into the success log (e.g. rebundle/headBlock during wait).
-// Quasar requires an X-Flashbots-Signature over this request body; Titan does not.
+// eth_sendBundle without revertingTxHashes so sim reverts are dropped, not mined. Quasar needs X-Flashbots-Signature.
 func broadcastSignedTxBundleToURL(
 	ctx context.Context,
 	endpoint string,
@@ -341,8 +314,7 @@ func postBundleViaEthClient(ctx context.Context, endpoint, path string, params s
 	return result, nil
 }
 
-// postSignedQuasarBundle POSTs eth_sendBundle and sets X-Flashbots-Signature to
-// address:personal_sign(keccak256(body)). The signature is over the request, not a spend.
+// Quasar auth: Flashbots-style signature over the request body (not a tx spend).
 func postSignedQuasarBundle(ctx context.Context, endpoint string, params sendBundleParams, signer *secp256k1.Keypair) (titanSendBundleResult, error) {
 	if signer == nil || signer.PrivateKey() == nil {
 		return titanSendBundleResult{}, fmt.Errorf("quasar bundle signature key unavailable")
@@ -392,8 +364,6 @@ func postSignedQuasarBundle(ctx context.Context, endpoint string, params sendBun
 	return parsed.Result, nil
 }
 
-// flashbotsSignatureHeader is the Flashbots auth header: checksummed address, then an
-// EIP-191 personal_sign of the keccak256 hex of the exact request body.
 func flashbotsSignatureHeader(body []byte, signer *secp256k1.Keypair) (string, error) {
 	hashedBody := gethcrypto.Keccak256Hash(body).Hex()
 	sig, err := gethcrypto.Sign(accounts.TextHash([]byte(hashedBody)), signer.PrivateKey())
@@ -414,8 +384,6 @@ func isBenignBroadcastError(err error) bool {
 		strings.Contains(msg, "nonce too low")
 }
 
-// privateSubmitUsesBundle is true for builders that accept eth_sendBundle and target only
-// the current block unless the bundle is refreshed. Other hosts get eth_sendRawTransaction.
 func privateSubmitUsesBundle(path string) bool {
 	switch path {
 	case "titan", "quasar":

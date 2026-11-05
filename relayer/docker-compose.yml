@@ -84,7 +84,7 @@ services:
       - PROFITABILITY_REWARD_RATE=${PROFITABILITY_REWARD_RATE:-0.0002}
       - PROFITABILITY_MAX_DELAY_SECS=${PROFITABILITY_MAX_DELAY_SECS:-14400} # 4 hours
       - LLAMA_PRICE_CACHE_TTL_SECONDS=${LLAMA_PRICE_CACHE_TTL_SECONDS:-14400}
-      - PRICE_INDEXER_API_URL=${PRICE_INDEXER_API_URL:-https://subsquid.snowbridge.network/graphql}
+      - PRICE_INDEXER_API_URL=${PRICE_INDEXER_API_URL}
       - ETHEREUM_V3_IGNORE_NONCES=${ETHEREUM_V3_IGNORE_NONCES:-[]}
       - ETHEREUM_V3_DEAD_NONCES_PATH=${ETHEREUM_V3_DEAD_NONCES_PATH:-/data/dead-nonces.json}
       - ETHEREUM_V3_MIN_MESSAGE_RELAYER_FEE_WEI=${ETHEREUM_V3_MIN_MESSAGE_RELAYER_FEE_WEI:-156250000000000}
@@ -122,7 +122,7 @@ services:
       - POLKADOT_ENDPOINT=${POLKADOT_ENDPOINT}
       - BRIDGEHUB_ENDPOINT=${BRIDGEHUB_ENDPOINT}
       - FLASHBOTS_ENDPOINT=${FLASHBOTS_ENDPOINT}
-      - DRY_RUN_RPC_URL=${DRY_RUN_RPC_URL:-https://fork-mainnet.snowbridge.network}
+      - DRY_RUN_RPC_URL=${DRY_RUN_RPC_URL}
       - FORKED_PROVIDER_API_KEY=${FORKED_PROVIDER_API_KEY}
       - GATEWAY_CONTRACT=${GATEWAY_CONTRACT}
       - BEEFY_CLIENT_CONTRACT=${BEEFY_CLIENT_CONTRACT}
@@ -138,7 +138,7 @@ services:
       - PROFITABILITY_REWARD_RATE=${PROFITABILITY_REWARD_RATE:-0.0002}
       - PROFITABILITY_MAX_DELAY_SECS=${PROFITABILITY_MAX_DELAY_SECS:-14400} # 4 hours
       - LLAMA_PRICE_CACHE_TTL_SECONDS=${LLAMA_PRICE_CACHE_TTL_SECONDS:-14400}
-      - PRICE_INDEXER_API_URL=${PRICE_INDEXER_API_URL:-https://subsquid.snowbridge.network/graphql}
+      - PRICE_INDEXER_API_URL=${PRICE_INDEXER_API_URL}
     restart: on-failure
     logging:
       <<: *fluentd
@@ -171,11 +171,10 @@ services:
       - POLKADOT_ENDPOINT=${POLKADOT_ENDPOINT}
       - BRIDGEHUB_ENDPOINT=${BRIDGEHUB_ENDPOINT}
       - FLASHBOTS_ENDPOINT=${FLASHBOTS_ENDPOINT}
-      # Submit-only private builders; empty disables. Not dial/heartbeat sinks.
-      # Titan and Quasar use eth_sendBundle and are rebundled on each new head.
-      - TITAN_ENDPOINT=${TITAN_ENDPOINT:-https://eu.rpc.titanbuilder.xyz}
-      - QUASAR_ENDPOINT=${QUASAR_ENDPOINT:-https://rpc.quasar.win}
-      - DRY_RUN_RPC_URL=${DRY_RUN_RPC_URL:-https://fork-mainnet.snowbridge.network}
+      # Submit-only builders; empty disables. eth_sendBundle, rebundled on new heads.
+      - TITAN_ENDPOINT=${TITAN_ENDPOINT}
+      - QUASAR_ENDPOINT=${QUASAR_ENDPOINT}
+      - DRY_RUN_RPC_URL=${DRY_RUN_RPC_URL}
       - FORKED_PROVIDER_API_KEY=${FORKED_PROVIDER_API_KEY}
       - FAST_PATH_DRY_RUN=${FAST_PATH_DRY_RUN:-false}
       # Static-gas profitability BEEFY burn (limit floor stays BASE_BEEFY_FIAT_SHAMIR_GAS=2M).
@@ -196,7 +195,7 @@ services:
       - PROFITABILITY_REWARD_RATE=${PROFITABILITY_REWARD_RATE:-0.0002}
       - PROFITABILITY_MAX_DELAY_SECS=${PROFITABILITY_MAX_DELAY_SECS:-14400} # 4 hours
       - LLAMA_PRICE_CACHE_TTL_SECONDS=${LLAMA_PRICE_CACHE_TTL_SECONDS:-14400}
-      - PRICE_INDEXER_API_URL=${PRICE_INDEXER_API_URL:-https://subsquid.snowbridge.network/graphql}
+      - PRICE_INDEXER_API_URL=${PRICE_INDEXER_API_URL}
     restart: on-failure
     logging:
       <<: *fluentd

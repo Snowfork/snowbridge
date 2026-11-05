@@ -57,34 +57,23 @@ type Relay struct {
 	latestFinalizedSlot     uint64
 	latestOnchainBeaconSlot uint64
 	mu                      sync.Mutex
-	// nonceBlocksMu guards the per-nonce emitting-block caches shared by the tip
-	// and catch-up scans.
 	nonceBlocksMu sync.Mutex
 	v2NonceBlocks map[uint64]uint64
 	v1NonceBlocks map[uint64]uint64
-	// deferredMu guards deferredV2, the retry time of each V2 nonce left out of
-	// candidate selection by the tip and catch-up scans.
 	deferredMu sync.Mutex
 	deferredV2 map[uint64]time.Time
-	// ethMu serializes gateway/chainID pointer swaps in reconnectAndRebind against
-	// tip + catch-up scans that read those fields (and share eth/para connections).
-	ethMu   sync.RWMutex
+	ethMu sync.RWMutex // reconnect vs scans reading gateway/chainID
 	trigger chan wakeKind
 }
 
-// wakeKind identifies why the worker was woken. It controls whether a scan may
-// attempt EthereumBeaconClient.submit (beacon-capable) or is restricted to
-// message-only submits against the existing on-chain light client.
+// Controls beacon submit vs message-only against existing on-chain LC.
 type wakeKind int
 
 const (
 	wakeStartup wakeKind = iota
 	wakeSSE
 	wakeOnchainLC
-	// wakeMessagePoll is a periodic message-only scan (parachain-v3 direct-relay
-	// analogue): deliver pending V1/V2 that already prove against on-chain LC
-	// without waiting for the next SSE / LC header move.
-	wakeMessagePoll
+	wakeMessagePoll // periodic message-only scan (ETHEREUM_V3_MESSAGE_POLL_SECS)
 )
 
 func (k wakeKind) String() string {
@@ -102,16 +91,10 @@ func (k wakeKind) String() string {
 	}
 }
 
-// allowBeaconSubmit is false for message-only wakes: on-chain LC is already far
-// enough (or unchanged); the worker only proves/submits messages against it.
 func (k wakeKind) allowBeaconSubmit() bool {
 	return k == wakeStartup || k == wakeSSE
 }
 
-// messagePollInterval is how often the worker re-scans for pending V1/V2 that
-// the existing on-chain beacon LC can already verify (same role as parachain-v3
-// catch-up tryDirectRelayAnchoredMessages). Override with ETHEREUM_V3_MESSAGE_POLL_SECS
-// (0 disables).
 var messagePollInterval = messagePollIntervalFromEnv()
 
 func messagePollIntervalFromEnv() time.Duration {
@@ -131,28 +114,21 @@ func messagePollIntervalFromEnv() time.Duration {
 	return time.Duration(secs) * time.Second
 }
 
-// finalityUpdatePollInterval / finalityUpdatePollTimeout: after SSE, Lodestar's
-// finality_update often lags the finalized_checkpoint by a few seconds. Short-poll
-// instead of giving up on the first lagging response so we can still force_batch
-// beacon+messages before the free-ride race.
+// Short-poll LC finality_update after SSE; first response often lags finalized_checkpoint.
 const finalityUpdatePollInterval = 1 * time.Second
 const finalityUpdatePollTimeout = 15 * time.Second
 
-// finalityUpdateCoversRequired reports whether an LC finality_update can advance
-// on-chain state and prove candidates that need consensus up to requiredSlot.
 func finalityUpdateCoversRequired(updateSlot, onchainSlot, requiredSlot uint64) bool {
 	return updateSlot > onchainSlot && updateSlot >= requiredSlot
 }
 
 func mergeWake(a, b wakeKind) wakeKind {
 	if !a.allowBeaconSubmit() && !b.allowBeaconSubmit() {
-		// Keep on-chain-lc label when either side was LC-driven; else message-poll.
 		if a == wakeOnchainLC || b == wakeOnchainLC {
 			return wakeOnchainLC
 		}
 		return wakeMessagePoll
 	}
-	// Prefer beacon-capable wakes (SSE/startup) over message-only wakes.
 	if a == wakeStartup || b == wakeStartup {
 		return wakeStartup
 	}
@@ -170,8 +146,6 @@ func NewRelay(
 	config *Config,
 	keypair *sr25519.Keypair,
 ) *Relay {
-	// Per-message reward floor (wei) on RelayerFee + decoded UI/service fee.
-	// Empty/invalid -> 0, i.e. no filter.
 	minMessageRelayerFee := new(big.Int)
 	if s := config.MinMessageRelayerFeeWei; s != "" {
 		if v, ok := new(big.Int).SetString(s, 10); ok {
@@ -261,8 +235,6 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	stateServiceClient := beaconstate.NewClient(r.config.Source.Beacon.StateServiceEndpoint)
 	log.WithField("endpoint", r.config.Source.Beacon.StateServiceEndpoint).Info("Using beacon state service for proof generation")
 
-	// Gloas: execution header comes from the execution node (not the beacon block).
-	// Catch-up LC: bare submit when solo; ForceBatch when piggybacking V1/V2 (replaces standalone beacon).
 	beaconHeader := header.New(
 		r.writer,
 		beaconAPI,
@@ -287,8 +259,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 
 	log.WithField("gasEstimation", r.gasEstimator.Enabled()).Info("[instant-eth] ethereum-v3: tip + beacon catch-up; V2 gas-estimator optional; V1 tip piggyback always")
 
-	// Seed the on-chain LC slot so the initial SubscribeStorage notification
-	// (current value) does not spuriously wake the worker.
+	// Seed on-chain LC slot so SubscribeStorage's initial value does not wake the worker.
 	if onchain, err := r.writer.GetLastFinalizedHeaderStateAtBestBlock(); err != nil {
 		log.WithError(err).Warn("[instant-eth] Failed to seed on-chain beacon slot; BH LC watch will seed on first observed advance")
 	} else {
@@ -347,9 +318,6 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 	}
 	log.Info("[instant-eth] beacon catch-up Header.Sync started (LC ± messages)")
 
-	// Periodic message-only poll: deliver pending V1/V2 already verifiable against
-	// on-chain LC without waiting for the next SSE / LC header move (parachain-v3
-	// tryDirectRelayAnchoredMessages analogue). Coalesces onto the single worker.
 	if messagePollInterval > 0 {
 		eg.Go(func() error {
 			ticker := time.NewTicker(messagePollInterval)
@@ -396,10 +364,6 @@ func (r *Relay) runBatchRelay(ctx context.Context, kind wakeKind) error {
 	return r.doScanAndBatchRelay(ctx, checkpoint, kind)
 }
 
-// handleLoopError centralizes the fast-path error policy: transient errors are
-// logged, self-healed (reconnect) and swallowed so the loop keeps running;
-// persistent errors are wrapped and returned so the errgroup terminates and the
-// supervisor restarts the process. what names the step for logging/wrapping.
 func (r *Relay) handleLoopError(ctx context.Context, err error, what string) error {
 	if err == nil {
 		return nil
@@ -453,8 +417,6 @@ func minDuration(a, b time.Duration) time.Duration {
 	return b
 }
 
-// sendWake coalesces fast-path wakes onto the buffered trigger channel. If a wake
-// is already pending, mergeWake keeps beacon-capable intent when either side has it.
 func (r *Relay) sendWake(kind wakeKind) {
 	select {
 	case r.trigger <- kind:
@@ -486,12 +448,7 @@ func (r *Relay) sendWake(kind wakeKind) {
 	}
 }
 
-// triggerIfFinalizedSlotAdvanced coalesces fast-path wakes on eth finalized
-// checkpoint advancement. Pass the checkpoint header slot (SSE event block root
-// or GetFinalizedCheckpoint), not light-client finality_update: we wake as soon
-// as the eth checkpoint advances so scan can start while waitForFinalityUpdateAhead
-// short-polls LC and force_batches beacon+messages once ready. Gating wakes on a
-// lagging finality_update slot would delay or drop the SSE wake entirely.
+// Wake on eth finalized checkpoint slot, not LC finality_update (that lags SSE).
 func (r *Relay) triggerIfFinalizedSlotAdvanced(slot uint64) {
 	r.mu.Lock()
 	if slot <= r.latestFinalizedSlot {
@@ -505,10 +462,7 @@ func (r *Relay) triggerIfFinalizedSlotAdvanced(slot uint64) {
 	r.sendWake(wakeSSE)
 }
 
-// triggerIfOnchainBeaconSlotAdvanced coalesces fast-path triggers when Bridge Hub's
-// EthereumBeaconClient finalized slot advances (often from a competing relayer).
-// Tracked separately from latestFinalizedSlot so an SSE scan that already saw the
-// eth checkpoint still wakes the worker once the on-chain LC catches up.
+// Wake when BH EthereumBeaconClient slot advances (separate from eth checkpoint tracking).
 func (r *Relay) triggerIfOnchainBeaconSlotAdvanced(slot uint64) {
 	r.mu.Lock()
 	if slot <= r.latestOnchainBeaconSlot {
@@ -522,12 +476,6 @@ func (r *Relay) triggerIfOnchainBeaconSlotAdvanced(slot uint64) {
 	r.sendWake(wakeOnchainLC)
 }
 
-// waitForFinalityUpdateAhead polls Lodestar finality_update until it is strictly ahead
-// of on-chain and covers requiredSlot, or until finalityUpdatePollTimeout. A lagging
-// first response is common for ~1–15s after SSE finalized_checkpoint; returning that
-// on-chain-equal update immediately skips the force_batch race. Transient fetch errors
-// are retried until timeout; the last update (or zero-slot on total failure) is returned
-// so the caller can skip beacon this round (dedicated beacon relayer / BH LC watch recover).
 func (r *Relay) waitForFinalityUpdateAhead(ctx context.Context, onchainSlot, requiredSlot uint64) (scale.Update, uint64, error) {
 	deadline := time.Now().Add(finalityUpdatePollTimeout)
 	var lastUpdate scale.Update
@@ -595,8 +543,6 @@ func (r *Relay) waitForFinalityUpdateAhead(ctx context.Context, onchainSlot, req
 	return lastUpdate, lastSlot, nil
 }
 
-// watchOnchainBeaconClient subscribes to EthereumBeaconClient::LatestFinalizedBlockRoot
-// on Bridge Hub and wakes the worker whenever the on-chain light-client slot advances.
 func (r *Relay) watchOnchainBeaconClient(ctx context.Context) error {
 	backoff := time.Second
 	for {
@@ -684,8 +630,6 @@ func (r *Relay) consumeOnchainBeaconClientEvents(
 }
 
 func (r *Relay) reconnectAndRebind(ctx context.Context) {
-	// Exclusive lock: wait out in-flight tip/catch-up scans that hold ethMu.RLock
-	// before swapping contract bindings or reconnecting shared RPC clients.
 	r.ethMu.Lock()
 	defer r.ethMu.Unlock()
 
@@ -701,7 +645,6 @@ func (r *Relay) reconnectAndRebind(ctx context.Context) {
 	}
 }
 
-// rebindContractsLocked refreshes gateway bindings and chainID. Caller must hold ethMu.
 func (r *Relay) rebindContractsLocked(ctx context.Context) error {
 	address := common.HexToAddress(r.config.Source.Contracts.Gateway)
 	contract, err := contracts.NewGateway(address, r.ethconn.Client())
@@ -725,7 +668,6 @@ func (r *Relay) rebindContractsLocked(ctx context.Context) error {
 	return nil
 }
 
-// ErrDuplicateMessage is returned when a message has already been processed
 func (r *Relay) filterSkippedNonces(nonces []uint64) []uint64 {
 	live := nonces[:0]
 	for _, n := range nonces {
@@ -762,12 +704,10 @@ func (r *Relay) fetchUnprocessedParachainNonces(latest uint64) ([]uint64, error)
 			return nil, fmt.Errorf("failed to read bucket %d: %w", b, err)
 		}
 
-		// "Missing" means the chain doesn't store it => it's 0
 		if !ok {
 			value = types.NewU128(*big.NewInt(0))
 		}
 
-		// Now parse bits from value...
 		bucketNonces := extractUnprocessedNonces(value, latest, b)
 		unprocessedNonces = append(unprocessedNonces, bucketNonces...)
 	}
@@ -782,7 +722,6 @@ func (r *Relay) isParachainNonceSet(index uint64) (bool, error) {
 	log.WithFields(log.Fields{
 		"index": index,
 	}).Debug("is parachain nonce set")
-	// Calculate the bucket and bit position
 	bucket := index / 128
 	bitPosition := index % 128
 
@@ -810,7 +749,7 @@ func checkBitState(bucketValue types.U128, bitPosition uint64) bool {
 		"bucketValue": bucketValue,
 		"bitPosition": bitPosition,
 	}).Debug("checking bit state")
-	mask := new(big.Int).Lsh(big.NewInt(1), uint(bitPosition)) // Create mask for the bit position
+	mask := new(big.Int).Lsh(big.NewInt(1), uint(bitPosition))
 	result := new(big.Int).And(bucketValue.Int, mask).Cmp(big.NewInt(0)) != 0
 	log.WithFields(log.Fields{
 		"result":      result,
@@ -821,20 +760,16 @@ func checkBitState(bucketValue types.U128, bitPosition uint64) bool {
 
 func extractUnprocessedNonces(bitmap types.U128, latest uint64, bucketIndex uint64) []uint64 {
 	var unprocessed []uint64
-	// Each bucket covers 128 nonces
 	baseNonce := bucketIndex * 128
 
 	for i := 0; i < 128; i++ {
 		nonce := baseNonce + uint64(i)
-		// Ignore nonce 0 since valid nonces start at 1
 		if nonce < 1 {
 			continue
 		}
-		// If we've passed the latest nonce to consider, stop checking further bits.
 		if nonce > latest {
 			break
 		}
-		// Check if bit `i` is unset (meaning unprocessed).
 		mask := new(big.Int).Lsh(big.NewInt(1), uint(i))
 		if new(big.Int).And(bitmap.Int, mask).Cmp(big.NewInt(0)) == 0 {
 			unprocessed = append(unprocessed, nonce)
@@ -862,9 +797,7 @@ func (r *Relay) fetchEthereumNonceWithBlockNumber(ctx context.Context, blockNumb
 	return ethOutboundNonce, nil
 }
 
-// findEvents returns the OutboundMessageAccepted events for nonces, reading only
-// the block that emitted each one. Walking back from the tip in getLogs pages
-// costs one request per page, which rate-limited RPCs reject for old nonces.
+// One getLogs per emitting block (tip walk pages hit rate limits on old nonces).
 func (r *Relay) findEvents(
 	ctx context.Context,
 	latestFinalizedBlockNumber uint64,
@@ -939,11 +872,6 @@ func (r *Relay) makeInboundMessage(
 	return msg, nil
 }
 
-// waitAndSendWithRetry wraps waitAndSend with retry logic for transient errors.
-// On a permanent (non-transient) error other than ErrBeaconHeaderNotFinalized,
-// the nonce is recorded in the dead-nonce store before the error is returned,
-// so the same nonce will be skipped on subsequent runs (including after a
-// process restart).
 func (r *Relay) fetchUnprocessedNonceSet(latest uint64) (map[uint64]struct{}, error) {
 	nonces, err := r.fetchUnprocessedParachainNonces(latest)
 	if err != nil {
@@ -999,12 +927,6 @@ type batchCandidate struct {
 	quote            *v2Economics
 }
 
-// buildCandidate resolves the inbound message, transaction sender, and beacon
-// header for an event. The caller pre-filters events against the unprocessed-nonce
-// set fetched once at the top of the scan, and the authoritative processed re-check
-// happens once just before submission, so no per-candidate bitmap scan is done here.
-// Returns a non-nil (unwrapped) error for the caller to classify via
-// handleCandidateError.
 func (r *Relay) buildCandidate(ctx context.Context, ev *contracts.GatewayOutboundMessageAccepted, onchainFinalizedSlot uint64) (*batchCandidate, error) {
 	inboundMsg, err := r.makeInboundMessage(ctx, r.headerCache, ev)
 	if err != nil {
@@ -1036,12 +958,7 @@ func (r *Relay) buildCandidate(ctx context.Context, ev *contracts.GatewayOutboun
 	}, nil
 }
 
-// beaconRootForEvent returns the beacon block root that commits to the execution block
-// containing the gateway event.
-//
-// Pre-Gloas uses ParentBeaconRoot of the next execution block (EIP-4788). From Gloas the
-// proven leaf is parent_block_hash on a later successor beacon block, so we resolve that
-// successor from the message block's slotNumber instead.
+// Pre-Gloas: next EL block ParentBeaconRoot (EIP-4788). Gloas: successor beacon block via slotNumber.
 func (r *Relay) beaconRootForEvent(ctx context.Context, event *contracts.GatewayOutboundMessageAccepted) (common.Hash, error) {
 	payloadSlot, hasSlot, err := execution.FetchHeaderSlotNumber(ctx, r.ethconn.Client(), event.Raw.BlockHash)
 	if err != nil {
@@ -1062,12 +979,7 @@ func (r *Relay) beaconRootForEvent(ctx context.Context, event *contracts.Gateway
 	return *blockHeader.ParentBeaconRoot, nil
 }
 
-// executionBlockNumberFromBeaconBlock resolves the execution block number the finalized
-// checkpoint's beacon block commits to.
-//
-// Pre-Gloas: execution payload lives on the beacon block body. Gloas (EIP-7732): the body
-// carries a signed execution payload bid instead, and Snowbridge proves parent_block_hash
-// from that bid, so its EL block number is resolved via the execution node.
+// Gloas (EIP-7732): EL block number from signed_execution_payload_bid via execution node.
 func (r *Relay) executionBlockNumberFromBeaconBlock(ctx context.Context, beaconBlock *api.BeaconBlockResponse, blockRoot common.Hash) (uint64, error) {
 	if bn := beaconBlock.Data.Message.Body.ExecutionPayload.BlockNumber; bn != "" {
 		blockNumber, err := strconv.ParseUint(bn, 10, 64)
@@ -1089,8 +1001,6 @@ func (r *Relay) executionBlockNumberFromBeaconBlock(ctx context.Context, beaconB
 }
 
 func (r *Relay) doScanAndBatchRelay(ctx context.Context, checkpoint api.FinalizedCheckpoint, kind wakeKind) error {
-	// Hold ethMu for the whole scan/submit so reconnectAndRebind cannot swap
-	// gateway/chainID (or reconnect shared RPCs) mid-flight.
 	r.ethMu.RLock()
 	defer r.ethMu.RUnlock()
 
@@ -1099,8 +1009,6 @@ func (r *Relay) doScanAndBatchRelay(ctx context.Context, checkpoint api.Finalize
 		return fmt.Errorf("get beacon block for root %s: %w", checkpoint.FinalizedBlockRoot.Hex(), err)
 	}
 
-	// The checkpoint's beacon block gives both the finalized slot and the execution
-	// block number, so no separate finalized-update fetch is needed just for the slot.
 	finalizedSlot, err := util.ToUint64(beaconBlock.Data.Message.Slot)
 	if err != nil {
 		return fmt.Errorf("parse finalized beacon block slot: %w", err)
@@ -1140,18 +1048,13 @@ func (r *Relay) doScanAndBatchRelay(ctx context.Context, checkpoint api.Finalize
 		"executionBlockNumber": executionBlockNumber,
 	}).Info("[instant-eth] Polled nonces for batch relay")
 
-	// Best-block view matches BH LC watch and peer delivery; finalized-head lag would
-	// falsely keep needsConsensus set after a competing LC submit.
+	// Best block for on-chain LC slot (finalized head can lag peer submits).
 	lastFinalizedHeaderState, err := r.writer.GetLastFinalizedHeaderStateAtBestBlock()
 	if err != nil {
 		return fmt.Errorf("fetch last finalized header state: %w", err)
 	}
 
-	// Cap the number of built candidates to fit exactly in a single force_batch
-	// extrinsic, and stop building once the cap is reached so we don't pay the
-	// per-candidate fetch/proof/estimate cost for messages that won't be submitted
-	// this round. Events are nonce-ordered, so this keeps the oldest deliverable ones.
-	maxMessages := int(r.writer.MaxWatchedExtrinsics()) - 1
+	maxMessages := int(r.writer.MaxWatchedExtrinsics()) - 1 // force_batch cap; nonce order keeps oldest
 	if maxMessages <= 0 {
 		maxMessages = 1
 	}
@@ -1207,13 +1110,7 @@ func (r *Relay) doScanAndBatchRelay(ctx context.Context, checkpoint api.Finalize
 
 	var sharedFinalizedPayload *scale.Update
 	var checkpointProof cache.Proof
-	// BH LC wakes never co-submit beacon: on-chain LC already moved. For SSE/startup,
-	// only submit when Lodestar's LC finality_update is strictly ahead of on-chain.
-	// Dedicated beacon-1 / peers land lagging checkpoints; BH LC watch then delivers
-	// message-only.
 	if includeBeacon && kind.allowBeaconSubmit() && len(candidates) > 0 {
-		// Prove against an update that covers every needsConsensus candidate. Prefer the
-		// scan checkpoint slot so we land the same epoch peers target.
 		requiredSlot := finalizedSlot
 		for i := range candidates {
 			if candidates[i].needsConsensus && candidates[i].headerSlot > requiredSlot {
@@ -1252,11 +1149,6 @@ func (r *Relay) doScanAndBatchRelay(ctx context.Context, checkpoint api.Finalize
 		includeBeacon = false
 	}
 
-	// Generate each candidate's execution proof. Candidates newer than the on-chain
-	// finalized header (needsConsensus) are anchored to the shared finalized update
-	// being submitted in this batch; the rest are proven against the existing on-chain
-	// header. When no beacon update is included, needsConsensus candidates cannot be
-	// proven and are skipped.
 	for i := range candidates {
 		c := &candidates[i]
 
@@ -1284,8 +1176,6 @@ func (r *Relay) doScanAndBatchRelay(ctx context.Context, checkpoint api.Finalize
 			headerUpdate, err = r.beaconHeader.GetHeaderUpdate(c.parentBeaconRoot, &checkpointProof)
 			finalizedPayload = sharedFinalizedPayload
 		} else {
-			// Message already covered by on-chain LC: prove the exact parent beacon root
-			// against that finalized checkpoint (not a slot-search substitute).
 			headerUpdate, err = r.beaconHeader.GetHeaderUpdateAgainstOnchainFinalized(c.parentBeaconRoot)
 		}
 
@@ -1308,12 +1198,10 @@ func (r *Relay) doScanAndBatchRelay(ctx context.Context, checkpoint api.Finalize
 		}
 	}
 
-	// Attach the execution proof to each message.
 	for i := range validCandidates {
 		validCandidates[i].inboundMsg.Proof.ExecutionProof = validCandidates[i].proof.HeaderPayload
 	}
 
-	// Final filtering: OFAC + already-processed nonces; profitability via checkV2Profitable.
 	var finalEvs []*contracts.GatewayOutboundMessageAccepted
 	var finalMessages []*parachain.MessageV3
 	var finalProofs []scale.ProofPayload
@@ -1321,7 +1209,6 @@ func (r *Relay) doScanAndBatchRelay(ctx context.Context, checkpoint api.Finalize
 	var finalQuotes []*v2Economics
 
 	if len(validCandidates) > 0 {
-		// Single authoritative bitmap read for the pre-submit processed re-check.
 		unprocessedBeforeSubmit, err := r.fetchUnprocessedNonceSet(ethNonce)
 		if err != nil {
 			return fmt.Errorf("fetch unprocessed nonce set for final check: %w", err)
@@ -1331,7 +1218,7 @@ func (r *Relay) doScanAndBatchRelay(ctx context.Context, checkpoint api.Finalize
 			c := &validCandidates[i]
 
 			if _, unprocessed := unprocessedBeforeSubmit[c.ev.Nonce]; !unprocessed {
-				continue // already processed by an earlier submission or a competing relayer
+				continue
 			}
 
 			c.inboundMsg.Proof.ExecutionProof = c.proof.HeaderPayload
@@ -1375,9 +1262,7 @@ func (r *Relay) doScanAndBatchRelay(ctx context.Context, checkpoint api.Finalize
 		}
 	}
 
-	// V1 always piggybacks on tip (no fee gate), proven against on-chain LC or this batch's update.
-	// A collect failure must not exit the worker: Header.Sync shares this process, and a
-	// non-transient error here cancels beacon catch-up too.
+	// V1 piggyback errors must not kill the worker (beacon Header.Sync shares the errgroup).
 	v1Cands, err := r.collectV1Piggybacks(ctx, executionBlockNumber, lastFinalizedHeaderState.BeaconSlot, sharedFinalizedPayload)
 	if err != nil {
 		log.WithError(err).Warn("[instant-eth] V1 collect failed; submitting V2 batch without V1")
@@ -1395,10 +1280,6 @@ func (r *Relay) doScanAndBatchRelay(ctx context.Context, checkpoint api.Finalize
 		"includeBeacon": includeBeacon,
 	}).Info("[instant-eth] Submitting batch")
 
-	// No pending-force_batch deferral: v3 competes with external relayers and submits
-	// whenever it has deliverable messages. Losing a race only wastes gas on
-	// already-processed items (non-atomic force_batch); tip and bitmap re-check bound cost.
-	// Writer mutex serializes with catch-up Header.Sync submits.
 	var calls []batchCall
 
 	if includeBeacon && sharedFinalizedPayload != nil {
@@ -1444,7 +1325,6 @@ func (r *Relay) doScanAndBatchRelay(ctx context.Context, checkpoint api.Finalize
 		log.WithError(err).Warn("[instant-eth] batch dry-run failed; skipping this round")
 		return nil
 	}
-	// A beacon update with no surviving message is catch-up's job.
 	if !batchHasMessage(calls) {
 		log.Info("[instant-eth] no messages left after the batch gate; skipping")
 		return nil
@@ -1465,7 +1345,6 @@ func (r *Relay) doScanAndBatchRelay(ctx context.Context, checkpoint api.Finalize
 
 	log.Info("[instant-eth] force_batch extrinsic submitted successfully; verifying outcomes...")
 
-	// Single bitmap read to reconcile per-nonce outcomes instead of scanning per nonce.
 	unprocessedAfterSubmit, err := r.fetchUnprocessedNonceSet(ethNonce)
 	if err != nil {
 		log.WithError(err).Warn("[instant-eth] Failed to fetch nonce bitmap for reconciliation; skipping per-nonce verification")

@@ -26,11 +26,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-const (
-	// stateServiceErrorThreshold is the duration after which continuous errors
-	// from the beacon state service should trigger a relayer restart
-	stateServiceErrorThreshold = 3 * time.Minute
-)
+const stateServiceErrorThreshold = 3 * time.Minute
 
 var (
 	ErrCommitteeUpdateHeaderInDifferentSyncPeriod = errors.New("sync committee in different sync period")
@@ -38,7 +34,6 @@ var (
 	ErrNewerFinalizedHeaderAvailable              = errors.New("newer finalized header available, abandoning current request")
 )
 
-// StateServiceClient is an interface for the beacon state service HTTP client
 type StateServiceClient interface {
 	GetBlockRootProof(slot uint64) (*scale.BlockRootProof, error)
 	GetFinalizedHeaderProof(slot uint64) ([]types.H256, error)
@@ -51,12 +46,7 @@ type Syncer struct {
 	Client       api.BeaconAPI
 	protocol     *protocol.Protocol
 	stateService StateServiceClient
-	// executionClient is only needed from Gloas, and only by relays that build header
-	// updates, so it is set separately rather than required of every caller.
-	executionClient execution.HeaderFetcher
-
-	// Cache reconstructed historical block_roots trees (keyed by state slot).
-	// Reward claims for adjacent nonces often share the same BH checkpoint.
+	executionClient execution.HeaderFetcher // Gloas execution proofs only
 	blockRootsMu    sync.Mutex
 	blockRootsCache map[uint64]scale.BlockRootProof
 }
@@ -70,8 +60,6 @@ func New(client api.BeaconAPI, protocol *protocol.Protocol, stateService StateSe
 	}
 }
 
-// WithExecutionClient supplies the execution node used to fetch execution headers for Gloas
-// proofs. Without it a Gloas header update fails rather than submits an incomplete proof.
 func (s *Syncer) WithExecutionClient(client execution.HeaderFetcher) *Syncer {
 	s.executionClient = client
 	return s
@@ -182,8 +170,7 @@ func (s *Syncer) GetCheckpointFromFile(file string) (scale.BeaconCheckpoint, err
 }
 
 func (s *Syncer) GetCheckpointAtSlot(slot uint64) (scale.BeaconCheckpoint, error) {
-	// Platåberget (and other Gloas testnets) do not serve light-client bootstrap. Build the
-	// checkpoint from the beacon header at `slot` plus state-service merkle proofs.
+	// No light-client bootstrap on some Gloas testnets; build checkpoint from header + state service.
 	header, err := s.FindBeaconHeaderWithBlockIncluded(slot)
 	if err != nil {
 		return scale.BeaconCheckpoint{}, fmt.Errorf("find header at slot %d: %w", slot, err)
@@ -226,10 +213,6 @@ func (s *Syncer) GetCheckpointAtSlot(slot uint64) (scale.BeaconCheckpoint, error
 	}, nil
 }
 
-// GetSyncCommitteePeriodUpdate fetches a sync committee update from the light client API endpoint. If it fails
-// (typically because it cannot download the finalized header beacon state because the slot does not fall on a 32
-// slot interval, due to a missed block), it will construct an update manually from data download from the beacon
-// API, or if that is unavailable, use a stored beacon state.
 func (s *Syncer) GetSyncCommitteePeriodUpdate(period uint64, lastFinalizedSlot uint64) (scale.Update, error) {
 	update, err := s.GetSyncCommitteePeriodUpdateFromEndpoint(period)
 	if err != nil {
@@ -243,9 +226,6 @@ func (s *Syncer) GetSyncCommitteePeriodUpdate(period uint64, lastFinalizedSlot u
 	return update, nil
 }
 
-// GetSyncCommitteePeriodUpdateFromEndpoint fetches a sync committee update from the light client API endpoint. If
-// it cannot download the required beacon state from the API, it will look in the data store if the state is stored.
-// If not, it returns an error.
 func (s *Syncer) GetSyncCommitteePeriodUpdateFromEndpoint(from uint64) (scale.Update, error) {
 	committeeUpdateContainer, err := s.Client.GetSyncCommitteePeriodUpdate(from)
 	if err != nil {
@@ -327,15 +307,7 @@ func (s *Syncer) GetSyncCommitteePeriodUpdateFromEndpoint(from uint64) (scale.Up
 	return syncCommitteePeriodUpdate, nil
 }
 
-// retryWithBackoff executes fetchFn with retry logic and backoff for proof not ready errors.
-// Returns ErrNewerFinalizedHeaderAvailable if a newer finalized slot is available.
-//
-// When allowFallback is true (block-root proofs that can be rebuilt from headers), both
-// ErrProofNotReady and other state-service errors (timeout, 5xx, …) are retried with the
-// same backoff until stateServiceErrorThreshold, then returned so GetBlockRoots can
-// reconstruct — a single blip must not jump straight into an ~11 minute header rebuild.
-// When false (sync-committee / finalized-header proofs with no reconstruction path),
-// ErrProofNotReady still retries then Fatals; any other error Fatals immediately.
+// allowFallback: retry hard errors then reconstruct block roots; else Fatal after threshold.
 func (s *Syncer) retryWithBackoff(slot uint64, proofType string, allowFallback bool, fetchFn func() error) error {
 	const maxRetries = 10
 	startTime := time.Now()
@@ -349,8 +321,6 @@ func (s *Syncer) retryWithBackoff(slot uint64, proofType string, allowFallback b
 		lastErr = err
 
 		proofNotReady := errors.Is(err, beaconerrors.ErrProofNotReady)
-		// Retry soft "not ready" always; with allowFallback also retry hard errors so a
-		// transient timeout/502 does not immediately trigger header reconstruction.
 		if proofNotReady || allowFallback {
 			if newerSlot, hasNewer := s.checkForNewerFinalizedSlot(slot); hasNewer {
 				log.WithFields(log.Fields{
@@ -393,7 +363,6 @@ func (s *Syncer) retryWithBackoff(slot uint64, proofType string, allowFallback b
 			continue
 		}
 
-		// !allowFallback and not ErrProofNotReady: hard fail immediately.
 		log.WithError(err).WithFields(log.Fields{
 			"slot":      slot,
 			"proofType": proofType,
@@ -412,14 +381,11 @@ func (s *Syncer) retryWithBackoff(slot uint64, proofType string, allowFallback b
 		return fmt.Errorf("%w: retries exhausted", beaconerrors.ErrProofNotReady)
 	}
 	log.WithFields(fields).Fatal("beacon state service retries exhausted, restarting relayer")
-	return nil // unreachable
+	return nil
 }
 
 func (s *Syncer) GetBlockRoots(slot uint64) (scale.BlockRootProof, error) {
-	// Prefer pre-generated proofs from the beacon state service when available.
-	// For historical slots the service only caches tip finality and typically
-	// returns 503 forever; reconstruct the block_roots tree from beacon headers
-	// so ancestry proofs for reward claims (and lagging checkpoints) stay possible.
+	// Historical slots: state service often 503; reconstruct block_roots from headers.
 	if s.stateService != nil {
 		if s.isNearCurrentFinalized(slot) {
 			var result *scale.BlockRootProof
@@ -456,13 +422,10 @@ func (s *Syncer) GetBlockRoots(slot uint64) (scale.BlockRootProof, error) {
 	return s.reconstructBlockRootsFromHeaders(slot)
 }
 
-// isNearCurrentFinalized reports whether slot is within two epochs of CL finality
-// (i.e. a tip-following request rather than a historical checkpoint).
 func (s *Syncer) isNearCurrentFinalized(slot uint64) bool {
 	finalizedUpdate, err := s.Client.GetLatestFinalizedUpdate()
 	if err != nil {
-		// Fail open: treat as tip so we still try state-service backoff for fresh slots.
-		return true
+		return true // fail open: tip backoff
 	}
 	currentFinalizedSlot, err := strconv.ParseUint(finalizedUpdate.Data.FinalizedHeader.Beacon.Slot, 10, 64)
 	if err != nil {
@@ -475,17 +438,7 @@ func (s *Syncer) isNearCurrentFinalized(slot uint64) bool {
 	return currentFinalizedSlot-slot <= nearTipWindow
 }
 
-// reconstructBlockRootsFromHeaders builds the beacon state block_roots vector for
-// state.slot = stateSlot from canonical block roots over [stateSlot-N, stateSlot).
-//
-// Consensus writes block_roots[t % N] during process_slot at t with the root of the
-// block at t after that block has been applied, so for a post-state at stateSlot the
-// vector holds roots for the prior N slots. Empty (skipped) slots reuse the previous
-// non-empty block root, matching process_slot behaviour.
-//
-// The Merkle multiproof against the full beacon state root is not reconstructed here;
-// callers that only need the block_roots tree for ancestry (reward / on-chain
-// checkpoint populate) do not require that multiproof.
+// Rebuild block_roots ring from headers; skipped slots forward-fill like process_slot.
 func (s *Syncer) reconstructBlockRootsFromHeaders(stateSlot uint64) (scale.BlockRootProof, error) {
 	s.blockRootsMu.Lock()
 	if cached, ok := s.blockRootsCache[stateSlot]; ok {
@@ -504,7 +457,6 @@ func (s *Syncer) reconstructBlockRootsFromHeaders(stateSlot uint64) (scale.Block
 		s.blockRootsCache = make(map[uint64]scale.BlockRootProof)
 	}
 	s.blockRootsCache[stateSlot] = proof
-	// Bound cache size roughly (unique BH checkpoints over a poll window).
 	if len(s.blockRootsCache) > 64 {
 		for k := range s.blockRootsCache {
 			if k != stateSlot {
@@ -536,7 +488,6 @@ func (s *Syncer) reconstructBlockRootsFromHeadersUncached(stateSlot uint64) (sca
 		err  error
 	}
 
-	// Modest concurrency with a shared RPS limit so public archives do not 429.
 	const workers = 6
 	const targetRPS = 12
 	interval := time.Second / time.Duration(targetRPS)
@@ -549,14 +500,12 @@ func (s *Syncer) reconstructBlockRootsFromHeadersUncached(stateSlot uint64) (sca
 	fetchRoot := func(slot uint64) (common.Hash, error) {
 		var lastErr error
 		for attempt := 0; attempt < 12; attempt++ {
-			// Pace every attempt so retries also respect the rate limit.
 			<-pace.C
 			root, err := s.Client.GetBeaconBlockRoot(slot)
 			if err == nil {
 				return root, nil
 			}
 			lastErr = err
-			// Empty/missed slots: not found is legitimate.
 			if errors.Is(err, api.ErrNotFound) {
 				<-pace.C
 				header, herr := s.Client.GetHeaderBySlot(slot)
@@ -577,13 +526,11 @@ func (s *Syncer) reconstructBlockRootsFromHeadersUncached(stateSlot uint64) (sca
 					return common.BytesToHash(htr[:]), nil
 				}
 			}
-			// Back off on rate limits / transient HTTP errors.
 			errStr := strings.ToLower(lastErr.Error())
 			if strings.Contains(errStr, "429") ||
 				strings.Contains(errStr, "too many") ||
 				strings.Contains(errStr, "http status not ok") ||
 				strings.Contains(errStr, "do http request") {
-				// Additional pause after a throttle response.
 				wait := time.Duration(1<<attempt) * time.Second
 				if wait > 20*time.Second {
 					wait = 20 * time.Second
@@ -616,7 +563,6 @@ func (s *Syncer) reconstructBlockRootsFromHeadersUncached(stateSlot uint64) (sca
 		close(results)
 	}()
 
-	// raw[i] is root at absolute slot startSlot+i (zero if missing)
 	raw := make([]common.Hash, n)
 	var fatal error
 	var mu sync.Mutex
@@ -634,7 +580,6 @@ func (s *Syncer) reconstructBlockRootsFromHeadersUncached(stateSlot uint64) (sca
 				fatal = fmt.Errorf("fetch block root for slot %d: %w", r.slot, r.err)
 			}
 			mu.Unlock()
-			// drain remaining so workers don't block on full channel
 			continue
 		}
 		idx := r.slot - startSlot
@@ -644,7 +589,6 @@ func (s *Syncer) reconstructBlockRootsFromHeadersUncached(stateSlot uint64) (sca
 		return scale.BlockRootProof{}, fatal
 	}
 
-	// Forward-fill skipped slots with the previous non-empty block root.
 	blockRoots := make([][]byte, n)
 	var prev []byte
 	filled := 0
@@ -666,7 +610,6 @@ func (s *Syncer) reconstructBlockRootsFromHeadersUncached(stateSlot uint64) (sca
 		blockRoots[slot%n] = b
 	}
 
-	// Ensure every ring index was assigned (defensive after fill).
 	for i := uint64(0); i < n; i++ {
 		if blockRoots[i] == nil {
 			return scale.BlockRootProof{}, fmt.Errorf("block roots ring incomplete at index %d", i)
@@ -690,12 +633,11 @@ func (s *Syncer) reconstructBlockRootsFromHeadersUncached(stateSlot uint64) (sca
 
 	return scale.BlockRootProof{
 		Leaf:  types.H256(common.BytesToHash(leaf)),
-		Proof: nil, // multiproof against full state not needed for ancestry cache path
+		Proof: nil,
 		Tree:  tree,
 	}, nil
 }
 
-// getSyncCommitteeProof fetches sync committee proof with pubkeys from state service with retry logic
 func (s *Syncer) getSyncCommitteeProof(slot uint64, period string) (*scale.SyncCommitteeProof, error) {
 	if s.stateService == nil {
 		return nil, fmt.Errorf("state service is required but not configured")
@@ -718,7 +660,6 @@ func (s *Syncer) getSyncCommitteeProof(slot uint64, period string) (*scale.SyncC
 	return result, nil
 }
 
-// getFinalizedHeaderProof fetches finalized header proof from state service with retry logic
 func (s *Syncer) getFinalizedHeaderProof(slot uint64) ([]types.H256, error) {
 	if s.stateService == nil {
 		return nil, fmt.Errorf("state service is required but not configured")
@@ -741,15 +682,10 @@ func (s *Syncer) getFinalizedHeaderProof(slot uint64) ([]types.H256, error) {
 	return result, nil
 }
 
-// checkForNewerFinalizedSlot checks whether the live finalized tip advanced past a
-// tip-following request. Returns the newer tip and true only when the requested
-// slot is still near the tip (within two epochs). Historical reward/checkpoint
-// slots are always far behind current finality; abandoning those on the first
-// "proof not ready" would make recovery impossible.
+// Abandon tip-following requests only within two epochs of finality (not historical slots).
 func (s *Syncer) checkForNewerFinalizedSlot(requestedSlot uint64) (uint64, bool) {
 	finalizedUpdate, err := s.Client.GetLatestFinalizedUpdate()
 	if err != nil {
-		// If we can't check, assume no newer slot is available
 		log.WithError(err).Debug("failed to check for newer finalized slot")
 		return 0, false
 	}
@@ -764,8 +700,6 @@ func (s *Syncer) checkForNewerFinalizedSlot(requestedSlot uint64) (uint64, bool)
 		return 0, false
 	}
 
-	// Tip-following only: if the request is more than two epochs behind the tip,
-	// this is a historical slot fetch and must not be abandoned.
 	nearTipWindow := s.protocol.Settings.SlotsInEpoch * 2
 	if currentFinalizedSlot-requestedSlot > nearTipWindow {
 		return 0, false
@@ -793,10 +727,7 @@ func (s *Syncer) GetFinalizedUpdate() (scale.Update, error) {
 	if err != nil {
 		return scale.Update{}, fmt.Errorf("fetch finalized update: %w", err)
 	}
-	// This path takes the finality branch and sync aggregate straight from the light client
-	// API, so a response derived from plain headers cannot serve it. The state service holds
-	// the same information in the beacon state, so build the update from there instead of
-	// stalling whenever the node is not serving light client data.
+	// Header-derived LC response lacks finality branch; build from state service instead.
 	if finalizedUpdate.DerivedFromHeaders {
 		if s.stateService == nil {
 			return scale.Update{}, fmt.Errorf("node does not serve the light client API and no state service is configured")
@@ -881,13 +812,10 @@ func (s *Syncer) FindBeaconHeaderWithBlockIncluded(slot uint64) (state.BeaconBlo
 	err := api.ErrNotFound
 	var header api.BeaconHeader
 	tries := 0
-	// Allow two epochs of skipped slots: Gloas testnets (Platåberget) regularly
-	// produce stretches longer than a single epoch without an included block.
 	maxSlotsMissed := int(s.protocol.Settings.SlotsInEpoch) * 2
 	startSlot := slot
 	for errors.Is(err, api.ErrNotFound) && tries < maxSlotsMissed {
-		// Need to use GetHeaderBySlot instead of GetBeaconBlockRoot here because GetBeaconBlockRoot
-		// returns the previous slot's block root if there is no block at the given slot
+		// GetBeaconBlockRoot returns the previous root on empty slots; use GetHeaderBySlot.
 		header, err = s.Client.GetHeaderBySlot(slot)
 		if err != nil && !errors.Is(err, api.ErrNotFound) {
 			return state.BeaconBlockHeader{}, fmt.Errorf("fetch block: %w", err)
@@ -942,8 +870,6 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash, checkpoint *cache.Proof)
 	slot := header.Slot
 	forkVersion := s.protocol.ForkVersion(slot)
 
-	// From Gloas the beacon block carries the builder's bid instead of the execution
-	// payload, so the execution side of the proof is built on a different path.
 	if forkVersion == protocol.Gloas {
 		return s.getGloasHeaderUpdate(blockRoot, header, checkpoint)
 	}
@@ -983,7 +909,6 @@ func (s *Syncer) GetHeaderUpdate(blockRoot common.Hash, checkpoint *cache.Proof)
 	}
 	versionedExecutionPayloadHeader = scale.VersionedExecutionPayloadHeader{Deneb: &executionPayloadScale}
 
-	// If checkpoint not provided or slot == finalizedSlot there won't be an ancestry proof because the header state in question is also the finalized header
 	if checkpoint == nil || beaconBlock.GetBeaconSlot() == checkpoint.Slot {
 		return scale.HeaderUpdatePayload{
 			Header: beaconHeader,
@@ -1038,10 +963,8 @@ func (s *Syncer) UnmarshalBeaconState(slot uint64, data []byte) (state.BeaconSta
 	return beaconState, nil
 }
 
-// FindValidHeaderPair finds a valid beacon header attested and finalized header pair within [minSlot, maxSlot].
 func (s *Syncer) FindValidHeaderPair(minSlot, maxSlot uint64) (uint64, uint64, error) {
 	var slot uint64
-	// make sure the starting slot is in a multiple of slotsInEpoch
 	if minSlot%s.protocol.Settings.SlotsInEpoch == 0 {
 		slot = minSlot
 	} else {
@@ -1066,7 +989,6 @@ func (s *Syncer) FindValidHeaderPair(minSlot, maxSlot uint64) (uint64, uint64, e
 	}
 }
 
-// FindValidAttestedHeader finds a valid beacon header attested header in [minSlot, maxSlot].
 func (s *Syncer) FindValidAttestedHeader(minSlot, maxSlot uint64) (uint64, error) {
 	_, attestedSlot, err := s.FindValidHeaderPair(minSlot, maxSlot)
 	return attestedSlot, err
@@ -1137,7 +1059,7 @@ func (s *Syncer) ValidatePair(finalizedSlot, attestedSlot uint64, attestedState 
 
 func (s *Syncer) GetFinalizedUpdateWithSyncCommittee(syncCommitteePeriod uint64) (scale.Update, error) {
 	minSlot := syncCommitteePeriod * s.protocol.SlotsPerHistoricalRoot
-	maxSlot := ((syncCommitteePeriod + 1) * s.protocol.SlotsPerHistoricalRoot) - s.protocol.Settings.SlotsInEpoch // just before the new sync committee boundary
+	maxSlot := ((syncCommitteePeriod + 1) * s.protocol.SlotsPerHistoricalRoot) - s.protocol.Settings.SlotsInEpoch
 
 	finalizedSlot, attestedSlot, err := s.FindValidHeaderPair(minSlot, maxSlot)
 	if err != nil {
@@ -1155,15 +1077,12 @@ func (s *Syncer) GetFinalizedUpdateAtAttestedSlot(minSlot, maxSlot uint64, fetch
 	return s.getFinalizedUpdateFromStateService(minSlot, maxSlot, fetchNextSyncCommittee)
 }
 
-// getFinalizedUpdateFromStateService gets finalized update using proofs from state service
-// This path never handles raw beacon state data
 func (s *Syncer) getFinalizedUpdateFromStateService(minSlot, maxSlot uint64, fetchNextSyncCommittee bool) (scale.Update, error) {
 	attestedSlot, err := s.FindValidAttestedHeader(minSlot, maxSlot)
 	if err != nil {
 		return scale.Update{}, fmt.Errorf("cannot find blocks at boundaries: %w", err)
 	}
 
-	// Get finalized header from light client API
 	finalizedUpdate, err := s.Client.GetLatestFinalizedUpdate()
 	if err != nil {
 		return scale.Update{}, fmt.Errorf("get finalized update from API: %w", err)
@@ -1180,7 +1099,6 @@ func (s *Syncer) getFinalizedUpdateFromStateService(minSlot, maxSlot uint64, fet
 }
 
 func (s *Syncer) buildFinalizedUpdateFromSlotPair(finalizedSlot, attestedSlot uint64, fetchNextSyncCommittee bool) (scale.Update, error) {
-	// Get proofs from state service
 	finalityProof, err := s.getFinalizedHeaderProof(attestedSlot)
 	if err != nil {
 		return scale.Update{}, fmt.Errorf("get finalized header proof: %w", err)
@@ -1213,7 +1131,6 @@ func (s *Syncer) buildFinalizedUpdateFromSlotPair(finalizedSlot, attestedSlot ui
 		return scale.Update{}, fmt.Errorf("fetch block roots: %w", err)
 	}
 
-	// Get headers from beacon API
 	header, err := s.Client.GetHeaderBySlot(attestedSlot)
 	if err != nil {
 		return scale.Update{}, fmt.Errorf("fetch header at slot: %w", err)
@@ -1224,7 +1141,6 @@ func (s *Syncer) buildFinalizedUpdateFromSlotPair(finalizedSlot, attestedSlot ui
 		return scale.Update{}, fmt.Errorf("fetch finalized header at slot: %w", err)
 	}
 
-	// Get the next block for the sync aggregate
 	nextHeader, err := s.FindBeaconHeaderWithBlockIncluded(attestedSlot + 1)
 	if err != nil {
 		return scale.Update{}, fmt.Errorf("fetch block: %w", err)
@@ -1264,7 +1180,6 @@ func (s *Syncer) buildFinalizedUpdateFromSlotPair(finalizedSlot, attestedSlot ui
 		return scale.Update{}, ErrSyncCommitteeNotSuperMajority
 	}
 
-	// Get finalized block root from beacon API
 	finalizedBlockRoot, err := s.Client.GetBeaconBlockRoot(finalizedSlot)
 	if err != nil {
 		return scale.Update{}, fmt.Errorf("get finalized block root: %w", err)
@@ -1322,16 +1237,7 @@ func (s *Syncer) getExecutionHeaderBranch(block state.BeaconBlock) ([]types.H256
 	return util.BytesBranchToScale(proof.Hashes), nil
 }
 
-// findFinalizedUpdateAtOrBefore builds a finalized update for the most recent slot pair at or
-// before finalizedSlot.
-//
-// The update's finality proof comes from the attested header's state, so the finalized header in
-// the update must be the FFG finalized checkpoint (not merely headers/finalized, which can sit on
-// a later justified or descendant block). Attested finality for checkpoint epoch E is present in
-// states from epoch E+2.
-//
-// When an epoch-boundary slot is skipped, the checkpoint root is often a mid-epoch block. The
-// epoch-aligned fallback below is only used if the checkpoint API is unavailable.
+// Finalized header must be FFG checkpoint root, not headers/finalized (epoch-aligned fallback if FFG API fails).
 func (s *Syncer) findFinalizedUpdateAtOrBefore(finalizedSlot uint64) (scale.Update, error) {
 	if update, err := s.findFinalizedUpdateFromFFGCheckpoint(); err == nil {
 		return update, nil
@@ -1360,8 +1266,6 @@ func (s *Syncer) findFinalizedUpdateAtOrBefore(finalizedSlot uint64) (scale.Upda
 	return scale.Update{}, fmt.Errorf("no valid slot pair within %d epochs of slot %d: %w", maxFinalizedUpdateLookback, finalizedSlot, lastErr)
 }
 
-// findFinalizedUpdateFromFFGCheckpoint builds an update from states/head/finality_checkpoints.
-// This is the source of truth for which header the finality branch in an attested state proves.
 func (s *Syncer) findFinalizedUpdateFromFFGCheckpoint() (scale.Update, error) {
 	epoch := s.protocol.Settings.SlotsInEpoch
 
@@ -1379,14 +1283,8 @@ func (s *Syncer) findFinalizedUpdateFromFFGCheckpoint() (scale.Update, error) {
 	}
 	finalizedSlot := checkpointHeader.Slot
 
-	// Finality for checkpoint epoch E is first expected around epoch E+2, but justification
-	// gaps can delay it, and the proving state may sit on a mid-epoch block. Walk forward
-	// block-by-block from that floor rather than only sampling epoch boundaries.
 	slot := (checkpoint.Epoch + 2) * epoch
 	maxSlot := slot + epoch*uint64(maxFinalizedUpdateLookback)
-	// Never search past the live head: on sparse Gloas testnets FindBeaconHeaderWithBlockIncluded
-	// otherwise walks empty slots into the future, then the epoch jump races ahead of head
-	// until the lookback budget is exhausted and the relayer fatals.
 	if head, headErr := s.Client.GetHeaderAtHead(); headErr == nil && head.Slot > 0 && head.Slot < maxSlot {
 		maxSlot = head.Slot
 	}
@@ -1395,7 +1293,6 @@ func (s *Syncer) findFinalizedUpdateFromFFGCheckpoint() (scale.Update, error) {
 		attestedHeader, err := s.FindBeaconHeaderWithBlockIncluded(slot)
 		if err != nil {
 			lastErr = err
-			// Past / at head there is nothing further to scan this cycle.
 			if slot+epoch > maxSlot {
 				break
 			}
@@ -1468,6 +1365,4 @@ func (s *Syncer) findFinalizedUpdateFromFFGCheckpoint() (scale.Update, error) {
 	)
 }
 
-// Skipped slots and thin sync participation both disqualify a pair, and Gloas testnets have
-// plenty of each, so the search needs room to step back.
 const maxFinalizedUpdateLookback = 16

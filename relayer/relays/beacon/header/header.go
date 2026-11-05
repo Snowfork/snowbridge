@@ -31,9 +31,7 @@ var ErrSyncCommitteeLatency = errors.New("sync committee latency found")
 var ErrExecutionHeaderNotImported = errors.New("execution header not imported")
 var ErrBeaconHeaderNotFinalized = errors.New("beacon header not finalized")
 
-// FinalizedSubmitter submits an EthereumBeaconClient update (finalized header or
-// sync-committee). When nil, Header uses WriteToParachainAndWatch alone.
-// ethereum-v3 sets this to ForceBatch the update with optional V1/V2 messages.
+// Optional hook to batch LC submit (ethereum-v3 ForceBatch); nil uses WriteToParachainAndWatch.
 type FinalizedSubmitter func(ctx context.Context, update scale.Update) error
 
 type Header struct {
@@ -55,14 +53,11 @@ func New(writer parachain.ChainWriter, client api.BeaconAPI, setting config.Spec
 	}
 }
 
-// WithExecutionClient supplies the execution node used for Gloas execution proofs.
 func (h Header) WithExecutionClient(client execution.HeaderFetcher) Header {
 	h.syncer = h.syncer.WithExecutionClient(client)
 	return h
 }
 
-// WithFinalizedSubmitter replaces the default single-extrinsic beacon submit so a
-// caller can batch the LC update with inbound messages (ethereum-v3 catch-up).
 func (h Header) WithFinalizedSubmitter(fn FinalizedSubmitter) Header {
 	h.finalizedSubmitter = fn
 	return h
@@ -91,8 +86,6 @@ func (h *Header) Sync(ctx context.Context, eg *errgroup.Group) error {
 	h.cache.SetInitialCheckpointSlot(lastFinalizedHeaderState.InitialCheckpointSlot)
 	h.cache.AddCheckPointSlots([]uint64{lastFinalizedHeaderState.BeaconSlot})
 
-	// Special handling here for the initial checkpoint to sync the next sync committee which is not included in initial
-	// checkpoint.
 	if h.isInitialSyncPeriod() {
 		log.Info("syncing next sync committee for initial checkpoint")
 		err = h.SyncCommitteePeriodUpdate(ctx, latestSyncedPeriod)
@@ -158,8 +151,6 @@ func (h *Header) SyncCommitteePeriodUpdate(ctx context.Context, period uint64) e
 		}
 	}
 
-	// If the gap between the last two finalized headers is more than the sync committee period, sync an interim
-	// finalized header
 	if uint64(update.Payload.FinalizedHeader.Slot) > h.cache.LastSyncedSlot() {
 		diff := uint64(update.Payload.FinalizedHeader.Slot) - h.cache.LastSyncedSlot()
 		minSlot := h.cache.LastSyncedSlot()
@@ -190,9 +181,7 @@ func (h *Header) SyncCommitteePeriodUpdate(ctx context.Context, period uint64) e
 		"period":                period,
 	}).Info("syncing sync committee for period")
 
-	// Skip only when on-chain state already covers this period. Do not trust
-	// LatestSyncCommitteeUpdatePeriod alone: force_checkpoint kills NextSyncCommittee
-	// but leaves that counter set, which previously caused permanent skips.
+	// Require on-chain NextSyncCommittee; LatestSyncCommitteeUpdatePeriod alone lies after force_checkpoint.
 	currentOnchainState, err := h.writer.GetLastFinalizedHeaderStateAtBestBlock()
 	if err != nil {
 		return fmt.Errorf("fetch current on-chain finalized header state: %w", err)
@@ -233,7 +222,6 @@ func (h *Header) SyncCommitteePeriodUpdate(ctx context.Context, period uint64) e
 		return err
 	}
 
-	// Only update cache when SyncCommitteeUpdate import succeeded as expected.
 	lastFinalizedHeaderState, err := h.writer.GetLastFinalizedHeaderState()
 	if err != nil {
 		return fmt.Errorf("fetch last finalized header state: %w", err)
@@ -253,7 +241,6 @@ func (h *Header) SyncCommitteePeriodUpdate(ctx context.Context, period uint64) e
 }
 
 func (h *Header) SyncFinalizedHeader(ctx context.Context) error {
-	// Retry loop to handle cases where a newer finalized header becomes available while waiting for proofs
 	maxRetries := 3
 	for attempt := 0; attempt < maxRetries; attempt++ {
 		err := h.syncFinalizedHeaderAttempt(ctx)
@@ -261,7 +248,6 @@ func (h *Header) SyncFinalizedHeader(ctx context.Context) error {
 			return nil
 		}
 
-		// If a newer finalized header is available, retry with the new one
 		if errors.Is(err, syncer.ErrNewerFinalizedHeaderAvailable) {
 			log.WithField("attempt", attempt+1).Info("newer finalized header available, retrying sync")
 			continue
@@ -274,7 +260,6 @@ func (h *Header) SyncFinalizedHeader(ctx context.Context) error {
 }
 
 func (h *Header) syncFinalizedHeaderAttempt(ctx context.Context) error {
-	// When the chain has been processed up until now, keep getting finalized block updates and send that to the parachain
 	finalizedHeader, err := h.syncer.GetFinalizedHeader()
 	if err != nil {
 		return fmt.Errorf("fetch finalized header from Ethereum beacon client: %w", err)
@@ -309,11 +294,7 @@ func (h *Header) syncFinalizedHeaderAttempt(ctx context.Context) error {
 	return nil
 }
 
-// Write the provided finalized header update (possibly containing a sync committee) on-chain and check if it was
-// imported successfully. Update the cache if it has and add the finalized header to the checkpoint cache.
 func (h *Header) updateFinalizedHeaderOnchain(ctx context.Context, update scale.Update) error {
-	// Check if the header is already on-chain by querying from the best (non-finalized) block.
-	// This prevents duplicate submissions when the previous submission is still pending finalization.
 	currentOnchainState, err := h.writer.GetLastFinalizedHeaderStateAtBestBlock()
 	if err != nil {
 		return fmt.Errorf("fetch current on-chain finalized header state: %w", err)
@@ -325,16 +306,12 @@ func (h *Header) updateFinalizedHeaderOnchain(ctx context.Context, update scale.
 			"block_root": update.FinalizedHeaderBlockRoot.Hex(),
 		}).Info("skipping finalized header submission: header already exists on-chain")
 
-		// Update cache since the header is already on-chain
 		h.cache.SetLastSyncedFinalizedState(update.FinalizedHeaderBlockRoot, uint64(update.Payload.FinalizedHeader.Slot))
 		h.cache.AddCheckPoint(update.FinalizedHeaderBlockRoot, update.BlockRootsTree, uint64(update.Payload.FinalizedHeader.Slot))
 		return nil
 	}
 
-	// Also skip if the on-chain slot is already at or ahead of the slot we want to submit.
-	// This catches the race condition where another relayer submitted a different header for the
-	// same or newer slot between our check and submission, which would result in a no-op
-	// on-chain with fees charged.
+	// Skip if another relayer advanced on-chain slot (no-op submit still costs fees).
 	if currentOnchainState.BeaconSlot >= uint64(update.Payload.FinalizedHeader.Slot) {
 		log.WithFields(log.Fields{
 			"slot":          update.Payload.FinalizedHeader.Slot,
@@ -347,15 +324,10 @@ func (h *Header) updateFinalizedHeaderOnchain(ctx context.Context, update scale.
 		return nil
 	}
 
-	// Add random jitter to reduce the chance of two relayers submitting simultaneously.
-	// This makes the tx pool check below more effective by staggering submissions.
 	jitter := time.Duration(rand.Intn(5000)) * time.Millisecond
 	log.WithField("jitter_ms", jitter.Milliseconds()).Debug("waiting before finalized header submission")
 	time.Sleep(jitter)
 
-	// Check if another relayer already has a pending submission in the transaction pool.
-	// This catches the race where both relayers pass the on-chain checks simultaneously
-	// but one submits slightly earlier, leaving a tx in the mempool.
 	hasPending, err := h.writer.HasPendingExtrinsic("EthereumBeaconClient.submit")
 	if err != nil {
 		log.WithError(err).Warn("failed to check pending extrinsics, proceeding with submission")
@@ -382,7 +354,6 @@ func (h *Header) updateFinalizedHeaderOnchain(ctx context.Context, update scale.
 		return ErrFinalizedHeaderNotImported
 	}
 
-	// If the finalized header import succeeded, we add it to this cache.
 	h.cache.SetLastSyncedFinalizedState(update.FinalizedHeaderBlockRoot, uint64(update.Payload.FinalizedHeader.Slot))
 	h.cache.AddCheckPoint(update.FinalizedHeaderBlockRoot, update.BlockRootsTree, uint64(update.Payload.FinalizedHeader.Slot))
 	return nil
@@ -419,9 +390,8 @@ func (h *Header) SyncHeaders(ctx context.Context) error {
 func (h *Header) syncInterimFinalizedUpdate(ctx context.Context, lastSyncedSlot, newCheckpointSlot uint64) (scale.Update, error) {
 	currentPeriod := h.protocol.ComputeSyncPeriodAtSlot(lastSyncedSlot)
 
-	// Calculate the range that the interim finalized header update may be in
 	minSlot := newCheckpointSlot - h.protocol.SlotsPerHistoricalRoot
-	maxSlot := ((currentPeriod + 1) * h.protocol.SlotsPerHistoricalRoot) - h.protocol.Settings.SlotsInEpoch // just before the new sync committee boundary
+	maxSlot := ((currentPeriod + 1) * h.protocol.SlotsPerHistoricalRoot) - h.protocol.Settings.SlotsInEpoch
 
 	finalizedUpdate, err := h.syncer.GetFinalizedUpdateAtAttestedSlot(minSlot, maxSlot, false)
 	if err != nil {
@@ -442,9 +412,6 @@ func (h *Header) syncInterimFinalizedUpdate(ctx context.Context, lastSyncedSlot,
 }
 
 func (h *Header) syncLaggingSyncCommitteePeriods(ctx context.Context, latestSyncedPeriod, currentSyncPeriod uint64) error {
-	// Sync committees for periods after the last synced finalized period through the
-	// current finalized period (inclusive). Period N's update finalizes in period N and
-	// installs the next committee (and rotates when N = store_period+1).
 	periodsToSync := []uint64{}
 	for i := latestSyncedPeriod + 1; i <= currentSyncPeriod; i++ {
 		periodsToSync = append(periodsToSync, i)
@@ -480,7 +447,6 @@ func (h *Header) populateFinalizedCheckpoint(slot uint64) error {
 		return fmt.Errorf("header hash root: %w", err)
 	}
 
-	// Always check slot finalized on chain before populating checkpoint
 	onChainFinalizedHeader, err := h.writer.GetFinalizedHeaderStateByBlockRoot(blockRoot)
 	if err != nil {
 		return fmt.Errorf("get finalized header state by block root: %w", err)
@@ -499,9 +465,6 @@ func (h *Header) populateFinalizedCheckpoint(slot uint64) error {
 	return nil
 }
 
-// Find the closest finalized checkpoint for a given slot. If a checkpoint cannot be found in the local cache, look
-// for a checkpoint that can be used on-chain. There should always be a checkpoint on-chain because on-chain we
-// verify that there is not large gap than the sync committee period range.
 func (h *Header) populateClosestCheckpoint(slot uint64) (cache.Proof, error) {
 	var checkpoint cache.Proof
 	checkpoint, err := h.cache.GetClosestCheckpoint(slot)
@@ -510,7 +473,6 @@ func (h *Header) populateClosestCheckpoint(slot uint64) (cache.Proof, error) {
 	case errors.Is(cache.FinalizedCheckPointNotAvailable, err) || errors.Is(cache.FinalizedCheckPointNotPopulated, err):
 		err = h.populateCheckPointCacheWithDataFromChain(slot)
 		if err != nil {
-			// There should always be a checkpoint onchain with the range of the sync committee period slots
 			return checkpoint, fmt.Errorf("find checkpoint on-chain for slot %d: %w", slot, err)
 		}
 
@@ -548,8 +510,6 @@ func (h *Header) populateCheckPointCacheWithDataFromChain(slot uint64) error {
 		}
 		checkpointSlot = historicState.BeaconSlot
 	} else {
-		// Setting the checkpoint slot to what is the latest finalized header on-chain, since the checkpoint should
-		// not be after the latest finalized header on-chain
 		checkpointSlot = lastFinalizedHeaderState.BeaconSlot
 	}
 
@@ -573,10 +533,7 @@ func (h *Header) GetHeaderUpdateBySlot(slot uint64) (scale.HeaderUpdatePayload, 
 	return h.GetHeaderUpdateAgainstOnchainFinalized(common.BytesToHash(blockRoot[:]))
 }
 
-// GetHeaderUpdateAgainstOnchainFinalized builds an InstantVerification execution proof for
-// blockRoot anchored to the closest on-chain finalized beacon checkpoint (ancestry against
-// EthereumBeaconClient state). Prefer this over GetHeaderUpdateBySlot when the exact parent
-// beacon root of the message is known — slot search can pick a different included header.
+// Prefer blockRoot over slot search when the exact parent beacon root is known.
 func (h *Header) GetHeaderUpdateAgainstOnchainFinalized(blockRoot common.Hash) (scale.HeaderUpdatePayload, error) {
 	header, err := h.syncer.Client.GetHeaderByBlockRoot(blockRoot)
 	if err != nil {
@@ -589,9 +546,7 @@ func (h *Header) GetHeaderUpdateAgainstOnchainFinalized(blockRoot common.Hash) (
 	return h.syncer.GetHeaderUpdate(blockRoot, &checkpoint)
 }
 
-// BeaconRootCommittingToExecutionBlock resolves the beacon block root that commits to the
-// given execution block hash under Gloas (EIP-7732). Pre-Gloas callers should pass the
-// ParentBeaconRoot from the next EL block instead.
+// Gloas (EIP-7732) successor beacon block; pre-Gloas use next EL ParentBeaconRoot.
 func (h *Header) BeaconRootCommittingToExecutionBlock(payloadSlot uint64, executionBlockHash common.Hash) (common.Hash, error) {
 	maxSlots := h.protocol.Settings.SlotsInEpoch
 	if maxSlots == 0 {
@@ -624,8 +579,6 @@ func (h *Header) FetchExecutionProof(blockRoot common.Hash, instantVerification 
 		return scale.ProofPayload{}, fmt.Errorf("fetch last finalized header state: %w", err)
 	}
 
-	// Prefer the on-chain LC when it already covers the message header. This matters for
-	// forceCheckpoint-based E2E where on-chain finality can lead a lagging network head.
 	if header.Slot <= lastFinalizedHeaderState.BeaconSlot {
 		headerUpdate, err := h.GetHeaderUpdateAgainstOnchainFinalized(blockRoot)
 		if err != nil {
@@ -643,7 +596,6 @@ func (h *Header) FetchExecutionProof(blockRoot common.Hash, instantVerification 
 		return scale.ProofPayload{}, err
 	}
 
-	// If the header is not finalized yet on the beacon chain, we can't do anything further.
 	if header.Slot > uint64(finalizedHeader.Slot) {
 		return scale.ProofPayload{}, fmt.Errorf("chain not finalized yet: %w", ErrBeaconHeaderNotFinalized)
 	}
@@ -653,8 +605,6 @@ func (h *Header) FetchExecutionProof(blockRoot common.Hash, instantVerification 
 	}
 
 	var finalizedUpdate scale.Update
-	// If we import the last finalized header, the gap between the finalized headers would be too large, so import
-	// a slightly older header.
 	if lastFinalizedHeaderState.BeaconSlot+h.protocol.SlotsPerHistoricalRoot < uint64(finalizedHeader.Slot) {
 		finalizedUpdate, err = h.syncer.GetFinalizedUpdateAtAttestedSlot(header.Slot, lastFinalizedHeaderState.BeaconSlot+h.protocol.SlotsPerHistoricalRoot, false)
 		if err != nil {
@@ -691,8 +641,6 @@ func (h *Header) CheckHeaderFinalized(blockRoot common.Hash, instantVerification
 		return fmt.Errorf("fetch last finalized header state: %w", err)
 	}
 
-	// On-chain LC already covers this header — proofs can be anchored to it directly
-	// (important when forceCheckpoint advances LC past a lagging network finalized head).
 	if header.Slot <= lastFinalizedHeaderState.BeaconSlot {
 		return nil
 	}
@@ -702,7 +650,6 @@ func (h *Header) CheckHeaderFinalized(blockRoot common.Hash, instantVerification
 		return err
 	}
 
-	// If the header is not finalized yet on the beacon chain, we can't do anything further.
 	if header.Slot > uint64(finalizedHeader.Slot) {
 		return fmt.Errorf("chain not finalized yet: %w", ErrBeaconHeaderNotFinalized)
 	}
@@ -738,8 +685,7 @@ func (h *Header) findLatestCheckPoint(slot uint64) (state.FinalizedHeader, error
 	endIndex := startIndex + 1
 
 	syncCommitteePeriod := h.protocol.Settings.SlotsInEpoch * h.protocol.Settings.EpochsPerSyncCommitteePeriod
-	totalStates := syncCommitteePeriod * h.protocol.HeaderRedundancy // Total size of the circular buffer,
-	// https://github.com/paritytech/polkadot-sdk/blob/master/bridges/snowbridge/pallets/ethereum-client/src/lib.rs#L75
+	totalStates := syncCommitteePeriod * h.protocol.HeaderRedundancy
 	for index := startIndex; index != endIndex; index = (index - 1 + totalStates) % totalStates {
 		beaconRoot, err := h.writer.GetFinalizedBeaconRootByIndex(uint32(index))
 		if err != nil {
@@ -747,7 +693,6 @@ func (h *Header) findLatestCheckPoint(slot uint64) (state.FinalizedHeader, error
 		}
 		beaconState, err = h.writer.GetFinalizedHeaderStateByBlockRoot(beaconRoot)
 		if err != nil {
-			// As soon as it can't find a block root, it means the circular wrap around array is empty.
 			log.WithFields(log.Fields{"index": index, "blockRoot": beaconRoot.Hex()}).WithError(err).Info("searching for checkpoint on-chain failed")
 			break
 		}
@@ -756,7 +701,6 @@ func (h *Header) findLatestCheckPoint(slot uint64) (state.FinalizedHeader, error
 			log.WithFields(log.Fields{"index": index, "blockRoot": beaconRoot.Hex()}).WithError(err).Debug("unable to find a relevant on-chain header")
 			break
 		}
-		// Found the beaconState
 		if beaconState.BeaconSlot > slot && beaconState.BeaconSlot < slot+syncCommitteePeriod {
 			return beaconState, nil
 		}

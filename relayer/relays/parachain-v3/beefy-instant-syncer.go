@@ -29,28 +29,19 @@ type DryRunMetrics struct {
 	GasPriceWei        *big.Int
 	EstimatedFeeWei    *big.Int
 	ConservativeFeeWei *big.Int
-	// EffectiveGasLimit is the gas limit that the strict (AllowFailure=false) dry-run
-	// succeeded with after any bump. Callers must apply this to the broadcast tx opts.
+	// Gas limit from strict dry-run after bump; apply to broadcast tx opts.
 	EffectiveGasLimit uint64
 }
 
-// gasWithForwardingReserve returns the gas a caller frame must hold so that, after
-// the EIP-150 63/64 retention applied at each of `hops` nested external calls, at
-// least `gas` remains at the innermost frame. Gateway gates message delivery on
-// `gasleft() * 63/64 >= dispatchGas + overhead` (v2_dispatch and the submitV1 check),
-// so the relayer must over-provision by the same rule or the submit reverts with
-// InsufficientGasLimit / NotEnoughGas.
+// Outer gas needed so inner frames still pass Gateway gasleft()*63/64 after `hops` EIP-150 retentions.
 func gasWithForwardingReserve(gas uint64, hops int) uint64 {
 	for i := 0; i < hops; i++ {
-		// ceil(gas * 64 / 63)
 		gas = (gas*64 + 62) / 63
 	}
 	return gas
 }
 
-// expectedCommandDispatchGas is the relayer's expected inner dispatch burn for fee
-// pricing (BaseUnlockGas / BaseMintGas). Command.MaxDispatchGas is a conservative
-// on-chain ceiling and must not be used for profitability estimates.
+// Fee pricing uses expected dispatch burn, not MaxDispatchGas ceiling.
 func expectedCommandDispatchGas(command *CommandWrapper) uint64 {
 	switch command.Kind {
 	case 2: // ERC20 unlock/transfer
@@ -63,21 +54,13 @@ func expectedCommandDispatchGas(command *CommandWrapper) uint64 {
 }
 
 func minGasForV2SubmitProof(proof *MessageProof) uint64 {
-	// Gas-limit floor: must satisfy Gateway's gasleft()*63/64 check against
-	// command.MaxDispatchGas (the on-chain ceiling), not our expected burn.
-	// _verifyCommitment runs inside v2_submit (one hop below aggregate3).
 	gas := gasWithForwardingReserve(BaseMessageVerificationGas, 1)
 	for _, cmd := range proof.Message.OriginalMessage.Commands {
-		// A command's gas is forwarded aggregate3 -> v2_submit -> v2_dispatch, and
-		// v2_dispatch's check reserves one more hop for v2_dispatchCommand — three
-		// EIP-150 63/64 retentions before the on-chain gas check.
 		gas += gasWithForwardingReserve(uint64(cmd.MaxDispatchGas)+gatewayDispatchOverheadBuffer, 3)
 	}
 	return gas
 }
 
-// estimatedGasForV2SubmitProof is the expected v2_submit burn for fee pricing.
-// Uses BaseUnlockGas/BaseMintGas instead of MaxDispatchGas.
 func estimatedGasForV2SubmitProof(proof *MessageProof) uint64 {
 	gas := gasWithForwardingReserve(BaseMessageVerificationGas, 1)
 	for _, cmd := range proof.Message.OriginalMessage.Commands {
@@ -87,21 +70,16 @@ func estimatedGasForV2SubmitProof(proof *MessageProof) uint64 {
 }
 
 func minGasForV1SubmitProof(proof *V1MessageProof) uint64 {
-	// submitV1: aggregate3 -> submitV1, then the gasleft*63/64 check reserves one hop
-	// for the handler call — two EIP-150 63/64 retentions for the dispatch gas.
 	gas := gasWithForwardingReserve(BaseMessageVerificationGas, 1)
 	gas += gasWithForwardingReserve(proof.Message.MaxDispatchGas+gatewayDispatchOverheadBuffer, 2)
 	return gas
 }
 
-// multicallGasFloor returns the minimum aggregate3 gas limit for a fiat-shamir + message batch.
 func multicallGasFloor(minSubmitProofGasSum uint64) uint64 {
 	return BaseBeefyFiatShamirGas + multicallBeefyGasHeadroom + multicall3AggregateOverheadBuffer + minSubmitProofGasSum
 }
 
-// applyMulticallGasFloor ensures aggregate3 has enough gas for submitFiatShamir plus nested v2_submit.
-// eth_estimateGas often undershoots here because failing v2_submit (e.g. InsufficientGasLimit) is swallowed
-// when AllowFailure is true, so the tx appears cheaper than a fully successful delivery.
+// Raise limit when estimate is low because AllowFailure=true hides inner v2_submit reverts.
 func (li *BeefyInstantSyncer) applyMulticallGasFloor(opts *bind.TransactOpts, minSubmitProofGasSum uint64) {
 	minTotal := multicallGasFloor(minSubmitProofGasSum)
 	if opts.GasLimit == 0 || opts.GasLimit < minTotal {
@@ -117,8 +95,6 @@ func (li *BeefyInstantSyncer) applyMulticallGasFloor(opts *bind.TransactOpts, mi
 	}
 }
 
-// strictAggregate3Calls clones calls with AllowFailure=false so dry-run/estimateGas cannot
-// swallow an inner v2_submit revert (e.g. InsufficientGasLimit) as a successful outer call.
 func strictAggregate3Calls(calls []contracts.Multicall3Call3) []contracts.Multicall3Call3 {
 	out := make([]contracts.Multicall3Call3, len(calls))
 	for i, c := range calls {
@@ -149,17 +125,9 @@ type BeefyInstantSyncer struct {
 	multicall3         *contracts.Multicall3
 	beefyClientABI     abi.ABI
 	serviceFees        serviceFeeLookup
-	// submitMu serializes account-nonce allocation + broadcast for instant,
-	// direct-relay, handover final, and BEEFY two-phase steps. Receipt / Randao
-	// waits run outside the lock so paths can interleave.
-	submitMu sync.Mutex
-	// handoverInFlight is single-flight for async two-phase handover.
+	submitMu sync.Mutex // nonce + broadcast for instant/direct-relay/handover/BEEFY steps
 	handoverInFlight atomic.Bool
-	// mu serializes the WS instant path and catch-up tick so they do not scan/submit
-	// the same tip concurrently. Receipt waits are inside the lock for those paths;
-	// async handover runs outside after kick so instant can still race while Randao
-	// is pending (nonce covered by submitMu).
-	mu sync.Mutex
+	mu sync.Mutex // WS instant vs catch-up scan; handover async outside (nonce via submitMu)
 }
 
 func NewBeefyInstantSyncer(
@@ -192,7 +160,6 @@ func NewBeefyInstantSyncer(
 }
 
 func (li *BeefyInstantSyncer) Start(ctx context.Context, eg *errgroup.Group) error {
-	// Initialize the beefy listener to setup the scanner
 	err := li.beefyListener.initialize(ctx)
 	if err != nil {
 		return fmt.Errorf("initialize beefy listener: %w", err)
@@ -201,8 +168,7 @@ func (li *BeefyInstantSyncer) Start(ctx context.Context, eg *errgroup.Group) err
 	if err != nil {
 		return fmt.Errorf("initialize ethereum writer: %w", err)
 	}
-	// Multicall3 must be bound after Ethereum ConnectWithHeartBeat (see InstantRelay.Start),
-	// otherwise BoundContract holds a nil ethclient and Transact panics.
+	// Bind Multicall3 only after ConnectWithHeartBeat or Transact panics on nil client.
 	client := li.ethereumWriter.conn.Client()
 	if client == nil {
 		return fmt.Errorf("ethereum writer client is nil; connect sink ethereum before starting instant syncer")
@@ -222,7 +188,6 @@ func (li *BeefyInstantSyncer) Start(ctx context.Context, eg *errgroup.Group) err
 	var mu sync.Mutex
 	trigger := make(chan struct{}, 1)
 
-	// Trigger initial sync on startup
 	eg.Go(func() error {
 		if ctx.Err() != nil {
 			return nil
@@ -249,7 +214,6 @@ func (li *BeefyInstantSyncer) Start(ctx context.Context, eg *errgroup.Group) err
 		return nil
 	})
 
-	// Worker goroutine to process justifications sequentially without blocking subscription reads
 	eg.Go(func() error {
 		for {
 			select {
@@ -278,7 +242,6 @@ func (li *BeefyInstantSyncer) Start(ctx context.Context, eg *errgroup.Group) err
 		}
 	})
 
-	// Subscription loop goroutine
 	eg.Go(func() error {
 		for {
 			if ctx.Err() != nil {
@@ -345,7 +308,6 @@ func (li *BeefyInstantSyncer) Start(ctx context.Context, eg *errgroup.Group) err
 		}
 	})
 
-	// Catch-up ticker: direct-relay → missed-WS fiat-shamir → async handover.
 	catchUpInterval := time.Duration(FastPathCatchUpIntervalSecs) * time.Second
 	if catchUpInterval <= 0 {
 		catchUpInterval = 120 * time.Second
@@ -379,17 +341,12 @@ func (li *BeefyInstantSyncer) Start(ctx context.Context, eg *errgroup.Group) err
 	return nil
 }
 
-// handleTransientEthError keeps the ticker/subscription goroutine alive and
-// reconnects Ethereum RPCs, matching ethereum/reward reconnectAndRebind.
 func (li *BeefyInstantSyncer) handleTransientEthError(ctx context.Context, err error, logMsg string) {
 	log.WithError(err).Warn(logMsg)
 	li.reconnectAndRebindEthereum(ctx)
 }
 
-// reconnectAndRebindEthereum walks to the next source Ethereum endpoint on any
-// transient error so the next interval does not retry the same client. The
-// process stays up. Write/Flashbots is not walked: ChannelNoncesOf / gas-price
-// failures come from the read RPC list.
+// Rotate read Ethereum RPC on transient errors; write/Flashbots unchanged.
 func (li *BeefyInstantSyncer) reconnectAndRebindEthereum(ctx context.Context) {
 	rotated := map[*ethereum.Connection]struct{}{}
 	rotate := func(name string, conn *ethereum.Connection) {
@@ -422,9 +379,7 @@ func (li *BeefyInstantSyncer) reconnectAndRebindEthereum(ctx context.Context) {
 	}
 }
 
-// VersionedSignedCommitment wraps types.SignedCommitment and implements
-// encoding.TextUnmarshaler to support decoding the VersionedFinalityProof returned
-// by Substrate's beefy_subscribeJustifications.
+// Decodes beefy_subscribeJustifications VersionedFinalityProof hex.
 type VersionedSignedCommitment struct {
 	types.SignedCommitment
 }
@@ -486,10 +441,7 @@ func (li *BeefyInstantSyncer) logMulticallReceipt(receipt *gethTypes.Receipt) er
 	return nil
 }
 
-// tryDirectRelayAnchoredMessages scans and attempts to relay messages anchored at the current
-// latest verified BEEFY block on the Ethereum light client contract without a consensus update prefix.
-// Returns true if a profitable batch was successfully submitted and confirmed.
-// V1 fees count fully; V2 includes UI/service fee; submit goes via Flashbots fast path.
+// Message-only relay at latest on-chain BEEFY block (no consensus prefix).
 func (li *BeefyInstantSyncer) tryDirectRelayAnchoredMessages(ctx context.Context, latestBeefyBlockOnEthereum uint64) (bool, error) {
 	tasks, err := li.beefyListener.scanner.Scan(ctx, latestBeefyBlockOnEthereum)
 	if err != nil {
@@ -563,17 +515,8 @@ func (li *BeefyInstantSyncer) tryDirectRelayAnchoredMessages(ctx context.Context
 	return true, nil
 }
 
-// simulateAggregate3 dry-runs the aggregate3 batch on conn (eth_call) and estimates its
-// fee. conn must point at a chain whose state matches where the batch will be broadcast:
-// the self-contained fiat-shamir path can use the forked-mainnet dry-run RPC, but the
-// two-phase submitFinal depends on the relayer's own submitInitial/commitPrevRandao writes
-// and so must simulate against a real-mainnet-state RPC, or eth_call falsely reverts.
-//
-// Simulation forces AllowFailure=false on every call so a nested v2_submit revert
-// (notably InsufficientGasLimit after BEEFY consumes most of the budget) fails the
-// outer eth_call instead of returning success. When that happens, gas is doubled up to
-// multicallMaxGasLimit and the dry-run is retried. Callers must apply EffectiveGasLimit
-// to the broadcast tx opts.
+// eth_call dry-run; conn state must match broadcast (fork OK for fiat-shamir, not two-phase Randao writes).
+// Strict AllowFailure=false; double gas on revert up to multicallMaxGasLimit. Apply EffectiveGasLimit to broadcast.
 func (li *BeefyInstantSyncer) simulateAggregate3(ctx context.Context, conn *ethereum.Connection, calls []contracts.Multicall3Call3, gasLimit uint64) (*DryRunMetrics, error) {
 	multicallABI, err := abi.JSON(strings.NewReader(contracts.Multicall3ABI))
 	if err != nil {
@@ -626,21 +569,14 @@ func (li *BeefyInstantSyncer) simulateAggregate3(ctx context.Context, conn *ethe
 		return nil, fmt.Errorf("estimate gas for aggregate3: %w", err)
 	}
 
-	// Price the execution at the live mainnet base fee, not the simulation conn's
-	// SuggestGasPrice. The dry-run conn is a forked-mainnet RPC whose gas price does not
-	// track live mainnet (observed ~4x too high), and SuggestGasPrice also pads in a
-	// suggested priority fee. Base fee is the unavoidable cost; the tip is discretionary
-	// and added (reward-capped) at bid time, so base fee is the correct profitability basis.
+	// Profitability uses live mainnet base fee, not the fork/dry-run conn SuggestGasPrice.
 	liveHeader, err := li.ethereumWriter.readConn.Client().HeaderByNumber(ctx, nil)
 	if err != nil || liveHeader == nil || liveHeader.BaseFee == nil {
 		return nil, fmt.Errorf("fetch live base fee for aggregate3 fee estimate: %w", err)
 	}
 	gasPriceWei := liveHeader.BaseFee
 
-	// Profitability prices expected burn (strict estimateGas), not the padded tx gas limit.
-	// The floor / EffectiveGasLimit only ensures the broadcast has headroom; using it here
-	// would over-gate profitable batches (e.g. ~2.4M success path vs ~4M floor).
-	feeGas := estimatedGas
+	feeGas := estimatedGas // expected burn, not padded tx gas limit
 	estimatedFeeWei := new(big.Int).Mul(gasPriceWei, new(big.Int).SetUint64(feeGas))
 	conservativeFeeWei := new(big.Int).Mul(gasPriceWei, new(big.Int).SetUint64(effectiveGas))
 
@@ -662,8 +598,6 @@ func (li *BeefyInstantSyncer) simulateAggregate3(ctx context.Context, conn *ethe
 	}, nil
 }
 
-// evaluateFastPathProfitability prices a fiat-shamir (+ messages) batch via static gas
-// or optional fork dry-run. Returns whether collected fee covers the basis cost.
 func (li *BeefyInstantSyncer) evaluateFastPathProfitability(
 	ctx context.Context,
 	batch *MessageBatchBuilder,
@@ -692,8 +626,7 @@ func (li *BeefyInstantSyncer) evaluateFastPathProfitability(
 	return profitable, metrics, basisFeeWei, pricingMode, nil
 }
 
-// doScanAndInstantRelayV2 is the WS hot path: fiat-shamir + ≥1 V2, with pending V1
-// piggybacked at fee=0. V1-only is left to catch-up. Serialized with doCatchUp via li.mu.
+// WS hot path: fiat-shamir + ≥1 V2; V1 piggyback fee=0; V1-only deferred to catch-up.
 func (li *BeefyInstantSyncer) doScanAndInstantRelayV2(ctx context.Context, beefyBlockNumber uint64) error {
 	li.mu.Lock()
 	defer li.mu.Unlock()
@@ -746,8 +679,6 @@ func (li *BeefyInstantSyncer) doScanAndInstantRelayV2(ctx context.Context, beefy
 		return err
 	}
 
-	// Instant requires >=1 V2 to pay the gate; V1 piggybacks. V1-only waits for
-	// direct-relay (once anchored) or handover.
 	if batch == nil || v2Count == 0 {
 		log.WithFields(logBatchComposition(v2Count, v1Count)).
 			Debug("[instant-v2] No V2 pending messages; skipping instant relay (V1-only deferred to direct-relay/handover)")
@@ -822,16 +753,12 @@ func (li *BeefyInstantSyncer) doScanAndInstantRelayV2(ctx context.Context, beefy
 	return nil
 }
 
-// MessageBatchBuilder helps collect and aggregate multicall3 message calls,
-// keeping track of accumulated gas limits and fees.
 type MessageBatchBuilder struct {
 	gatewayAddress common.Address
 	allowFailure   bool
 	Calls          []contracts.Multicall3Call3
-	// MinGasSum is the gas-limit floor contribution (MaxDispatchGas-based for v2).
-	MinGasSum uint64
-	// FeeGasSum is the expected-burn contribution for profitability pricing.
-	FeeGasSum   uint64
+	MinGasSum uint64 // gas-limit floor (MaxDispatchGas for v2)
+	FeeGasSum uint64 // expected burn for fee pricing
 	TotalFeeWei *big.Int
 }
 
@@ -844,8 +771,6 @@ func NewMessageBatchBuilder(gatewayAddress common.Address, allowFailure bool) *M
 	}
 }
 
-// AddCall appends a message call. minGas feeds the tx gas-limit floor; feeGas feeds
-// static profitability pricing (may be lower than minGas when MaxDispatchGas is padded).
 func (b *MessageBatchBuilder) AddCall(calldata []byte, minGas, feeGas uint64, feeWei *big.Int) {
 	b.Calls = append(b.Calls, contracts.Multicall3Call3{
 		Target:       b.gatewayAddress,
