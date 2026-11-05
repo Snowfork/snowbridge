@@ -4,11 +4,9 @@ import (
 	"github.com/snowfork/snowbridge/relayer/cmd/run/beacon"
 	beaconstate "github.com/snowfork/snowbridge/relayer/cmd/run/beacon-state"
 	"github.com/snowfork/snowbridge/relayer/cmd/run/beefy"
-	"github.com/snowfork/snowbridge/relayer/cmd/run/ethereum"
-	ethereumv2 "github.com/snowfork/snowbridge/relayer/cmd/run/ethereum-v2"
+	ethereumv3 "github.com/snowfork/snowbridge/relayer/cmd/run/ethereum-v3"
 	"github.com/snowfork/snowbridge/relayer/cmd/run/fisherman"
-	"github.com/snowfork/snowbridge/relayer/cmd/run/parachain"
-	parachainv2 "github.com/snowfork/snowbridge/relayer/cmd/run/parachain-v2"
+	parachainv3 "github.com/snowfork/snowbridge/relayer/cmd/run/parachain-v3"
 	"github.com/snowfork/snowbridge/relayer/cmd/run/reward"
 	"github.com/spf13/cobra"
 )
@@ -20,13 +18,11 @@ func Command() *cobra.Command {
 		Args:  cobra.MinimumNArgs(1),
 	}
 
+	cmd.AddCommand(parachainv3.Command())
 	cmd.AddCommand(beefy.Command())
-	cmd.AddCommand(parachain.Command())
-	cmd.AddCommand(parachainv2.Command())
 	cmd.AddCommand(beacon.Command())
 	cmd.AddCommand(beaconstate.Command())
-	cmd.AddCommand(ethereum.Command())
-	cmd.AddCommand(ethereumv2.Command())
+	cmd.AddCommand(ethereumv3.Command())
 	cmd.AddCommand(reward.Command())
 	cmd.AddCommand(fisherman.Command())
 

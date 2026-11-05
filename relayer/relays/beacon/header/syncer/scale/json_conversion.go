@@ -1,6 +1,7 @@
 package scale
 
 import (
+	"encoding/hex"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/json"
 	"github.com/snowfork/snowbridge/relayer/relays/util"
 )
@@ -83,6 +84,9 @@ func (s *SyncAggregate) ToJSON() json.SyncAggregate {
 }
 
 func (v *VersionedExecutionPayloadHeader) ToJSON() json.VersionedExecutionPayloadHeader {
+	if v.Gloas != nil {
+		return json.VersionedExecutionPayloadHeader{Gloas: "0x" + hex.EncodeToString(v.Gloas)}
+	}
 	data := v.Deneb.ToJSON()
 	return json.VersionedExecutionPayloadHeader{Deneb: &data}
 }

@@ -6,7 +6,9 @@ package relaychain
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"sort"
+	"sync"
 	"time"
 
 	gsrpc "github.com/snowfork/go-substrate-rpc-client/v4"
@@ -18,18 +20,27 @@ import (
 )
 
 type Connection struct {
-	endpoint    string
+	endpoints   []string
+	currentIdx  int
+	mu          sync.Mutex
 	kp          *signature.KeyringPair
 	api         *gsrpc.SubstrateAPI
 	metadata    types.Metadata
 	genesisHash types.Hash
 }
 
-func NewConnection(endpoint string, kp *signature.KeyringPair) *Connection {
+func NewConnection(endpoints []string, kp *signature.KeyringPair) *Connection {
 	return &Connection{
-		endpoint: endpoint,
-		kp:       kp,
+		endpoints:  endpoints,
+		currentIdx: rand.Intn(len(endpoints)),
+		kp:         kp,
 	}
+}
+
+func (co *Connection) endpoint() string {
+	co.mu.Lock()
+	defer co.mu.Unlock()
+	return co.endpoints[co.currentIdx]
 }
 
 func (co *Connection) API() *gsrpc.SubstrateAPI {
@@ -44,34 +55,50 @@ func (co *Connection) Keypair() *signature.KeyringPair {
 	return co.kp
 }
 
-func (co *Connection) Connect(_ context.Context) error {
-	// Initialize API
-	api, err := gsrpc.NewSubstrateAPI(co.endpoint)
+func (co *Connection) connectToEndpoint(endpoint string) (*gsrpc.SubstrateAPI, *types.Metadata, types.Hash, error) {
+	api, err := gsrpc.NewSubstrateAPI(endpoint)
 	if err != nil {
-		return err
+		return nil, nil, types.Hash{}, err
 	}
-	co.api = api
-
-	// Fetch metadata
 	meta, err := api.RPC.State.GetMetadataLatest()
 	if err != nil {
-		return err
+		return nil, nil, types.Hash{}, err
 	}
-	co.metadata = *meta
-
-	// Fetch genesis hash
 	genesisHash, err := api.RPC.Chain.GetBlockHash(0)
 	if err != nil {
-		return err
+		return nil, nil, types.Hash{}, err
 	}
-	co.genesisHash = genesisHash
+	return api, meta, genesisHash, nil
+}
 
-	log.WithFields(log.Fields{
-		"endpoint":    co.endpoint,
-		"metaVersion": meta.Version,
-	}).Info("Connected to chain")
+func (co *Connection) Connect(_ context.Context) error {
+	var lastErr error
+	for _, idx := range rand.Perm(len(co.endpoints)) {
+		endpoint := co.endpoints[idx]
 
-	return nil
+		api, meta, genesisHash, err := co.connectToEndpoint(endpoint)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"endpoint": endpoint,
+				"error":    err,
+			}).Warn("Failed to connect to relay chain endpoint")
+			lastErr = err
+			continue
+		}
+
+		co.api = api
+		co.metadata = *meta
+		co.genesisHash = genesisHash
+		co.currentIdx = idx
+
+		log.WithFields(log.Fields{
+			"endpoint":    endpoint,
+			"metaVersion": meta.Version,
+		}).Info("Connected to chain")
+
+		return nil
+	}
+	return fmt.Errorf("failed to connect to any relay chain endpoint: %w", lastErr)
 }
 
 func (co *Connection) ConnectWithHeartBeat(ctx context.Context, eg *errgroup.Group, heartBeat time.Duration) error {
@@ -92,7 +119,8 @@ func (co *Connection) ConnectWithHeartBeat(ctx context.Context, eg *errgroup.Gro
 				case <-ticker.C:
 					_, err := co.API().RPC.System.Version()
 					if err != nil {
-						log.WithField("endpoint", co.endpoint).Error("Connection heartbeat failed")
+						log.WithField("endpoint", co.endpoint()).Error("Connection heartbeat failed")
+						co.Reconnect()
 					}
 				}
 			}
@@ -100,6 +128,43 @@ func (co *Connection) ConnectWithHeartBeat(ctx context.Context, eg *errgroup.Gro
 	}
 
 	return nil
+}
+
+func (co *Connection) Reconnect() error {
+	if len(co.endpoints) <= 1 {
+		return nil
+	}
+	co.mu.Lock()
+	startIdx := co.currentIdx
+	co.mu.Unlock()
+
+	for i := 1; i < len(co.endpoints); i++ {
+		idx := (startIdx + i) % len(co.endpoints)
+		endpoint := co.endpoints[idx]
+
+		api, meta, genesisHash, err := co.connectToEndpoint(endpoint)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"endpoint": endpoint,
+				"error":    err,
+			}).Warn("Failed to reconnect to relay chain endpoint")
+			continue
+		}
+
+		co.mu.Lock()
+		log.WithFields(log.Fields{
+			"from": co.endpoints[co.currentIdx],
+			"to":   endpoint,
+		}).Info("Switched relay chain endpoint")
+
+		co.api = api
+		co.metadata = *meta
+		co.genesisHash = genesisHash
+		co.currentIdx = idx
+		co.mu.Unlock()
+		return nil
+	}
+	return fmt.Errorf("failed to reconnect to any relay chain endpoint")
 }
 
 func (co *Connection) Close() {

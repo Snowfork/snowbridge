@@ -29,7 +29,7 @@ type Relay struct {
 func NewRelay(config *Config, keypair *secp256k1.Keypair, keypair2 *sr25519.Keypair) (*Relay, error) {
 	log.Info("Creating fisherman worker")
 
-	relaychainWriterConn := relaychain.NewConnection(config.Source.Polkadot.Endpoint, keypair2.AsKeyringPair())
+	relaychainWriterConn := relaychain.NewConnection(config.Source.Polkadot.ParseEndpoints(), keypair2.AsKeyringPair())
 
 	ethereumConnBeefy := ethereum.NewConnection(&config.Source.Ethereum, keypair)
 

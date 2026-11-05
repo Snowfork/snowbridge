@@ -11,6 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
+	"github.com/snowfork/snowbridge/relayer/config"
 	"github.com/snowfork/snowbridge/relayer/relays/beefy"
 	"github.com/snowfork/snowbridge/relayer/relays/util"
 	"github.com/spf13/cobra"
@@ -40,7 +41,7 @@ func ScanBeefyFn(cmd *cobra.Command, _ []string) error {
 	logrus.SetLevel(logrus.DebugLevel)
 
 	polkadotUrl, _ := cmd.Flags().GetString("polkadot-url")
-	relaychainConn := relaychain.NewConnection(polkadotUrl, nil)
+	relaychainConn := relaychain.NewConnection(config.ParseEndpoints(polkadotUrl), nil)
 	relaychainConn.Connect(ctx)
 
 	config := beefy.SourceConfig{}
@@ -119,7 +120,7 @@ func ScanSingleBeefyBlockFn(cmd *cobra.Command, _ []string) error {
 	logrus.SetLevel(logrus.DebugLevel)
 
 	polkadotUrl, _ := cmd.Flags().GetString("polkadot-url")
-	relaychainConn := relaychain.NewConnection(polkadotUrl, nil)
+	relaychainConn := relaychain.NewConnection(config.ParseEndpoints(polkadotUrl), nil)
 	err := relaychainConn.Connect(ctx)
 	if err != nil {
 		fmt.Errorf("connect: %w", err)

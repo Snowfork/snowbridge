@@ -1,238 +1,63 @@
 package beefy
 
 import (
-	"bytes"
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/snowfork/go-substrate-rpc-client/v4/scale"
-	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
-	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
-	"github.com/snowfork/snowbridge/relayer/contracts"
-	contractV1 "github.com/snowfork/snowbridge/relayer/contracts/v1"
 	"github.com/snowfork/snowbridge/relayer/crypto/secp256k1"
 	"golang.org/x/sync/errgroup"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/snowfork/snowbridge/relayer/relays/error_tracking"
 )
 
 type OnDemandRelay struct {
-	config            *Config
-	ethereumConn      *ethereum.Connection
-	parachainConn     *parachain.Connection
-	relaychainConn    *relaychain.Connection
-	polkadotListener  *PolkadotListener
-	ethereumWriter    *EthereumWriter
-	gatewayContractV2 *contracts.Gateway
-	gatewayContractV1 *contractV1.Gateway
-	assetHubChannelID [32]byte
-	activeTasks       TaskMap
+	config           *Config
+	ethereumConn     *ethereum.Connection
+	relaychainConn   *relaychain.Connection
+	polkadotListener *PolkadotListener
+	ethereumWriter   *EthereumWriter
 }
 
 func NewOnDemandRelay(config *Config, ethereumKeypair *secp256k1.Keypair) (*OnDemandRelay, error) {
 	ethereumConn := ethereum.NewConnection(&config.Sink.Ethereum, ethereumKeypair)
-	relaychainConn := relaychain.NewConnection(config.Source.Polkadot.Endpoint, nil)
-	parachainConn := parachain.NewConnection(config.Source.BridgeHub.Endpoint, nil)
+	relaychainConn := relaychain.NewConnection(config.Source.Polkadot.ParseEndpoints(), nil)
 
 	polkadotListener := NewPolkadotListener(&config.Source, relaychainConn)
 	ethereumWriter := NewEthereumWriter(&config.Sink, ethereumConn)
 
-	assetHubChannelID, err := types.HexDecodeString(config.OnDemandSync.AssetHubChannelID)
-	if err != nil {
-		return nil, fmt.Errorf("hex decode assethub channel: %w", err)
-	}
-
-	relay := OnDemandRelay{
-		config:            config,
-		ethereumConn:      ethereumConn,
-		parachainConn:     parachainConn,
-		relaychainConn:    relaychainConn,
-		polkadotListener:  polkadotListener,
-		ethereumWriter:    ethereumWriter,
-		assetHubChannelID: *(*[32]byte)(assetHubChannelID),
-		activeTasks:       *NewTaskMap(config.OnDemandSync.MaxTasks, config.OnDemandSync.MergePeriod, config.OnDemandSync.ExpiredPeriod),
-	}
-
-	return &relay, nil
+	return &OnDemandRelay{
+		config:           config,
+		ethereumConn:     ethereumConn,
+		relaychainConn:   relaychainConn,
+		polkadotListener: polkadotListener,
+		ethereumWriter:   ethereumWriter,
+	}, nil
 }
 
-func (relay *OnDemandRelay) Start(ctx context.Context, eg *errgroup.Group) error {
-	err := relay.ethereumConn.ConnectWithHeartBeat(ctx, eg, time.Second*time.Duration(relay.config.Sink.Ethereum.HeartbeatSecs))
-	if err != nil {
-		return fmt.Errorf("connect to ethereum: %w", err)
-	}
-	err = relay.relaychainConn.ConnectWithHeartBeat(ctx, eg, time.Second*time.Duration(relay.config.Source.Polkadot.HeartbeatSecs))
-	if err != nil {
-		return fmt.Errorf("connect to relaychain: %w", err)
-	}
-	err = relay.parachainConn.ConnectWithHeartBeat(ctx, eg, time.Second*time.Duration(relay.config.Source.BridgeHub.HeartbeatSecs))
-	if err != nil {
-		return fmt.Errorf("connect to parachain: %w", err)
-	}
-	err = relay.ethereumWriter.initialize(ctx)
-	if err != nil {
-		return fmt.Errorf("initialize EthereumWriter: %w", err)
-	}
-
-	gatewayAddress := common.HexToAddress(relay.config.Sink.Contracts.Gateway)
-	gatewayContractV2, err := contracts.NewGateway(gatewayAddress, relay.ethereumConn.Client())
-	if err != nil {
-		return fmt.Errorf("create gateway client: %w", err)
-	}
-	relay.gatewayContractV2 = gatewayContractV2
-
-	gatewayContractV1, err := contractV1.NewGateway(gatewayAddress, relay.ethereumConn.Client())
-	if err != nil {
-		return fmt.Errorf("create gateway client: %w", err)
-	}
-	relay.gatewayContractV1 = gatewayContractV1
-
-	ticker := time.NewTicker(time.Second * 60)
-
-	eg.Go(func() error {
-		defer ticker.Stop()
-		for {
-			log.Info("Starting check nonces for both V1 and V2")
-			err = relay.queueAll(ctx)
-			if err != nil {
-				if error_tracking.IsTransientError(err) {
-					log.Warnf("Queue all failed with transient error: %v", err)
-					time.Sleep(time.Second * 10)
-					continue
-				}
-				return fmt.Errorf("Queue all failed: %w", err)
-			}
-			select {
-			case <-ctx.Done():
-				return nil
-			case <-ticker.C:
-				continue
-			}
-		}
-	})
-
-	scheduleTicker := time.NewTicker(time.Second * 60)
-	eg.Go(func() error {
-		defer scheduleTicker.Stop()
-		for {
-			log.Info("Scheduling pending tasks")
-			err = relay.schedule(ctx, eg)
-			if err != nil {
-				if error_tracking.IsTransientError(err) {
-					log.Warnf("Schedule failed with transient error: %v", err)
-					time.Sleep(time.Second * 10)
-					continue
-				}
-				return fmt.Errorf("Schedule failed: %w", err)
-			}
-			select {
-			case <-ctx.Done():
-				return nil
-			case <-scheduleTicker.C:
-				continue
-			}
-		}
-	})
-	return nil
-}
-
-func (relay *OnDemandRelay) waitUntilMessagesSynced(ctx context.Context, task *TaskInfo) error {
-	var cnt uint64
-	for {
-		if task.fromV1 {
-			ethNonce, err := relay.fetchEthereumNonce(ctx)
-			if err == nil && ethNonce >= task.nonce {
-				break
-			}
-		} else {
-			relayed, err := relay.isV2NonceRelayed(ctx, task.nonce)
-			if err == nil && relayed {
-				break
-			}
-		}
-		time.Sleep(time.Second * 30)
-		cnt++
-		if cnt > 10 {
-			return fmt.Errorf("timeout waiting for messages to be relayed")
-		}
-	}
-	return nil
-}
-
-func (relay *OnDemandRelay) queryNonces(ctx context.Context) (uint64, uint64, error) {
-	paraNonce, err := relay.fetchLatestParachainNonce(ctx)
-	if err != nil {
-		return 0, 0, fmt.Errorf("fetch latest parachain nonce: %w", err)
-	}
-
-	ethNonce, err := relay.fetchEthereumNonce(ctx)
-	if err != nil {
-		return 0, 0, fmt.Errorf("fetch latest ethereum nonce: %w", err)
-	}
-
-	return paraNonce, ethNonce, nil
-}
-
-func (relay *OnDemandRelay) fetchLatestParachainNonce(_ context.Context) (uint64, error) {
-	paraNonceKey, err := types.CreateStorageKey(
-		relay.parachainConn.Metadata(), "EthereumOutboundQueue", "Nonce",
-		relay.assetHubChannelID[:], nil,
-	)
-	if err != nil {
-		return 0, fmt.Errorf(
-			"create storage key for EthereumOutboundQueue.Nonce(%v): %w",
-			Hex(relay.assetHubChannelID[:]), err,
-		)
-	}
-	var paraOutboundNonce uint64
-	ok, err := relay.parachainConn.API().RPC.State.GetStorageLatest(paraNonceKey, &paraOutboundNonce)
-	if err != nil {
-		return 0, fmt.Errorf(
-			"fetch storage EthereumOutboundQueue.Nonce(%v): %w",
-			Hex(relay.assetHubChannelID[:]), err,
-		)
-	}
-	if !ok {
-		paraOutboundNonce = 0
-	}
-
-	return paraOutboundNonce, nil
-}
-
-func (relay *OnDemandRelay) fetchEthereumNonce(ctx context.Context) (uint64, error) {
-	opts := bind.CallOpts{
-		Context: ctx,
-	}
-	ethInboundNonce, _, err := relay.gatewayContractV1.ChannelNoncesOf(&opts, relay.assetHubChannelID)
-	if err != nil {
-		return 0, fmt.Errorf(
-			"fetch Gateway.ChannelNoncesOf(%v): %w",
-			Hex(relay.assetHubChannelID[:]), err,
-		)
-	}
-
-	return ethInboundNonce, nil
-}
-
-func (relay *OnDemandRelay) sync(ctx context.Context, blockNumber uint64) error {
+// SyncInTwoPhase performs the standard two-phase BEEFY sync flow for a relaychain block.
+func (relay *OnDemandRelay) SyncInTwoPhase(ctx context.Context, blockNumber uint64) error {
 	task, err := relay.polkadotListener.generateBeefyUpdate(blockNumber)
 	if err != nil {
 		return fmt.Errorf("fail to generate next beefy request: %w", err)
 	}
-	err = relay.syncBeefyUpdate(ctx, &task)
+	err = relay.SyncRequestInTwoPhase(ctx, &task)
 	if err != nil {
 		return fmt.Errorf("Sync beefy request failed: %w", err)
 	}
 	return nil
 }
 
-func (relay *OnDemandRelay) syncBeefyUpdate(ctx context.Context, task *Request) error {
+// SyncRequestInTwoPhase performs the standard two-phase BEEFY sync flow for an already prepared request.
+func (relay *OnDemandRelay) SyncRequestInTwoPhase(ctx context.Context, task *Request) error {
+	if task == nil {
+		return nil
+	}
+
 	state, err := relay.ethereumWriter.queryBeefyClientState(ctx)
 	if err != nil {
 		return fmt.Errorf("query beefy client state: %w", err)
@@ -243,7 +68,6 @@ func (relay *OnDemandRelay) syncBeefyUpdate(ctx context.Context, task *Request) 
 		"currentValidatorSetID": state.CurrentValidatorSetID,
 		"nextValidatorSetID":    state.NextValidatorSetID,
 	})
-	// Ignore commitment earlier than LatestBeefyBlock which is outdated
 	if uint64(task.SignedCommitment.Commitment.BlockNumber) <= state.LatestBeefyBlock {
 		logger.Info("Commitment outdated, just ignore")
 		return nil
@@ -254,19 +78,14 @@ func (relay *OnDemandRelay) syncBeefyUpdate(ctx context.Context, task *Request) 
 		return nil
 	}
 
-	// Submit the task
 	if task.SignedCommitment.Commitment.ValidatorSetID == state.CurrentValidatorSetID {
 		task.ValidatorsRoot = state.CurrentValidatorSetRoot
 	} else {
 		task.ValidatorsRoot = state.NextValidatorSetRoot
 	}
-	if relay.ethereumWriter.config.EnableFiatShamir {
-		err = relay.ethereumWriter.submitFiatShamir(ctx, task)
-	} else {
-		err = relay.ethereumWriter.submit(ctx, task)
-	}
+	err = relay.ethereumWriter.submit(ctx, task)
 	if err != nil {
-		return fmt.Errorf("fail to submit beefy update: %w", err)
+		return fmt.Errorf("Sync beefy request failed: %w", err)
 	}
 
 	updatedState, err := relay.ethereumWriter.queryBeefyClientState(ctx)
@@ -279,152 +98,97 @@ func (relay *OnDemandRelay) syncBeefyUpdate(ctx context.Context, task *Request) 
 		"updatedValidatorSetID":     updatedState.CurrentValidatorSetID,
 		"updatedNextValidatorSetID": updatedState.NextValidatorSetID,
 	}).Info("Sync beefy update success")
+
 	return nil
 }
 
-func (relay *OnDemandRelay) fetchLatestV2Nonce(_ context.Context) (uint64, error) {
-	paraNonceKey, err := types.CreateStorageKey(
-		relay.parachainConn.Metadata(), "EthereumOutboundQueueV2", "Nonce",
-		nil,
-	)
+func (relay *OnDemandRelay) syncFiatShamir(ctx context.Context, blockNumber uint64) error {
+	task, err := relay.polkadotListener.generateBeefyUpdate(blockNumber)
 	if err != nil {
-		return 0, fmt.Errorf(
-			"create storage key for EthereumOutboundQueueV2.Nonce: %w",
-			err,
-		)
+		return fmt.Errorf("fail to generate next beefy request: %w", err)
 	}
-	var paraOutboundNonce uint64
-	ok, err := relay.parachainConn.API().RPC.State.GetStorageLatest(paraNonceKey, &paraOutboundNonce)
+	err = relay.syncBeefyUpdateFiatShamir(ctx, &task)
 	if err != nil {
-		return 0, fmt.Errorf(
-			"fetch storage EthereumOutboundQueueV2.Nonce: %w",
-			err,
-		)
+		return fmt.Errorf("Sync beefy request failed: %w", err)
 	}
-	if !ok {
-		paraOutboundNonce = 0
-	}
-
-	return paraOutboundNonce, nil
+	return nil
 }
 
-func (relay *OnDemandRelay) fetchParachainBlockByV2Nonce(_ context.Context, nonce uint64) (uint64, error) {
-	nonceKey, _ := types.EncodeToBytes(types.NewU64(nonce))
-	storageKey, err := types.CreateStorageKey(relay.parachainConn.Metadata(), "EthereumOutboundQueueV2", "PendingOrders", nonceKey, nil)
+func (relay *OnDemandRelay) prepareBeefySyncTask(ctx context.Context, task *Request) (*log.Entry, bool, error) {
+	state, err := relay.ethereumWriter.queryBeefyClientState(ctx)
 	if err != nil {
-		return 0, fmt.Errorf("create storage key for pendingOrder: %w", err)
+		return nil, false, fmt.Errorf("query beefy client state: %w", err)
 	}
 
-	var order parachain.PendingOrder
-	value, err := relay.parachainConn.API().RPC.State.GetStorageRawLatest(storageKey)
-	if err != nil {
-		return 0, fmt.Errorf("fetch value of pendingOrder with key '%v': %w", storageKey, err)
+	logger := log.WithFields(log.Fields{
+		"commitmentBlock":       task.SignedCommitment.Commitment.BlockNumber,
+		"latestBeefyBlock":      state.LatestBeefyBlock,
+		"currentValidatorSetID": state.CurrentValidatorSetID,
+		"nextValidatorSetID":    state.NextValidatorSetID,
+	})
+
+	if uint64(task.SignedCommitment.Commitment.BlockNumber) <= state.LatestBeefyBlock {
+		logger.Info("Commitment outdated, just ignore")
+		return logger, true, nil
 	}
-	decoder := scale.NewDecoder(bytes.NewReader(*value))
-	err = decoder.Decode(&order)
-	if err != nil {
-		return 0, fmt.Errorf("decode order error: %w", err)
+
+	if task.SignedCommitment.Commitment.ValidatorSetID > state.NextValidatorSetID {
+		logger.Warn("Task unexpected, wait for mandatory updates to catch up first")
+		return logger, true, nil
 	}
-	return uint64(order.BlockNumber), nil
+
+	if task.SignedCommitment.Commitment.ValidatorSetID == state.CurrentValidatorSetID {
+		task.ValidatorsRoot = state.CurrentValidatorSetRoot
+	} else {
+		task.ValidatorsRoot = state.NextValidatorSetRoot
+	}
+
+	return logger, false, nil
 }
 
-func (relay *OnDemandRelay) fetchRelaychainInclusionBlock(
-	paraBlockNumber uint64,
-) (uint64, error) {
-	validationDataKey, err := types.CreateStorageKey(relay.parachainConn.Metadata(), "ParachainSystem", "ValidationData", nil, nil)
+func (relay *OnDemandRelay) logBeefySyncSuccess(ctx context.Context, logger *log.Entry, task *Request, message string) error {
+	updatedState, err := relay.ethereumWriter.queryBeefyClientState(ctx)
 	if err != nil {
-		return 0, fmt.Errorf("create storage key: %w", err)
+		return fmt.Errorf("query beefy client state: %w", err)
 	}
 
-	paraBlockHash, err := relay.parachainConn.API().RPC.Chain.GetBlockHash(paraBlockNumber)
-	if err != nil {
-		return 0, fmt.Errorf("fetch parachain block hash: %w", err)
-	}
+	logger.WithFields(log.Fields{
+		"commitmentBlock":           task.SignedCommitment.Commitment.BlockNumber,
+		"updatedBeefyBlock":         updatedState.LatestBeefyBlock,
+		"updatedValidatorSetID":     updatedState.CurrentValidatorSetID,
+		"updatedNextValidatorSetID": updatedState.NextValidatorSetID,
+	}).Info(message)
 
-	var validationData parachain.PersistedValidationData
-	ok, err := relay.parachainConn.API().RPC.State.GetStorage(validationDataKey, &validationData, paraBlockHash)
-	if err != nil {
-		return 0, fmt.Errorf("fetch PersistedValidationData for block %v: %w", paraBlockHash.Hex(), err)
-	}
-	if !ok {
-		return 0, fmt.Errorf("PersistedValidationData not found for block %v", paraBlockHash.Hex())
-	}
-
-	// fetch ParaId
-	paraIDKey, err := types.CreateStorageKey(relay.parachainConn.Metadata(), "ParachainInfo", "ParachainId", nil, nil)
-	if err != nil {
-		return 0, err
-	}
-	var paraID uint32
-	ok, err = relay.parachainConn.API().RPC.State.GetStorageLatest(paraIDKey, &paraID)
-	if err != nil {
-		return 0, fmt.Errorf("fetch parachain id: %w", err)
-	}
-
-	startBlock := validationData.RelayParentNumber + 1
-	for i := validationData.RelayParentNumber + 1; i < startBlock+relaychain.FinalizationTimeout; i++ {
-		relayBlockHash, err := relay.relaychainConn.API().RPC.Chain.GetBlockHash(uint64(i))
-		if err != nil {
-			return 0, fmt.Errorf("fetch relaychain block hash: %w", err)
-		}
-
-		var paraHead types.Header
-		ok, err := relay.relaychainConn.FetchParachainHead(relayBlockHash, paraID, &paraHead)
-		if err != nil {
-			return 0, fmt.Errorf("fetch head for parachain %v at block %v: %w", paraID, relayBlockHash.Hex(), err)
-		}
-		if !ok {
-			return 0, fmt.Errorf("parachain %v is not registered", paraID)
-		}
-
-		if paraBlockNumber == uint64(paraHead.Number) {
-			return uint64(i), nil
-		}
-	}
-
-	return 0, fmt.Errorf("can't find inclusion block")
+	return nil
 }
 
-func (relay *OnDemandRelay) isV2NonceRelayed(ctx context.Context, nonce uint64) (bool, error) {
-	isRelayed, err := relay.gatewayContractV2.V2IsDispatched(&bind.CallOpts{
-		Pending: true,
-		Context: ctx,
-	}, nonce)
+func (relay *OnDemandRelay) syncBeefyUpdateFiatShamir(ctx context.Context, task *Request) error {
+	logger, skip, err := relay.prepareBeefySyncTask(ctx, task)
 	if err != nil {
-		return false, fmt.Errorf("check nonce from gateway contract: %w", err)
+		return err
 	}
-	return isRelayed, nil
+	if skip {
+		return nil
+	}
+
+	err = relay.ethereumWriter.submitFiatShamir(ctx, task)
+	if err != nil {
+		return fmt.Errorf("fail to submit fiat-shamir beefy update: %w", err)
+	}
+
+	return relay.logBeefySyncSuccess(ctx, logger, task, "Sync fiat-shamir beefy update success")
 }
 
 func (relay *OnDemandRelay) OneShotStart(ctx context.Context, beefyBlockNumber uint64) error {
 	eg, ctx := errgroup.WithContext(ctx)
-	err := relay.ethereumConn.ConnectWithHeartBeat(ctx, eg, time.Second*time.Duration(relay.config.Sink.Ethereum.HeartbeatSecs))
+	err := relay.InitializeOnDemandSync(ctx, eg)
 	if err != nil {
-		return fmt.Errorf("connect to ethereum: %w", err)
-	}
-	err = relay.relaychainConn.ConnectWithHeartBeat(ctx, eg, time.Second*time.Duration(relay.config.Source.Polkadot.HeartbeatSecs))
-	if err != nil {
-		return fmt.Errorf("connect to relaychain: %w", err)
-	}
-	err = relay.parachainConn.ConnectWithHeartBeat(ctx, eg, time.Second*time.Duration(relay.config.Source.BridgeHub.HeartbeatSecs))
-	if err != nil {
-		return fmt.Errorf("connect to parachain: %w", err)
-	}
-	err = relay.ethereumWriter.initialize(ctx)
-	if err != nil {
-		return fmt.Errorf("initialize EthereumWriter: %w", err)
+		return err
 	}
 
-	gatewayAddress := common.HexToAddress(relay.config.Sink.Contracts.Gateway)
-	gatewayContract, err := contractV1.NewGateway(gatewayAddress, relay.ethereumConn.Client())
-	if err != nil {
-		return fmt.Errorf("create gateway client: %w", err)
-	}
-	relay.gatewayContractV1 = gatewayContract
+	log.Info("Performing fiat-shamir sync")
 
-	log.Info("Performing sync")
-
-	err = relay.sync(ctx, beefyBlockNumber)
+	err = relay.syncFiatShamir(ctx, beefyBlockNumber)
 	if err != nil {
 		return fmt.Errorf("Sync failed: %w", err)
 	}
@@ -433,290 +197,168 @@ func (relay *OnDemandRelay) OneShotStart(ctx context.Context, beefyBlockNumber u
 	return nil
 }
 
-// Enqueue a parachain task into the queue
-func (relay *OnDemandRelay) queue(ctx context.Context, paraBlock uint64, nonce uint64, isV1 bool) error {
-	if relay.activeTasks.Full() {
-		log.Info("Task queue full, wait for scheduling")
-		return nil
-	}
-	logger := log.WithFields(log.Fields{
-		"paraBlock": paraBlock,
-		"nonce":     nonce,
-		"isV1":      isV1,
-	})
-	exist := relay.activeTasks.Exist(paraBlock)
-	if exist {
-		logger.Info("parachain block in syncing, just ignore")
-		return nil
-	}
-	logger.Info("Performing queueing")
+// QueryBeefyClientState exposes the on-chain BEEFY light client tip for ops tooling.
+func (relay *OnDemandRelay) QueryBeefyClientState(ctx context.Context) (*BeefyClientState, error) {
+	return relay.ethereumWriter.queryBeefyClientState(ctx)
+}
 
-	relayBlock, err := relay.fetchRelaychainInclusionBlock(paraBlock)
+// RelayBeefyTip returns the relay-chain BEEFY finalized block number.
+func (relay *OnDemandRelay) RelayBeefyTip(ctx context.Context) (uint64, error) {
+	finalizedHash, err := relay.relaychainConn.API().RPC.Beefy.GetFinalizedHead()
 	if err != nil {
-		return fmt.Errorf("fetch relaychain inclusion block: %w", err)
+		return 0, err
+	}
+	finalizedHeader, err := relay.relaychainConn.API().RPC.Chain.GetHeader(finalizedHash)
+	if err != nil {
+		return 0, err
+	}
+	return uint64(finalizedHeader.Number), nil
+}
+
+// SyncNextFromLightClient finds the farthest forward-compatible BEEFY commitment
+// after the on-chain light client tip and submits it via fiat-shamir (single tx)
+// only when it is a validator-set handover. See SyncNextHandoverFromLightClient.
+func (relay *OnDemandRelay) SyncNextFromLightClient(ctx context.Context) error {
+	return relay.SyncNextHandoverFromLightClient(ctx, false)
+}
+
+func (relay *OnDemandRelay) InitializeOnDemandSync(ctx context.Context, eg *errgroup.Group) error {
+	err := relay.ethereumConn.ConnectWithHeartBeat(ctx, eg, time.Second*time.Duration(relay.config.Sink.Ethereum.HeartbeatSecs))
+	if err != nil {
+		return fmt.Errorf("connect to ethereum: %w", err)
+	}
+	err = relay.relaychainConn.ConnectWithHeartBeat(ctx, eg, time.Second*time.Duration(relay.config.Source.Polkadot.HeartbeatSecs))
+	if err != nil {
+		return fmt.Errorf("connect to relaychain: %w", err)
+	}
+	err = relay.ethereumWriter.initialize(ctx)
+	if err != nil {
+		return fmt.Errorf("initialize EthereumWriter: %w", err)
 	}
 
+	return nil
+}
+
+// RotateEthereumEndpoint walks to the next Sink Ethereum RPC after a
+// transient error and rebinds BeefyClient/Multicall3. No-op when only one
+// endpoint is configured.
+func (relay *OnDemandRelay) RotateEthereumEndpoint(ctx context.Context) {
+	if relay == nil || relay.ethereumConn == nil {
+		return
+	}
+	if err := relay.ethereumConn.Reconnect(ctx); err != nil {
+		log.WithError(err).Error("On-demand Ethereum reconnect after transient error failed")
+		return
+	}
+	if err := relay.ethereumWriter.initialize(ctx); err != nil {
+		log.WithError(err).Error("On-demand Ethereum rebind after reconnect failed")
+	}
+}
+
+type ConsensusTaskResult struct {
+	Task                          *Request
+	Calldata                      []byte
+	BeefyTarget                   common.Address
+	MMRAnchorRelayBlock           uint64
+	IsHandover                    bool
+	LeafNextValidatorSetID        uint64
+	LightClientNextValidatorSetID uint64
+}
+
+func (relay *OnDemandRelay) BuildConsensusTask(ctx context.Context, blockNumber uint64) (*ConsensusTaskResult, error) {
 	state, err := relay.ethereumWriter.queryBeefyClientState(ctx)
 	if err != nil {
-		return fmt.Errorf("query beefy client state: %w", err)
+		return nil, fmt.Errorf("query beefy client state: %w", err)
 	}
 
-	// Generate a Beefy request which includes the commitment at paraBlock
-	req, err := relay.polkadotListener.generateBeefyUpdate(relayBlock)
+	task, err := relay.polkadotListener.generateBeefyUpdateWithMaxValidatorSet(state, blockNumber)
 	if err != nil {
-		return fmt.Errorf("fail to generate next beefy request: %w", err)
+		return nil, fmt.Errorf("fail to generate compatible beefy request: %w", err)
 	}
-
-	logger = log.WithFields(log.Fields{
-		"latestBeefyBlock":         state.LatestBeefyBlock,
-		"currentValidatorSetID":    state.CurrentValidatorSetID,
-		"nextValidatorSetID":       state.NextValidatorSetID,
-		"relayInclusionBlock":      relayBlock,
-		"commitmentBlock":          req.SignedCommitment.Commitment.BlockNumber,
-		"commitmentValidatorSetID": req.SignedCommitment.Commitment.ValidatorSetID,
-		"paraBlock":                paraBlock,
-		"nonce":                    nonce,
-		"isV1":                     isV1,
-	})
-
-	// Ignore commitment earlier than LatestBeefyBlock
-	if req.SignedCommitment.Commitment.BlockNumber <= uint32(state.LatestBeefyBlock) {
-		logger.Info("Commitment outdated, just ignore")
-		return nil
-	}
-	if req.SignedCommitment.Commitment.ValidatorSetID > state.NextValidatorSetID {
-		logger.Warn("Task unexpected, wait for mandatory updates to catch up first")
-		return nil
-	}
-
-	if req.SignedCommitment.Commitment.ValidatorSetID == state.CurrentValidatorSetID {
-		req.ValidatorsRoot = state.CurrentValidatorSetRoot
-	} else {
-		req.ValidatorsRoot = state.NextValidatorSetRoot
-	}
-	ok := relay.activeTasks.Store(paraBlock, nonce, isV1, &req)
-	if ok {
-		logger.Info("Task enqueued")
-	} else {
-		logger.Warn("Task not enqueued because the queue is full")
-	}
-	return nil
-}
-
-// Schedule an available task for execution
-func (relay *OnDemandRelay) schedule(ctx context.Context, eg *errgroup.Group) error {
-	tasks := relay.activeTasks.InspectAll()
-	log.WithFields(log.Fields{
-		"pendingTasks": len(tasks),
-		"lastUpdate":   time.Unix(int64(relay.activeTasks.lastUpdated), 0),
-	}).Info("Queue info")
-	for _, task := range tasks {
-		log.WithFields(log.Fields{
-			"id":         task.id,
-			"commitment": task.req.SignedCommitment.Commitment.BlockNumber,
-			"status":     task.status,
-			"skipped":    task.req.Skippable,
-			"timestamp":  time.Unix(int64(task.timestamp), 0),
-			"nonce":      task.nonce,
-			"fromV1":     task.fromV1,
-		}).Info("Task info")
-	}
-	task := relay.activeTasks.Pop()
 	if task == nil {
-		log.Info("No task available, waiting for new tasks to be queued or for ongoing tasks to complete")
-		return nil
+		return nil, nil
 	}
-	err := relay.activeTasks.sem.Acquire(ctx, 1)
-	if err != nil {
-		return fmt.Errorf("Acquires the semaphore: %w", err)
+
+	leafNextValidatorSetID := uint64(task.Proof.Leaf.BeefyNextAuthoritySet.ID)
+	lightClientNextValidatorSetID := state.NextValidatorSetID
+	isHandover := leafNextValidatorSetID > lightClientNextValidatorSetID
+	commitmentBlock := uint64(task.SignedCommitment.Commitment.BlockNumber)
+
+	if task.SignedCommitment.Commitment.ValidatorSetID == state.CurrentValidatorSetID {
+		task.ValidatorsRoot = state.CurrentValidatorSetRoot
+	} else {
+		task.ValidatorsRoot = state.NextValidatorSetRoot
 	}
-	logger := log.WithFields(log.Fields{
-		"id":         task.id,
-		"commitment": task.req.SignedCommitment.Commitment.BlockNumber,
-		"nonce":      task.nonce,
-		"fromV1":     task.fromV1,
-	})
-	eg.Go(func() error {
-		defer relay.activeTasks.sem.Release(1)
-		logger.Info("Starting beefy sync")
-		err := relay.syncBeefyUpdate(ctx, task.req)
-		if err != nil {
-			logger.Error(fmt.Sprintf("Sync beefy failed, %v", err))
-			relay.activeTasks.SetStatus(task.id, Failed)
-		} else {
-			if task.req.Skippable {
-				logger.Info("Sync beefy skipped")
-				relay.activeTasks.SetStatus(task.id, Canceled)
-			} else {
-				logger.Info("Sync beefy completed")
-				relay.activeTasks.SetLastUpdated(task.id)
-				err = relay.waitUntilMessagesSynced(ctx, task)
-				if err != nil {
-					logger.Warn("Sync beefy completed, but pending nonce not synced in time")
-					relay.activeTasks.SetStatus(task.id, Completed)
-				} else {
-					relay.activeTasks.Delete(task.id)
-				}
-			}
-		}
-		return nil
-	})
-	return nil
+
+	return &ConsensusTaskResult{
+		Task:                          task,
+		BeefyTarget:                   relay.ethereumWriter.ContractAddress(),
+		MMRAnchorRelayBlock:           commitmentBlock,
+		IsHandover:                    isHandover,
+		LeafNextValidatorSetID:        leafNextValidatorSetID,
+		LightClientNextValidatorSetID: lightClientNextValidatorSetID,
+	}, nil
 }
 
-// Searches from the given parachain block number backwards for all outstanding
-// commitments until it finds the given nonce, returning the parachain block number
-// that contains it.
-func (relay *OnDemandRelay) fetchParachainBlockByV1Nonce(_ context.Context, nonce uint64) (paraBlock uint64, err error) {
-	lastParaBlockNumber, err := relay.parachainConn.GetLatestBlockNumber()
+// BuildFiatShamirCalldata returns calldata for submitFiatShamir, the BeefyClient address,
+// mmrAnchorRelayBlock, and handover metadata.
+// mmrAnchorRelayBlock is SignedCommitment.Commitment.BlockNumber: the relay block whose MMR root the submission
+// updates on Ethereum. Parachain v2_submit proofs must use this relay block (not the caller's hint block), because
+// generateBeefyUpdate may wait for a newer finalized head than blockNumber while the commitment still references
+// an earlier relay block.
+func (relay *OnDemandRelay) BuildFiatShamirCalldata(ctx context.Context, blockNumber uint64) (*ConsensusTaskResult, error) {
+	result, err := relay.BuildConsensusTask(ctx, blockNumber)
 	if err != nil {
-		return paraBlock, fmt.Errorf("fetch latest parachain block number: %w", err)
+		return nil, err
 	}
-	messagesKey, err := types.CreateStorageKey(relay.parachainConn.Metadata(), "EthereumOutboundQueue", "Messages", nil, nil)
-	if err != nil {
-		return paraBlock, fmt.Errorf("create storage key: %w", err)
+	if result == nil {
+		return nil, nil
 	}
 
-	start := uint64(*lastParaBlockNumber)
-	end := start - 43200 // look back up to 3 days assuming 6s block time
-
-	for currentBlockNumber := start; currentBlockNumber > end; currentBlockNumber-- {
-
-		log.WithFields(log.Fields{
-			"blockNumber": currentBlockNumber,
-		}).Debug("Checking header")
-
-		blockHash, err := relay.parachainConn.API().RPC.Chain.GetBlockHash(currentBlockNumber)
-		if err != nil {
-			return paraBlock, fmt.Errorf("fetch block hash for block %v: %w", currentBlockNumber, err)
-		}
-
-		header, err := relay.parachainConn.API().RPC.Chain.GetHeader(blockHash)
-		if err != nil {
-			return paraBlock, fmt.Errorf("fetch header for block hash %v: %w", blockHash.Hex(), err)
-		}
-
-		commitmentHash, err := relay.ExtractCommitmentFromDigest(header.Digest)
-		if err != nil {
-			return paraBlock, fmt.Errorf("extract commitment from digest %v: %w", blockHash.Hex(), err)
-		}
-		if commitmentHash == nil {
-			continue
-		}
-		raw, err := relay.parachainConn.API().RPC.State.GetStorageRaw(messagesKey, blockHash)
-		if err != nil {
-			return paraBlock, fmt.Errorf("fetch committed messages for block %v: %w", blockHash.Hex(), err)
-		}
-		decoder := scale.NewDecoder(bytes.NewReader(*raw))
-		n, err := decoder.DecodeUintCompact()
-		if err != nil {
-			return paraBlock, fmt.Errorf("decode message length error: %w", err)
-		}
-		for i := uint64(0); i < n.Uint64(); i++ {
-			m := parachain.OutboundQueueMessage{}
-			err = decoder.Decode(&m)
-			if err != nil {
-				return paraBlock, fmt.Errorf("decode message error: %w", err)
-			}
-			if m.Nonce == nonce {
-				return uint64(header.Number), nil
-			}
-		}
-	}
-	return paraBlock, fmt.Errorf("can't find parachain block for nonce %d", nonce)
+	return relay.BuildFiatShamirCalldataForTask(ctx, result)
 }
 
-func (relay *OnDemandRelay) ExtractCommitmentFromDigest(digest types.Digest) (*types.H256, error) {
-	for _, digestItem := range digest {
-		if digestItem.IsOther {
-			digestItemRawBytes := digestItem.AsOther
-			// Prefix 0 reserved for snowbridge
-			if digestItemRawBytes[0] == 0 {
-				var commitment types.H256
-				err := types.DecodeFromBytes(digestItemRawBytes[1:], &commitment)
-				if err != nil {
-					return nil, err
-				}
-				return &commitment, nil
-			}
-		}
+func (relay *OnDemandRelay) BuildFiatShamirCalldataForTask(ctx context.Context, result *ConsensusTaskResult) (*ConsensusTaskResult, error) {
+	if result == nil || result.Task == nil {
+		return nil, nil
 	}
-	return nil, nil
+
+	calldata, err := relay.ethereumWriter.BuildFiatShamirCalldata(ctx, result.Task)
+	if err != nil {
+		return nil, fmt.Errorf("build submitFiatShamir calldata: %w", err)
+	}
+
+	result.Calldata = calldata
+	return result, nil
 }
 
-func (relay *OnDemandRelay) queueV1(ctx context.Context) error {
-	paraNonce, ethNonce, err := relay.queryNonces(ctx)
+// ExecuteTwoPhaseAndPackSubmitFinal runs the BEEFY two-phase flow then returns
+// packed submitFinal calldata for batching with message calls.
+func (relay *OnDemandRelay) ExecuteTwoPhaseAndPackSubmitFinal(ctx context.Context, result *ConsensusTaskResult) ([]byte, error) {
+	if result == nil || result.Task == nil {
+		return nil, nil
+	}
+
+	calldata, err := relay.ethereumWriter.ExecuteTwoPhaseAndPackSubmitFinal(ctx, result.Task)
 	if err != nil {
-		return fmt.Errorf("Query V1 nonces: %w", err)
+		return nil, fmt.Errorf("execute two-phase and pack submitFinal: %w", err)
 	}
 
-	logger := log.WithFields(log.Fields{
-		"paraNonce": paraNonce,
-		"ethNonce":  ethNonce,
-	})
-	logger.Info("V1 Nonces checked")
-
-	if paraNonce > ethNonce {
-		exist := relay.activeTasks.NonceExist(paraNonce, true)
-		if exist {
-			logger.Info("V1 parachain nonce in syncing, just ignore")
-			return nil
-		}
-		paraBlock, err := relay.fetchParachainBlockByV1Nonce(ctx, paraNonce)
-		if err != nil {
-			return fmt.Errorf("Fetch parachain block failed: %w", err)
-		}
-		return relay.queue(ctx, paraBlock, paraNonce, true)
-	}
-	return nil
+	return calldata, nil
 }
 
-func (relay *OnDemandRelay) queueV2(ctx context.Context) error {
-	paraNonce, err := relay.fetchLatestV2Nonce(ctx)
-	if err != nil {
-		return fmt.Errorf("Query V2 nonce: %w", err)
-	}
-	if paraNonce == 0 {
-		return nil
-	}
-
-	log.WithFields(log.Fields{
-		"paraNonce": paraNonce,
-	}).Info("V2 nonce checked")
-
-	relayed, err := relay.isV2NonceRelayed(ctx, paraNonce)
-	if err != nil {
-		return fmt.Errorf("Check v2 nonce relayed: %w", err)
-	}
-	if relayed {
-		return nil
-	}
-
-	exist := relay.activeTasks.NonceExist(paraNonce, false)
-	if exist {
-		log.WithFields(log.Fields{
-			"paraNonce": paraNonce,
-		}).Info("V2 parachain nonce in syncing, just ignore")
-		return nil
-	}
-
-	paraBlock, err := relay.fetchParachainBlockByV2Nonce(ctx, paraNonce)
-	if err != nil {
-		return fmt.Errorf("Fetch paraBlock of v2 nonce: %w", err)
-	}
-	return relay.queue(ctx, paraBlock, paraNonce, false)
+func (relay *OnDemandRelay) BeefyClientAddress() common.Address {
+	return relay.ethereumWriter.ContractAddress()
 }
 
-func (relay *OnDemandRelay) queueAll(ctx context.Context) error {
-	if relay.activeTasks.Full() {
-		log.Info("Task queue full, wait for scheduling")
-		return nil
+func (relay *OnDemandRelay) GetConfig() *Config {
+	return relay.config
+}
+
+// SetSubmitMutex shares the parachain-v3 account-nonce serializer with BEEFY
+// submitInitial / commitPrevRandao broadcasts.
+func (relay *OnDemandRelay) SetSubmitMutex(mu *sync.Mutex) {
+	if relay.ethereumWriter != nil {
+		relay.ethereumWriter.SetSubmitMutex(mu)
 	}
-	if err := relay.queueV1(ctx); err != nil {
-		return fmt.Errorf("Queue V1 parachain block failed: %w", err)
-	}
-	if err := relay.queueV2(ctx); err != nil {
-		return fmt.Errorf("Queue V2 parachain block failed: %w", err)
-	}
-	return nil
 }

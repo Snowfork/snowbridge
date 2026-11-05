@@ -250,8 +250,11 @@ func removeLeadingZeroHash(s string) string {
 
 type VersionedExecutionPayloadHeader struct {
 	Deneb *ExecutionPayloadHeaderDeneb `json:"Deneb,omitempty"`
+	Gloas string                       `json:"Gloas,omitempty"`
 }
 
 func (v *VersionedExecutionPayloadHeader) RemoveLeadingZeroHashes() {
-	v.Deneb.RemoveLeadingZeroHashes()
+	if v.Deneb != nil {
+		v.Deneb.RemoveLeadingZeroHashes()
+	}
 }

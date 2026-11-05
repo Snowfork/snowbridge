@@ -15,6 +15,13 @@ import (
 	"golang.org/x/exp/slices"
 )
 
+// failedBeefyToEthAddress is the sentinel leaf used by pallet-beefy-mmr for a
+// BEEFY authority whose ECDSA key cannot be converted to an Ethereum address.
+// It must stay byte-for-byte identical to the runtime's FAILED_BEEFY_TO_ETH_ADDRESS
+// (a 20-byte zero array) so the authority-set merkle root we reconstruct here
+// matches the on-chain root. See paritytech/polkadot-sdk#12214.
+var failedBeefyToEthAddress = make([]byte, 20)
+
 type InitialRequestParams struct {
 	Commitment contracts.BeefyClientCommitment
 	Bitfield   []*big.Int
@@ -140,7 +147,7 @@ func (r *Request) generateValidatorAddressProof(validatorIndex int64) ([][32]byt
 		address, err := rawAddress.IntoEthereumAddress()
 		if err != nil {
 			invalidAddress = append(invalidAddress, util.BytesToHexString(rawAddress[:]))
-			leaves = append(leaves, make([]byte, 0))
+			leaves = append(leaves, append([]byte(nil), failedBeefyToEthAddress...))
 		} else {
 			leaves = append(leaves, address.Bytes())
 		}

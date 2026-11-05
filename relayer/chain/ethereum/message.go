@@ -13,7 +13,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 )
 
-func MakeMessageFromEvent(event *etypes.Log, receiptsTrie *etrie.Trie) (*parachain.Message, error) {
+func MakeMessageFromEvent(event *etypes.Log, receiptsTrie *etrie.Trie) (*parachain.MessageV3, error) {
 	// RLP encode event log's Address, Topics, and Data
 	var buf bytes.Buffer
 	err := event.EncodeRLP(&buf)
@@ -26,8 +26,8 @@ func MakeMessageFromEvent(event *etypes.Log, receiptsTrie *etrie.Trie) (*paracha
 		return nil, err
 	}
 
-	proof := parachain.NewProofData()
-	err = receiptsTrie.Prove(receiptKey, proof)
+	legacyProof := parachain.NewProofData()
+	err = receiptsTrie.Prove(receiptKey, legacyProof)
 	if err != nil {
 		return nil, err
 	}
@@ -37,16 +37,16 @@ func MakeMessageFromEvent(event *etypes.Log, receiptsTrie *etrie.Trie) (*paracha
 		convertedTopics = append(convertedTopics, types.H256(topic))
 	}
 
-	m := parachain.Message{
+	legacyMessage := parachain.Message{
 		EventLog: parachain.EventLog{
 			Address: types.H160(event.Address),
 			Topics:  convertedTopics,
 			Data:    event.Data,
 		},
 		Proof: parachain.Proof{
-			ReceiptProof: proof,
+			ReceiptProof: legacyProof,
 		},
 	}
 
-	return &m, nil
+	return parachain.ConvertLegacyToV3Message(&legacyMessage, uint64(event.TxIndex))
 }
