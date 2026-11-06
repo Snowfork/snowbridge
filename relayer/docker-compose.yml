@@ -1,29 +1,15 @@
-x-logging: &fluentd
-  driver: fluentd
+x-logging: &jsonlog
+  driver: json-file
   options:
-    fluentd-address: 127.0.0.1:24224
-    fluentd-async: "true"
+    max-size: "20m"
+    max-file: "5"
 
 x-image: &image
   image: ghcr.io/snowfork/${IMAGE_NAME}:${IMAGE_TAG:-latest}
   platform: linux/amd64
+  logging: *jsonlog
 
 services:
-  fluent-bit:
-    image: public.ecr.aws/aws-observability/aws-for-fluent-bit:stable
-    command: ["/fluent-bit/bin/fluent-bit", "-c", "/fluent-bit/etc/fluent-bit.conf"]
-    ports:
-      - "24224:24224"
-      - "24224:24224/udp"
-    environment:
-      - AWS_REGION=${AWS_REGION}
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - ENVIRONMENT=${ENVIRONMENT:-prod}
-    volumes:
-      - ./fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
-    restart: on-failure
-
   beacon-state-service:
     <<: *image
     command: run beacon-state-service --config /config/beacon-state-service.json
@@ -44,12 +30,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
-    logging:
-      <<: *fluentd
-      options:
-        fluentd-address: 127.0.0.1:24224
-        fluentd-async: "true"
-        tag: beacon-state-service
 
   ethereum-v3:
     <<: *image
@@ -93,12 +73,6 @@ services:
     depends_on:
       beacon-state-service:
         condition: service_healthy
-    logging:
-      <<: *fluentd
-      options:
-        fluentd-address: 127.0.0.1:24224
-        fluentd-async: "true"
-        tag: ethereum-v3-relay
 
   parachain-v3:
     <<: *image
@@ -140,12 +114,6 @@ services:
       - LLAMA_PRICE_CACHE_TTL_SECONDS=${LLAMA_PRICE_CACHE_TTL_SECONDS:-14400}
       - PRICE_INDEXER_API_URL=${PRICE_INDEXER_API_URL}
     restart: on-failure
-    logging:
-      <<: *fluentd
-      options:
-        fluentd-address: 127.0.0.1:24224
-        fluentd-async: "true"
-        tag: parachain-v3-relay
 
   parachain-v3-fastpath:
     <<: *image
@@ -197,12 +165,6 @@ services:
       - LLAMA_PRICE_CACHE_TTL_SECONDS=${LLAMA_PRICE_CACHE_TTL_SECONDS:-14400}
       - PRICE_INDEXER_API_URL=${PRICE_INDEXER_API_URL}
     restart: on-failure
-    logging:
-      <<: *fluentd
-      options:
-        fluentd-address: 127.0.0.1:24224
-        fluentd-async: "true"
-        tag: parachain-v3-fastpath-relay
 
   reward:
     <<: *image
@@ -233,12 +195,6 @@ services:
     depends_on:
       beacon-state-service:
         condition: service_healthy
-    logging:
-      <<: *fluentd
-      options:
-        fluentd-address: 127.0.0.1:24224
-        fluentd-async: "true"
-        tag: reward-relay
 
 volumes:
   beacon-state-data:
