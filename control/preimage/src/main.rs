@@ -79,6 +79,9 @@ pub enum Command {
     /// Upgrade to FiatShamir on Polkadot
     #[command(alias = "upgrade-202603")]
     Upgrade202603,
+    /// Upgrade Gateway and BeefyClient on Polkadot (Oct 2026)
+    #[command(alias = "upgrade-202610")]
+    Upgrade202610,
 }
 
 #[derive(Debug, Args)]
@@ -662,6 +665,23 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
                     logic_address: address!("36e74FCAAcb07773b144Ca19Ef2e32Fc972aC50b"),
                     logic_code_hash: FixedBytes::from_slice(&hex!(
                         "e3cfcc0042ad4c819c627fb2a84ba0822d67747a8618a4e1c4eb0c5112b17903"
+                    )),
+                    initializer_params: Default::default(),
+                    initializer_gas: 100000,
+                });
+                send_xcm_bridge_hub(&context, vec![upgrade_call]).await?
+            }
+        }
+        Command::Upgrade202610 => {
+            #[cfg(not(feature = "polkadot"))]
+            panic!("Upgrade202610 only for polkadot runtime.");
+
+            #[cfg(feature = "polkadot")]
+            {
+                let upgrade_call = commands::upgrade(&UpgradeArgs {
+                    logic_address: address!("4aD0577C76AfaEf8AaC23C661974340bB131426F"),
+                    logic_code_hash: FixedBytes::from_slice(&hex!(
+                        "7082f0a78744653164d1a8cf7525634ea7fc009e27e0a81b5146e399415af5a8"
                     )),
                     initializer_params: Default::default(),
                     initializer_gas: 100000,
