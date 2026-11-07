@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/ferranbt/fastssz"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/protocol"
@@ -76,7 +75,16 @@ func (s *Service) handleFinalizedHeaderProof(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	// Proof not cached - return 503 to signal retry
+	// The watcher only pre-generates proofs for the slots it sees finalize, and the relay
+	// legitimately asks for older ones, so build this slot's proofs before giving up.
+	if s.generateProofsForSlot(slot) {
+		if cached, ok := s.proofCache.Get(cacheKey); ok {
+			w.Header().Set("Content-Type", "application/json")
+			w.Write(cached)
+			return
+		}
+	}
+
 	log.WithField("slot", slot).Debug("Proof not cached, returning 503 for client retry")
 	w.Header().Set("Retry-After", "5")
 	writeError(w, http.StatusServiceUnavailable, "proof not ready, please retry")
@@ -99,8 +107,14 @@ func (s *Service) handleBlockRootProof(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Proof not cached - return 503 to signal retry
-	// Finality watcher will pre-generate proofs when state is downloaded
+	if s.generateProofsForSlot(slot) {
+		if cached, ok := s.proofCache.Get(cacheKey); ok {
+			w.Header().Set("Content-Type", "application/json")
+			w.Write(cached)
+			return
+		}
+	}
+
 	log.WithField("slot", slot).Debug("Proof not cached, returning 503 for client retry")
 	w.Header().Set("Retry-After", "5")
 	writeError(w, http.StatusServiceUnavailable, "proof not ready, please retry")
@@ -128,29 +142,36 @@ func (s *Service) handleSyncCommitteeProof(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Proof not cached - return 503 to signal retry
+	if s.generateProofsForSlot(slot) {
+		if cached, ok := s.proofCache.Get(cacheKey); ok {
+			w.Header().Set("Content-Type", "application/json")
+			w.Write(cached)
+			return
+		}
+	}
+
 	log.WithFields(log.Fields{"slot": slot, "period": period}).Debug("Proof not cached, returning 503 for client retry")
 	w.Header().Set("Retry-After", "5")
 	writeError(w, http.StatusServiceUnavailable, "proof not ready, please retry")
 }
 
 // cacheAllProofs generates all proof types for a slot and caches them
-func (s *Service) cacheAllProofs(slot uint64, beaconState state.BeaconState, tree *ssz.Node) {
+func (s *Service) cacheAllProofs(slot uint64, beaconState state.BeaconState, p prover) {
 	// 1. Finalized header proof
-	s.cacheProof(slot, "finalized-header", s.protocol.FinalizedCheckpointGeneralizedIndex(slot), tree)
+	s.cacheProof(slot, "finalized-header", s.protocol.FinalizedCheckpointGeneralizedIndex(slot), p)
 
 	// 2. Block root proof (includes block roots array)
-	s.cacheBlockRootProof(slot, beaconState, tree)
+	s.cacheBlockRootProof(slot, beaconState, p)
 
 	// 3. Sync committee proofs (current and next) - includes pubkeys
-	s.cacheSyncCommitteeProof(slot, "current", beaconState.GetCurrentSyncCommittee(), s.protocol.CurrentSyncCommitteeGeneralizedIndex(slot), tree)
-	s.cacheSyncCommitteeProof(slot, "next", beaconState.GetNextSyncCommittee(), s.protocol.NextSyncCommitteeGeneralizedIndex(slot), tree)
+	s.cacheSyncCommitteeProof(slot, "current", beaconState.GetCurrentSyncCommittee(), s.protocol.CurrentSyncCommitteeGeneralizedIndex(slot), p)
+	s.cacheSyncCommitteeProof(slot, "next", beaconState.GetNextSyncCommittee(), s.protocol.NextSyncCommitteeGeneralizedIndex(slot), p)
 
 	log.WithField("slot", slot).Info("Cached all proofs for slot")
 }
 
-func (s *Service) cacheProof(slot uint64, proofType string, generalizedIndex int, tree *ssz.Node) {
-	proof, err := tree.Prove(generalizedIndex)
+func (s *Service) cacheProof(slot uint64, proofType string, generalizedIndex int, p prover) {
+	leaf, hashes, err := p.prove(generalizedIndex)
 	if err != nil {
 		log.WithError(err).WithFields(log.Fields{"slot": slot, "proofType": proofType}).Warn("Failed to generate proof")
 		return
@@ -160,8 +181,8 @@ func (s *Service) cacheProof(slot uint64, proofType string, generalizedIndex int
 
 	response := ProofResponse{
 		Slot:             slot,
-		Leaf:             "0x" + hex.EncodeToString(proof.Leaf),
-		Proof:            hashesToHexStrings(proof.Hashes),
+		Leaf:             "0x" + hex.EncodeToString(leaf),
+		Proof:            hashesToHexStrings(hashes),
 		GeneralizedIndex: generalizedIndex,
 	}
 
@@ -173,8 +194,8 @@ func (s *Service) cacheProof(slot uint64, proofType string, generalizedIndex int
 	s.proofCache.Put(cacheKey, jsonResponse)
 }
 
-func (s *Service) cacheSyncCommitteeProof(slot uint64, period string, syncCommittee *state.SyncCommittee, generalizedIndex int, tree *ssz.Node) {
-	proof, err := tree.Prove(generalizedIndex)
+func (s *Service) cacheSyncCommitteeProof(slot uint64, period string, syncCommittee *state.SyncCommittee, generalizedIndex int, p prover) {
+	leaf, hashes, err := p.prove(generalizedIndex)
 	if err != nil {
 		log.WithError(err).WithFields(log.Fields{"slot": slot, "period": period}).Warn("Failed to generate sync committee proof")
 		return
@@ -190,8 +211,8 @@ func (s *Service) cacheSyncCommitteeProof(slot uint64, period string, syncCommit
 
 	response := SyncCommitteeProofResponse{
 		Slot:             slot,
-		Leaf:             "0x" + hex.EncodeToString(proof.Leaf),
-		Proof:            hashesToHexStrings(proof.Hashes),
+		Leaf:             "0x" + hex.EncodeToString(leaf),
+		Proof:            hashesToHexStrings(hashes),
 		GeneralizedIndex: generalizedIndex,
 		Pubkeys:          pubkeysHex,
 		AggregatePubkey:  "0x" + hex.EncodeToString(syncCommittee.AggregatePubKey[:]),
@@ -205,9 +226,9 @@ func (s *Service) cacheSyncCommitteeProof(slot uint64, period string, syncCommit
 	s.proofCache.Put(cacheKey, jsonResponse)
 }
 
-func (s *Service) cacheBlockRootProof(slot uint64, beaconState state.BeaconState, tree *ssz.Node) {
+func (s *Service) cacheBlockRootProof(slot uint64, beaconState state.BeaconState, p prover) {
 	generalizedIndex := s.protocol.BlockRootGeneralizedIndex(slot)
-	proof, err := tree.Prove(generalizedIndex)
+	leaf, hashes, err := p.prove(generalizedIndex)
 	if err != nil {
 		log.WithError(err).WithField("slot", slot).Warn("Failed to generate block root proof")
 		return
@@ -222,8 +243,8 @@ func (s *Service) cacheBlockRootProof(slot uint64, beaconState state.BeaconState
 
 	response := BlockRootProofResponse{
 		Slot:             slot,
-		Leaf:             "0x" + hex.EncodeToString(proof.Leaf),
-		Proof:            hashesToHexStrings(proof.Hashes),
+		Leaf:             "0x" + hex.EncodeToString(leaf),
+		Proof:            hashesToHexStrings(hashes),
 		GeneralizedIndex: generalizedIndex,
 		BlockRoots:       blockRootsHex,
 	}
@@ -250,7 +271,9 @@ func (s *Service) unmarshalBeaconState(slot uint64, data []byte) (state.BeaconSt
 	var beaconState state.BeaconState
 	forkVersion := s.protocol.ForkVersion(slot)
 
-	if forkVersion == protocol.Fulu {
+	if forkVersion == protocol.Gloas {
+		beaconState = &state.BeaconStateGloas{}
+	} else if forkVersion == protocol.Fulu {
 		beaconState = &state.BeaconStateFulu{}
 	} else if forkVersion == protocol.Electra {
 		beaconState = &state.BeaconStateElectra{}
@@ -271,6 +294,17 @@ func (s *Service) unmarshalBeaconState(slot uint64, data []byte) (state.BeaconSt
 // hashes for the rest without storing the raw data.
 func (s *Service) unmarshalBeaconStateLite(slot uint64, data []byte) (state.BeaconState, error) {
 	forkVersion := s.protocol.ForkVersion(slot)
+
+	// No lite Gloas decoder yet: the lite path hashes straight from the SSZ buffer, and the
+	// Gloas offsets shift from field 24 where latest_execution_payload_header became
+	// latest_block_hash. Decode in full for now; correctness first, memory after measurement.
+	if forkVersion == protocol.Gloas {
+		gloasState := &state.BeaconStateGloas{}
+		if err := gloasState.UnmarshalSSZ(data); err != nil {
+			return nil, fmt.Errorf("unmarshal gloas state: %w", err)
+		}
+		return gloasState, nil
+	}
 
 	if forkVersion == protocol.Fulu {
 		liteState, err := UnmarshalSSZLiteFulu(data)

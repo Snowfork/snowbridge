@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/ethereum/go-ethereum/trie"
 	gethTrie "github.com/ethereum/go-ethereum/trie"
 	"github.com/ethereum/go-ethereum/triedb"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
@@ -17,13 +18,13 @@ import (
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
 )
 
-type TestProof parachain.ProofData
+type TestProof parachain.ProofDataV2
 
 // For interface gethTrie.KeyValueReader
 func (tp *TestProof) Get(key []byte) ([]byte, error) {
-	for i, k := range tp.Keys {
-		if bytes.Equal(k, key) {
-			return tp.Values[i], nil
+	for _, value := range tp.Values {
+		if bytes.Equal(crypto.Keccak256(value), key) {
+			return value, nil
 		}
 	}
 	return nil, fmt.Errorf("Value for key %s does not exist", key)
@@ -33,6 +34,24 @@ func (tp *TestProof) Get(key []byte) ([]byte, error) {
 func (tp *TestProof) Has(key []byte) (bool, error) {
 	_, err := tp.Get(key)
 	return err == nil, nil
+}
+
+// receiptTrieTestHasher adapts *gethTrie.Trie to types.ListHasher for DeriveSha.
+type receiptTrieTestHasher struct {
+	db   *triedb.Database
+	trie *gethTrie.Trie
+}
+
+func (h *receiptTrieTestHasher) Reset() {
+	h.trie = gethTrie.NewEmpty(h.db)
+}
+
+func (h *receiptTrieTestHasher) Update(key []byte, value []byte) error {
+	return h.trie.Update(bytes.Clone(key), bytes.Clone(value))
+}
+
+func (h *receiptTrieTestHasher) Hash() common.Hash {
+	return h.trie.Hash()
 }
 
 func TestMessage_Proof(t *testing.T) {
@@ -48,10 +67,12 @@ func TestMessage_Proof(t *testing.T) {
 		panic(err)
 	}
 
-	// Construct Merkle Patricia Trie for receipts
-	receiptTrie := trie.NewEmpty(triedb.NewDatabase(rawdb.NewMemoryDatabase(), nil))
-
-	types.DeriveSha(receipts, receiptTrie)
+	// Construct Merkle Patricia Trie for receipts via ListHasher adapter.
+	db := triedb.NewDatabase(rawdb.NewMemoryDatabase(), nil)
+	hasher := &receiptTrieTestHasher{db: db}
+	hasher.Reset()
+	types.DeriveSha(receipts, hasher)
+	receiptTrie := hasher.trie
 
 	fmt.Println("Hash", receiptTrie.Hash())
 

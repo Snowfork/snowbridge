@@ -25,11 +25,11 @@ type Service struct {
 	store               *store.Store
 	proofCache          *ProofCache
 	httpServer          *http.Server
-	downloadMu          sync.Mutex  // Ensures only one state download at a time
-	lastFinalizedSlot   uint64      // Tracks the last seen finalized slot for the watcher
-	slotMu              sync.Mutex  // Protects lastFinalizedSlot
-	watcherDownloading  bool        // True if watcher is currently downloading
-	watcherDownloadSlot uint64      // The slot currently being downloaded by watcher
+	downloadMu          sync.Mutex // Ensures only one state download at a time
+	lastFinalizedSlot   uint64     // Tracks the last seen finalized slot for the watcher
+	slotMu              sync.Mutex // Protects lastFinalizedSlot
+	watcherDownloading  bool       // True if watcher is currently downloading
+	watcherDownloadSlot uint64     // The slot currently being downloaded by watcher
 }
 
 func New(config *Config) *Service {
@@ -60,7 +60,7 @@ func (s *Service) Start(ctx context.Context, eg *errgroup.Group) error {
 	s.store = &st
 
 	// Initialize beacon API client
-	beaconAPI := api.NewBeaconClient(s.config.Beacon.Endpoint)
+	beaconAPI := api.NewBeaconClient(s.config.Beacon.ParseEndpoints())
 
 	// Initialize syncer without state service (this IS the state service)
 	// The syncer will fall back to beacon API directly
@@ -203,9 +203,9 @@ func (s *Service) shouldSaveOnStartup(interval time.Duration) bool {
 	}
 
 	log.WithFields(log.Fields{
-		"lastSaved":    latestTimestamp,
-		"age":          age,
-		"nextSaveIn":   interval - age,
+		"lastSaved":  latestTimestamp,
+		"age":        age,
+		"nextSaveIn": interval - age,
 	}).Info("Recent beacon state exists, skipping startup save")
 	return false
 }
@@ -220,13 +220,9 @@ func (s *Service) saveCurrentFinalizedState() error {
 		return fmt.Errorf("get finalized update: %w", err)
 	}
 
-	attestedSlot, err := strconv.ParseUint(update.Data.AttestedHeader.Beacon.Slot, 10, 64)
+	attestedSlot, finalizedSlot, err := s.slotPairFromUpdate(update)
 	if err != nil {
-		return fmt.Errorf("parse attested slot: %w", err)
-	}
-	finalizedSlot, err := strconv.ParseUint(update.Data.FinalizedHeader.Beacon.Slot, 10, 64)
-	if err != nil {
-		return fmt.Errorf("parse finalized slot: %w", err)
+		return err
 	}
 
 	log.WithFields(log.Fields{
@@ -340,13 +336,9 @@ func (s *Service) checkAndDownloadFinalizedState(ctx context.Context) error {
 		return fmt.Errorf("get finalized update: %w", err)
 	}
 
-	attestedSlot, err := strconv.ParseUint(update.Data.AttestedHeader.Beacon.Slot, 10, 64)
+	attestedSlot, finalizedSlot, err := s.slotPairFromUpdate(update)
 	if err != nil {
-		return fmt.Errorf("parse attested slot: %w", err)
-	}
-	finalizedSlot, err := strconv.ParseUint(update.Data.FinalizedHeader.Beacon.Slot, 10, 64)
-	if err != nil {
-		return fmt.Errorf("parse finalized slot: %w", err)
+		return err
 	}
 
 	// Check if this is a new finalized slot or if we're already downloading it
@@ -545,13 +537,9 @@ func (s *Service) downloadCurrentFinalizedStateSync() error {
 		return fmt.Errorf("get finalized update: %w", err)
 	}
 
-	attestedSlot, err := strconv.ParseUint(update.Data.AttestedHeader.Beacon.Slot, 10, 64)
+	attestedSlot, finalizedSlot, err := s.slotPairFromUpdate(update)
 	if err != nil {
-		return fmt.Errorf("parse attested slot: %w", err)
-	}
-	finalizedSlot, err := strconv.ParseUint(update.Data.FinalizedHeader.Beacon.Slot, 10, 64)
-	if err != nil {
-		return fmt.Errorf("parse finalized slot: %w", err)
+		return err
 	}
 
 	log.WithFields(log.Fields{
@@ -679,9 +667,10 @@ func (s *Service) preGenerateProofs(slot uint64, data []byte) {
 	unmarshalDuration := time.Since(unmarshalStart)
 
 	treeStart := time.Now()
-	tree, err := beaconState.GetTree()
+	// Gloas states cannot use fastssz's tree, so the prover is chosen by fork.
+	stateProver, err := newProver(beaconState)
 	if err != nil {
-		log.WithError(err).WithField("slot", slot).Warn("Failed to get state tree for proof pre-generation")
+		log.WithError(err).WithField("slot", slot).Warn("Failed to build state prover for proof pre-generation")
 		return
 	}
 	treeDuration := time.Since(treeStart)
@@ -693,19 +682,77 @@ func (s *Service) preGenerateProofs(slot uint64, data []byte) {
 	// only the hashes it needs along each proof path.
 
 	proofsStart := time.Now()
-	s.cacheAllProofs(slot, beaconState, tree)
+	s.cacheAllProofs(slot, beaconState, stateProver)
 	proofsDuration := time.Since(proofsStart)
 
 	// Release large objects and force GC to prevent memory buildup
 	beaconState = nil
-	tree = nil
+	stateProver = nil
 	runtime.GC()
 
 	log.WithFields(log.Fields{
-		"slot":             slot,
-		"unmarshalMs":      unmarshalDuration.Milliseconds(),
-		"treeMs":           treeDuration.Milliseconds(),
-		"proofsMs":         proofsDuration.Milliseconds(),
-		"totalMs":          time.Since(startTime).Milliseconds(),
+		"slot":        slot,
+		"unmarshalMs": unmarshalDuration.Milliseconds(),
+		"treeMs":      treeDuration.Milliseconds(),
+		"proofsMs":    proofsDuration.Milliseconds(),
+		"totalMs":     time.Since(startTime).Milliseconds(),
 	}).Info("Pre-generated and cached proofs for slot")
+}
+
+// slotPairFromUpdate reports the attested and finalized slots the relay will ask for proofs
+// at.
+//
+// When the node does not serve the light client API the update carries no attested header of
+// its own, and the relay pairs a finalized slot with the header two epochs later. Reporting
+// that same slot here is what makes the pre-generated proof the one it goes on to request.
+func (s *Service) slotPairFromUpdate(update api.LatestFinalisedUpdateResponse) (uint64, uint64, error) {
+	finalizedSlot, err := strconv.ParseUint(update.Data.FinalizedHeader.Beacon.Slot, 10, 64)
+	if err != nil {
+		return 0, 0, fmt.Errorf("parse finalized slot: %w", err)
+	}
+	if update.DerivedFromHeaders {
+		return finalizedSlot + s.protocol.Settings.SlotsInEpoch*2, finalizedSlot, nil
+	}
+	attestedSlot, err := strconv.ParseUint(update.Data.AttestedHeader.Beacon.Slot, 10, 64)
+	if err != nil {
+		return 0, 0, fmt.Errorf("parse attested slot: %w", err)
+	}
+	return attestedSlot, finalizedSlot, nil
+}
+
+// generateProofsForSlot builds and caches the proofs for one slot on demand.
+//
+// The finality watcher only covers slots as they finalize, but the relay also asks for older
+// ones -- the sync committee update for the start of a period, for instance. Downloading the
+// state for those is what lets the service answer instead of telling the relay to retry
+// forever. It reports whether the proofs are now cached.
+func (s *Service) generateProofsForSlot(slot uint64) bool {
+	if s.hasAllProofsCached(slot) {
+		return true
+	}
+	// Nothing to download from, so leave the caller to report the proof as not ready.
+	if s.store == nil || s.syncer == nil || s.syncer.Client == nil {
+		return false
+	}
+
+	// One download at a time: several proof types are requested for the same slot in quick
+	// succession, and each would otherwise fetch the same state.
+	s.downloadMu.Lock()
+	defer s.downloadMu.Unlock()
+	if s.hasAllProofsCached(slot) {
+		return true
+	}
+
+	data, err := s.store.GetBeaconStateData(slot)
+	if err != nil || len(data) == 0 {
+		log.WithField("slot", slot).Info("Downloading beacon state on demand")
+		data, err = s.syncer.Client.GetBeaconState(fmt.Sprintf("%d", slot))
+		if err != nil {
+			log.WithError(err).WithField("slot", slot).Warn("On-demand beacon state download failed")
+			return false
+		}
+	}
+
+	s.preGenerateProofs(slot, data)
+	return s.hasAllProofsCached(slot)
 }

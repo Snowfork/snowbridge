@@ -1,14 +1,18 @@
 package api
 
 import (
+	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -26,6 +30,12 @@ var (
 	UnmarshalBodyErrorMessage          = "unmarshal body"
 )
 
+type FinalizedCheckpointEvent struct {
+	Block string `json:"block"`
+	State string `json:"state"`
+	Epoch string `json:"epoch"`
+}
+
 type BeaconAPI interface {
 	GetBootstrap(blockRoot common.Hash) (BootstrapResponse, error)
 	GetGenesis() (Genesis, error)
@@ -40,29 +50,63 @@ type BeaconAPI interface {
 	GetSyncCommitteePeriodUpdate(from uint64) (SyncCommitteePeriodUpdateResponse, error)
 	GetLatestFinalizedUpdate() (LatestFinalisedUpdateResponse, error)
 	GetBeaconState(stateIdOrSlot string) ([]byte, error)
+	SubscribeFinalizedCheckpoint(ctx context.Context) (<-chan FinalizedCheckpointEvent, <-chan error, error)
 }
 
 type BeaconClient struct {
 	httpClient http.Client
-	endpoint   string
+	endpoints  []string
+	currentIdx int
+	mu         sync.Mutex
 }
 
-func NewBeaconClient(endpoint string) *BeaconClient {
+func NewBeaconClient(endpoints []string) *BeaconClient {
 	return &BeaconClient{
-		http.Client{},
-		endpoint,
+		httpClient: http.Client{},
+		endpoints:  endpoints,
+		currentIdx: rand.Intn(len(endpoints)),
 	}
+}
+
+func (b *BeaconClient) endpoint() string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.endpoints[b.currentIdx]
+}
+
+func (b *BeaconClient) do(req *http.Request) (*http.Response, error) {
+	res, err := b.httpClient.Do(req)
+	if err != nil {
+		b.switchEndpoint()
+		return nil, err
+	}
+	if res.StatusCode >= 500 {
+		b.switchEndpoint()
+	}
+	return res, nil
+}
+
+func (b *BeaconClient) switchEndpoint() {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if len(b.endpoints) <= 1 {
+		return
+	}
+	prev := b.endpoints[b.currentIdx]
+	b.currentIdx = (b.currentIdx + 1) % len(b.endpoints)
+	log.WithField("endpoint", prev).Warn("Beacon endpoint failed")
+	log.WithField("endpoint", b.endpoints[b.currentIdx]).Info("Switched beacon endpoint")
 }
 
 func (b *BeaconClient) GetBootstrap(blockRoot common.Hash) (BootstrapResponse, error) {
 	var response BootstrapResponse
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/light_client/bootstrap/%s", b.endpoint, blockRoot), nil)
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/light_client/bootstrap/%s", b.endpoint(), blockRoot), nil)
 	if err != nil {
 		return response, fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
 	}
 
 	req.Header.Set("accept", "application/json")
-	res, err := b.httpClient.Do(req)
+	res, err := b.do(req)
 	if err != nil {
 		return response, fmt.Errorf("%s: %w", DoHTTPRequestErrorMessage, err)
 	}
@@ -85,13 +129,13 @@ func (b *BeaconClient) GetBootstrap(blockRoot common.Hash) (BootstrapResponse, e
 }
 
 func (b *BeaconClient) GetGenesis() (Genesis, error) {
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/genesis", b.endpoint), nil)
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/genesis", b.endpoint()), nil)
 	if err != nil {
 		return Genesis{}, fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
 	}
 
 	req.Header.Set("accept", "application/json")
-	res, err := b.httpClient.Do(req)
+	res, err := b.do(req)
 	if err != nil {
 		return Genesis{}, fmt.Errorf("%s: %w", DoHTTPRequestErrorMessage, err)
 	}
@@ -123,13 +167,13 @@ func (b *BeaconClient) GetGenesis() (Genesis, error) {
 }
 
 func (b *BeaconClient) GetFinalizedCheckpoint() (FinalizedCheckpoint, error) {
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/states/head/finality_checkpoints", b.endpoint), nil)
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/states/head/finality_checkpoints", b.endpoint()), nil)
 	if err != nil {
 		return FinalizedCheckpoint{}, fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
 	}
 
 	req.Header.Set("accept", "application/json")
-	res, err := b.httpClient.Do(req)
+	res, err := b.do(req)
 	if err != nil {
 		return FinalizedCheckpoint{}, fmt.Errorf("%s: %w", DoHTTPRequestErrorMessage, err)
 	}
@@ -149,8 +193,14 @@ func (b *BeaconClient) GetFinalizedCheckpoint() (FinalizedCheckpoint, error) {
 		return FinalizedCheckpoint{}, fmt.Errorf("%s: %w", UnmarshalBodyErrorMessage, err)
 	}
 
+	epoch, err := strconv.ParseUint(response.Data.Finalized.Epoch, 10, 64)
+	if err != nil {
+		return FinalizedCheckpoint{}, fmt.Errorf("parse finalized checkpoint epoch: %w", err)
+	}
+
 	return FinalizedCheckpoint{
 		FinalizedBlockRoot: common.HexToHash(response.Data.Finalized.Root),
+		Epoch:              epoch,
 	}, nil
 }
 
@@ -167,13 +217,13 @@ func (b *BeaconClient) GetHeaderByBlockRoot(blockRoot common.Hash) (BeaconHeader
 }
 
 func (b *BeaconClient) GetHeader(qualifier string) (BeaconHeader, error) {
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/headers/%s", b.endpoint, qualifier), nil)
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/headers/%s", b.endpoint(), qualifier), nil)
 	if err != nil {
 		return BeaconHeader{}, fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
 	}
 
 	req.Header.Set("accept", "application/json")
-	res, err := b.httpClient.Do(req)
+	res, err := b.do(req)
 	if err != nil {
 		return BeaconHeader{}, fmt.Errorf("%s: %w", DoHTTPRequestErrorMessage, err)
 	}
@@ -218,13 +268,13 @@ func (b *BeaconClient) GetHeader(qualifier string) (BeaconHeader, error) {
 }
 
 func (b *BeaconClient) GetBeaconBlockBySlot(slot uint64) (BeaconBlockResponse, error) {
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v2/beacon/blocks/%d", b.endpoint, slot), nil)
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v2/beacon/blocks/%d", b.endpoint(), slot), nil)
 	if err != nil {
 		return BeaconBlockResponse{}, fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
 	}
 
 	req.Header.Set("accept", "application/json")
-	res, err := b.httpClient.Do(req)
+	res, err := b.do(req)
 	if err != nil {
 		return BeaconBlockResponse{}, fmt.Errorf("%s: %w", DoHTTPRequestErrorMessage, err)
 	}
@@ -253,13 +303,13 @@ func (b *BeaconClient) GetBeaconBlockBySlot(slot uint64) (BeaconBlockResponse, e
 }
 
 func (b *BeaconClient) GetBeaconBlockRoot(slot uint64) (common.Hash, error) {
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/blocks/%d/root", b.endpoint, slot), nil)
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/blocks/%d/root", b.endpoint(), slot), nil)
 	if err != nil {
 		return common.Hash{}, fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
 	}
 
 	req.Header.Set("accept", "application/json")
-	res, err := b.httpClient.Do(req)
+	res, err := b.do(req)
 	if err != nil {
 		return common.Hash{}, fmt.Errorf("%s: %w", DoHTTPRequestErrorMessage, err)
 	}
@@ -294,13 +344,13 @@ func (b *BeaconClient) GetBeaconBlockRoot(slot uint64) (common.Hash, error) {
 func (b *BeaconClient) GetBeaconBlock(blockID common.Hash) (BeaconBlockResponse, error) {
 	var beaconBlockResponse BeaconBlockResponse
 
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v2/beacon/blocks/%s", b.endpoint, blockID), nil)
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v2/beacon/blocks/%s", b.endpoint(), blockID), nil)
 	if err != nil {
 		return beaconBlockResponse, fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
 	}
 
 	req.Header.Add("Accept", "application/json")
-	res, err := b.httpClient.Do(req)
+	res, err := b.do(req)
 	if err != nil {
 		return beaconBlockResponse, fmt.Errorf("%s: %w", DoHTTPRequestErrorMessage, err)
 	}
@@ -322,13 +372,13 @@ func (b *BeaconClient) GetBeaconBlock(blockID common.Hash) (BeaconBlockResponse,
 }
 
 func (b *BeaconClient) GetSyncCommitteePeriodUpdate(from uint64) (SyncCommitteePeriodUpdateResponse, error) {
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/light_client/updates?start_period=%d&count=1", b.endpoint, from), nil)
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/light_client/updates?start_period=%d&count=1", b.endpoint(), from), nil)
 	if err != nil {
 		return SyncCommitteePeriodUpdateResponse{}, fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
 	}
 
 	req.Header.Set("accept", "application/json")
-	res, err := b.httpClient.Do(req)
+	res, err := b.do(req)
 	if err != nil {
 		return SyncCommitteePeriodUpdateResponse{}, fmt.Errorf("%s: %w", DoHTTPRequestErrorMessage, err)
 	}
@@ -373,15 +423,23 @@ func (b *BeaconClient) GetSyncCommitteePeriodUpdate(from uint64) (SyncCommitteeP
 }
 
 func (b *BeaconClient) GetLatestFinalizedUpdate() (LatestFinalisedUpdateResponse, error) {
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/light_client/finality_update", b.endpoint), nil)
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/eth/v1/beacon/light_client/finality_update", b.endpoint()), nil)
 	if err != nil {
 		return LatestFinalisedUpdateResponse{}, fmt.Errorf("%s: %w", ConstructRequestErrorMessage, err)
 	}
 
 	req.Header.Set("accept", "application/json")
-	res, err := b.httpClient.Do(req)
+	res, err := b.do(req)
 	if err != nil {
 		return LatestFinalisedUpdateResponse{}, fmt.Errorf("%s: %w", DoHTTPRequestErrorMessage, err)
+	}
+
+	// A node that does not serve the light client API for the current fork answers 404. The
+	// slots it would have reported are also available from the standard header endpoints, and
+	// every proof the relayer submits is built from beacon state rather than from this
+	// response, so fall back rather than stall.
+	if res.StatusCode == http.StatusNotFound {
+		return b.finalizedUpdateFromHeaders()
 	}
 
 	if res.StatusCode != http.StatusOK {
@@ -403,9 +461,33 @@ func (b *BeaconClient) GetLatestFinalizedUpdate() (LatestFinalisedUpdateResponse
 	return response, nil
 }
 
+// finalizedUpdateFromHeaders reports the finalized and attested slots from the standard
+// header endpoints.
+//
+// The result carries no finality branch and no sync aggregate, because neither is available
+// this way. It is marked DerivedFromHeaders so the one path that needs them can refuse it
+// instead of building an update out of zero values.
+func (b *BeaconClient) finalizedUpdateFromHeaders() (LatestFinalisedUpdateResponse, error) {
+	finalized, err := b.GetHeader("finalized")
+	if err != nil {
+		return LatestFinalisedUpdateResponse{}, fmt.Errorf("get finalized header: %w", err)
+	}
+	head, err := b.GetHeaderAtHead()
+	if err != nil {
+		return LatestFinalisedUpdateResponse{}, fmt.Errorf("get head header: %w", err)
+	}
+
+	var response LatestFinalisedUpdateResponse
+	response.DerivedFromHeaders = true
+	response.Data.FinalizedHeader.Beacon = finalized.ToResponse()
+	response.Data.AttestedHeader.Beacon = head.ToResponse()
+	response.Data.SignatureSlot = strconv.FormatUint(head.Slot+1, 10)
+	return response, nil
+}
+
 func (b *BeaconClient) GetBeaconState(stateIdOrSlot string) ([]byte, error) {
 	var data []byte
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/eth/v2/debug/beacon/states/%s", b.endpoint, stateIdOrSlot), nil)
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/eth/v2/debug/beacon/states/%s", b.endpoint(), stateIdOrSlot), nil)
 	if err != nil {
 		return data, err
 	}
@@ -413,7 +495,7 @@ func (b *BeaconClient) GetBeaconState(stateIdOrSlot string) ([]byte, error) {
 	req.Header.Add("Accept", "application/octet-stream")
 
 	startTime := time.Now()
-	res, err := b.httpClient.Do(req)
+	res, err := b.do(req)
 	endTime := time.Now()
 	duration := endTime.Sub(startTime)
 	log.WithFields(log.Fields{"startTime": startTime.Format(time.UnixDate), "endTime": endTime.Format(time.UnixDate), "duration": duration.Seconds()}).Info("beacon state download time")
@@ -438,14 +520,14 @@ func (b *BeaconClient) GetBeaconState(stateIdOrSlot string) ([]byte, error) {
 
 func (b *BeaconClient) GetBeaconBlockBytes(blockID common.Hash) ([]byte, error) {
 	var data []byte
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/eth/v2/beacon/blocks/%s", b.endpoint, blockID), nil)
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/eth/v2/beacon/blocks/%s", b.endpoint(), blockID), nil)
 	if err != nil {
 		return data, err
 	}
 
 	req.Header.Add("Accept", "application/octet-stream")
 
-	res, err := b.httpClient.Do(req)
+	res, err := b.do(req)
 	if err != nil {
 		return data, err
 	}
@@ -462,4 +544,87 @@ func (b *BeaconClient) GetBeaconBlockBytes(blockID common.Hash) ([]byte, error) 
 	buf.ReadFrom(res.Body)
 	data = buf.Bytes()
 	return data, nil
+}
+
+func (b *BeaconClient) SubscribeFinalizedCheckpoint(ctx context.Context) (<-chan FinalizedCheckpointEvent, <-chan error, error) {
+	endpoint := b.endpoint()
+	url := fmt.Sprintf("%s/eth/v1/events?topics=finalized_checkpoint", endpoint)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, nil, fmt.Errorf("create request for finalized checkpoint stream: %w", err)
+	}
+	req.Header.Set("Accept", "text/event-stream")
+
+	// Call the endpoint directly without b.do() because we want to stream the response
+	res, err := b.httpClient.Do(req)
+	if err != nil {
+		b.switchEndpoint()
+		return nil, nil, fmt.Errorf("dial finalized checkpoint stream: %w", err)
+	}
+
+	if res.StatusCode != http.StatusOK {
+		res.Body.Close()
+		b.switchEndpoint()
+		return nil, nil, fmt.Errorf("finalized checkpoint stream returned status: %d", res.StatusCode)
+	}
+
+	eventsCh := make(chan FinalizedCheckpointEvent, 10)
+	errCh := make(chan error, 1)
+
+	go func() {
+		defer res.Body.Close()
+		reader := bufio.NewReader(res.Body)
+
+		var eventType string
+		for {
+			line, err := reader.ReadString('\n')
+			if err != nil {
+				select {
+				case <-ctx.Done():
+				case errCh <- err:
+				default:
+				}
+				return
+			}
+
+			line = strings.TrimSpace(line)
+			if line == "" {
+				// Empty line means event block complete
+				eventType = ""
+				continue
+			}
+
+			if strings.HasPrefix(line, ":") {
+				// SSE comment, ignore
+				continue
+			}
+
+			parts := strings.SplitN(line, ":", 2)
+			key := parts[0]
+			var value string
+			if len(parts) > 1 {
+				value = strings.TrimSpace(parts[1])
+			}
+
+			switch key {
+			case "event":
+				eventType = value
+			case "data":
+				if eventType == "finalized_checkpoint" {
+					var event FinalizedCheckpointEvent
+					if err := json.Unmarshal([]byte(value), &event); err != nil {
+						log.WithError(err).Warn("Failed to unmarshal finalized checkpoint event data")
+						continue
+					}
+					select {
+					case <-ctx.Done():
+						return
+					case eventsCh <- event:
+					}
+				}
+			}
+		}
+	}()
+
+	return eventsCh, errCh, nil
 }

@@ -76,24 +76,29 @@ func (b *BeaconCache) SetInitialCheckpointSlot(slot uint64) {
 }
 
 func (b *BeaconCache) AddCheckPoint(finalizedHeaderRoot common.Hash, blockRootsTree *ssz.Node, slot uint64) {
-	b.addSlot(slot)
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.addSlotLocked(slot)
 	b.Finalized.Checkpoints.Proofs[slot] = Proof{
 		FinalizedBlockRoot: finalizedHeaderRoot,
 		BlockRootsTree:     blockRootsTree,
 		Slot:               slot,
 	}
-
-	b.pruneOldCheckpoints()
+	b.pruneOldCheckpointsLocked()
 }
 
 func (b *BeaconCache) AddCheckPointSlots(slots []uint64) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
 	for _, slot := range slots {
-		b.addSlot(slot)
+		b.addSlotLocked(slot)
 	}
 }
 
 func (b *BeaconCache) GetClosestCheckpoint(slot uint64) (Proof, error) {
-	checkpointSlot, err := b.calculateClosestCheckpointSlot(slot)
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	checkpointSlot, err := b.calculateClosestCheckpointSlotLocked(slot)
 	if err != nil {
 		return Proof{}, err
 	}
@@ -107,10 +112,33 @@ func (b *BeaconCache) GetClosestCheckpoint(slot uint64) (Proof, error) {
 }
 
 func (b *BeaconCache) LastFinalizedHeader() common.Hash {
+	b.mu.Lock()
+	defer b.mu.Unlock()
 	return b.Finalized.LastSyncedHash
 }
 
-func (b *BeaconCache) pruneOldCheckpoints() {
+// LastSyncedSlot returns the last successfully synced finalized slot.
+func (b *BeaconCache) LastSyncedSlot() uint64 {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.Finalized.LastSyncedSlot
+}
+
+// LastSyncedHash returns the last successfully imported finalized header hash.
+func (b *BeaconCache) LastSyncedHash() common.Hash {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.Finalized.LastSyncedHash
+}
+
+// GetInitialCheckpointSlot returns the initial checkpoint slot.
+func (b *BeaconCache) GetInitialCheckpointSlot() uint64 {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.InitialCheckpointSlot
+}
+
+func (b *BeaconCache) pruneOldCheckpointsLocked() {
 	checkpointsCount := len(b.Finalized.Checkpoints.Slots)
 	if checkpointsCount <= FinalizedCheckpointsLimit {
 		return
@@ -128,14 +156,14 @@ func (b *BeaconCache) pruneOldCheckpoints() {
 	b.Finalized.Checkpoints.Slots = slotsToKeep
 }
 
-func (b *BeaconCache) addSlot(slot uint64) {
+func (b *BeaconCache) addSlotLocked(slot uint64) {
 	if !slices.Contains(b.Finalized.Checkpoints.Slots, slot) {
 		b.Finalized.Checkpoints.Slots = append(b.Finalized.Checkpoints.Slots, slot)
 	}
 	slices.Sort(b.Finalized.Checkpoints.Slots)
 }
 
-func (b *BeaconCache) calculateClosestCheckpointSlot(slot uint64) (uint64, error) {
+func (b *BeaconCache) calculateClosestCheckpointSlotLocked(slot uint64) (uint64, error) {
 	blockRootThreshold := b.slotsInEpoch * b.epochsPerSyncCommitteePeriod
 	for _, i := range b.Finalized.Checkpoints.Slots {
 		if i < slot {

@@ -6,8 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"strings"
 	"time"
 
+	geth "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/sirupsen/logrus"
@@ -22,6 +24,7 @@ import (
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/api"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/protocol"
+	"github.com/snowfork/snowbridge/relayer/relays/error_tracking"
 	"github.com/snowfork/snowbridge/relayer/relays/util"
 	"golang.org/x/sync/errgroup"
 )
@@ -35,6 +38,8 @@ type Relay struct {
 	beaconHeader    *header.Header
 	headerCache     *ethereum.HeaderCache
 	writer          *parachain.ParachainWriter
+	skippedNonces   map[uint64]bool
+	deadNonces      *error_tracking.DeadNonceStore
 }
 
 func NewRelay(
@@ -42,16 +47,45 @@ func NewRelay(
 	keypair *sr25519.Keypair,
 ) *Relay {
 	return &Relay{
-		config:  config,
-		keypair: keypair,
+		config:        config,
+		keypair:       keypair,
+		skippedNonces: make(map[uint64]bool),
+	}
+}
+
+func (r *Relay) isSkippedNonce(nonce uint64) bool {
+	if r.skippedNonces[nonce] {
+		return true
+	}
+	if r.deadNonces != nil && r.deadNonces.IsDead(nonce) {
+		return true
+	}
+	return false
+}
+
+// markSkipped permanently skips nonce for this process and, when a path is
+// configured, persists it so restarts keep skipping it.
+func (r *Relay) markSkipped(nonce uint64, reason string) {
+	r.skippedNonces[nonce] = true
+	if r.deadNonces == nil {
+		return
+	}
+	if err := r.deadNonces.MarkDead(nonce, reason); err != nil {
+		log.WithError(err).WithField("nonce", nonce).Error("failed to persist dead reward nonce")
 	}
 }
 
 func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
-	paraconn := parachain.NewConnection(r.config.Sink.Parachain.Endpoint, r.keypair.AsKeyringPair())
+	deadNonces, err := error_tracking.NewDeadNonceStore(r.config.DeadNoncesPath)
+	if err != nil {
+		return fmt.Errorf("init dead-nonce store: %w", err)
+	}
+	r.deadNonces = deadNonces
+
+	paraconn := parachain.NewConnection(r.config.Sink.Parachain.ParseEndpoints(), r.keypair.AsKeyringPair())
 	ethconn := ethereum.NewConnection(&r.config.Source.Ethereum, nil)
 
-	err := paraconn.ConnectWithHeartBeat(ctx, eg, time.Second*time.Duration(r.config.Sink.Parachain.HeartbeatSecs))
+	err = paraconn.ConnectWithHeartBeat(ctx, eg, time.Second*time.Duration(r.config.Sink.Parachain.HeartbeatSecs))
 	if err != nil {
 		return err
 	}
@@ -90,7 +124,7 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 
 	p := protocol.New(r.config.Source.Beacon.Spec, r.config.Sink.Parachain.HeaderRedundancy)
 
-	beaconAPI := api.NewBeaconClient(r.config.Source.Beacon.Endpoint)
+	beaconAPI := api.NewBeaconClient(r.config.Source.Beacon.ParseEndpoints())
 
 	stateServiceClient := beaconstate.NewClient(r.config.Source.Beacon.StateServiceEndpoint)
 	log.WithField("endpoint", r.config.Source.Beacon.StateServiceEndpoint).Info("Using beacon state service for proof generation")
@@ -103,6 +137,9 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		0, // setting is not used in the reward relay
 		stateServiceClient,
 	)
+	// From Gloas the execution header is no longer in the beacon block, so the proof path
+	// reads it from the execution node this relay is already connected to.
+	beaconHeader = beaconHeader.WithExecutionClient(r.ethconn.Client())
 	r.beaconHeader = &beaconHeader
 
 	var fetchInterval time.Duration
@@ -112,35 +149,100 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 		fetchInterval = time.Duration(r.config.FetchInterval) * time.Second
 	}
 
+	// Poll immediately on startup, then on every fetchInterval.
+	// Waiting a full interval first delayed recovery (e.g. 300s in prod) after restarts.
+	ticker := time.NewTicker(fetchInterval)
+	defer ticker.Stop()
+
 	for {
+		err = r.pollOnce(ctx)
+		if err != nil {
+			if error_tracking.IsTransientError(err) {
+				log.WithError(err).Warn("Transient error in reward relay, will retry next interval")
+				r.reconnectAndRebind(ctx)
+			} else {
+				return err
+			}
+		}
+
 		select {
 		case <-ctx.Done():
 			return nil
-		case <-time.After(fetchInterval):
-			orders, err := r.findOrderUndelivered(ctx)
-			if err != nil {
-				return fmt.Errorf("find undelivered order: %w", err)
-			}
-			rewardAddress, err := util.HexStringTo32Bytes(r.config.RewardAddress)
-			if err != nil {
-				return fmt.Errorf("convert to reward address: %w", err)
-			}
-			for _, order := range orders {
-				event, err := r.findEvent(ctx, order.Nonce)
-				if err != nil {
-					return fmt.Errorf("find event GatewayInboundMessageDispatched: %w", err)
-				}
-				if event.RewardAddress != rewardAddress {
-					log.Info("order is not from the current relayer, just ignore")
-					continue
-				}
-				err = r.doSubmit(ctx, event)
-				if err != nil {
-					return fmt.Errorf("submit delivery proof for GatewayInboundMessageDispatched: %w", err)
-				}
-			}
+		case <-ticker.C:
 		}
 	}
+}
+
+const staleBlockThreshold = 100_000 // ~2 weeks of Ethereum blocks
+
+func (r *Relay) pollOnce(ctx context.Context) error {
+	log.Info("Polling for reward claims")
+	orders, err := r.findOrderUndelivered(ctx)
+	if err != nil {
+		return fmt.Errorf("find undelivered order: %w", err)
+	}
+	rewardAddress, err := util.HexStringTo32Bytes(r.config.RewardAddress)
+	if err != nil {
+		return fmt.Errorf("convert to reward address: %w", err)
+	}
+
+	currentBlock, err := r.ethconn.Client().BlockNumber(ctx)
+	if err != nil {
+		return fmt.Errorf("get current block number: %w", err)
+	}
+
+	for _, order := range orders {
+		nonce := order.Nonce
+		if r.isSkippedNonce(nonce) {
+			continue
+		}
+		event, err := r.findEvent(ctx, nonce)
+		if err != nil {
+			return fmt.Errorf("find event GatewayInboundMessageDispatched: %w", err)
+		}
+		if event.RewardAddress != rewardAddress {
+			r.markSkipped(nonce, "order is not from the current relayer")
+			log.WithField("nonce", nonce).Debug("order is not from the current relayer, skipping permanently")
+			continue
+		}
+		if currentBlock-event.Raw.BlockNumber > staleBlockThreshold {
+			r.markSkipped(nonce, "stale reward nonce, too old to finalize")
+			log.WithFields(log.Fields{
+				"nonce":        nonce,
+				"eventBlock":   event.Raw.BlockNumber,
+				"currentBlock": currentBlock,
+			}).Info("Skipping stale reward nonce, too old to finalize")
+			continue
+		}
+		err = r.doSubmit(ctx, event)
+		if err != nil {
+			return fmt.Errorf("submit delivery proof for GatewayInboundMessageDispatched: %w", err)
+		}
+	}
+	return nil
+}
+
+func (r *Relay) reconnectAndRebind(ctx context.Context) {
+	if err := r.ethconn.Reconnect(ctx); err != nil {
+		log.WithError(err).Error("Ethereum reconnection failed")
+	} else {
+		if err := r.rebindContracts(); err != nil {
+			log.WithError(err).Error("Failed to rebind contracts after reconnect")
+		}
+	}
+	if err := r.paraconn.Reconnect(); err != nil {
+		log.WithError(err).Error("Parachain reconnection failed")
+	}
+}
+
+func (r *Relay) rebindContracts() error {
+	address := common.HexToAddress(r.config.Source.Contracts.Gateway)
+	contract, err := contracts.NewGateway(address, r.ethconn.Client())
+	if err != nil {
+		return fmt.Errorf("rebind gateway contract: %w", err)
+	}
+	r.gatewayContract = contract
+	return nil
 }
 
 func (r *Relay) isNonceRelayed(ctx context.Context, nonce uint64) (bool, error) {
@@ -175,13 +277,17 @@ func (r *Relay) findOrderUndelivered(
 		if err != nil {
 			return nil, fmt.Errorf("decode order error: %w", err)
 		}
-		isRelayed, err := r.isNonceRelayed(ctx, uint64(undeliveredOrder.Nonce))
+		nonce := uint64(undeliveredOrder.Nonce)
+		if r.isSkippedNonce(nonce) {
+			continue
+		}
+		isRelayed, err := r.isNonceRelayed(ctx, nonce)
 		if err != nil {
 			return nil, fmt.Errorf("check nonce relayed: %w", err)
 		}
 		if isRelayed {
 			log.WithFields(log.Fields{
-				"nonce": uint64(undeliveredOrder.Nonce),
+				"nonce": nonce,
 			}).Debug("Relayed but not delivered to BH")
 			undeliveredOrders = append(undeliveredOrders, &undeliveredOrder)
 		}
@@ -194,8 +300,6 @@ func (relay *Relay) findEvent(
 	nonce uint64,
 ) (*contracts.GatewayInboundMessageDispatched, error) {
 
-	const BlocksPerQuery = 4096
-
 	var event *contracts.GatewayInboundMessageDispatched
 
 	blockNumber, err := relay.ethconn.Client().BlockNumber(ctx)
@@ -203,33 +307,18 @@ func (relay *Relay) findEvent(
 		return event, fmt.Errorf("get last block number: %w", err)
 	}
 
-	done := false
-
-	for {
-		var begin uint64
-		if blockNumber < BlocksPerQuery {
-			begin = 0
-		} else {
-			begin = blockNumber - BlocksPerQuery
-		}
-
-		opts := bind.FilterOpts{
-			Start:   begin,
-			End:     &blockNumber,
-			Context: ctx,
-		}
-
-		iter, err := relay.gatewayContract.FilterInboundMessageDispatched(&opts, []uint64{nonce})
+	err = ethereum.WalkLogFilterPages(ctx, blockNumber, func(opts *bind.FilterOpts) (bool, error) {
+		iter, err := relay.gatewayContract.FilterInboundMessageDispatched(opts, []uint64{nonce})
 		if err != nil {
-			return event, fmt.Errorf("iter dispatch event: %w", err)
+			return false, fmt.Errorf("iter dispatch event: %w", err)
 		}
 
+		done := false
 		for {
 			more := iter.Next()
 			if !more {
-				err = iter.Error()
-				if err != nil {
-					return event, fmt.Errorf("iter dispatch event: %w", err)
+				if err := iter.Error(); err != nil {
+					return false, fmt.Errorf("iter dispatch event: %w", err)
 				}
 				break
 			}
@@ -239,16 +328,13 @@ func (relay *Relay) findEvent(
 				break
 			}
 		}
-
 		if done {
 			iter.Close()
 		}
-
-		blockNumber = begin
-
-		if done || begin == 0 {
-			break
-		}
+		return done, nil
+	})
+	if err != nil {
+		return event, err
 	}
 
 	return event, nil
@@ -258,7 +344,7 @@ func (relay *Relay) makeInboundMessage(
 	ctx context.Context,
 	headerCache *ethereum.HeaderCache,
 	event *contracts.GatewayInboundMessageDispatched,
-) (*parachain.Message, error) {
+) (*parachain.MessageV3, error) {
 	receiptTrie, err := headerCache.GetReceiptTrie(ctx, event.Raw.BlockHash)
 	if err != nil {
 		log.WithFields(logrus.Fields{
@@ -309,16 +395,43 @@ func (relay *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayInboundMe
 
 	blockHeader, err := relay.ethconn.Client().HeaderByNumber(ctx, nextBlockNumber)
 	if err != nil {
+		// The delivery landed in the head block, so block+1 does not exist yet. Expected
+		// on a fresh delivery; retry next poll rather than crashing the relayer.
+		if isBlockNotMinedError(err) {
+			logger.Info("next block is not mined yet")
+			return nil
+		}
 		return fmt.Errorf("get block header: %w", err)
+	}
+	if blockHeader == nil {
+		logger.Info("next block is not mined yet")
+		return nil
 	}
 
 	proof, err := relay.beaconHeader.FetchExecutionProof(*blockHeader.ParentBeaconRoot, false)
-	if errors.Is(err, header.ErrBeaconHeaderNotFinalized) || proof.HeaderPayload.ExecutionBranch == nil {
+	// Only treat real light-client lag as soft "not finalized". Zero-value proofs
+	// used to match ExecutionBranch == nil on *any* error and infinite-looped as
+	// "not finalized" (e.g. lodestar 404 after pruneHistory dropped the root).
+	if errors.Is(err, header.ErrBeaconHeaderNotFinalized) {
 		logger.Info("event block is not finalized yet")
 		return nil
 	}
 	if err != nil {
+		if isUnrecoverableBeaconCheckpointError(err) {
+			relay.markSkipped(ev.Nonce, "no on-chain beacon checkpoint covers this slot: "+err.Error())
+			logger.WithError(err).Error("permanently skipping reward claim: no on-chain beacon checkpoint covers this slot")
+			return nil
+		}
+		if isBeaconHistoryUnavailableError(err) {
+			// Soft-skip so other nonces can still claim; retry next poll if archive CL recovers.
+			logger.WithError(err).Warn("cannot build execution proof for reward claim (beacon history unavailable); will retry")
+			return nil
+		}
 		return fmt.Errorf("fetch execution header proof: %w", err)
+	}
+	if len(proof.HeaderPayload.ExecutionBranch) == 0 {
+		logger.Warn("execution proof missing execution branch; treating as not ready")
+		return nil
 	}
 
 	inboundMsg.Proof.ExecutionProof = proof.HeaderPayload
@@ -341,4 +454,43 @@ func (relay *Relay) doSubmit(ctx context.Context, ev *contracts.GatewayInboundMe
 	logger.Info("v2 inbound message executed successfully")
 
 	return nil
+}
+
+// isBeaconHistoryUnavailableError matches beacon/CL responses when the header or
+// intermediate state is gone from (or not yet present on) the configured endpoints.
+// Multi-endpoint clients should retry against an archive CL for these.
+func isBeaconHistoryUnavailableError(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, api.ErrNotFound) {
+		return true
+	}
+	s := strings.ToLower(err.Error())
+	return strings.Contains(s, "not found") ||
+		strings.Contains(s, "block not found") ||
+		strings.Contains(s, "unable to find a relevant on-chain header") ||
+		strings.Contains(s, "find checkpoint on-chain") ||
+		strings.Contains(s, "get header update against on-chain finalized")
+}
+
+// isBlockNotMinedError matches an execution-client miss for a block that does not exist
+// yet. go-ethereum returns ethereum.NotFound; other clients only set the message.
+func isBlockNotMinedError(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, geth.NotFound) {
+		return true
+	}
+	return strings.Contains(strings.ToLower(err.Error()), "not found")
+}
+
+// isUnrecoverableBeaconCheckpointError is for proofs that cannot be built because
+// BridgeHub no longer stores a finalized header within the historical-root window.
+func isUnrecoverableBeaconCheckpointError(err error) bool {
+	if err == nil {
+		return false
+	}
+	return strings.Contains(strings.ToLower(err.Error()), "no checkpoint on chain for slot")
 }

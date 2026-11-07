@@ -21,25 +21,22 @@ var (
 	privateKey     string
 	privateKeyFile string
 	privateKeyID   string
-	onDemand       bool
 )
 
 func Command() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "beefy",
-		Short: "Start the beefy relay",
+		Short: "Start a handover-only BEEFY light-client updater (cheap-gas tiers; no message delivery)",
 		Args:  cobra.ExactArgs(0),
 		RunE:  run,
 	}
 
-	cmd.Flags().StringVar(&configFile, "config", "", "Path to configuration file")
-	cmd.MarkFlagRequired("config")
+	cmd.Flags().StringVar(&configFile, "config", "", "Path to beefy configuration file")
+	_ = cmd.MarkFlagRequired("config")
 
 	cmd.Flags().StringVar(&privateKey, "ethereum.private-key", "", "Ethereum private key")
 	cmd.Flags().StringVar(&privateKeyFile, "ethereum.private-key-file", "", "The file from which to read the private key")
 	cmd.Flags().StringVar(&privateKeyID, "ethereum.private-key-id", "", "The secret id to lookup the private key in AWS Secrets Manager")
-
-	cmd.Flags().BoolVarP(&onDemand, "on-demand", "", false, "Synchronize commitments on demand")
 
 	return cmd
 }
@@ -54,13 +51,10 @@ func run(_ *cobra.Command, _ []string) error {
 	}
 
 	var config beefy.Config
-	err := viper.UnmarshalExact(&config)
-	if err != nil {
+	if err := viper.UnmarshalExact(&config); err != nil {
 		return err
 	}
-
-	err = config.Validate()
-	if err != nil {
+	if err := config.Validate(); err != nil {
 		return fmt.Errorf("config file validation failed: %w", err)
 	}
 
@@ -72,11 +66,9 @@ func run(_ *cobra.Command, _ []string) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	eg, ctx := errgroup.WithContext(ctx)
 
-	// Ensure clean termination upon SIGINT, SIGTERM
 	eg.Go(func() error {
 		notify := make(chan os.Signal, 1)
 		signal.Notify(notify, syscall.SIGINT, syscall.SIGTERM)
-
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
@@ -84,36 +76,21 @@ func run(_ *cobra.Command, _ []string) error {
 			logrus.WithField("signal", sig.String()).Info("Received signal")
 			cancel()
 		}
-
 		return nil
 	})
 
-	if !onDemand {
-		relay, err := beefy.NewRelay(&config, keypair)
-		if err != nil {
-			return err
-		}
-
-		err = relay.Start(ctx, eg)
-	} else {
-		relay, err := beefy.NewOnDemandRelay(&config, keypair)
-		if err != nil {
-			return err
-		}
-
-		err = relay.Start(ctx, eg)
-		if err != nil {
-			logrus.WithError(err).Fatal("Unhandled error")
-			cancel()
-			return err
-		}
-	}
-
-	err = eg.Wait()
+	relay, err := beefy.NewOnDemandRelay(&config, keypair)
 	if err != nil {
-		logrus.WithError(err).Fatal("Unhandled error")
+		return err
+	}
+	if err := relay.StartCheapGasLoop(ctx, eg); err != nil {
+		cancel()
 		return err
 	}
 
+	if err := eg.Wait(); err != nil {
+		logrus.WithError(err).Error("beefy cheap-gas loop stopped")
+		return err
+	}
 	return nil
 }

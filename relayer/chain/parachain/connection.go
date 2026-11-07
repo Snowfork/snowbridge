@@ -5,7 +5,9 @@ package parachain
 
 import (
 	"context"
-	"strings"
+	"fmt"
+	"math/rand"
+	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -19,7 +21,9 @@ import (
 )
 
 type Connection struct {
-	endpoint    string
+	endpoints   []string
+	currentIdx  int
+	mu          sync.Mutex
 	kp          *signature.KeyringPair
 	api         *gsrpc.SubstrateAPI
 	metadata    types.Metadata
@@ -38,41 +42,64 @@ func (co *Connection) Keypair() *signature.KeyringPair {
 	return co.kp
 }
 
-func NewConnection(endpoint string, kp *signature.KeyringPair) *Connection {
+func (co *Connection) endpoint() string {
+	co.mu.Lock()
+	defer co.mu.Unlock()
+	return co.endpoints[co.currentIdx]
+}
+
+func NewConnection(endpoints []string, kp *signature.KeyringPair) *Connection {
 	return &Connection{
-		endpoint: endpoint,
-		kp:       kp,
+		endpoints:  endpoints,
+		currentIdx: rand.Intn(len(endpoints)),
+		kp:         kp,
 	}
 }
 
-func (co *Connection) Connect(_ context.Context) error {
-	// Initialize API
-	api, err := gsrpc.NewSubstrateAPI(co.endpoint)
+func (co *Connection) connectToEndpoint(endpoint string) (*gsrpc.SubstrateAPI, *types.Metadata, types.Hash, error) {
+	api, err := gsrpc.NewSubstrateAPI(endpoint)
 	if err != nil {
-		return err
+		return nil, nil, types.Hash{}, err
 	}
-	co.api = api
-
-	// Fetch metadata
 	meta, err := api.RPC.State.GetMetadataLatest()
 	if err != nil {
-		return err
+		return nil, nil, types.Hash{}, err
 	}
-	co.metadata = *meta
-
-	// Fetch genesis hash
 	genesisHash, err := api.RPC.Chain.GetBlockHash(0)
 	if err != nil {
-		return err
+		return nil, nil, types.Hash{}, err
 	}
-	co.genesisHash = genesisHash
+	return api, meta, genesisHash, nil
+}
 
-	log.WithFields(logrus.Fields{
-		"endpoint":    co.endpoint,
-		"metaVersion": meta.Version,
-	}).Info("Connected to chain")
+func (co *Connection) Connect(_ context.Context) error {
+	var lastErr error
+	for _, idx := range rand.Perm(len(co.endpoints)) {
+		endpoint := co.endpoints[idx]
 
-	return nil
+		api, meta, genesisHash, err := co.connectToEndpoint(endpoint)
+		if err != nil {
+			log.WithFields(logrus.Fields{
+				"endpoint": endpoint,
+				"error":    err,
+			}).Warn("Failed to connect to parachain endpoint")
+			lastErr = err
+			continue
+		}
+
+		co.api = api
+		co.metadata = *meta
+		co.genesisHash = genesisHash
+		co.currentIdx = idx
+
+		log.WithFields(logrus.Fields{
+			"endpoint":    endpoint,
+			"metaVersion": meta.Version,
+		}).Info("Connected to chain")
+
+		return nil
+	}
+	return fmt.Errorf("failed to connect to any parachain endpoint: %w", lastErr)
 }
 
 func (co *Connection) ConnectWithHeartBeat(ctx context.Context, eg *errgroup.Group, heartBeat time.Duration) error {
@@ -93,7 +120,8 @@ func (co *Connection) ConnectWithHeartBeat(ctx context.Context, eg *errgroup.Gro
 				case <-ticker.C:
 					_, err := co.API().RPC.System.Version()
 					if err != nil {
-						log.WithField("endpoint", co.endpoint).Error("Connection heartbeat failed")
+						log.WithField("endpoint", co.endpoint()).Error("Connection heartbeat failed")
+						co.Reconnect()
 					}
 				}
 			}
@@ -101,6 +129,43 @@ func (co *Connection) ConnectWithHeartBeat(ctx context.Context, eg *errgroup.Gro
 	}
 
 	return nil
+}
+
+func (co *Connection) Reconnect() error {
+	if len(co.endpoints) <= 1 {
+		return nil
+	}
+	co.mu.Lock()
+	startIdx := co.currentIdx
+	co.mu.Unlock()
+
+	for i := 1; i < len(co.endpoints); i++ {
+		idx := (startIdx + i) % len(co.endpoints)
+		endpoint := co.endpoints[idx]
+
+		api, meta, genesisHash, err := co.connectToEndpoint(endpoint)
+		if err != nil {
+			log.WithFields(logrus.Fields{
+				"endpoint": endpoint,
+				"error":    err,
+			}).Warn("Failed to reconnect to parachain endpoint")
+			continue
+		}
+
+		co.mu.Lock()
+		log.WithFields(logrus.Fields{
+			"from": co.endpoints[co.currentIdx],
+			"to":   endpoint,
+		}).Info("Switched parachain endpoint")
+
+		co.api = api
+		co.metadata = *meta
+		co.genesisHash = genesisHash
+		co.currentIdx = idx
+		co.mu.Unlock()
+		return nil
+	}
+	return fmt.Errorf("failed to reconnect to any parachain endpoint")
 }
 
 func (co *Connection) Close() {
@@ -134,13 +199,9 @@ func (co *Connection) GetLatestBlockNumber() (*types.BlockNumber, error) {
 	return &latestBlock.Block.Header.Number, nil
 }
 
-func (co *Connection) GenerateSubmitMessagePayload(payload *Message) (interface{}, error) {
-	runtimeSpecVersion, err := co.api.RPC.State.GetRuntimeVersionLatest()
-	if err != nil {
-		return nil, err
-	}
-	if strings.Contains(string(runtimeSpecVersion.SpecName), "westend") || (strings.Contains(string(runtimeSpecVersion.SpecName), "polkadot") && runtimeSpecVersion.SpecVersion >= 2_001_001) {
-		return ConvertToV2Message(payload)
-	}
-	return payload, nil
+func (co *Connection) GenerateSubmitMessagePayload(payload *MessageV3) (interface{}, error) {
+	// EventProof.Log on current Bridge Hub runtimes includes tx_index. MessageV2 drops it and
+	// the extrinsic then fails SCALE decode in validate_transaction ("Bad input data" / codec
+	// error). Always submit the V3 shape that matches EventProof.
+	return ConvertToV3Message(payload)
 }

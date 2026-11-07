@@ -18,6 +18,7 @@ import (
 
 type ChainWriter interface {
 	BatchCall(ctx context.Context, extrinsic []string, calls []interface{}) error
+	ForceBatch(ctx context.Context, extrinsic []string, calls []interface{}) error
 	WriteToParachainAndRateLimit(ctx context.Context, extrinsicName string, payload ...interface{}) error
 	WriteToParachainAndWatch(ctx context.Context, extrinsicName string, payload ...interface{}) error
 	GetLastFinalizedHeaderState() (state.FinalizedHeader, error)
@@ -28,7 +29,10 @@ type ChainWriter interface {
 	GetFinalizedHeaderStateByBlockRoot(blockRoot types.H256) (state.FinalizedHeader, error)
 	GetLastFinalizedStateIndex() (types.U32, error)
 	GetFinalizedBeaconRootByIndex(index uint32) (types.H256, error)
+	GetLatestSyncCommitteeUpdatePeriod() (uint64, error)
+	HasNextSyncCommittee() (bool, error)
 	HasPendingExtrinsic(extrinsicName string) (bool, error)
+	MaxWatchedExtrinsics() int64
 }
 
 type ParachainWriter struct {
@@ -37,7 +41,15 @@ type ParachainWriter struct {
 	pool                 *ExtrinsicPool
 	genesisHash          types.Hash
 	maxWatchedExtrinsics int64
+	tip                  uint64
 	mu                   sync.Mutex
+}
+
+// SetTip sets the tip (in the parachain's native token base units) attached to
+// every extrinsic signed by this writer. Defaults to 0. A non-zero tip raises the
+// extrinsic's block-inclusion priority. Call before Start.
+func (wr *ParachainWriter) SetTip(tip uint64) {
+	wr.tip = tip
 }
 
 func NewParachainWriter(
@@ -93,6 +105,31 @@ func (wr *ParachainWriter) BatchCall(ctx context.Context, extrinsic []string, ca
 		err := wr.WriteToParachainAndWatch(ctx, "Utility.batch_all", encodedCalls)
 		if err != nil {
 			return fmt.Errorf("batch call failed: %w", err)
+		}
+	}
+	return nil
+}
+
+func (wr *ParachainWriter) ForceBatch(ctx context.Context, extrinsic []string, calls []interface{}) error {
+	batchSize := int(wr.maxWatchedExtrinsics)
+	var j int
+	for i := 0; i < len(calls); i += batchSize {
+		j += batchSize
+		if j > len(calls) {
+			j = len(calls)
+		}
+		slicedCalls := append([]interface{}{}, calls[i:j]...)
+		encodedCalls := make([]types.Call, len(slicedCalls))
+		for k := range slicedCalls {
+			call, err := wr.prepCall(extrinsic[i+k], slicedCalls[k])
+			if err != nil {
+				return err
+			}
+			encodedCalls[k] = *call
+		}
+		err := wr.WriteToParachainAndWatch(ctx, "Utility.force_batch", encodedCalls)
+		if err != nil {
+			return fmt.Errorf("force batch call failed: %w", err)
 		}
 	}
 	return nil
@@ -155,6 +192,24 @@ func (wr *ParachainWriter) GetLastBasicChannelBlockNumber() (uint64, error) {
 	return wr.getNumberFromParachain("EthereumInboundQueue", "LatestVerifiedBlockNumber")
 }
 
+func (wr *ParachainWriter) GetLatestSyncCommitteeUpdatePeriod() (uint64, error) {
+	return wr.getNumberFromParachain("EthereumBeaconClient", "LatestSyncCommitteeUpdatePeriod")
+}
+
+// HasNextSyncCommittee reports whether NextSyncCommittee is present in storage.
+// force_checkpoint kills this value; LatestSyncCommitteeUpdatePeriod alone is not
+// a reliable signal that the next committee has been imported.
+func (wr *ParachainWriter) HasNextSyncCommittee() (bool, error) {
+	key, err := types.CreateStorageKey(wr.conn.Metadata(), "EthereumBeaconClient", "NextSyncCommittee", nil, nil)
+	if err != nil {
+		return false, fmt.Errorf("create storage key for NextSyncCommittee: %w", err)
+	}
+	raw, err := wr.conn.API().RPC.State.GetStorageRawLatest(key)
+	if err != nil {
+		return false, fmt.Errorf("read NextSyncCommittee storage: %w", err)
+	}
+	return raw != nil && len(*raw) > 0, nil
+}
 func (wr *ParachainWriter) GetLastBasicChannelNonceByAddresses(addresses []common.Address) (map[common.Address]uint64, error) {
 	addressNonceMap := make(map[common.Address]uint64, len(addresses))
 
@@ -304,6 +359,10 @@ func (wr *ParachainWriter) GetFinalizedHeaderStateByBlockRoot(blockRoot types.H2
 }
 
 func (wr *ParachainWriter) writeToParachain(ctx context.Context, extrinsicName string, payload ...interface{}) (*author.ExtrinsicStatusSubscription, error) {
+	if chainNonce, qErr := wr.queryAccountNonce(); qErr == nil && chainNonce > wr.nonce {
+		wr.nonce = chainNonce
+	}
+
 	extI, err := wr.prepExtrinstic(ctx, extrinsicName, payload...)
 	if err != nil {
 		return nil, err
@@ -311,10 +370,52 @@ func (wr *ParachainWriter) writeToParachain(ctx context.Context, extrinsicName s
 
 	sub, err := wr.conn.API().RPC.Author.SubmitAndWatchExtrinsic(*extI)
 	if err != nil {
+		enc, encErr := types.EncodeToHexString(*extI)
+		fields := log.Fields{"extrinsic": extrinsicName}
+		if encErr == nil {
+			fields["hexBytes"] = len(enc) / 2
+			var info interface{}
+			if qErr := wr.conn.API().Client.Call(&info, "payment_queryInfo", enc); qErr == nil {
+				fields["queryInfo"] = info
+			}
+			var dry interface{}
+			if dErr := wr.conn.API().Client.Call(&dry, "system_dryRun", enc); dErr == nil {
+				fields["dryRun"] = dry
+			}
+			// Intentionally no author_submitExtrinsic: a raw resubmit can land the
+			// extrinsic unwatched if SubmitAndWatch already broadcast it.
+		} else {
+			fields["encodeError"] = encErr.Error()
+		}
+		log.WithError(err).WithFields(fields).Error("parachain submit rejected")
+		if syncErr := wr.resyncNonce(); syncErr != nil {
+			return nil, fmt.Errorf("%w (also failed to resync nonce: %v)", err, syncErr)
+		}
 		return nil, err
 	}
 
 	return sub, nil
+}
+
+// resyncNonce adopts the on-chain account nonce after a rejected submit.
+// An external extrinsic from this same key (for example a manual reward claim)
+// spends a nonce this process never increments, and the cached value then
+// stays stale. The caller holds wr.mu, and the nonce is incremented only after
+// a subscription is returned, so nothing from this writer is in flight.
+func (wr *ParachainWriter) resyncNonce() error {
+	nonce, err := wr.queryAccountNonce()
+	if err != nil {
+		return err
+	}
+	if nonce == wr.nonce {
+		return nil
+	}
+	log.WithFields(log.Fields{
+		"cached": wr.nonce,
+		"chain":  nonce,
+	}).Warn("resyncing parachain account nonce from chain")
+	wr.nonce = nonce
+	return nil
 }
 
 func (wr *ParachainWriter) queryAccountNonce() (uint32, error) {
@@ -375,7 +476,7 @@ func (wr *ParachainWriter) prepExtrinstic(ctx context.Context, extrinsicName str
 		GenesisHash:        genesisHash,
 		Nonce:              types.NewUCompactFromUInt(uint64(wr.nonce)),
 		SpecVersion:        rv.SpecVersion,
-		Tip:                types.NewUCompactFromUInt(0),
+		Tip:                types.NewUCompactFromUInt(wr.tip),
 		TransactionVersion: rv.TransactionVersion,
 	}
 
@@ -387,6 +488,20 @@ func (wr *ParachainWriter) prepExtrinstic(ctx context.Context, extrinsicName str
 	}
 
 	return &extI, nil
+}
+
+// EncodeRuntimeCall SCALE-encodes the RuntimeCall that ForceBatch would submit
+// for this extrinsic, without signing or broadcasting it.
+func (wr *ParachainWriter) EncodeRuntimeCall(extrinsicName string, payload interface{}) ([]byte, error) {
+	call, err := wr.prepCall(extrinsicName, payload)
+	if err != nil {
+		return nil, err
+	}
+	encoded, err := types.EncodeToBytes(call)
+	if err != nil {
+		return nil, fmt.Errorf("encode %s: %w", extrinsicName, err)
+	}
+	return encoded, nil
 }
 
 func (wr *ParachainWriter) prepCall(extrinsicName string, payload ...interface{}) (*types.Call, error) {
@@ -495,4 +610,8 @@ func (wr *ParachainWriter) HasPendingExtrinsic(extrinsicName string) (bool, erro
 	}
 
 	return false, nil
+}
+
+func (wr *ParachainWriter) MaxWatchedExtrinsics() int64 {
+	return wr.maxWatchedExtrinsics
 }

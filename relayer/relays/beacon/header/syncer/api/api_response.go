@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 
@@ -53,7 +54,36 @@ type BeaconBlockResponseBody struct {
 	Deposits          []DepositResponse             `json:"deposits"`
 	VoluntaryExits    []SignedVoluntaryExitResponse `json:"voluntary_exits"`
 	SyncAggregate     SyncAggregateResponse         `json:"sync_aggregate"`
-	ExecutionPayload  struct {
+	// SignedExecutionPayloadBid replaces ExecutionPayload from Gloas (EIP-7732). The body
+	// commits to the builder's bid instead of the payload itself, and the value Snowbridge
+	// proves is the bid's parent_block_hash. Absent on pre-Gloas blocks.
+	SignedExecutionPayloadBid *struct {
+		Message struct {
+			ParentBlockHash       string   `json:"parent_block_hash"`
+			ParentBlockRoot       string   `json:"parent_block_root"`
+			BlockHash             string   `json:"block_hash"`
+			PrevRandao            string   `json:"prev_randao"`
+			FeeRecipient          string   `json:"fee_recipient"`
+			GasLimit              string   `json:"gas_limit"`
+			BuilderIndex          string   `json:"builder_index"`
+			Slot                  string   `json:"slot"`
+			Value                 string   `json:"value"`
+			ExecutionPayment      string   `json:"execution_payment"`
+			BlobKzgCommitments    []string `json:"blob_kzg_commitments"`
+			ExecutionRequestsRoot string   `json:"execution_requests_root"`
+		} `json:"message"`
+		Signature string `json:"signature"`
+	} `json:"signed_execution_payload_bid,omitempty"`
+	// PayloadAttestations and ParentExecutionRequests are new in Gloas.
+	PayloadAttestations     []PayloadAttestationResponse `json:"payload_attestations"`
+	ParentExecutionRequests *struct {
+		Deposits        []json.RawMessage `json:"deposits"`
+		Withdrawals     []json.RawMessage `json:"withdrawals"`
+		Consolidations  []json.RawMessage `json:"consolidations"`
+		BuilderDeposits []json.RawMessage `json:"builder_deposits"`
+		BuilderExits    []json.RawMessage `json:"builder_exits"`
+	} `json:"parent_execution_requests,omitempty"`
+	ExecutionPayload struct {
 		ParentHash    string               `json:"parent_hash"`
 		FeeRecipient  string               `json:"fee_recipient"`
 		StateRoot     string               `json:"state_root"`
@@ -93,7 +123,8 @@ type BootstrapResponse struct {
 type FinalizedCheckpointResponse struct {
 	Data struct {
 		Finalized struct {
-			Root string `json:"root"`
+			Epoch string `json:"epoch"`
+			Root  string `json:"root"`
 		} `json:"finalized"`
 	} `json:"data"`
 }
@@ -203,6 +234,7 @@ type BeaconBlock struct {
 
 type FinalizedCheckpoint struct {
 	FinalizedBlockRoot common.Hash
+	Epoch              uint64
 }
 
 func (h *HeaderResponse) ToBeaconHeader() (BeaconHeader, error) {
@@ -276,6 +308,21 @@ type LatestFinalisedUpdateResponse struct {
 		SyncAggregate  SyncAggregateResponse `json:"sync_aggregate"`
 		SignatureSlot  string                `json:"signature_slot"`
 	} `json:"data"`
+	// DerivedFromHeaders marks a response assembled from the standard header endpoints
+	// because the node does not serve the light client API. It carries slots only: no
+	// finality branch and no sync aggregate.
+	DerivedFromHeaders bool `json:"-"`
+}
+
+// ToResponse renders a decoded header back into its wire form.
+func (h BeaconHeader) ToResponse() HeaderResponse {
+	return HeaderResponse{
+		Slot:          strconv.FormatUint(h.Slot, 10),
+		ProposerIndex: strconv.FormatUint(h.ProposerIndex, 10),
+		ParentRoot:    h.ParentRoot.Hex(),
+		StateRoot:     h.StateRoot.Hex(),
+		BodyRoot:      h.BodyRoot.Hex(),
+	}
 }
 
 type LatestHeaderUpdateResponse struct {
@@ -386,4 +433,16 @@ func (c CheckpointResponse) ToScale() (scale.Checkpoint, error) {
 		Epoch: types.NewU64(epoch),
 		Root:  types.NewH256(common.HexToHash(c.Root).Bytes()),
 	}, nil
+}
+
+// PayloadAttestationResponse is the Gloas payload timeliness attestation.
+type PayloadAttestationResponse struct {
+	AggregationBits string `json:"aggregation_bits"`
+	Data            struct {
+		BeaconBlockRoot   string `json:"beacon_block_root"`
+		Slot              string `json:"slot"`
+		PayloadPresent    bool   `json:"payload_present"`
+		BlobDataAvailable bool   `json:"blob_data_available"`
+	} `json:"data"`
+	Signature string `json:"signature"`
 }

@@ -21,7 +21,7 @@ const TestUrl = "https://lodestar-sepolia.chainsafe.io"
 const MaxRedundancy = 20
 
 func newTestRunner() *Syncer {
-	return New(api.NewBeaconClient(TestUrl), protocol.New(config.SpecSettings{
+	return New(api.NewBeaconClient([]string{TestUrl}), protocol.New(config.SpecSettings{
 		SlotsInEpoch:                 32,
 		EpochsPerSyncCommitteePeriod: 256,
 	}, MaxRedundancy), nil)

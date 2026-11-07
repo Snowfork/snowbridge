@@ -256,6 +256,10 @@ type BeaconState struct {
 
 type VersionedExecutionPayloadHeader struct {
 	Deneb *ExecutionPayloadHeaderDeneb
+	// Gloas carries the execution header's canonical RLP rather than a decoded header. From
+	// Gloas the beacon body commits to the execution block hash, which is the Keccak hash of
+	// exactly these bytes, so the pallet is given the bytes it must hash.
+	Gloas []byte
 }
 
 var (
@@ -264,7 +268,12 @@ var (
 
 func (v VersionedExecutionPayloadHeader) Encode(encoder scale.Encoder) error {
 	var err error
-	if v.Deneb != nil {
+	// The indices match the pallet's enum and are pinned there: Capella was 0 and removing
+	// it did not renumber the rest.
+	if v.Gloas != nil {
+		encoder.PushByte(2)
+		err = encoder.Encode(v.Gloas)
+	} else if v.Deneb != nil {
 		encoder.PushByte(1)
 		err = encoder.Encode(v.Deneb)
 	} else {

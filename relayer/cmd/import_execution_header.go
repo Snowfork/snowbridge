@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/snowfork/snowbridge/relayer/chain/parachain"
+	rootconfig "github.com/snowfork/snowbridge/relayer/config"
 	"github.com/snowfork/snowbridge/relayer/crypto/sr25519"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/cache"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/config"
@@ -94,7 +95,7 @@ func importExecutionHeaderFn(cmd *cobra.Command, _ []string) error {
 			return fmt.Errorf("get keypair from file: %w", err)
 		}
 
-		paraconn := parachain.NewConnection(parachainEndpoint, keypair.AsKeyringPair())
+		paraconn := parachain.NewConnection(rootconfig.ParseEndpoints(parachainEndpoint), keypair.AsKeyringPair())
 		err = paraconn.Connect(ctx)
 		if err != nil {
 			return fmt.Errorf("connect to parachain: %w", err)
@@ -110,7 +111,7 @@ func importExecutionHeaderFn(cmd *cobra.Command, _ []string) error {
 
 		p := protocol.New(conf.Source.Beacon.Spec, conf.Sink.Parachain.HeaderRedundancy)
 
-		client := api.NewBeaconClient(lodestarEndpoint)
+		client := api.NewBeaconClient(rootconfig.ParseEndpoints(lodestarEndpoint))
 		syncer := syncer.New(client, p, nil)
 
 		beaconHeaderHash := common.HexToHash(finalizedHeader)

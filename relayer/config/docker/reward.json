@@ -16,7 +16,8 @@
         "forkVersions": {
           "deneb": ${FORK_DENEB},
           "electra": ${FORK_ELECTRA},
-          "fulu": ${FORK_FULU}
+          "fulu": ${FORK_FULU},
+          "gloas": ${FORK_GLOAS}
         }
       },
       "datastore": {
@@ -33,5 +34,7 @@
       "heartbeat-secs": 45
     }
   },
-  "reward-address": "${REWARD_ADDRESS}"
+  "reward-address": "${REWARD_ADDRESS}",
+  "fetch-interval": 300,
+  "deadNoncesPath": "${REWARD_DEAD_NONCES_PATH}"
 }
