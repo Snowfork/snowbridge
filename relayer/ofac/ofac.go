@@ -5,13 +5,23 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"strings"
+	"time"
 
 	log "github.com/sirupsen/logrus"
+)
+
+const (
+	defaultEndpoint = "https://public.chainalysis.com/api/v1/address"
+	requestTimeout  = 10 * time.Second
 )
 
 type OFAC struct {
 	enabled bool
 	apiKey  string
+	client  *http.Client
+	endpoint string
 }
 
 type Response struct {
@@ -24,7 +34,12 @@ type Response struct {
 }
 
 func New(enabled bool, apiKey string) *OFAC {
-	return &OFAC{enabled, apiKey}
+	return &OFAC{
+		enabled:  enabled,
+		apiKey:   apiKey,
+		client:   &http.Client{Timeout: requestTimeout},
+		endpoint: defaultEndpoint,
+	}
 }
 
 func (o OFAC) IsBanned(source string, destinations []string) (bool, error) {
@@ -60,9 +75,8 @@ func (o OFAC) IsBanned(source string, destinations []string) (bool, error) {
 }
 
 func (o OFAC) isOFACListed(address string) (bool, error) {
-	client := &http.Client{}
-
-	req, err := http.NewRequest("GET", fmt.Sprintf("https://public.chainalysis.com/api/v1/address/%s", address), nil)
+	endpoint := fmt.Sprintf("%s/%s", strings.TrimRight(o.endpoint, "/"), url.PathEscape(address))
+	req, err := http.NewRequest("GET", endpoint, nil)
 	if err != nil {
 		return true, err
 	}
@@ -70,11 +84,14 @@ func (o OFAC) isOFACListed(address string) (bool, error) {
 	req.Header.Add("Accept", "application/json")
 	req.Header.Add("X-API-Key", o.apiKey)
 
-	resp, err := client.Do(req)
+	resp, err := o.client.Do(req)
 	if err != nil {
 		return true, err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		return true, fmt.Errorf("OFAC API returned unexpected status %s", resp.Status)
+	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
