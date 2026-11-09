@@ -47,6 +47,7 @@ anyhow = "1.0"
 thiserror = "1.0"
 log = "0.4"
 env_logger = "0.11"
+rand = "0.8"
 
 asset-hub-westend-local-runtime = { path = "runtimes/asset-hub-westend-local", optional = true }
 bridge-hub-westend-local-runtime = { path = "runtimes/bridge-hub-westend-local", optional = true }

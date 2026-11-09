@@ -3,7 +3,8 @@ use clap::{Parser, Subcommand};
 use codec;
 use hex;
 use snowbridge_gas_estimator::estimator::{
-    clients, decode_assets_from_hex, estimate_gas, BridgeAsset, EstimatorError,
+    clients, decode_assets_from_hex, decode_runtime_call, dry_run_force_batch, estimate_gas,
+    BridgeAsset, EstimatorError,
 };
 use snowbridge_gas_estimator::runtimes::Location;
 use snowbridge_gas_estimator::xcm_builder::construct_register_token_xcm;
@@ -48,6 +49,9 @@ enum EstimateCommands {
         /// Event log data (hex string)
         #[arg(long)]
         event_log_data: String,
+        /// Event log transaction index
+        #[arg(long, default_value_t = 0)]
+        event_log_tx_index: u64,
         /// Proof data (hex-encoded SCALE-encoded proof)
         #[arg(long)]
         proof: String,
@@ -81,6 +85,23 @@ enum EstimateCommands {
         /// Message nonce from the event
         #[arg(long)]
         nonce: u64,
+        /// Comma-separated 32-byte hex accounts that receive the service fee.
+        /// Ether deposited to one of these is Snowbridge revenue, not relayer reward.
+        #[arg(long, default_value = "")]
+        service_fee_recipients: String,
+    },
+    /// Dry-run Utility.force_batch of SCALE-encoded RuntimeCalls and price that extrinsic.
+    ///
+    /// Pass the same calls ethereum-v3 submits, in order. Each --call is a hex
+    /// SCALE RuntimeCall (EthereumBeaconClient.submit, EthereumInboundQueueV2.submit,
+    /// EthereumInboundQueue.submit).
+    Batch {
+        /// SCALE-encoded RuntimeCall (0x…). Repeat for each inner call, in order.
+        #[arg(long = "call", required = true, num_args = 1..)]
+        calls: Vec<String>,
+        /// Relayer account public key (hex string, 32 bytes). Signed origin for the dry-run.
+        #[arg(long)]
+        relayer_account: String,
     },
 }
 
@@ -109,6 +130,7 @@ async fn estimate(cli: Cli) -> Result<String, EstimatorError> {
                 event_log_address,
                 event_log_topics,
                 event_log_data,
+                event_log_tx_index,
                 proof,
                 xcm_kind,
                 xcm_data,
@@ -120,7 +142,9 @@ async fn estimate(cli: Cli) -> Result<String, EstimatorError> {
                 relayer_fee,
                 relayer_account,
                 nonce,
+                service_fee_recipients,
             } => {
+                let service_fee_recipients = parse_service_fee_recipients(&service_fee_recipients)?;
                 let claimer = parse_claimer(&claimer)?;
                 let origin = parse_origin(&origin)?;
                 let assets = parse_assets(&assets)?;
@@ -147,6 +171,7 @@ async fn estimate(cli: Cli) -> Result<String, EstimatorError> {
                     &event_log_address,
                     &event_log_topics,
                     &event_log_data,
+                    event_log_tx_index,
                     &proof,
                     &xcm_bytes,
                     claimer,
@@ -157,9 +182,31 @@ async fn estimate(cli: Cli) -> Result<String, EstimatorError> {
                     &assets,
                     relayer_account,
                     nonce,
+                    &service_fee_recipients,
                 )
                 .await?;
 
+                serde_json::to_string_pretty(&estimation).map_err(|e| {
+                    EstimatorError::InvalidCommand(format!(
+                        "Failed to serialize result to JSON: {}",
+                        e
+                    ))
+                })
+            }
+            EstimateCommands::Batch {
+                calls,
+                relayer_account,
+            } => {
+                let relayer_account = parse_relayer_account(&relayer_account)?;
+                let mut decoded = Vec::with_capacity(calls.len());
+                for (index, call_hex) in calls.iter().enumerate() {
+                    let bytes = parse_hex_address(call_hex)?;
+                    let call = decode_runtime_call(&bytes).map_err(|err| {
+                        EstimatorError::InvalidCommand(format!("call {}: {}", index, err))
+                    })?;
+                    decoded.push(call);
+                }
+                let estimation = dry_run_force_batch(&clients, decoded, relayer_account).await?;
                 serde_json::to_string_pretty(&estimation).map_err(|e| {
                     EstimatorError::InvalidCommand(format!(
                         "Failed to serialize result to JSON: {}",
@@ -220,6 +267,29 @@ fn parse_relayer_account(relayer_account_hex: &str) -> Result<[u8; 32], Estimato
     let mut account = [0u8; 32];
     account.copy_from_slice(&account_bytes);
     Ok(account)
+}
+
+/// Parses the comma-separated service fee recipient list. An empty value means
+/// no recipient is configured, so no message has a service fee.
+fn parse_service_fee_recipients(value: &str) -> Result<Vec<[u8; 32]>, EstimatorError> {
+    let mut recipients = Vec::new();
+    for entry in value.split(',') {
+        let entry = entry.trim();
+        if entry.is_empty() {
+            continue;
+        }
+        let bytes = parse_hex_address(entry)?;
+        if bytes.len() != 32 {
+            return Err(EstimatorError::InvalidCommand(format!(
+                "Service fee recipient must be 32 bytes: {}",
+                entry
+            )));
+        }
+        let mut account = [0u8; 32];
+        account.copy_from_slice(&bytes);
+        recipients.push(account);
+    }
+    Ok(recipients)
 }
 
 sol! {

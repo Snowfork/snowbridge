@@ -1,3 +1,9 @@
+#!/usr/bin/env bash
+
+set -eu
+if (set -o pipefail) 2>/dev/null; then
+    set -o pipefail
+fi
 
 # Generate Rust bindings for contracts
 forge bind --module --overwrite \
@@ -20,5 +26,5 @@ echo "paseo"
 #subxt metadata --url wss://bridge-hub-paseo.dotters.network -o runtimes/bridge-hub-paseo/bridge-hub-metadata.bin
 # Polkadot
 echo "polkadot"
-subxt metadata --url wss://asset-hub-polkadot-rpc.n.dwellir.com -o runtimes/asset-hub-polkadot/asset-hub-metadata.bin
-subxt metadata --url wss://bridge-hub-polkadot-rpc.n.dwellir.com -o runtimes/bridge-hub-polkadot/bridge-hub-metadata.bin
+subxt metadata -f bytes --url wss://asset-hub-polkadot-rpc.n.dwellir.com -o runtimes/asset-hub-polkadot/asset-hub-metadata.bin
+subxt metadata -f bytes --url wss://bridge-hub-polkadot-rpc.n.dwellir.com -o runtimes/bridge-hub-polkadot/bridge-hub-metadata.bin
