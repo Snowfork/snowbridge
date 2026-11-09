@@ -26,7 +26,7 @@ var (
 func Command() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "beefy",
-		Short: "Start a handover-only BEEFY light-client updater (cheap-gas tiers; no message delivery)",
+		Short: "Start a BEEFY light-client updater (handover-only by default; cheap-gas tiers; no message delivery)",
 		Args:  cobra.ExactArgs(0),
 		RunE:  run,
 	}

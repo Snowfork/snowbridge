@@ -25,6 +25,53 @@ func TestIsHandoverRequest(t *testing.T) {
 	}
 }
 
+func TestTipGasAction(t *testing.T) {
+	cases := []struct {
+		path       beefyGasPath
+		wantSubmit bool
+		wantTwoPh  bool
+		wantErr    bool
+	}{
+		{pathFiatShamir, true, false, false},
+		{pathForceTwoPhase, true, true, false},
+		{pathTwoPhase, false, false, false},
+		{pathWait, false, false, false},
+		{beefyGasPath(99), false, false, true},
+	}
+	for _, tc := range cases {
+		submit, twoPhase, err := tipGasAction(tc.path)
+		if tc.wantErr {
+			if err == nil {
+				t.Fatalf("path=%s: want error", tc.path)
+			}
+			continue
+		}
+		if err != nil {
+			t.Fatalf("path=%s: unexpected err %v", tc.path, err)
+		}
+		if submit != tc.wantSubmit || twoPhase != tc.wantTwoPh {
+			t.Fatalf("path=%s: got submit=%v twoPhase=%v want %v %v",
+				tc.path, submit, twoPhase, tc.wantSubmit, tc.wantTwoPh)
+		}
+	}
+}
+
+func TestTipLagAllows(t *testing.T) {
+	orig := BeefyTipMinLagBlocks
+	BeefyTipMinLagBlocks = 2400
+	t.Cleanup(func() { BeefyTipMinLagBlocks = orig })
+
+	if tipLagAllows(2399) {
+		t.Fatal("lag below tip min must refuse")
+	}
+	if !tipLagAllows(2400) {
+		t.Fatal("lag at tip min must allow")
+	}
+	if !tipLagAllows(2401) {
+		t.Fatal("lag above tip min must allow")
+	}
+}
+
 func TestSelectBeefyGasPath(t *testing.T) {
 	origFiat, origWait, origLag := BeefyFiatShamirMaxWei, BeefyWaitMinWei, BeefySkipMaxLagBlocks
 	BeefyFiatShamirMaxWei = 100_000_000

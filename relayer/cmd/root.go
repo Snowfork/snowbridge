@@ -39,6 +39,7 @@ func init() {
 	rootCmd.AddCommand(generateDeliveryProofFixtureCmd())
 	rootCmd.AddCommand(syncBeefyCommitmentCmd())
 	rootCmd.AddCommand(forwardBeefyCatchupCmd())
+	rootCmd.AddCommand(tipBeefyOnceCmd())
 	rootCmd.AddCommand(reportEquivocationCmd())
 }
 
