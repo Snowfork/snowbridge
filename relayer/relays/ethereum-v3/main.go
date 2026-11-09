@@ -227,7 +227,11 @@ func (r *Relay) Start(ctx context.Context, eg *errgroup.Group) error {
 
 	p := protocol.New(r.config.Source.Beacon.Spec, r.config.Sink.Parachain.HeaderRedundancy)
 
-	r.ofac = ofac.New(r.config.OFAC.Enabled, r.config.OFAC.ApiKey)
+	r.ofac = ofac.New(ofac.Config{
+		Enabled:  r.config.OFAC.Enabled,
+		ApiKey:   r.config.OFAC.ApiKey,
+		CacheTTL: time.Duration(r.config.OFAC.CacheTTLSecs) * time.Second,
+	})
 
 	beaconAPI := api.NewBeaconClient(r.config.Source.Beacon.ParseEndpoints())
 	r.beaconAPI = beaconAPI

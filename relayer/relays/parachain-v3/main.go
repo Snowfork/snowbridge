@@ -73,7 +73,11 @@ func NewInstantRelay(config *Config, beefyConfig *beefy.Config, keypair *secp256
 	ethereumConnBeefy := ethereum.NewConnection(&config.Source.Ethereum, keypair)
 	ethereumConnDryRun := newDryRunConnection(&config.Sink.Ethereum, keypair)
 
-	ofacClient := ofac.New(config.OFAC.Enabled, config.OFAC.ApiKey)
+	ofacClient := ofac.New(ofac.Config{
+		Enabled:  config.OFAC.Enabled,
+		ApiKey:   config.OFAC.ApiKey,
+		CacheTTL: time.Duration(config.OFAC.CacheTTLSecs) * time.Second,
+	})
 
 	deadNonces, err := error_tracking.NewDeadNonceStore(config.DeadNoncesPath)
 	if err != nil {

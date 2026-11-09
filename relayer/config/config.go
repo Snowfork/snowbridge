@@ -32,6 +32,9 @@ type EthereumConfig struct {
 type OFACConfig struct {
 	Enabled bool   `mapstructure:"enabled"`
 	ApiKey  string `mapstructure:"apiKey"`
+	// CacheTTLSecs is how long a clean (not sanctioned) TRM result is cached.
+	// Sanctioned hits are cached for the process lifetime. Zero uses the ofac package default.
+	CacheTTLSecs uint64 `mapstructure:"cache-ttl-secs"`
 }
 
 func (p ParachainConfig) ParseEndpoints() []string {
@@ -68,8 +71,6 @@ func (p PolkadotConfig) Validate() error {
 }
 
 func (o OFACConfig) Validate() error {
-	if o.Enabled && o.ApiKey == "" {
-		return errors.New("OFAC is enabled but no [apiKey] set")
-	}
+	// ApiKey is optional: TRM's public sanctions endpoint works without a key.
 	return nil
 }
