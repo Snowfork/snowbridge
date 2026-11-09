@@ -112,7 +112,8 @@ const SNOWBRIDGE_ENV: { [env: string]: Environment } = {
             "3397": "wss://rpc.jamton.network",
         },
         gatewayContract: "0x27ca963c279c93801941e1eb8799c23f407d68e7",
-        beefyContract: "0x7cfc5c8b341991993080af67d940b6ad19a010e1",
+        // After OpenGov #1964 (Gateway 202610): BeefyClient baked into Gateway impl 0x4aD0577C…
+        beefyContract: "0xbcbebc20a0fdf9efd53b5852a71869b0cf25283f",
         assetHubParaId: 1000,
         bridgeHubParaId: 1002,
         v2_parachains: [1000, 2034],
