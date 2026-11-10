@@ -6,7 +6,7 @@ import { cryptoWaitReady } from "@polkadot/util-crypto"
 import { formatEther, Wallet } from "ethers"
 import { bridgeInfoFor } from "@snowbridge/registry"
 import { IERC20__factory } from "@snowbridge/contract-types"
-import { findFeeBreakdownTotal, findFeeTotal } from "./fee"
+import { findFeeBreakdownTotal, findFeeTotal, volumeFeeFromEnv } from "./fee"
 
 export const transferToPolkadot = async (
     l2ChainId: number,
@@ -70,8 +70,17 @@ export const transferToPolkadot = async (
     )
 
     // Step 1. Get the delivery fee for the transaction
-    let fee = await transferImpl.fee(TOKEN_CONTRACT, amount)
+    const volumeFee = volumeFeeFromEnv()
+    let fee = await transferImpl.fee(TOKEN_CONTRACT, amount, { volumeFee })
     console.log("fee: ", fee)
+    if (volumeFee) {
+        console.log("volume fee params:", volumeFee)
+        console.log("service fee:", fee.serviceFee)
+        console.log(
+            "assetHubDepositPad:",
+            findFeeBreakdownTotal(fee, "assetHubDepositPad", "ETH").toString(),
+        )
+    }
 
     // Step 2. Create a transfer tx (needed before approve so we can read the
     // exact value the adaptor will pull, transfer.computed.totalValue).
