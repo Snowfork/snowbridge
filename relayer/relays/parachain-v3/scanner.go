@@ -112,8 +112,7 @@ func (s *Scanner) Scan(ctx context.Context, beefyBlockNumber uint64) ([]*Task, e
 }
 
 // ScanV2 scans only for V2 pending messages against the given beefy block.
-// Used by the V2-only fast path; OFAC checks are skipped here for latency (legacy
-// Scan → findTasks still enforces OFAC).
+// Used by the V2-only fast path. OFAC is enforced the same way as Scan.
 func (s *Scanner) ScanV2(ctx context.Context, beefyBlockNumber uint64) ([]*Task, error) {
 	// fetch last parachain header that was finalized *before* the BEEFY block
 	beefyBlockMinusOneHash, err := s.relayConn.API().RPC.Chain.GetBlockHash(uint64(beefyBlockNumber - 1))
@@ -198,7 +197,7 @@ func (s *Scanner) findTasks(
 		pendingOrders = append(pendingOrders, pendingOrder)
 	}
 
-	v2Tasks, err := s.filterTasks(ctx, pendingOrders, false /* skipOFAC */)
+	v2Tasks, err := s.filterTasks(ctx, pendingOrders)
 	if err != nil {
 		return nil, err
 	}
@@ -245,7 +244,7 @@ func (s *Scanner) findV2Tasks(
 		pendingOrders = append(pendingOrders, pendingOrder)
 	}
 
-	v2Tasks, err := s.filterTasks(ctx, pendingOrders, true /* skipOFAC */)
+	v2Tasks, err := s.filterTasks(ctx, pendingOrders)
 	if err != nil {
 		return nil, err
 	}
@@ -467,7 +466,6 @@ func scanForOutboundQueueProofsV1(
 func (s *Scanner) filterTasks(
 	ctx context.Context,
 	pendingOrders []parachain.PendingOrder,
-	skipOFAC bool,
 ) ([]*Task, error) {
 
 	var tasks []*Task
@@ -534,22 +532,26 @@ func (s *Scanner) filterTasks(
 		if err != nil {
 			return nil, fmt.Errorf("decode message length error: %w", err)
 		}
+		skipOrder := false
 		for i := uint64(0); i < n.Uint64(); i++ {
 			m := OutboundQueueMessage{}
 			err = decoder.Decode(&m)
 			if err != nil {
 				return nil, fmt.Errorf("decode message error: %w", err)
 			}
-			if !skipOFAC {
-				isBanned, err := s.IsBanned(m)
-				if err != nil {
-					log.WithError(err).Fatal("error checking banned address found")
-					return nil, fmt.Errorf("banned check: %w", err)
-				}
-				if isBanned {
-					log.Fatal("banned address found")
-					return nil, errors.New("banned address found")
-				}
+			isBanned, err := s.IsBanned(m)
+			if err != nil {
+				// Fail closed for this order without killing the process (matches ethereum-v3).
+				log.WithError(err).WithField("nonce", uint64(m.Nonce)).
+					Warn("OFAC check failed; skipping order this round")
+				skipOrder = true
+				break
+			}
+			if isBanned {
+				log.WithField("nonce", uint64(m.Nonce)).
+					Warn("banned address found; dropping order")
+				skipOrder = true
+				break
 			}
 			if isBlockedV2Origin(m.Origin) {
 				log.WithField("nonce", uint64(m.Nonce)).
@@ -559,6 +561,9 @@ func (s *Scanner) filterTasks(
 			messageWithFee.OriginalMessage = m
 			messageWithFee.Fee = order.Fee
 			messagesWithFee = append(messagesWithFee, messageWithFee)
+		}
+		if skipOrder {
+			continue
 		}
 
 		var messageLeaves []types.H256

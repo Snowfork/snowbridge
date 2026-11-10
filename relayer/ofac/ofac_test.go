@@ -141,3 +141,49 @@ func TestIsBannedBatchesAddresses(t *testing.T) {
 		t.Fatalf("batch size=%d want 2 (deduped)", len(got))
 	}
 }
+
+func TestIsBannedPartialResponseFailClosed(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		// Empty body must not mark requested addresses as clean.
+		_, _ = w.Write([]byte(`[]`))
+	}))
+	defer srv.Close()
+
+	o := New(Config{Enabled: true})
+	o.endpoint = srv.URL
+	o.client = srv.Client()
+
+	banned, err := o.IsBanned("0xabc", nil)
+	if err == nil || !banned {
+		t.Fatalf("want fail-closed banned+err on missing address, got banned=%v err=%v", banned, err)
+	}
+}
+
+func TestIsBannedRetriesTransientHTTP(t *testing.T) {
+	var calls atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		n := calls.Add(1)
+		if n < 3 {
+			http.Error(w, "slow down", http.StatusTooManyRequests)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`[{"address":"0xabc","isSanctioned":false}]`))
+	}))
+	defer srv.Close()
+
+	o := New(Config{Enabled: true})
+	o.endpoint = srv.URL
+	o.client = srv.Client()
+
+	banned, err := o.IsBanned("0xabc", nil)
+	if err != nil || banned {
+		t.Fatalf("banned=%v err=%v", banned, err)
+	}
+	if calls.Load() != 3 {
+		t.Fatalf("calls=%d want 3", calls.Load())
+	}
+}

@@ -17,11 +17,12 @@ const (
 	defaultEndpoint = "https://api.trmlabs.com/public/v1/sanctions/screening"
 	defaultCacheTTL = 6 * time.Hour
 	httpTimeout     = 5 * time.Second
+	fetchAttempts   = 3
+	fetchRetryWait  = 200 * time.Millisecond
 )
 
-// Config configures the TRM free Sanctions Screening client.
-// ApiKey is optional: the public endpoint works without a key (low rate limits);
-// a TRM sanctions API key raises those limits.
+// Config configures the TRM Sanctions Screening client.
+// ApiKey is required when Enabled (enforced by config.OFACConfig.Validate).
 type Config struct {
 	Enabled  bool
 	ApiKey   string
@@ -165,9 +166,31 @@ func (o *OFAC) fetch(addresses []string) (map[string]bool, error) {
 		return nil, err
 	}
 
+	var lastErr error
+	for attempt := 1; attempt <= fetchAttempts; attempt++ {
+		out, retryable, err := o.fetchOnce(payload)
+		if err == nil {
+			for _, addr := range addresses {
+				key := normalizeAddress(addr)
+				if _, ok := out[key]; !ok {
+					return nil, fmt.Errorf("TRM sanctions response missing address %s", key)
+				}
+			}
+			return out, nil
+		}
+		lastErr = err
+		if !retryable || attempt == fetchAttempts {
+			break
+		}
+		time.Sleep(fetchRetryWait)
+	}
+	return nil, lastErr
+}
+
+func (o *OFAC) fetchOnce(payload []byte) (map[string]bool, bool, error) {
 	req, err := http.NewRequest(http.MethodPost, o.endpoint, bytes.NewReader(payload))
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
@@ -178,31 +201,31 @@ func (o *OFAC) fetch(addresses []string) (map[string]bool, error) {
 
 	resp, err := o.client.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, true, err
 	}
 	defer resp.Body.Close()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return nil, true, err
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("TRM sanctions API HTTP %d: %s", resp.StatusCode, truncateForLog(respBody))
+		retryable := resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode >= 500
+		return nil, retryable, fmt.Errorf("TRM sanctions API HTTP %d: %s", resp.StatusCode, truncateForLog(respBody))
 	}
 
 	var results []screenResponse
 	if err := json.Unmarshal(respBody, &results); err != nil {
-		return nil, fmt.Errorf("decode TRM sanctions response: %w", err)
+		return nil, false, fmt.Errorf("decode TRM sanctions response: %w", err)
 	}
 
-	out := make(map[string]bool, len(addresses))
-	for _, addr := range addresses {
-		out[normalizeAddress(addr)] = false
-	}
+	// Only addresses present in the response are recorded. Callers must treat
+	// a missing address as an error (fail closed), not as "not sanctioned".
+	out := make(map[string]bool, len(results))
 	for _, item := range results {
 		out[normalizeAddress(item.Address)] = item.IsSanctioned
 	}
-	return out, nil
+	return out, false, nil
 }
 
 func normalizeAddress(address string) string {

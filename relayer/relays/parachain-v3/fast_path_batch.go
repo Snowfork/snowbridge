@@ -24,7 +24,7 @@ const (
 	v1FeeFull
 )
 
-// buildFastPathMessageBatch scans V2 (no OFAC) and V1 in parallel, generates MMR
+// buildFastPathMessageBatch scans V2 (with OFAC) and V1 in parallel, generates MMR
 // proofs, and packs submit calls. V2 collected fee includes UI/service fee when
 // available. V1 fee accounting follows feeMode.
 func (li *BeefyInstantSyncer) buildFastPathMessageBatch(

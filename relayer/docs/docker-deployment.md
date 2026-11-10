@@ -61,7 +61,7 @@ Minimum recommended specifications:
 2. **Configure your .env file with:**
    - RPC endpoints
    - Private key references (see Private Keys section)
-   - (Mainnet only) Optional `TRM_API_KEY` for higher OFAC screening limits
+   - (Mainnet only) `TRM_API_KEY` required when `OFAC_ENABLED=true`
 
 3. **Start the relayers:**
    ```bash
@@ -187,7 +187,7 @@ The execution and parachain relays screen addresses via TRM Labs' free Sanctions
 (`POST https://api.trmlabs.com/public/v1/sanctions/screening`), with an in-process cache
 (clean results TTL; sanctioned hits cached for the process lifetime).
 
-- **Mainnet**: Enable with `OFAC_ENABLED=true`. `TRM_API_KEY` is optional (raises rate limits).
+- **Mainnet**: Enable with `OFAC_ENABLED=true`. `TRM_API_KEY` is required.
 - **Testnets**: Disabled by default
 - Optional config: `ofac.cache-ttl-secs` (default 6h for clean results)
 
