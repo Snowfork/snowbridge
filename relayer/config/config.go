@@ -71,8 +71,7 @@ func (p PolkadotConfig) Validate() error {
 }
 
 func (o OFACConfig) Validate() error {
-	if o.Enabled && o.ApiKey == "" {
-		return errors.New("OFAC is enabled but no [apiKey] set")
-	}
+	// ApiKey is optional: TRM's public sanctions endpoint works without a key
+	// (lower rate limits). A key raises those limits when available.
 	return nil
 }

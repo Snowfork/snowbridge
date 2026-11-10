@@ -22,7 +22,8 @@ const (
 )
 
 // Config configures the TRM Sanctions Screening client.
-// ApiKey is required when Enabled (enforced by config.OFACConfig.Validate).
+// ApiKey is optional: the public endpoint works without a key (lower rate
+// limits); a TRM sanctions API key raises those limits.
 type Config struct {
 	Enabled  bool
 	ApiKey   string

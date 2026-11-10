@@ -59,7 +59,7 @@ Minimum recommended specifications:
 2. **Configure your .env file with:**
    * RPC endpoints
    * Private key references (see [Private Keys](run-relayers.md#private-keys) section)
-   * (Mainnet only) `TRM_API_KEY` required when `OFAC_ENABLED=true`
+   * (Mainnet only) Optional `TRM_API_KEY` for higher OFAC screening limits
 3.  **Start the relayers:**
 
     ```bash
@@ -159,7 +159,7 @@ All endpoints are configured via environment variables:
 The execution and parachain relays screen addresses via TRM Labs' free Sanctions API,
 with in-process caching of results.
 
-* **Mainnet**: Enable with `OFAC_ENABLED=true`. `TRM_API_KEY` is required.
+* **Mainnet**: Enable with `OFAC_ENABLED=true`. `TRM_API_KEY` is optional (raises rate limits).
 * **Testnets**: Disabled by default
 
 ### Fund Relayer Accounts
