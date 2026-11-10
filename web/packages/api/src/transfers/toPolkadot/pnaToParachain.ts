@@ -217,6 +217,9 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
             deliveryFeeInEther,
         )
 
+        // Remains on AH after InitiateTransfer + serviceFee for DepositAsset(AllOf).
+        const assetHubDepositPad = getAssetHubEtherMinBalance(registry)
+
         const breakdown: DeliveryFee["breakdown"] = {}
         addBreakdown(breakdown, "assetHubDelivery", { amount: deliveryFeeInEther, symbol: "ETH" })
         addBreakdown(breakdown, "assetHubDelivery", { amount: deliveryFeeInDOT, symbol: "DOT" })
@@ -246,6 +249,10 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
                 symbol: "DOT",
             })
         }
+        addBreakdown(breakdown, "assetHubDepositPad", {
+            amount: assetHubDepositPad,
+            symbol: "ETH",
+        })
         addBreakdown(breakdown, "relayer", { amount: relayerFee, symbol: "ETH" })
         addBreakdown(breakdown, "extrinsic", { amount: extrinsicFeeDot, symbol: "DOT" })
         addBreakdown(breakdown, "extrinsic", { amount: extrinsicFeeEther, symbol: "ETH" })
@@ -256,7 +263,8 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
         const summary = [
             {
                 description: "XCM execution fees",
-                amount: assetHubExecutionFeeEther + destinationExecutionFeeEther,
+                amount:
+                    assetHubExecutionFeeEther + destinationExecutionFeeEther + assetHubDepositPad,
                 symbol: "ETH",
             },
             {
@@ -611,6 +619,11 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
                 findInBreakdown(inputFee.breakdown, "destinationDelivery", "ETH")
 
             let xcm
+            const assetHubDepositPad = findInBreakdownOrZero(
+                inputFee.breakdown,
+                "assetHubDepositPad",
+                "ETH",
+            )
             if (isDOT(inputFee.feeAsset)) {
                 xcm = buildAssetHubPNAReceivedXcmWithDOTFee(
                     assetHub.registry,
@@ -627,6 +640,7 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
                     "0x0000000000000000000000000000000000000000000000000000000000000000",
                     transfer.input.customXcm,
                     inputFee.serviceFee,
+                    assetHubDepositPad,
                 )
             } else {
                 xcm = buildAssetHubPNAReceivedXcm(
@@ -643,6 +657,7 @@ export class PNAToParachain<T extends EthereumProviderTypes> implements Transfer
                     "0x0000000000000000000000000000000000000000000000000000000000000000",
                     transfer.input.customXcm,
                     inputFee.serviceFee,
+                    assetHubDepositPad,
                 )
             }
             let result = await assetHubImpl.dryRunXcm(

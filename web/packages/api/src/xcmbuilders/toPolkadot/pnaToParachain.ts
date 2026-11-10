@@ -25,6 +25,8 @@ export function buildAssetHubPNAReceivedXcm(
     topic: string,
     customXcm?: any[],
     serviceFee?: ServiceFee,
+    // Extra ether that must remain after InitiateTransfer + serviceFee for AllOf.
+    assetHubDepositPad: bigint = 0n,
 ) {
     let ether = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
     let beneficiaryLocation = accountToLocation(beneficiary)
@@ -71,9 +73,12 @@ export function buildAssetHubPNAReceivedXcm(
                     },
                 ],
             },
-            // Payload ether on top of the fee ether: the destination execution
-            // fee plus the service fee.
-            ...buildPayloadEtherDeposit(ether, remoteExecutionFee + (serviceFee?.amount ?? 0n)),
+            // Payload ether on top of the fee ether: destination execution fee,
+            // service fee, and AH AllOf deposit pad (not taken by InitiateTransfer).
+            ...buildPayloadEtherDeposit(
+                ether,
+                remoteExecutionFee + (serviceFee?.amount ?? 0n) + assetHubDepositPad,
+            ),
             {
                 descendOrigin: {
                     x1: [
@@ -358,6 +363,7 @@ export function buildAssetHubPNAReceivedXcmWithDOTFee(
     topic: string,
     customXcm?: any[],
     serviceFee?: ServiceFee,
+    assetHubDepositPad: bigint = 0n,
 ) {
     let ether = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
     let beneficiaryLocation = accountToLocation(beneficiary)
@@ -404,9 +410,11 @@ export function buildAssetHubPNAReceivedXcmWithDOTFee(
                     },
                 ],
             },
-            // Payload ether on top of the fee ether: the destination execution
-            // fee plus the service fee.
-            ...buildPayloadEtherDeposit(ether, remoteEtherFeeAmount + (serviceFee?.amount ?? 0n)),
+            // Payload ether: destination execution + service fee + AllOf deposit pad.
+            ...buildPayloadEtherDeposit(
+                ether,
+                remoteEtherFeeAmount + (serviceFee?.amount ?? 0n) + assetHubDepositPad,
+            ),
             {
                 descendOrigin: {
                     x1: [

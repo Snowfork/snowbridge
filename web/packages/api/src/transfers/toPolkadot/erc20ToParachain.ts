@@ -228,6 +228,9 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
             deliveryFeeInEther,
         )
 
+        // Remains on AH after InitiateTransfer + serviceFee for DepositAsset(AllOf).
+        const assetHubDepositPad = getAssetHubEtherMinBalance(registry)
+
         const breakdown: DeliveryFee["breakdown"] = {}
         addBreakdown(breakdown, "assetHubDelivery", { amount: deliveryFeeInEther, symbol: "ETH" })
         addBreakdown(breakdown, "assetHubDelivery", { amount: deliveryFeeInDOT, symbol: "DOT" })
@@ -257,6 +260,10 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
                 symbol: "DOT",
             })
         }
+        addBreakdown(breakdown, "assetHubDepositPad", {
+            amount: assetHubDepositPad,
+            symbol: "ETH",
+        })
         addBreakdown(breakdown, "relayer", { amount: relayerFee, symbol: "ETH" })
         addBreakdown(breakdown, "extrinsic", { amount: extrinsicFeeDot, symbol: "DOT" })
         addBreakdown(breakdown, "extrinsic", { amount: extrinsicFeeEther, symbol: "ETH" })
@@ -267,7 +274,8 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
         const summary = [
             {
                 description: "XCM execution fees",
-                amount: assetHubExecutionFeeEther + destinationExecutionFeeEther,
+                amount:
+                    assetHubExecutionFeeEther + destinationExecutionFeeEther + assetHubDepositPad,
                 symbol: "ETH",
             },
             {
@@ -625,6 +633,10 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
                 findInBreakdown(inputFee.breakdown, "destinationDelivery", "ETH")
             const relayerFee = findInBreakdown(inputFee.breakdown, "relayer", "ETH")
             const payloadValue = transfer.computed.totalValue - assetHubFee - relayerFee
+            // For ETH, second RAD is tokenAmount + etherAmount; payloadValue already
+            // includes amount. Pass only accompanying fee ether as etherAmount.
+            const etherAmount =
+                tokenAddress === ETHER_TOKEN_ADDRESS ? payloadValue - amount : payloadValue
 
             let xcm
             if (isDOT(inputFee.feeAsset)) {
@@ -632,7 +644,7 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
                     assetHub.registry,
                     registry.ethChainId,
                     tokenAddress,
-                    payloadValue,
+                    etherAmount,
                     assetHubFee,
                     amount,
                     claimer,
@@ -650,7 +662,7 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
                     assetHub.registry,
                     registry.ethChainId,
                     tokenAddress,
-                    payloadValue,
+                    etherAmount,
                     assetHubFee,
                     amount,
                     claimer,

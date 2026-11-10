@@ -22,6 +22,9 @@ export type ToPolkadotFeeKey =
     | "assetHubExecution"
     | "destinationDelivery"
     | "destinationExecution"
+    // Ether that must remain on AH after InitiateTransfer + serviceFee so the
+    // trailing DepositAsset(AllOf ether→beneficiary) is not empty / below ED.
+    | "assetHubDepositPad"
     | "relayer"
     | "extrinsic"
     | "serviceFee"

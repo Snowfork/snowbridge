@@ -118,7 +118,11 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
             claimer,
             executionFee: gatewayExecutionFee,
             relayerFee,
-            destinationExecutionFee: destExecutionFeeEther + (serviceFee?.amount ?? 0n),
+            // Pad stays on AH after InitiateTransfer + serviceFee for AllOf dust.
+            destinationExecutionFee:
+                destExecutionFeeEther +
+                (serviceFee?.amount ?? 0n) +
+                getAssetHubEtherMinBalance(registry),
             outputAmount: amount,
             swap,
         })
@@ -278,6 +282,10 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
             deliveryFeeInEther,
         )
 
+        // Ether that remains on AH after InitiateTransfer + serviceFee so the
+        // trailing DepositAsset(AllOf) is not empty when PayFees surplus is 0.
+        const assetHubDepositPad = getAssetHubEtherMinBalance(registry)
+
         // Total ether that must arrive on Asset Hub to cover AH execution, the
         // relayer (which already includes the BridgeHub->AH delivery), and the
         // AH->destination delivery + destination execution legs.
@@ -286,7 +294,8 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
             destinationDeliveryFeeEther +
             destinationExecutionFeeEther +
             relayerFee +
-            (serviceFee?.amount ?? 0n)
+            (serviceFee?.amount ?? 0n) +
+            assetHubDepositPad
 
         // Calculate fee with Across SDK
         let bridgeFeeInL2Token = 0n,
@@ -435,6 +444,10 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
             amount: destinationExecutionFeeEther,
             symbol: "ETH",
         })
+        addBreakdown(breakdown, "assetHubDepositPad", {
+            amount: assetHubDepositPad,
+            symbol: "ETH",
+        })
         addBreakdown(breakdown, "relayer", { amount: relayerFee, symbol: "ETH" })
         if (serviceFee) {
             addBreakdown(breakdown, "serviceFee", { amount: serviceFee.amount, symbol: "ETH" })
@@ -451,7 +464,8 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
         const summary: DeliveryFee["summary"] = [
             {
                 description: "XCM execution fees",
-                amount: assetHubExecutionFeeEther + destinationExecutionFeeEther,
+                amount:
+                    assetHubExecutionFeeEther + destinationExecutionFeeEther + assetHubDepositPad,
                 symbol: "ETH",
             },
             {
@@ -600,7 +614,12 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
             claimer: claimerLocationToBytes(claimer),
             executionFee: assetHubExecutionFee,
             relayerFee: findInBreakdown(fee.breakdown, "relayer", "ETH"),
-            destinationExecutionFee: destExecutionFeeEther + (fee.serviceFee?.amount ?? 0n),
+            // assetHubDepositPad is not part of InitiateTransfer remote fees; it
+            // remains on AH for DepositAsset(AllOf) after the serviceFee take.
+            destinationExecutionFee:
+                destExecutionFeeEther +
+                (fee.serviceFee?.amount ?? 0n) +
+                findInBreakdownOrZero(fee.breakdown, "assetHubDepositPad", "ETH"),
         }
         const l2FeeTokenAddress =
             context.environment.l2Bridge?.l2Chains[this.from.id]?.feeTokenAddress
@@ -932,11 +951,18 @@ export class ERC20ToParachain<T extends EthereumProviderTypes> implements Transf
                     ? transfer.computed.totalValue - bridgeFeeInL2Token
                     : transfer.computed.totalValue
             const payloadValue = deliveredValue - assetHubFee - relayerFee
+            // For ETH, buildAssetHubERC20ReceivedXcm second RAD is
+            // tokenAmount + etherAmount. payloadValue already includes amount, so
+            // etherAmount must be only the accompanying fee ether (remote + service
+            // + deposit pad). Passing payloadValue double-counted amount and made
+            // AllOf succeed in validate while live Gateway XCM failed.
+            const etherAmount =
+                tokenAddress === ETHER_TOKEN_ADDRESS ? payloadValue - amount : payloadValue
             const xcm = buildAssetHubERC20ReceivedXcm(
                 assetHub.registry,
                 registry.ethChainId,
                 tokenAddress,
-                payloadValue,
+                etherAmount,
                 assetHubFee,
                 amount,
                 claimer,
