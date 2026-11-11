@@ -1,6 +1,7 @@
 package mock
 
 import (
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/relays/beacon/header/syncer/scale"
 )
@@ -9,6 +10,7 @@ import (
 type StateService struct {
 	BlockRootProofs       map[uint64]*scale.BlockRootProof
 	FinalizedHeaderProofs map[uint64][]types.H256
+	FinalizedHeaderRoots  map[uint64]common.Hash
 	SyncCommitteeProofs   map[string]*scale.SyncCommitteeProof
 	HealthError           error
 }
@@ -25,6 +27,13 @@ func (m *StateService) GetFinalizedHeaderProof(slot uint64) ([]types.H256, error
 		return proof, nil
 	}
 	return []types.H256{}, nil
+}
+
+func (m *StateService) GetFinalizedHeaderCheckpointRoot(slot uint64) (common.Hash, error) {
+	if root, ok := m.FinalizedHeaderRoots[slot]; ok {
+		return root, nil
+	}
+	return common.Hash{}, nil
 }
 
 func (m *StateService) GetSyncCommitteeProof(slot uint64, period string) (*scale.SyncCommitteeProof, error) {

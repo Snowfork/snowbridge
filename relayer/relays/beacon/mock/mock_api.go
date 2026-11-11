@@ -1,6 +1,7 @@
 package mock
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -16,6 +17,8 @@ type API struct {
 	BlocksAtSlot                      map[uint64]api.BeaconBlockResponse
 	Header                            map[common.Hash]api.BeaconHeader
 	BeaconStates                      map[uint64]bool
+	FinalizedCheckpointEventsCh       chan api.FinalizedCheckpointEvent
+	FinalizedCheckpointErrorsCh       chan error
 }
 
 func (m *API) GetHeaderAtHead() (api.BeaconHeader, error) {
@@ -90,4 +93,8 @@ func (m *API) GetBeaconState(stateIdOrSlot string) ([]byte, error) {
 		return nil, fmt.Errorf("error reading file: %w", err)
 	}
 	return data, nil
+}
+
+func (m *API) SubscribeFinalizedCheckpoint(ctx context.Context) (<-chan api.FinalizedCheckpointEvent, <-chan error, error) {
+	return m.FinalizedCheckpointEventsCh, m.FinalizedCheckpointErrorsCh, nil
 }

@@ -226,13 +226,48 @@ async fn lookup_foreign_asset_location(
         EstimatorError::InvalidCommand(format!("Foreign asset ID not found: {}", foreign_id))
     })?;
 
-    // Convert from bridge hub Location to asset hub Location
-    let encoded = codec::Encode::encode(&bridge_location);
-    let decoded_location: Location = codec::Decode::decode(&mut &encoded[..]).map_err(|e| {
+    let convert_err = |e: codec::Error| {
         EstimatorError::InvalidCommand(format!("Failed to convert Location types: {:?}", e))
-    })?;
+    };
+    let location: xcm::latest::Location =
+        codec::Decode::decode(&mut &codec::Encode::encode(&bridge_location)[..])
+            .map_err(convert_err)?;
+    let location = reanchor_to_asset_hub(location)?;
+    codec::Decode::decode(&mut &codec::Encode::encode(&location)[..]).map_err(convert_err)
+}
 
-    Ok(decoded_location)
+#[cfg(feature = "polkadot")]
+const RELAY_NETWORK: xcm::latest::NetworkId = xcm::latest::NetworkId::Polkadot;
+#[cfg(not(feature = "polkadot"))]
+const RELAY_NETWORK: xcm::latest::NetworkId =
+    xcm::latest::NetworkId::ByGenesis(xcm::latest::WESTEND_GENESIS_HASH);
+
+/// `ForeignToNativeId` stores locations relative to Ethereum. Reanchor to Asset Hub the same way
+/// the BridgeHub inbound converter does, so `WithdrawAsset` matches what AH actually executes.
+fn reanchor_to_asset_hub(
+    location: xcm::latest::Location,
+) -> Result<xcm::latest::Location, EstimatorError> {
+    use xcm::latest::{Junction, Location as XcmLocation, NetworkId as XcmNetworkId, Reanchorable};
+
+    let asset_hub_from_ethereum = XcmLocation::new(
+        1,
+        [
+            Junction::GlobalConsensus(RELAY_NETWORK),
+            Junction::Parachain(ASSET_HUB_PARA_ID),
+        ],
+    );
+    let ethereum_universal = [Junction::GlobalConsensus(XcmNetworkId::Ethereum {
+        chain_id: CHAIN_ID,
+    })]
+    .into();
+    location
+        .reanchored(&asset_hub_from_ethereum, &ethereum_universal)
+        .map_err(|location| {
+            EstimatorError::InvalidCommand(format!(
+                "Cannot reanchor foreign asset location to Asset Hub: {:?}",
+                location
+            ))
+        })
 }
 
 /// Construct the remote XCM needed to create a new asset in the `ForeignAssets` pallet
@@ -412,4 +447,75 @@ fn parse_hex_string(hex_str: &str) -> Result<Vec<u8>, EstimatorError> {
 
     hex::decode(hex_str)
         .map_err(|e| EstimatorError::InvalidCommand(format!("Invalid hex string: {}", e)))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use codec::Decode;
+    use xcm::latest::{Junction as J, Location as XcmLocation, NetworkId as XcmNetworkId};
+
+    fn reanchor(location: XcmLocation) -> XcmLocation {
+        reanchor_to_asset_hub(location).unwrap()
+    }
+
+    #[test]
+    fn relay_native_asset_becomes_parent() {
+        let dot = XcmLocation::new(1, [J::GlobalConsensus(RELAY_NETWORK)]);
+        assert_eq!(reanchor(dot), XcmLocation::parent());
+    }
+
+    #[test]
+    fn asset_hub_asset_becomes_local() {
+        let asset = XcmLocation::new(
+            1,
+            [
+                J::GlobalConsensus(RELAY_NETWORK),
+                J::Parachain(ASSET_HUB_PARA_ID),
+                J::PalletInstance(50),
+                J::GeneralIndex(31337),
+            ],
+        );
+        assert_eq!(
+            reanchor(asset),
+            XcmLocation::new(0, [J::PalletInstance(50), J::GeneralIndex(31337)])
+        );
+    }
+
+    #[test]
+    fn sibling_parachain_asset_drops_global_consensus() {
+        let asset = XcmLocation::new(
+            1,
+            [
+                J::GlobalConsensus(RELAY_NETWORK),
+                J::Parachain(2000),
+                J::GeneralIndex(7),
+            ],
+        );
+        assert_eq!(
+            reanchor(asset),
+            XcmLocation::new(1, [J::Parachain(2000), J::GeneralIndex(7)])
+        );
+    }
+
+    #[test]
+    fn other_consensus_asset_stays_global() {
+        let ksm = XcmLocation::new(1, [J::GlobalConsensus(XcmNetworkId::Kusama)]);
+        assert_eq!(
+            reanchor(ksm),
+            XcmLocation::new(2, [J::GlobalConsensus(XcmNetworkId::Kusama)])
+        );
+    }
+
+    /// WUD as stored in mainnet BridgeHub `ForeignToNativeId`.
+    #[cfg(feature = "polkadot")]
+    #[test]
+    fn mainnet_wud_storage_value_reanchors_to_asset_hub_assets() {
+        let stored = hex::decode("0104090200a10f043205a6e90100").unwrap();
+        let location = XcmLocation::decode(&mut &stored[..]).unwrap();
+        assert_eq!(
+            reanchor(location),
+            XcmLocation::new(0, [J::PalletInstance(50), J::GeneralIndex(31337)])
+        );
+    }
 }

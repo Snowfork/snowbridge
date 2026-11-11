@@ -22,6 +22,7 @@ pub fn make_{{TestCase}}_message() -> EventFixture {
                 {{/InboundMessage.EventLog.Topics}}
                 ],
                 data: hex!("{{InboundMessage.EventLog.Data}}").into(),
+                tx_index: {{InboundMessage.EventLog.TxIndex}},
             },
             proof: Proof {
                 receipt_proof: (vec![

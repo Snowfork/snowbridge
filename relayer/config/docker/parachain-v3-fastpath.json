@@ -1,0 +1,42 @@
+{
+  "source": {
+    "ethereum": {
+      "endpoint": "${ETHEREUM_ENDPOINT}",
+      "heartbeat-secs": ${ETHEREUM_HEARTBEAT_SECS},
+      "pending-tx-timeout-secs": ${PENDING_TX_TIMEOUT_SECS}
+    },
+    "polkadot": {
+      "endpoint": "${POLKADOT_ENDPOINT}",
+      "heartbeat-secs": 45
+    },
+    "parachain": {
+      "endpoint": "${BRIDGEHUB_ENDPOINT}",
+      "heartbeat-secs": 45
+    },
+    "contracts": {
+      "BeefyClient": "${BEEFY_CLIENT_CONTRACT}",
+      "Gateway": "${GATEWAY_CONTRACT}"
+    }
+  },
+  "sink": {
+    "ethereum": {
+      "endpoint": "${FLASHBOTS_ENDPOINT}",
+      "pending-tx-timeout-secs": ${PENDING_TX_TIMEOUT_SECS}
+    },
+    "contracts": {
+      "Gateway": "${GATEWAY_CONTRACT}",
+      "Multicall3": "${MULTICALL3_CONTRACT}"
+    }
+  },
+  "reward-address": "${REWARD_ADDRESS}",
+  "ofac": {
+    "enabled": ${OFAC_ENABLED},
+    "apiKey": "${TRM_API_KEY}"
+  },
+  "ignoreNonces": ${PARACHAIN_V3_IGNORE_NONCES},
+  "deadNoncesPath": "${PARACHAIN_V3_DEAD_NONCES_PATH}",
+  "extra-private-submit-endpoints": [
+    "${TITAN_ENDPOINT}",
+    "${QUASAR_ENDPOINT}"
+  ]
+}

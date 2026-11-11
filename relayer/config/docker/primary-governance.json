@@ -29,6 +29,6 @@
   },
   "ofac": {
     "enabled": ${OFAC_ENABLED},
-    "apiKey": "${CHAINALYSIS_API_KEY}"
+    "apiKey": "${TRM_API_KEY}"
   }
 }

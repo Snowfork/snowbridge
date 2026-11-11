@@ -12,10 +12,10 @@ For new operators, we recommend starting with:
 
 | Relayer | Direction | Reward Potential | Complexity |
 |---------|-----------|------------------|------------|
-| `parachain-v2` | Polkadot → Ethereum | High | Medium |
-| `ethereum-v2` | Ethereum → Polkadot | Medium | Low |
+| `parachain-v3` | Polkadot → Ethereum | High | Medium |
+| `ethereum-v3` | Ethereum → Polkadot | Medium | Low |
 
-**Note:** The `beefy` and `beacon` relayers are consensus relayers that are expensive to operate (high gas costs) and are run exclusively by the Snowfork team. Individual operators do not need to run these.
+**Note:** Ethereum → Polkadot light-client updates are handled inside `ethereum-v3` (no standalone `beacon` service).
 
 ### Hardware Requirements
 
@@ -27,8 +27,8 @@ Minimum recommended specifications:
 
 ### Cost Considerations
 
-- **Ethereum relayers** (`parachain-v2`): Require ETH for gas fees when submitting proofs to Ethereum
-- **Polkadot relayers** (`ethereum-v2`, `beacon`): Require DOT/KSM for transaction fees (very low cost)
+- **Ethereum relayers** (`parachain-v3`): Require ETH for gas fees when submitting proofs to Ethereum
+- **Polkadot relayers** (`ethereum-v3`): Require DOT/KSM for transaction fees (very low cost)
 - **RPC endpoints**: You'll need access to archive nodes (can use public endpoints or run your own)
 
 ## Prerequisites
@@ -61,21 +61,16 @@ Minimum recommended specifications:
 2. **Configure your .env file with:**
    - RPC endpoints
    - Private key references (see Private Keys section)
-   - (Mainnet only) Chainalysis API key for OFAC compliance
+   - (Mainnet only) Optional `TRM_API_KEY` for higher OFAC screening limits
 
 3. **Start the relayers:**
    ```bash
    docker compose up -d
    ```
 
-   To start all services including consensus relayers (Snowfork only):
-   ```bash
-   docker compose --profile consensus up -d
-   ```
-
 ### Option B: Run a Single Relayer (Recommended for Beginners)
 
-Example: Running only the `parachain-v2` relayer on mainnet:
+Example: Running only the `parachain-v3` relayer on mainnet:
 
 1. **Create your .env file:**
    ```bash
@@ -84,9 +79,9 @@ Example: Running only the `parachain-v2` relayer on mainnet:
 
 2. **Edit .env with your RPC endpoints and Ethereum private key**
 
-3. **Start only the parachain-v2 relayer:**
+3. **Start only the parachain-v3 relayer:**
    ```bash
-   docker compose up -d parachain-v2
+   docker compose up -d parachain-v3
    ```
 
 This is the simplest way to start earning rewards by relaying Polkadot → Ethereum messages.
@@ -95,33 +90,21 @@ This is the simplest way to start earning rewards by relaying Polkadot → Ether
 
 The Docker Compose setup runs the following relayer services:
 
-| Service | Description | Keys Required | Profile |
-|---------|-------------|---------------|---------|
-| `beacon-state-service` | Caches beacon state proofs | None | default |
-| `beacon` | Relays Ethereum beacon headers to Polkadot | Substrate | consensus |
-| `ethereum-v2` | Relays Ethereum messages to Polkadot (v2) | Substrate | default |
-| `ethereum` | Relays Ethereum messages to Polkadot (v1) | Substrate | default |
-| `beefy` | Relays BEEFY commitments to Ethereum | Ethereum | consensus |
-| `beefy-on-demand` | On-demand BEEFY relay | Ethereum | consensus |
-| `parachain-v2` | Relays Polkadot messages to Ethereum (v2) | Ethereum | default |
-| `parachain` | Relays Polkadot messages to Ethereum (v1) | Ethereum | default |
-| `reward` | Processes relayer rewards | Substrate | default |
-
-**Note:** Services in the `consensus` profile are run by the Snowfork team and require `--profile consensus` to start. Individual relayer operators do not need to run these services.
+| Service | Description | Keys Required |
+|---------|-------------|---------------|
+| `beacon-state-service` | Caches beacon state proofs | None |
+| `ethereum-v3` | Relays Ethereum messages + LC updates to Polkadot | Substrate |
+| `parachain-v3` | Relays Polkadot messages to Ethereum | Ethereum |
+| `reward` | Processes relayer rewards | Substrate |
 
 ### Service Dependencies
 
 ```
 beacon-state-service (starts first, health checked)
-    ├── beacon (consensus profile)
-    ├── ethereum-v2
-    ├── ethereum
+    ├── ethereum-v3  (LC catch-up + V1/V2 delivery)
     └── reward
 
-beefy (independent, consensus profile)
-beefy-on-demand (independent, consensus profile)
-parachain-v2 (independent)
-parachain (independent)
+parachain-v3 (independent)
 ```
 
 ## Configuration
@@ -151,14 +134,15 @@ There are three options for providing private keys:
 Set the private key directly in your `.env` file:
 
 ```bash
-# For Substrate relayers (ethereum-v2, beacon, reward)
+# For Substrate relayers (ethereum-v3, reward)
 # Use the secret seed phrase or hex-encoded private key
-BEACON_RELAY_SUBSTRATE_KEY="//Alice"  # Dev account
-BEACON_RELAY_SUBSTRATE_KEY="0x..."    # Hex private key
+ETHEREUM_V3_RELAY_SUBSTRATE_KEY="//Alice"  # Dev account
+ETHEREUM_V3_RELAY_SUBSTRATE_KEY="0x..."    # Hex private key
 
-# For Ethereum relayers (parachain-v2, beefy)
+# For Ethereum relayers (parachain-v3)
 PARACHAIN_RELAY_ETHEREUM_KEY="0x..."  # Hex private key (without 0x prefix)
 ```
+
 
 Then update docker-compose.yml to use `--substrate.private-key` or `--ethereum.private-key` instead of the `-id` variants.
 
@@ -179,8 +163,7 @@ For production deployments, use AWS Secrets Manager:
 
 ```bash
 # Pattern: {network}/{relay-name}
-BEACON_RELAY_SUBSTRATE_KEY_ID=mainnet/beacon-relay
-ETHEREUM_V2_RELAY_SUBSTRATE_KEY_ID=mainnet/ethereum-relay-v2
+ETHEREUM_V3_RELAY_SUBSTRATE_KEY_ID=mainnet/ethereum-relay-v2
 ```
 
 Create secrets in AWS Secrets Manager containing the raw private key strings. Requires AWS credentials configured.
@@ -200,10 +183,13 @@ All endpoints are configured via environment variables:
 
 ### OFAC Compliance
 
-The execution and parachain relays support OFAC compliance checking via Chainalysis.
+The execution and parachain relays screen addresses via TRM Labs' free Sanctions API
+(`POST https://api.trmlabs.com/public/v1/sanctions/screening`), with an in-process cache
+(clean results TTL; sanctioned hits cached for the process lifetime).
 
-- **Mainnet**: Enabled by default, requires `CHAINALYSIS_API_KEY`
+- **Mainnet**: Enable with `OFAC_ENABLED=true`. `TRM_API_KEY` is optional (raises rate limits).
 - **Testnets**: Disabled by default
+- Optional config: `ofac.cache-ttl-secs` (default 6h for clean results)
 
 ## Operations
 
@@ -214,7 +200,7 @@ The execution and parachain relays support OFAC compliance checking via Chainaly
 docker compose logs -f
 
 # Specific service
-docker compose logs -f beacon
+docker compose logs -f ethereum-v3
 ```
 
 ### Stop relayers
@@ -226,7 +212,7 @@ docker compose down
 ### Restart a specific relayer
 
 ```bash
-docker compose restart ethereum-v2
+docker compose restart ethereum-v3
 ```
 
 ### Check health
@@ -240,7 +226,7 @@ curl http://localhost:8080/health
 
 The setup creates persistent volumes for:
 - `beacon-state-data` - Beacon state service cache and persistence
-- `beacon-data` - Beacon relay local datastore
+- `ethereum-v3-data` - ethereum-v3 local datastore
 
 To reset state:
 ```bash
@@ -297,8 +283,8 @@ Common issues:
 
 Relayers earn rewards for successfully delivering messages:
 
-- **Polkadot → Ethereum** (`parachain-v2`): Rewards are paid in ETH on Ethereum
-- **Ethereum → Polkadot** (`ethereum-v2`): Rewards are paid in DOT on AssetHub
+- **Polkadot → Ethereum** (`parachain-v3`): Rewards are paid in ETH on Ethereum
+- **Ethereum → Polkadot** (`ethereum-v3`): Rewards are paid in DOT on AssetHub
 
 To claim rewards, configure the `REWARD_ADDRESS` environment variable with your reward destination address.
 
@@ -323,10 +309,10 @@ View logs locally:
 docker compose logs -f
 
 # Follow specific service
-docker compose logs -f parachain-v2
+docker compose logs -f parachain-v3
 
 # View last 100 lines
-docker compose logs --tail 100 ethereum-v2
+docker compose logs --tail 100 ethereum-v3
 ```
 
 ### Health Checks

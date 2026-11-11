@@ -2,6 +2,16 @@
 
 This tool calculates relaying profitability in the Ethereum -> Polkadot direction.
 
+After Asset Hub or Bridge Hub runtime upgrades, rebuild the estimator (and the
+relayer Docker image) with freshly fetched metadata. Stale subxt codegen fails
+at runtime with `Metadata(IncompatibleCodegen)` on dry-run APIs. The relayer
+Dockerfile re-fetches metadata on every release build via
+`GAS_ESTIMATOR_METADATA_CACHEBUST`, and the scheduled `check-runtime-upgrade`
+workflow compares live spec versions against the labels on the published image,
+auto-dispatching a `release-relayer` rebuild when they drift. Redeploying the
+running relayer with the rebuilt image is still a manual step — until then the
+relayer logs `ALERT: gas estimator metadata incompatible with live runtime`.
+
 ## Building
 
 Runtime metadata (`.bin` files) is gitignored and must be generated before building. Install [subxt-cli](https://crates.io/crates/subxt-cli) then run:

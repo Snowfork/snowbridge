@@ -1,0 +1,3 @@
+# Cached beacon state for the Gloas oracle test (~16MB). Refetched when absent.
+gloas_state.ssz
+gloas_state.root

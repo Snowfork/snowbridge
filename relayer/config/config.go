@@ -14,16 +14,39 @@ type ParachainConfig struct {
 
 type EthereumConfig struct {
 	Endpoint             string `mapstructure:"endpoint"`
+	// SubmitEndpoint is optional and used only for eth_sendRawTransaction (signed txs).
+	// Reads / eth_call / receipts / gas stay on Endpoint. Typical value: Flashbots Protect
+	// (e.g. https://rpc.flashbots.net/fast) so simulated reverts are dropped unpaid.
+	SubmitEndpoint       string `mapstructure:"submit-endpoint"`
 	GasFeeCap            uint64 `mapstructure:"gas-fee-cap"`
 	GasTipCap            uint64 `mapstructure:"gas-tip-cap"`
 	GasLimit             uint64 `mapstructure:"gas-limit"`
 	HeartbeatSecs        uint64 `mapstructure:"heartbeat-secs"`
 	PendingTxTimeoutSecs uint64 `mapstructure:"pending-tx-timeout-secs"`
+	// Headers are sent on every JSON-RPC request to Endpoint (e.g. an X-API-Key for a
+	// dry-run/forked-mainnet RPC). Empty means a plain dial with no extra headers.
+	// Not applied to SubmitEndpoint (builder RPCs expect a plain dial).
+	Headers map[string]string `mapstructure:"headers"`
 }
 
 type OFACConfig struct {
 	Enabled bool   `mapstructure:"enabled"`
 	ApiKey  string `mapstructure:"apiKey"`
+	// CacheTTLSecs is how long a clean (not sanctioned) TRM result is cached.
+	// Sanctioned hits are cached for the process lifetime. Zero uses the ofac package default.
+	CacheTTLSecs uint64 `mapstructure:"cache-ttl-secs"`
+}
+
+func (p ParachainConfig) ParseEndpoints() []string {
+	return ParseEndpoints(p.Endpoint)
+}
+
+func (e EthereumConfig) ParseEndpoints() []string {
+	return ParseEndpoints(e.Endpoint)
+}
+
+func (p PolkadotConfig) ParseEndpoints() []string {
+	return ParseEndpoints(p.Endpoint)
 }
 
 func (p ParachainConfig) Validate() error {
@@ -48,8 +71,7 @@ func (p PolkadotConfig) Validate() error {
 }
 
 func (o OFACConfig) Validate() error {
-	if o.Enabled && o.ApiKey == "" {
-		return errors.New("OFAC is enabled but no [apiKey] set")
-	}
+	// ApiKey is optional: TRM's public sanctions endpoint works without a key
+	// (lower rate limits). A key raises those limits when available.
 	return nil
 }

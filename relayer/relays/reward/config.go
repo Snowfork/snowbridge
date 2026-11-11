@@ -12,6 +12,9 @@ type Config struct {
 	Sink          SinkConfig   `mapstructure:"sink"`
 	RewardAddress string       `mapstructure:"reward-address"`
 	FetchInterval uint32       `mapstructure:"fetch-interval"`
+	// DeadNoncesPath is the file path where nonces that should never be
+	// claimed again are persisted (across restarts). Empty = in-memory only.
+	DeadNoncesPath string `mapstructure:"deadNoncesPath"`
 }
 
 type SourceConfig struct {

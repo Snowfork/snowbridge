@@ -25,7 +25,7 @@ jobs:
       - name: Setup go
         uses: actions/setup-go@v5
         with:
-          go-version: "^1.23"
+          go-version: "^1.26"
 
       - name: Install Go tools
         run: >
@@ -172,12 +172,43 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Record the runtime versions the gas estimator is built against so the
+      # check-runtime-upgrade workflow can detect when a parachain upgrade has
+      # outdated the published image. HTTPS twins of the wss endpoints in
+      # relayer/Dockerfile — keep in sync.
+      - name: Query live runtime spec versions
+        id: runtime_versions
+        run: |
+          set -euo pipefail
+          query_spec_version() {
+            curl -sf --max-time 30 -H "Content-Type: application/json" \
+              -d '{"id":1,"jsonrpc":"2.0","method":"state_getRuntimeVersion","params":[]}' "$1" \
+              | sed -n 's/.*"specVersion":\([0-9][0-9]*\).*/\1/p' | head -n 1
+          }
+          ah=$(query_spec_version "https://asset-hub-polkadot-rpc.n.dwellir.com")
+          bh=$(query_spec_version "https://bridge-hub-polkadot-rpc.n.dwellir.com")
+          if [ -z "$ah" ] || [ -z "$bh" ]; then
+            echo "Failed to query runtime spec versions (AH='$ah' BH='$bh')" >&2
+            exit 1
+          fi
+          echo "Asset Hub specVersion=$ah, Bridge Hub specVersion=$bh"
+          echo "ah=$ah" >> $GITHUB_OUTPUT
+          echo "bh=$bh" >> $GITHUB_OUTPUT
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./relayer/Dockerfile
           push: true
+          # Always re-fetch AH/BH metadata so the gas estimator is not baked against
+          # a cached runtime after parachain upgrades (IncompatibleCodegen on dry-run).
+          build-args: |
+            GAS_ESTIMATOR_METADATA_CACHEBUST=${{ github.run_id }}-${{ github.sha }}
+          labels: |
+            snowbridge.gas-estimator.ah-spec-version=${{ steps.runtime_versions.outputs.ah }}
+            snowbridge.gas-estimator.bh-spec-version=${{ steps.runtime_versions.outputs.bh }}
+          # A custom image_tag is a test build; only versioned releases move `latest`.
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.image_tag.outputs.tag }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ${{ !inputs.image_tag && format('{0}/{1}:latest', env.REGISTRY, env.IMAGE_NAME) || '' }}

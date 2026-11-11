@@ -7,7 +7,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/chain/relaychain"
-	"github.com/snowfork/snowbridge/relayer/relays/parachain-v2"
+	"github.com/snowfork/snowbridge/relayer/config"
+	parachain "github.com/snowfork/snowbridge/relayer/relays/parachain-v3"
 	"github.com/spf13/cobra"
 )
 
@@ -50,7 +51,7 @@ func ParachainHeadProofFn(cmd *cobra.Command, _ []string) error {
 	ctx := cmd.Context()
 
 	url, _ := cmd.Flags().GetString("url")
-	conn := relaychain.NewConnection(url, nil)
+	conn := relaychain.NewConnection(config.ParseEndpoints(url), nil)
 	err := conn.Connect(ctx)
 	if err != nil {
 		log.WithError(err).Error("Cannot connect.")

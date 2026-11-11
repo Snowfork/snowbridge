@@ -8,9 +8,10 @@ pub use asset_hub_westend_local_runtime::{
             junction::{Junction, NetworkId},
             junctions::Junctions,
             location::Location,
+            traits::Outcome,
             Hint, Instruction, Xcm,
         },
-        xcm::{double_encoded::DoubleEncoded, v3::OriginKind, VersionedXcm},
+        xcm::{double_encoded::DoubleEncoded, v3::OriginKind, VersionedLocation, VersionedXcm},
     },
 };
 
@@ -24,9 +25,10 @@ pub use asset_hub_westend_runtime::{
             junction::{Junction, NetworkId},
             junctions::Junctions,
             location::Location,
+            traits::Outcome,
             Hint, Instruction, Xcm,
         },
-        xcm::{double_encoded::DoubleEncoded, v3::OriginKind, VersionedXcm},
+        xcm::{double_encoded::DoubleEncoded, v3::OriginKind, VersionedLocation, VersionedXcm},
     },
 };
 
@@ -40,9 +42,10 @@ pub use asset_hub_paseo_runtime::{
             junction::{Junction, NetworkId},
             junctions::Junctions,
             location::Location,
+            traits::Outcome,
             Hint, Instruction, Xcm,
         },
-        xcm::{double_encoded::DoubleEncoded, v3::OriginKind, VersionedXcm},
+        xcm::{double_encoded::DoubleEncoded, v3::OriginKind, VersionedLocation, VersionedXcm},
     },
 };
 #[cfg(feature = "polkadot")]
@@ -55,9 +58,10 @@ pub use asset_hub_polkadot_runtime::{
             junction::{Junction, NetworkId},
             junctions::Junctions,
             location::Location,
+            traits::Outcome,
             Hint, Instruction, Xcm,
         },
-        xcm::{double_encoded::DoubleEncoded, v3::OriginKind, VersionedXcm},
+        xcm::{double_encoded::DoubleEncoded, v3::OriginKind, VersionedLocation, VersionedXcm},
     },
 };
 

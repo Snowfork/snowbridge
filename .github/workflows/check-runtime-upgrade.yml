@@ -1,0 +1,98 @@
+name: check-runtime-upgrade
+
+# Detects Asset Hub / Bridge Hub runtime upgrades that outdate the gas
+# estimator baked into the published relayer image (stale subxt codegen fails
+# at runtime with Metadata(IncompatibleCodegen) on dry-run). Compares live
+# on-chain spec versions against the labels release-relayer stamps on
+# :latest, and dispatches a rebuild on drift. Stateless: if a dispatched
+# rebuild fails, the labels stay stale and the next scheduled run retries.
+#
+# Note: this only rebuilds and publishes the image. Redeploying the running
+# ethereum-v3 container is still a manual step; until then the relayer logs
+# "ALERT: gas estimator metadata incompatible with live runtime".
+
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  packages: read
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: snowfork/snowbridge-relay
+  # HTTPS twins of the wss endpoints in relayer/Dockerfile — keep in sync.
+  ASSET_HUB_HTTP_URL: https://asset-hub-polkadot-rpc.n.dwellir.com
+  BRIDGE_HUB_HTTP_URL: https://bridge-hub-polkadot-rpc.n.dwellir.com
+
+jobs:
+  check-runtime-upgrade:
+    runs-on: snowbridge-runner
+    timeout-minutes: 10
+    steps:
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compare live runtime versions against latest image
+        id: check
+        run: |
+          set -euo pipefail
+          query_spec_version() {
+            curl -sf --max-time 30 -H "Content-Type: application/json" \
+              -d '{"id":1,"jsonrpc":"2.0","method":"state_getRuntimeVersion","params":[]}' "$1" \
+              | sed -n 's/.*"specVersion":\([0-9][0-9]*\).*/\1/p' | head -n 1
+          }
+          live_ah=$(query_spec_version "$ASSET_HUB_HTTP_URL")
+          live_bh=$(query_spec_version "$BRIDGE_HUB_HTTP_URL")
+          if [ -z "$live_ah" ] || [ -z "$live_bh" ]; then
+            echo "Failed to query live runtime spec versions (AH='$live_ah' BH='$live_bh')" >&2
+            exit 1
+          fi
+
+          image="$REGISTRY/$IMAGE_NAME:latest"
+          docker pull -q "$image"
+          image_ah=$(docker inspect --format '{{index .Config.Labels "snowbridge.gas-estimator.ah-spec-version"}}' "$image")
+          image_bh=$(docker inspect --format '{{index .Config.Labels "snowbridge.gas-estimator.bh-spec-version"}}' "$image")
+
+          echo "Live: AH=$live_ah BH=$live_bh | Image: AH=${image_ah:-<unlabeled>} BH=${image_bh:-<unlabeled>}"
+          if [ "$live_ah" = "$image_ah" ] && [ "$live_bh" = "$image_bh" ]; then
+            echo "Image metadata is current; no rebuild needed." >> "$GITHUB_STEP_SUMMARY"
+            echo "rebuild=false" >> "$GITHUB_OUTPUT"
+          else
+            # Unlabeled image (pre-labeling release) also lands here: rebuild
+            # once and the fresh image carries labels.
+            echo "Runtime upgrade detected (AH $image_ah -> $live_ah, BH $image_bh -> $live_bh); dispatching rebuild." >> "$GITHUB_STEP_SUMMARY"
+            echo "rebuild=true" >> "$GITHUB_OUTPUT"
+            echo "tag=runtime-upgrade-ah${live_ah}-bh${live_bh}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Dispatch release-relayer rebuild
+        if: steps.check.outputs.rebuild == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.check.outputs.tag }}
+        run: |
+          set -euo pipefail
+          api="https://api.github.com/repos/${{ github.repository }}/actions/workflows/release-relayer.yml"
+          # Skip if a release build is already queued or running.
+          for status in queued in_progress; do
+            count=$(curl -sf -H "Authorization: Bearer $GH_TOKEN" \
+              "$api/runs?status=$status&per_page=1" \
+              | sed -n 's/.*"total_count": *\([0-9][0-9]*\).*/\1/p' | head -n 1)
+            if [ "${count:-0}" -gt 0 ]; then
+              echo "A release-relayer run is already $status; skipping dispatch." | tee -a "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+          done
+          curl -sf -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "$api/dispatches" \
+            -d "{\"ref\":\"main\",\"inputs\":{\"image_tag\":\"$TAG\"}}"
+          echo "Dispatched release-relayer with image_tag=$TAG. Redeploy ethereum-v3 once the image is published." | tee -a "$GITHUB_STEP_SUMMARY"

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	beaconerrors "github.com/snowfork/snowbridge/relayer/relays/beacon/errors"
@@ -27,6 +28,21 @@ func NewClient(endpoint string) *Client {
 			Timeout: 60 * time.Second,
 		},
 	}
+}
+
+// GetFinalizedHeaderCheckpointRoot returns the finalized_checkpoint.root leaf proved for slot.
+// Returns ErrProofNotReady if the proof is not yet cached (503 response).
+func (c *Client) GetFinalizedHeaderCheckpointRoot(slot uint64) (common.Hash, error) {
+	url := fmt.Sprintf("%s/v1/proofs/finalized-header?slot=%d", c.endpoint, slot)
+	proofResp, err := c.fetchProof(url)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	leaf, err := util.HexToH256(proofResp.Leaf)
+	if err != nil {
+		return common.Hash{}, fmt.Errorf("parse finalized checkpoint leaf: %w", err)
+	}
+	return common.BytesToHash(leaf[:]), nil
 }
 
 // GetFinalizedHeaderProof fetches the finalized header proof for a slot
@@ -247,4 +263,3 @@ func (c *Client) fetchProof(url string) (*ProofResponse, error) {
 
 	return &proofResp, nil
 }
-
