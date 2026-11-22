@@ -87,7 +87,6 @@ start_lodestar() {
         --startValidators "0..7" \
         --enr.ip6 "127.0.0.1" \
         --rest.address "0.0.0.0" \
-        --eth1.providerUrls "http://127.0.0.1:8545" \
         --execution.urls "http://127.0.0.1:8551" \
         --execution.engineMock false \
         --dataDir "$ethereum_data_dir" \
