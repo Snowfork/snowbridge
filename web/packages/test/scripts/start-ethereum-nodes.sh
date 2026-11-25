@@ -22,7 +22,7 @@ if [ -z "${from_start_services:-}" ]; then
   sleep 5
   echo "Starting beacon node"
   pushd $root_dir/lodestar
-  ./lodestar beacon --dataDir="$ethereum_data_dir" --network=$chain --rest.namespace="*" --jwt-secret=$config_dir/jwtsecret --chain.archiveStateEpochFrequency=1 --checkpointSyncUrl=https://beaconstate-$chain.chainsafe.io >"$output_dir/lodestar.log" 2>&1 &
+  ./lodestar beacon --dataDir="$ethereum_data_dir" --network=$chain --rest.namespace="*" --jwt-secret=$config_dir/jwtsecret --chain.archiveStateEpochFrequency=1 --serveHistoricalState --checkpointSyncUrl=https://beaconstate-$chain.chainsafe.io >"$output_dir/lodestar.log" 2>&1 &
   popd
   wait
 fi
