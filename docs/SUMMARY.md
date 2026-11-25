@@ -14,6 +14,7 @@
     * [Create Agent](developers/snowbridge-v2/typescript-sdk/create-agent.md)
     * [SDK Cases](developers/snowbridge-v2/typescript-sdk/cases.md)
   * [Parachain Integration](developers/snowbridge-v2/parachain-integration.md)
+  * [V2 Requirements](developers/snowbridge-v2/v2-requirements.md)
 * [V1](developers/snowbridge-v1/README.md)
   * [SDK](developers/snowbridge-v1/typescript-sdk.md)
   * [Parachain Integration](developers/snowbridge-v1/parachain-integration.md)
