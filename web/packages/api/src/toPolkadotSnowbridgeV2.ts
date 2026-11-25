@@ -239,7 +239,7 @@ export async function inboundMessageExtrinsicFee(
     // invalid proof underestimates the cost by 80%. Constructing a proof is
     // complex and requires the message to be finalized, so not fit for purpose
     // here. Consequently, DOT fee is hardcoded for now.
-    const extrinsicFeeDot = 250_000_000n
+    const extrinsicFeeDot = 2_000_000_000n // 0.2 DOT
 
     const etherLocation = erc20Location(ethChainId, ETHER_TOKEN_ADDRESS)
     // Quote in the runtime swap direction (ETH->DOT): the runtime swaps the
