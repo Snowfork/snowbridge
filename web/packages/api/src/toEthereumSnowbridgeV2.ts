@@ -135,6 +135,7 @@ export class TransferToEthereum<T extends EthereumProviderTypes> implements Tran
             claimerLocation?: any
             contractCall?: ContractCall
             volumeFee?: VolumeFeeParams
+            accelerated?: boolean
         },
     ): Promise<DeliveryFee> {
         return this.#resolveByTokenAddress(tokenAddress).fee(tokenAddress, options)
